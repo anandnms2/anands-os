@@ -76,10 +76,12 @@
   }
 
   /* ---------- preview (themed card) ---------- */
+  var CICO = { Tel: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z', '@': 'M3 6h18v12H3z M3 7l9 7 9-7', WA: 'M4 20l1.3-4A8 8 0 1 1 8 18.8z M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-.8.8a4 4 0 0 1-2-2l.8-.8-1-2z', Web: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 3c3 3 3 15 0 18 M12 3c-3 3-3 15 0 18', Map: 'M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z M12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z' };
+  function cico(k) { var d = CICO[k]; return d ? '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/></svg>' : '<span style="font-size:16px;line-height:1">&#8226;</span>'; }
   function previewHtml(c) {
     var k = colors(c), r = RADIUS[c.shape_style] || 18, font = FONT_CSS[c.font_style] || 'inherit', order = (c.field_order && c.field_order.length ? c.field_order : ['phone', 'email', 'whatsapp', 'website', 'address']);
     var logo = (k.bg === '#131110' || THEMES[c.theme || 'classic'].dark) ? (c.logo_dark || c.logo_light) : (c.logo_light || c.logo_dark);
-    var row = function (ico, label, val, href) { return '<a ' + (href ? 'href="' + esc(href) + '" target="_blank" rel="noopener"' : '') + ' style="display:flex;gap:12px;align-items:center;padding:11px 14px;border-radius:' + Math.min(r, 14) + 'px;background:' + k.surface + ';border:1px solid ' + k.line + ';color:' + k.text + ';text-decoration:none;margin-bottom:8px"><span style="width:30px;text-align:center;color:' + k.accent + ';font-weight:700;font-size:12px;text-transform:uppercase">' + ico + '</span><span style="min-width:0;overflow-wrap:anywhere"><span style="display:block;font-size:11px;color:' + k.dim + '">' + label + '</span>' + esc(val) + '</span></a>'; };
+    var row = function (ico, label, val, href) { return '<a ' + (href ? 'href="' + esc(href) + '" target="_blank" rel="noopener"' : '') + ' style="display:flex;gap:12px;align-items:center;padding:11px 14px;border-radius:' + Math.min(r, 14) + 'px;background:' + k.surface + ';border:1px solid ' + k.line + ';color:' + k.text + ';text-decoration:none;margin-bottom:8px"><span style="flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:' + k.accent + '22;color:' + k.accent + '">' + cico(ico) + '</span><span style="min-width:0;overflow-wrap:anywhere"><span style="display:block;font-size:11px;color:' + k.dim + '">' + label + '</span>' + esc(val) + '</span></a>'; };
     var rows = '';
     order.forEach(function (f) {
       if (f === 'phone') [c.phone, c.phone2].filter(Boolean).forEach(function (v) { rows += row('Tel', 'Phone', v, 'tel:' + v); });

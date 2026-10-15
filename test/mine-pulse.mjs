@@ -106,7 +106,7 @@ try {
       await q.mouse.move(x, y); await q.mouse.down(); await q.mouse.move(x + 60, y, { steps: 4 }); await q.mouse.up();
       const nb = await q.locator(sel).first().boundingBox(); assert.ok(nb.width > b.width + 40, key + ' widened ' + b.width + '->' + nb.width);
     }
-    const w1 = (await q.locator('.pxlist').first().boundingBox()).width; await q.reload(); await q.waitForSelector('.pxlist'); assert.ok(Math.abs((await q.locator('.pxlist').first().boundingBox()).width - w1) < 3);
+    const w1 = (await q.locator('.pxlist').first().boundingBox()).width; await q.reload(); await q.locator('.pxlist').first().waitFor(); assert.ok(Math.abs((await q.locator('.pxlist').first().boundingBox()).width - w1) < 3);
     await c3.close();
   });
   await t('no page errors', async () => assert.deepEqual(errs, []));
