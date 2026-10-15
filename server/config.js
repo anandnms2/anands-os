@@ -46,6 +46,7 @@ export function effective() {
     immich: { url: clean(s.immich?.url) || clean(env.IMMICH_URL), key: clean(s.immich?.key) || clean(env.IMMICH_API_KEY) },
     coolify: { url: clean(s.coolify?.url) || clean(env.COOLIFY_URL), token: clean(s.coolify?.token) || clean(env.COOLIFY_TOKEN) },
     dav: { url: clean(s.dav?.url) || clean(env.DAV_URL), user: clean(s.dav?.user) || clean(env.DAV_USER), pass: clean(s.dav?.pass) || clean(env.DAV_PASSWORD) },
+    vault: { url: clean(s.vault?.url) || clean(env.VAULT_URL) },
     llm: { base: clean(s.llm?.base) || clean(env.LLM_BASE_URL), key: clean(s.llm?.key) || clean(env.LLM_API_KEY), model: clean(s.llm?.model) || clean(env.LLM_MODEL) || 'gpt-4o-mini' }
   };
 }
@@ -55,6 +56,7 @@ export function publicSettings() {
     immich: { url: e.immich.url, keySet: !!e.immich.key },
     coolify: { url: e.coolify.url, tokenSet: !!e.coolify.token },
     dav: { url: e.dav.url, user: e.dav.user, passSet: !!e.dav.pass },
+    vault: { url: e.vault.url },
     llm: { base: e.llm.base, keySet: !!e.llm.key, model: e.llm.model }
   };
 }
@@ -72,6 +74,7 @@ export function updateSettings(patch) {
   set('immich', 'url', p.immich?.url); set('immich', 'key', p.immich?.key, true);
   set('coolify', 'url', p.coolify?.url); set('coolify', 'token', p.coolify?.token, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
+  set('vault', 'url', p.vault?.url);
   set('llm', 'base', p.llm?.base); set('llm', 'key', p.llm?.key, true); set('llm', 'model', p.llm?.model);
   stored = next;
   const tmp = sfile + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(stored, null, 2), { mode: 0o600 }); fs.renameSync(tmp, sfile);

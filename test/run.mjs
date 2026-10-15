@@ -1,5 +1,7 @@
 // End-to-end test against mock Immich, Coolify and OpenAI-compatible servers. No network, no dependencies.
+import { makeVault } from './bw.mjs';
 import http from 'node:http';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -12,7 +14,7 @@ const seen = { immich: [], coolify: [], llm: [] };
 const listen = (h) => new Promise((r) => { const s = http.createServer(h); s.listen(0, '127.0.0.1', () => r(s)); });
 const send = (res, c, o, ct = 'application/json') => { res.writeHead(c, { 'content-type': ct }); res.end(typeof o === 'string' || Buffer.isBuffer(o) ? o : JSON.stringify(o)); };
 const body = (req) => new Promise((r) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => r(Buffer.concat(c).toString())); });
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAKAAAAB4CAIAAAD6wG44AAACd0lEQVR4nO3dMU7DQBBG4Q1CHACJ21IicVh6CioKS1aUKGASL/PPy/tqitl53kQUkQ+f789DXA/VA2guA8MZGM7AcAaGMzCcgeEMDGdgOAPDGRjOwHAGhjMwnIHhDAxnYDgDwxkYzsBwBoYzMJyB4QwMZ2A4A8MZGM7AcAaGe6weYK6Xt68tf/bx+jR7kioH2M9HNxb9Gak3JPAuXc8BSvcOPKnrub6luwb+t7THOmbuF7gk7bFemTsFLk97rEvmNv8HR9UdefNc0uAGh68y/Cqn3+DwuiN+wujA4btbJc+ZGzh5a+dipw0NHLuvH2TOnBg4c1NbBE4eFzhwR3+SNn9W4LTtXCfqFEGBo/Zyo5yzBAXWDCmBcx75vYScKCJwyC52l3CuiMCapz5wwmM+T/np6gNrquLA5Q/4P6g9ozcYzsBwlYHv4fN5UXhSbzCcgeEMDFcW+H6+gBdV5/UGwxkYzsBwBoYzMJyB4QwMZ2A4A8MZGK4scPjvpndXdV5vMJyB4QwMVxn4fr6GC0/qDYYzMFxx4Hv4lK49ozcYrj4w+xKXn64+sKaKCFz+mE+ScK6IwCNjF/sKOVFKYE0SFDjkkd9FzlmCAo+kvdwi6hRZgUfYdq6QNn9c4JG3o+0CJ08MPCI39avMmUMDj9R9XRI7bW7gEby1E8lzRgce2btbhE/Y4LU6i8AfjIenXaTf4FXaNtPmuaTNDV6VX+UuaRf9Ai98++hGXQMvfH/wr3oHXvkG8EsggVe7lAZ0XdECn9jYm1T0BDyw2vwfrOsYGM7AcAaGMzCcgeEMDGdgOAPDGRjOwHAGhjMwnIHhDAxnYDgDwxkY7hv306DTuuTxywAAAABJRU5ErkJggg==', 'base64');
 
 const asset = (i, extra = {}) => ({ id: '00000000-0000-4000-8000-00000000000' + i, type: 'IMAGE', originalFileName: `IMG_${i}.jpg`, localDateTime: `2026-10-0${i}T10:00:00.000Z`, isFavorite: false, exifInfo: { city: 'Nairobi', country: 'Kenya', make: 'Sony', model: 'A7' }, ...extra });
 
@@ -52,8 +54,40 @@ const llm = await listen(async (req, res) => {
   send(res, 200, { model: b.model, choices: [{ message: { role: 'assistant', content: 'You have 3 resources. Safari album exists.' } }] });
 });
 
+
+/* mock Vaultwarden speaking the real Bitwarden wire format */
+const VAULT_ITEMS = [
+  { name: 'Hetzner', user: 'anand@example.com', pw: 'Tn7#qLm2vXr9!eKd', url: 'https://console.hetzner.cloud', folder: 'Infra', fav: true, totp: 'JBSWY3DPEHPK3PXP', notes: 'main project', age: 40 },
+  { name: 'Cloudflare', user: 'anand@example.com', pw: 'summer2024', url: 'https://dash.cloudflare.com', folder: 'Infra', age: 500 },
+  { name: 'GoDaddy', user: 'anandnms2', pw: 'summer2024', url: 'https://sso.godaddy.com', age: 20, itemKey: true },
+  { name: 'Wifi note', type: 2, notes: 'router admin: see drawer', age: 5 },
+  { name: 'Shared team login', user: 'x', pw: 'y', org: true },
+  { name: 'Old card', type: 3 },
+  { name: 'Deleted one', user: 'z', pw: 'zzzzzzzzzzzz', deleted: true }
+];
+const VAULTS = { 'me@example.com': { pw: 'correct master', iter: 5000, v: null, twofa: false }, 'two@example.com': { pw: 'correct master', iter: 5000, v: null, twofa: true } };
+for (const [em, o] of Object.entries(VAULTS)) o.v = makeVault(em, o.pw, o.iter, VAULT_ITEMS);
+{ const vm = await import('node:vm'); const cx = vm.createContext({ WebAssembly, TextEncoder, TextDecoder, Uint8Array, Uint32Array, ArrayBuffer, DataView, Math, Error, Object, Array, Promise }); vm.runInContext(fs.readFileSync(path.join(root, 'web/vendor/argon2.js'), 'utf8'), cx); const argon2id = cx.hashwasm.argon2id; const salt = crypto.createHash('sha256').update('argon@example.com').digest();
+  const mk = Buffer.from(await argon2id({ password: 'correct master', salt, parallelism: 2, iterations: 3, memorySize: 16 * 1024, hashLength: 32, outputType: 'binary' }));
+  VAULTS['argon@example.com'] = { pw: 'correct master', iter: 3, kdf: { kdf: 1, kdfIterations: 3, kdfMemory: 16, kdfParallelism: 2 }, v: makeVault('argon@example.com', 'correct master', 3, VAULT_ITEMS, mk), twofa: false }; }
+const vaultSeen = [];
+const vault = await listen(async (req, res) => {
+  const u = new URL(req.url, 'http://x'), b = (await body(req)) || '';
+  vaultSeen.push({ m: req.method, p: u.pathname, q: u.search, auth: req.headers.authorization, b });
+  if (u.pathname === '/alive') return send(res, 200, 'ok');
+  if (u.pathname === '/identity/accounts/prelogin') { const e = JSON.parse(b).email; return send(res, 200, VAULTS[e]?.kdf || { kdf: 0, kdfIterations: VAULTS[e]?.iter || 5000, kdfMemory: null, kdfParallelism: null }); }
+  if (u.pathname === '/identity/connect/token') {
+    const f = new URLSearchParams(b), o = VAULTS[f.get('username')];
+    if (!o || f.get('password') !== o.v.hash) return send(res, 400, { error: 'invalid_grant', error_description: 'invalid_username_or_password' });
+    if (o.twofa && f.get('twoFactorToken') !== '123456') return send(res, 400, { error: 'invalid_grant', error_description: 'Two factor required.', TwoFactorProviders: [0], TwoFactorProviders2: { 0: null } });
+    return send(res, 200, { access_token: 'tok-' + f.get('username'), Key: o.v.Key, Kdf: 0, KdfIterations: o.iter });
+  }
+  if (u.pathname === '/api/sync') { const em = (req.headers.authorization || '').replace('Bearer tok-', ''); return VAULTS[em] ? send(res, 200, VAULTS[em].v.sync) : send(res, 401, {}); }
+  send(res, 404, {});
+});
+
 /* in-memory WebDAV server mounted at /dav, like Cloudreve's */
-const tree = new Map([['/', { dir: true }], ['/Work', { dir: true }], ['/Work/Fleet KPIs.csv', { data: Buffer.from('truck,tat\nT412,4.2\n') }], ['/Notes.md', { data: Buffer.from('# Hello from Drive') }]]);
+const tree = new Map([['/', { dir: true }], ['/Work', { dir: true }], ['/Work/Fleet KPIs.csv', { data: Buffer.from('truck,tat\nT412,4.2\n') }], ['/Notes.md', { data: Buffer.from('# Hello from Drive') }], ['/Work/pic.png', { data: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAKAAAAB4CAIAAAD6wG44AAACd0lEQVR4nO3dMU7DQBBG4Q1CHACJ21IicVh6CioKS1aUKGASL/PPy/tqitl53kQUkQ+f789DXA/VA2guA8MZGM7AcAaGMzCcgeEMDGdgOAPDGRjOwHAGhjMwnIHhDAxnYDgDwxkYzsBwBoYzMJyB4QwMZ2A4A8MZGM7AcAaGe6weYK6Xt68tf/bx+jR7kioH2M9HNxb9Gak3JPAuXc8BSvcOPKnrub6luwb+t7THOmbuF7gk7bFemTsFLk97rEvmNv8HR9UdefNc0uAGh68y/Cqn3+DwuiN+wujA4btbJc+ZGzh5a+dipw0NHLuvH2TOnBg4c1NbBE4eFzhwR3+SNn9W4LTtXCfqFEGBo/Zyo5yzBAXWDCmBcx75vYScKCJwyC52l3CuiMCapz5wwmM+T/np6gNrquLA5Q/4P6g9ozcYzsBwlYHv4fN5UXhSbzCcgeEMDFcW+H6+gBdV5/UGwxkYzsBwBoYzMJyB4QwMZ2A4A8MZGK4scPjvpndXdV5vMJyB4QwMVxn4fr6GC0/qDYYzMFxx4Hv4lK49ozcYrj4w+xKXn64+sKaKCFz+mE+ScK6IwCNjF/sKOVFKYE0SFDjkkd9FzlmCAo+kvdwi6hRZgUfYdq6QNn9c4JG3o+0CJ08MPCI39avMmUMDj9R9XRI7bW7gEby1E8lzRgce2btbhE/Y4LU6i8AfjIenXaTf4FXaNtPmuaTNDV6VX+UuaRf9Ai98++hGXQMvfH/wr3oHXvkG8EsggVe7lAZ0XdECn9jYm1T0BDyw2vwfrOsYGM7AcAaGMzCcgeEMDGdgOAPDGRjOwHAGhjMwnIHhDAxnYDgDwxkY7hv306DTuuTxywAAAABJRU5ErkJggg==', 'base64') }]]);
 const davLog = [];
 const rawBody = (req) => new Promise((r) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => r(Buffer.concat(c))); });
 const xmlEsc = (x) => x.replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -83,7 +117,7 @@ const port = 20000 + Math.floor(Math.random() * 20000);
 const srv = spawn('node', ['server/index.js'], {
   cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
   env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: process.env.E2E_SUITE || path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'correct horse', SESSION_SECRET: 'x'.repeat(40),
-    IMMICH_URL: url(immich), IMMICH_API_KEY: 'imm-secret', COOLIFY_URL: url(coolify), COOLIFY_TOKEN: 'cool-secret', LLM_BASE_URL: url(llm) + '/v1', LLM_API_KEY: 'llm-secret', LLM_MODEL: 'test-model', DAV_URL: url(dav) + '/dav', DAV_USER: 'anand@example.com', DAV_PASSWORD: 'dav-secret' }
+    IMMICH_URL: url(immich), IMMICH_API_KEY: 'imm-secret', COOLIFY_URL: url(coolify), COOLIFY_TOKEN: 'cool-secret', LLM_BASE_URL: url(llm) + '/v1', LLM_API_KEY: 'llm-secret', LLM_MODEL: 'test-model', VAULT_URL: url(vault), DAV_URL: url(dav) + '/dav', DAV_USER: 'anand@example.com', DAV_PASSWORD: 'dav-secret' }
 });
 let log = ''; srv.stdout.on('data', (d) => (log += d)); srv.stderr.on('data', (d) => (log += d));
 const B = `http://127.0.0.1:${port}`;
@@ -233,6 +267,20 @@ try {
   await t('assistant sees Drive files', async () => {
     await call('/api/chat', { method: 'POST', json: { messages: [{ role: 'user', content: 'what is in my drive' }], ctx: { files: true } } });
     const sys = JSON.stringify(seen.llm.at(-1).b.messages); assert.match(sys, /Fleet KPIs/); assert.ok(!sys.includes('dav-secret'));
+  });
+  await t('vault relay: only the three Bitwarden calls pass, login data is relayed untouched', async () => {
+    const st = await call('/api/vault/status'); assert.equal(st.j.connected, true);
+    assert.equal((await call('/api/vault/api/accounts/profile')).s, 404);
+    assert.equal((await call('/api/vault/identity/connect/token', { method: 'GET' })).s, 404);
+    const pre = await call('/api/vault/identity/accounts/prelogin', { method: 'POST', json: { email: 'me@example.com' } }); assert.equal(pre.j.kdfIterations, 5000);
+    const tok = await call('/api/vault/identity/connect/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'grant_type=password&username=me%40example.com&password=bad' }); assert.equal(tok.s, 400);
+    const sy = await call('/api/vault/api/sync?evil=1', { headers: { authorization: 'Bearer tok-me@example.com' } }); assert.equal(sy.s, 200); assert.equal(vaultSeen.at(-1).q, '?excludeDomains=true');
+    assert.equal((await call('/api/vault/api/sync')).s, 401);
+  });
+  await t('vault relay needs a session and the x-aos header; vault address never leaks a secret', async () => {
+    const saved = cookie; cookie = ''; assert.equal((await call('/api/vault/status')).s, 401); cookie = saved;
+    assert.equal((await call('/api/vault/identity/accounts/prelogin', { method: 'POST', json: {}, noCsrf: true })).s, 403);
+    assert.ok(!JSON.stringify((await call('/api/settings')).j).includes('tok-'));
   });
   await t('logout clears the session', async () => {
     await call('/auth/logout', { method: 'POST' }); cookie = '';

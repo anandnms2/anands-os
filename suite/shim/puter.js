@@ -92,6 +92,23 @@
   function itemOf(st) { var p = st.path; return { name: st.name, path: p, size: st.size, is_dir: !!st.is_dir, read: function () { return fs.read(p); }, text: function () { return fs.read(p).then(function (b) { return b.text(); }); } }; }
   var launchP = null;
   try { var lo = new URLSearchParams(location.search).getAll('open'); if (lo.length) launchP = Promise.all(lo.map(function (p) { return fs.stat(p).then(itemOf).catch(function () { return null; }); })).then(function (a) { return a.filter(Boolean); }); } catch (e) {}
+  // Apps with no launch hand-off but a hidden <input type=file>: feed the Drive file to it once the app has started.
+  (function () {
+    var m = location.pathname.match(/\/apps\/([^\/]+)/); if (!launchP || !m || ['photo-studio'].indexOf(m[1]) < 0) return;
+    launchP.then(function (items) {
+      if (!items.length) return; var tries = 0, done = false;
+      (function poll() {
+        if (done) return; var inp = document.getElementById('file-input') || document.querySelector('input[type=file]');
+        if (!inp) { if (++tries < 100) setTimeout(poll, 300); return; }
+        done = true;
+        setTimeout(function () {
+          Promise.all(items.map(function (it) { return it.read().then(function (b) { return new File([b], it.name, { type: b.type || '' }); }); })).then(function (files) {
+            var dt = new DataTransfer(); files.forEach(function (f) { dt.items.add(f); }); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
+          }).catch(function () {});
+        }, 1200);
+      })();
+    });
+  })();
   function onLaunch(cb) { if (launchP && typeof cb === 'function') launchP.then(function (items) { if (items.length) cb(items); }); }
 
   /* ---- in-page file browser for Open / Save (lists local files and /Drive) ---- */

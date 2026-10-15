@@ -21,9 +21,15 @@ The first build takes several minutes (it compiles every app). A GitHub Action a
 
 In Cloudreve open Settings > WebDAV, create an account and copy its address (ends in `/dav`), account name and password. Enter them in the OS under Settings > Drive, or set `DAV_URL`, `DAV_USER`, `DAV_PASSWORD`. Your files then appear as a `/Drive` folder: the Drive screen, the Open/Save dialogs of the apps and the assistant all use it. The password is write-only and never sent back to the browser.
 
-Open with: Spreadsheet (csv/xlsx), Documents (.docx only), PDF, Presentation, Video/Audio Studio, Vector Studio, CAD, Circuits and Parametric receive the file at launch. Notes and Photo Studio have no launch hand-off; use their own Open dialog. Text files open in a built-in editor.
+Open with: Spreadsheet (csv/xlsx), Documents (.docx only), PDF, Presentation, Video/Audio Studio, Vector Studio, CAD, Circuits and Parametric receive the file at launch. Photo Studio gets the file through its file input. Notes has no launch hand-off; use its Open dialog. Text files open in a built-in editor.
 
 Limits: tested against a mock WebDAV server only; uploads up to 200 MB are buffered; folders cannot be copied between local storage and Drive.
+
+## Vault (Vaultwarden)
+
+Set the Vaultwarden address (for example `https://pass.anands.xyz`) in Settings, or `VAULT_URL`. The Vault screen asks for your email and master password on each unlock. The key is derived and the vault decrypted in your browser (PBKDF2 or Argon2id, as your account uses). The server only relays Bitwarden's prelogin, token and sync calls as ciphertext; the master password, keys and decrypted items are never stored or logged, and the assistant cannot see them. It auto-locks after 5 minutes idle. Supported: master-password accounts, authenticator or email two-step codes, TOTP codes, folders, favourites, per-item keys. Not supported: SSO-only accounts without a master password, security-key two-step, shared organization items, cards and identities (listed as not shown). Read only and copy only; the clipboard is cleared after 30 seconds.
+
+Photo Studio opens images handed over from Drive; its own Open dialog also lists `/Drive`.
 
 ## Security model
 

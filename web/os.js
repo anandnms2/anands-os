@@ -66,7 +66,7 @@ function boot() {
 }
 
 /* ---------- shell ---------- */
-var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['insights', 'Insights', 'insights'], ['apps', 'Suite', 'apps']];
+var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['apps', 'Suite', 'apps']];
 function cur(v) { if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; return S.view === v || (v === 'apps' && S.view === 'app'); }
 function buildNav() {
   var h = '<button class="logo" data-act="nav" data-v="home" aria-label="Home"><img src="/logo-white.png" alt=""></button><div class="rsep"></div>';
@@ -77,7 +77,7 @@ function buildNav() {
   var t = ''; NAV.concat([['pal', 'Search', 'search']]).forEach(function (n) { t += '<button ' + (n[0] === 'pal' ? 'data-act="pal"' : 'data-act="nav" data-v="' + n[0] + '"') + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
   $('#tabs').innerHTML = t;
 }
-function go(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); }
+function go(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); }
 function redraw() { var y = $('#view').scrollTop; render(); $('#view').scrollTop = y; }
 function render() {
   var app = $('#app'), tabs = $('#tabs'), fab = $('#fab');
@@ -88,6 +88,7 @@ function render() {
   if (S.view === 'home') v.innerHTML = homeV();
   else if (S.view === 'photos') { v.innerHTML = photosShell(); photosGrid(); }
   else if (S.view === 'drive') v.innerHTML = driveV();
+  else if (S.view === 'vault') v.innerHTML = vaultV();
   else if (S.view === 'dedit') v.innerHTML = dedV();
   else if (S.view === 'insights') v.innerHTML = insightsV();
   else if (S.view === 'apps') v.innerHTML = appsV();
@@ -105,7 +106,7 @@ function loginV() {
 
 /* ---------- home ---------- */
 var SVC = [['AI Chat', 'Anands AI', 'chat', 'https://ai.anands.xyz', 'Anands AI'], ['Pulse', 'Mail, chat, tasks', 'pulse', 'https://pulse.anands.xyz', 'Anands Control Center'], ['Drive', 'Files and sharing', 'cloud', '#drive', 'Anands Drive'], ['Files', 'Whole server', 'folder', 'https://files.anands.xyz', 'Anands Filemanager'],
-  ['Photos', 'Your library', 'photos', '#photos', 'Anands Photos'], ['Cards', 'Scan and contacts', 'card', 'https://cards.anands.xyz', 'Anands Cards'], ['Vault', 'Passwords', 'lock', 'https://pass.anands.xyz', 'Anands Password'], ['Desktop', 'Linux in a browser', 'monitor', 'https://desktop.anands.xyz', ''],
+  ['Photos', 'Your library', 'photos', '#photos', 'Anands Photos'], ['Cards', 'Scan and contacts', 'card', 'https://cards.anands.xyz', 'Anands Cards'], ['Vault', 'Passwords', 'lock', '#vault', 'Anands Password'], ['Desktop', 'Linux in a browser', 'monitor', 'https://desktop.anands.xyz', ''],
   ['Remote', 'Your Puter, Suite', 'apps', '#apps', ''], ['VPN', 'WireGuard', 'shield', 'https://vpn.anands.xyz', 'Anands VPN'], ['Status', 'Server health', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'S3 buckets', 'folder', 'https://storage.anands.xyz', 'Anands S3 Storage']];
 function svcState(n) {
   var d = S.ins.data; if (!n || !d) return ['na', 'Not tracked'];
@@ -261,11 +262,12 @@ function appWinV() {
 
 /* ---------- settings ---------- */
 function settingsV() {
-  var c = S.settings || { immich: {}, coolify: {}, llm: {} };
+  var c = S.settings || { immich: {}, coolify: {}, llm: {} }; c.dav = c.dav || {};
   var field = function (id, label, val, ph, type) { return '<div class="field"><label for="' + id + '">' + label + '</label><input class="input" id="' + id + '" type="' + (type || 'text') + '" value="' + esc(val || '') + '" placeholder="' + esc(ph || '') + '" autocomplete="off"></div>'; };
   return '<div class="wrap"><div class="pagehead"><div><h1>Settings</h1><p>Connections the OS uses. Keys are stored on the server in your data volume and are never sent back to the browser.</p></div><a class="btn" href="/auth/logout">' + ic('out') + 'Sign out</a></div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Immich (Photos)</h2>' + field('s_iu', 'Server address', c.immich.url, 'https://photos.anands.xyz') + field('s_ik', 'API key' + (c.immich.keySet ? ' (saved, leave blank to keep)' : ''), '', c.immich.keySet ? '••••••••' : 'Immich: Account settings, API keys', 'password') + '<div id="r_immich" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="immich">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Coolify (Cloud Insights)</h2>' + field('s_cu', 'Coolify address', c.coolify.url, 'https://coolify.anands.xyz') + field('s_ct', 'API token, read only' + (c.coolify.tokenSet ? ' (saved, leave blank to keep)' : ''), '', c.coolify.tokenSet ? '••••••••' : 'Coolify: Keys and tokens', 'password') + '<div id="r_coolify" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="coolify">Save and test</button></div>' +
+    '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Vault (Vaultwarden)</h2><p class="note" style="margin:0 0 14px">Only the address is saved. Your email and master password are typed on the Vault screen and are never stored.</p>' + field('s_vu', 'Vault address', (c.vault || {}).url, 'https://pass.anands.xyz') + '<div id="r_vault" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="vault">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Drive (Cloudreve, WebDAV)</h2><p class="note" style="margin:0 0 14px">In Cloudreve: Settings, WebDAV, create an account. Use its address (for example https://drive.anands.xyz/dav), name and password.</p>' + field('s_du', 'WebDAV address', c.dav.url, 'https://drive.anands.xyz/dav') + field('s_dn', 'Account name', c.dav.user, 'you@example.com') + field('s_dp', 'Password' + (c.dav.passSet ? ' (saved, leave blank to keep)' : ''), '', c.dav.passSet ? '••••••••' : 'WebDAV account password', 'password') + '<div id="r_dav" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="dav">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Assistant (FreeLLMAPI)</h2>' + field('s_lb', 'API address (OpenAI compatible)', c.llm.base, 'https://llm.anands.xyz/v1') + field('s_lk', 'API key' + (c.llm.keySet ? ' (saved, leave blank to keep)' : ''), '', c.llm.keySet ? '••••••••' : 'sk-...', 'password') + field('s_lm', 'Model', c.llm.model, 'gpt-4o-mini') + '<div id="r_llm" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="llm">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Local mode (no Puter cloud)</h2><dl class="dl"><dt>Sign-in</dt><dd>' + (S.login.method === 'oidc' ? 'Your SSO' : 'Password') + ', handled by this server</dd><dt>puter.kv</dt><dd>Database in your data volume</dd><dt>puter.fs</dt><dd>Folder in your data volume</dd><dt>puter.ai</dt><dd>Your FreeLLMAPI</dd><dt>puter.com</dt><dd>Apps cannot connect (CSP)</dd></dl></div></div></div>';
@@ -274,7 +276,7 @@ function settingsV() {
 S.drive = { path: '/', items: [], loading: false, error: null, code: null, sel: null, status: null };
 var OPENWITH = { csv: ['spreadsheet'], xlsx: ['spreadsheet'], xls: ['spreadsheet'], docx: ['documents'], doc: ['documents'], pdf: ['pdf'], pptx: ['presentation'], ppt: ['presentation'], jpg: ['photo-studio'], jpeg: ['photo-studio'], png: ['photo-studio'], webp: ['photo-studio'], gif: ['photo-studio'], mp4: ['video-studio'], mov: ['video-studio'], mp3: ['audio-studio'], wav: ['audio-studio'], svg: ['vector-studio'], drawio: ['whiteboard'] };
 /* Apps verified to read a file handed to them at launch (puter.ui.onLaunchedWithItems). The rest open normally and use their own Open dialog, which lists /Drive. */
-var LAUNCHES = ['audio-studio', 'cad', 'circuits', 'documents', 'parametric', 'pdf', 'presentation', 'spreadsheet', 'vector-studio', 'video-studio'];
+var LAUNCHES = ['audio-studio', 'cad', 'circuits', 'documents', 'parametric', 'pdf', 'photo-studio', 'presentation', 'spreadsheet', 'vector-studio', 'video-studio'];
 var TEXTEXT = /^(txt|md|csv|tsv|json|html|htm|xml|yml|yaml|log|ini|conf|js|css|py|sh)$/;
 function dext(n) { var m = /\.([a-z0-9]+)$/i.exec(n); return m ? m[1].toLowerCase() : ''; }
 function dpathOf(p) { return '/Drive' + (p === '/' ? '' : p); }
@@ -334,6 +336,7 @@ function saveGroup(k, after) {
   var v = function (id) { var e = $('#' + id); return e ? e.value : ''; }, body = {};
   if (k === 'immich') body.immich = { url: v('s_iu'), key: v('s_ik') };
   if (k === 'coolify') body.coolify = { url: v('s_cu'), token: v('s_ct') };
+  if (k === 'vault') body.vault = { url: v('s_vu') };
   if (k === 'dav') body.dav = { url: v('s_du'), user: v('s_dn'), pass: v('s_dp') };
   if (k === 'llm') body.llm = { base: v('s_lb'), key: v('s_lk'), model: v('s_lm') };
   note('r_' + k, 'Saving...');
@@ -342,6 +345,7 @@ function saveGroup(k, after) {
     return api('/api/settings/test', { method: 'POST', json: { target: k } }).then(function (r) {
       if (k === 'immich') { S.imm = r; S.tl = { items: [], next: 1, loading: false, error: null, loaded: false }; S.albums = null; if (r.connected) loadPage(S.tl, '/api/photos/timeline'); }
       if (k === 'dav') { S.drive.status = r; S.drive.items = []; }
+      if (k === 'vault') { S.vault.status = r; }
       if (k === 'coolify') { S.ins = { data: null, error: null, code: null, loading: false }; if (r.connected) loadIns(true); }
       note('r_' + k, r.connected ? 'Connected' + (r.version ? ' (Immich ' + r.version + ')' : r.resources ? ' (' + r.resources + ' resources)' : '') + '.' : 'Saved, but not reachable: ' + (r.reason || 'no answer') + '.', r.connected ? 'ok' : 'bad'); if (after) after(r); });
   }).catch(function (e) { note('r_' + k, e.message, 'bad'); });
@@ -353,10 +357,106 @@ function connectModal(k) {
   var f = $('#m1'); if (f) f.focus();
 }
 
+/* ---------- Vault (Vaultwarden, decrypted in this tab only) ---------- */
+P.eye = 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z';
+P.copy = 'M9 9h11v11H9z M5 15H4V4h11v1';
+P.key = 'M21 2l-2 2 M11.4 11.6a5.5 5.5 0 1 1-7.8 7.8 5.5 5.5 0 0 1 7.8-7.8z M11.4 11.6L15.5 7.5 M15.5 7.5l3 3L22 7l-3-3';
+P.open = 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6 M15 3h6v6 M10 14L21 3';
+var VLOCK_MS = 300000;
+S.vault = { items: null, skipped: null, sel: null, folder: 'All', q: '', show: false, err: '', busy: false, twofa: null, email: LS.get('vault.email', ''), lockAt: 0, status: null };
+function vWeak(p) { return !!p && (p.length < 10 || /^(password|qwerty|123456|summer|letmein)/i.test(p)); }
+function vReused(it) { return !!it.pw && S.vault.items.filter(function (x) { return x.pw === it.pw; }).length > 1; }
+function vFlags(it) { var f = []; if (it.type === 'login' && it.pw) { if (vWeak(it.pw)) f.push('weak'); if (vReused(it)) f.push('reused'); if (it.age > 365) f.push('old'); } return f; }
+function vLock(auto) { var V = S.vault; V.items = null; V.sel = null; V.show = false; V.q = ''; V.folder = 'All'; V.twofa = null; V.err = auto === true ? 'Locked after 5 minutes without activity.' : ''; if (S.view === 'vault') redraw(); if (auto !== true) toast('Vault locked. Nothing is kept in memory.'); }
+function vTouch() { if (S.vault.items) S.vault.lockAt = Date.now() + VLOCK_MS; }
+function vClip(text, label) {
+  var done = function () { toast(label + ' copied. The clipboard is cleared in 30 seconds.'); clearTimeout(vClip.t); vClip.t = setTimeout(function () { try { navigator.clipboard.writeText('').catch(function () {}); } catch (e) {} }, 30000); };
+  try { navigator.clipboard.writeText(text).then(done).catch(function () { toast('Copy was blocked by the browser. Select the text instead.'); }); } catch (e) { toast('Copy was blocked by the browser. Select the text instead.'); }
+}
+function vMatch(it) {
+  var q = S.vault.q.toLowerCase().trim(), f = S.vault.folder;
+  if (f === 'weak' || f === 'reused' || f === 'old') { if (vFlags(it).indexOf(f) < 0) return false; } else if (f === 'fav') { if (!it.fav) return false; } else if (f !== 'All' && it.folder !== f) return false;
+  return !q || (it.name + ' ' + it.user + ' ' + it.url).toLowerCase().indexOf(q) > -1;
+}
+function vTile(it) { var h = 0; for (var i = 0; i < it.name.length; i++) h = (h * 31 + it.name.charCodeAt(i)) % 360; return '<span class="vtile">' + esc(it.name.charAt(0).toUpperCase()) + '</span>'; }
+function vListHtml() {
+  var rows = S.vault.items.filter(vMatch).sort(function (a, b) { return a.name.localeCompare(b.name); });
+  return rows.map(function (it) {
+    var fl = vFlags(it);
+    return '<button class="drow vrow' + (S.vault.sel === it.id ? ' sel' : '') + '" data-act="vsel" data-id="' + esc(it.id) + '">' + vTile(it) + '<span class="dn"><b>' + esc(it.name) + '</b><small>' + esc(it.user || (it.type === 'note' ? 'Secure note' : '')) + '</small></span><span class="dm">' + (fl.length ? '<span class="pill ' + (fl.indexOf('weak') > -1 ? 'bad' : 'warn') + '">' + fl[0] + '</span>' : '') + '</span><span class="dm dd">' + (it.fav ? '&#9733;' : '') + '</span></button>';
+  }).join('') || '<div class="empty" style="margin:16px">Nothing matches</div>';
+}
+function vField(label, val, k, extra) { return '<div class="vfield"><div><div class="eyebrow">' + label + '</div><div class="vval mono">' + val + '</div></div><div class="vbtns">' + (extra || '') + '<button class="btn sm" data-act="vcopy" data-k="' + k + '" aria-label="Copy ' + label.toLowerCase() + '">' + ic('copy') + 'Copy</button></div></div>'; }
+function vSel() { return S.vault.items.filter(function (x) { return x.id === S.vault.sel; })[0]; }
+function vDetail() {
+  var V = S.vault, it = vSel();
+  if (!it) return '<div class="dpanel"><h3 style="font-size:18px;margin-bottom:6px">Pick an item</h3><p style="color:var(--muted);margin:0;font-size:14px">Everything here is decrypted in this tab. Copy puts a value on your clipboard for 30 seconds.</p></div>';
+  var fl = vFlags(it), warn = fl.map(function (f) { return f === 'weak' ? 'This password is short or common.' : f === 'reused' ? 'The same password is used on ' + V.items.filter(function (x) { return x.pw === it.pw; }).length + ' items.' : 'Not changed for ' + Math.round(it.age / 30) + ' months.'; }).join(' ');
+  var pwv = V.show ? esc(it.pw) : '&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;';
+  return '<div class="dpanel"><div style="display:flex;gap:12px;align-items:center;margin-bottom:6px">' + vTile(it) + '<div style="min-width:0"><h3 style="font-size:20px;word-break:break-word">' + esc(it.name) + '</h3><div style="color:var(--muted);font-size:13px">' + esc(it.folder) + '</div></div></div>' +
+    (warn ? '<div class="vwarn">' + esc(warn) + '</div>' : '') +
+    (it.user ? vField('Username', esc(it.user), 'user') : '') +
+    (it.pw ? vField('Password', pwv, 'pw', '<button class="btn sm" data-act="vreveal">' + ic('eye') + (V.show ? 'Hide' : 'Show') + '</button>') : '') +
+    (it.totp ? '<div class="vfield"><div><div class="eyebrow">One-time code</div><div class="vval mono" style="font-size:22px;letter-spacing:.08em" id="vtotp">------</div></div><div class="vbtns"><svg class="vring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="var(--line)" stroke-width="3"/><circle id="vringc" cx="18" cy="18" r="15" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="94.2" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><button class="btn sm" data-act="vcopy" data-k="totp">' + ic('copy') + 'Copy</button></div></div>' : '') +
+    (it.url ? '<div class="vfield"><div><div class="eyebrow">Website</div><div class="vval mono" style="word-break:break-all">' + esc(it.url.replace(/^https?:\/\//, '')) + '</div></div><div class="vbtns">' + (/^https?:\/\//i.test(it.url) ? '<a class="btn sm" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + ic('open') + 'Open</a>' : '') + '</div></div>' : '') +
+    (it.notes ? '<div class="vfield" style="display:block"><div class="eyebrow">Notes</div><div style="margin-top:4px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere">' + esc(it.notes) + '</div></div>' : '') +
+    '<p class="note" style="margin:6px 0 0">Changed ' + (it.age < 60 ? it.age + ' days' : Math.round(it.age / 30) + ' months') + ' ago. Read only here. Edit in the Vault web app.</p></div>';
+}
+function vFlow() {
+  return '<div class="card" style="margin-top:20px"><h2 style="font-size:20px;margin-bottom:4px">Where decryption happens</h2><p style="color:var(--muted);margin:0 0 16px;max-width:70ch">Vaultwarden only stores ciphertext. This server relays it and never holds your master password or the decrypted vault.</p>' +
+    '<div class="flow"><div><b>Your browser</b><small>master password, key, decrypt</small></div><i>&harr;</i><div><b>This server</b><small>relays ciphertext only</small></div><i>&harr;</i><div><b>Vaultwarden</b><small>' + esc(((S.settings && S.settings.vault && S.settings.vault.url) || 'pass.anands.xyz').replace(/^https?:\/\//, '')) + '</small></div></div>' +
+    '<dl class="dl" style="margin-top:18px"><dt>Unlock</dt><dd>Your email and master password are used in this tab to derive the key. They are never stored and never reach the server in a usable form.</dd><dt>Memory</dt><dd>Decrypted items live in page memory. Locking or reloading wipes them.</dd><dt>Auto-lock</dt><dd>After five minutes without activity, or with Lock now.</dd><dt>Assistant</dt><dd>The assistant has no access to the Vault, not even item names.</dd><dt>Editing</dt><dd>Read only here. Add or change items in the Vault web app.</dd></dl></div>';
+}
+function vaultV() {
+  var V = S.vault, head = '<div class="pagehead"><div><h1>Vault</h1><p>Your Vaultwarden passwords inside the OS. Decrypted in your browser only.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">';
+  if (V.status && !V.status.configured) return '<div class="wrap">' + head + '</div></div>' + connectBlock('Connect your Vault', 'vsettings', 'Enter the address of your Vaultwarden (for example https://pass.anands.xyz) in Settings. Your master password is never saved.') + '</div>';
+  if (!V.items) {
+    var two = V.twofa;
+    return '<div class="wrap">' + head + '<span class="pill warn"><i class="dot warn"></i>Locked</span></div></div><div class="card vlockcard"><div class="vlockic">' + ic('lock') + '</div><h2 style="font-size:24px;margin:10px 0 4px">' + (two ? 'Two-step code' : 'Vault is locked') + '</h2><p style="color:var(--muted);margin:0 0 18px;font-size:14.5px">' + (two ? 'Enter the code from your authenticator app.' : 'Enter your master password. It is used in this tab only.') + '</p>' +
+      '<form id="vf" autocomplete="off">' + (two ? '<div class="field"><label for="v2">Code</label><input class="input mono" id="v2" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>' : '<div class="field"><label for="vem">Email</label><input class="input" id="vem" type="email" autocomplete="username" value="' + esc(V.email) + '" placeholder="you@example.com"></div><div class="field"><label for="vpw">Master password</label><input class="input" id="vpw" type="password" autocomplete="off" placeholder="Master password"></div>') +
+      (V.err ? '<p role="alert" style="color:var(--bad);font-size:14px;margin:-4px 0 12px">' + esc(V.err) + '</p>' : '') +
+      '<button class="btn primary" type="submit" style="width:100%;justify-content:center"' + (V.busy ? ' disabled' : '') + '>' + ic('key') + (V.busy ? 'Unlocking...' : 'Unlock') + '</button></form></div>' + vFlow() + '</div>';
+  }
+  var items = V.items, n = items.length, w = items.filter(function (x) { return x.type === 'login' && vWeak(x.pw); }).length, r = items.filter(function (x) { return x.type === 'login' && vReused(x); }).length, o = items.filter(function (x) { return x.type === 'login' && x.pw && x.age > 365; }).length;
+  var rem = Math.max(0, Math.round((V.lockAt - Date.now()) / 1000));
+  var kp = function (l, v, f, c) { return '<button class="card kpi vkpi' + (V.folder === f ? ' on' : '') + '" data-act="vfold" data-f="' + f + '"><div class="eyebrow">' + l + '</div><div class="stat" style="margin-top:8px"><span class="n" style="font-size:28px;' + (c && v ? 'color:' + c : '') + '">' + v + '</span></div></button>'; };
+  var fnames = []; items.forEach(function (x) { if (fnames.indexOf(x.folder) < 0) fnames.push(x.folder); }); fnames.sort();
+  var chips = ['All', 'fav'].concat(fnames).map(function (f) { return '<button class="chip" data-act="vfold" data-f="' + esc(f) + '" aria-pressed="' + (V.folder === f) + '">' + (f === 'fav' ? 'Favourites' : esc(f)) + '</button>'; }).join('');
+  return '<div class="wrap">' + head + '<span class="pill ok"><i class="dot"></i>Unlocked &middot; locks in <span id="vlockt" class="mono">' + Math.floor(rem / 60) + ':' + ('0' + rem % 60).slice(-2) + '</span></span><button class="btn" data-act="vlock">' + ic('lock') + 'Lock now</button></div></div>' +
+    '<div class="kpis">' + kp('Items', n, 'All') + kp('Weak', w, 'weak', 'var(--bad)') + kp('Reused', r, 'reused', 'var(--warn)') + kp('Not changed in a year', o, 'old', 'var(--warn)') + '</div>' +
+    '<div class="toolbar"><div class="search">' + ic('search') + '<input class="input" id="vq" type="search" placeholder="Search name, username or site" value="' + esc(V.q) + '" aria-label="Search vault" data-in="vq"></div><div class="chips">' + chips + '</div></div>' +
+    '<div class="dgrid"><div class="card" style="padding:0;overflow:hidden"><div id="vlist">' + vListHtml() + '</div></div>' + vDetail() + '</div>' +
+    (V.skipped && (V.skipped.org || V.skipped.other) ? '<p class="note" style="margin-top:12px">Not shown here: ' + (V.skipped.org ? V.skipped.org + ' shared (organization) item' + (V.skipped.org === 1 ? '' : 's') : '') + (V.skipped.org && V.skipped.other ? ', ' : '') + (V.skipped.other ? V.skipped.other + ' card, identity or unreadable item' + (V.skipped.other === 1 ? '' : 's') : '') + '. Open them in the Vault web app.</p>' : '') + vFlow() + '</div>';
+}
+function loadVault() { return api('/api/vault/status').then(function (s) { S.vault.status = s; }).catch(function () { S.vault.status = { configured: true, connected: false }; }).then(function () { if (S.view === 'vault') redraw(); }); }
+function vTick() {
+  var V = S.vault; if (!V.items) return;
+  var rem = Math.round((V.lockAt - Date.now()) / 1000); if (rem <= 0) { vLock(true); return; }
+  var t = $('#vlockt'); if (t) t.textContent = Math.floor(rem / 60) + ':' + ('0' + rem % 60).slice(-2);
+  var it = vSel(), el = $('#vtotp');
+  if (it && it.totp && el && S.view === 'vault') window.AOSVault.totp(it.totp).then(function (r) { var e = $('#vtotp'); if (!e || !r) return; e.textContent = r.code.length === 6 ? r.code.slice(0, 3) + ' ' + r.code.slice(3) : r.code; var rc = $('#vringc'); if (rc) { rc.setAttribute('stroke-dashoffset', String(94.2 * (1 - r.left / r.period))); rc.setAttribute('stroke', r.left <= 5 ? 'var(--bad)' : 'var(--accent)'); } });
+}
+setInterval(vTick, 1000);
+document.addEventListener('click', vTouch, true); document.addEventListener('keydown', vTouch, true);
+function vSubmit() {
+  var V = S.vault; if (V.busy) return;
+  var emailEl = $('#vem'), pwEl = $('#vpw'), codeEl = $('#v2');
+  if (!V.twofa) { V.email = emailEl ? emailEl.value.trim() : V.email; V.pending = pwEl ? pwEl.value : ''; if (!V.email || !V.pending) { V.err = 'Enter your email and master password.'; redraw(); return; } LS.set('vault.email', V.email); }
+  var tf = V.twofa ? { code: (codeEl ? codeEl.value : '').replace(/\s/g, ''), provider: V.twofa.provider } : null; if (tf && !tf.code) return;
+  V.busy = true; V.err = ''; redraw();
+  window.AOSVault.login(V.email, V.pending, tf).then(function (r) { V.items = r.items; V.skipped = r.skipped; V.pending = null; V.twofa = null; V.busy = false; V.sel = null; V.lockAt = Date.now() + VLOCK_MS; redraw(); vTick(); })
+    .catch(function (e) {
+      V.busy = false;
+      if (e.code === '2fa') { var p = e.providers.filter(function (x) { return x === 0 || x === 1; })[0]; if (p === undefined) { V.err = 'This account needs a two-step method that is not supported here (security key or similar). Use the Vault web app.'; V.pending = null; } else V.twofa = { provider: p }; }
+      else { V.err = e.code === 'not_configured' ? 'Add the Vault address in Settings first.' : e.message; if (V.twofa) V.twofa = V.twofa; else V.pending = null; }
+      redraw(); var f = $('#vpw') || $('#v2'); if (f) f.focus();
+    });
+}
+
 /* ---------- palette ---------- */
 var PAL = [];
 function palItems() {
-  var l = [['Home', 'Overview', 'home', 'home'], ['Photos', 'Immich library', 'photos', 'photos'], ['Drive', 'Cloudreve files', 'cloud', 'drive'], ['Cloud Insights', 'Coolify health and deployments', 'insights', 'insights'], ['Suite', 'All apps', 'apps', 'apps'], ['Settings', 'Immich, Coolify, assistant', 'settings', 'settings']].map(function (x) { return { n: x[0], s: x[1], ic: x[2], run: function () { S.openApp = null; go(x[3]); } }; });
+  var l = [['Home', 'Overview', 'home', 'home'], ['Photos', 'Immich library', 'photos', 'photos'], ['Drive', 'Cloudreve files', 'cloud', 'drive'], ['Vault', 'Vaultwarden passwords', 'lock', 'vault'], ['Cloud Insights', 'Coolify health and deployments', 'insights', 'insights'], ['Suite', 'All apps', 'apps', 'apps'], ['Settings', 'Immich, Coolify, assistant', 'settings', 'settings']].map(function (x) { return { n: x[0], s: x[1], ic: x[2], run: function () { S.openApp = null; go(x[3]); } }; });
   (S.albums || []).forEach(function (a) { l.push({ n: a.name, s: 'Photo album', ic: 'photos', run: function () { openAlbum(a.id, a.name); } }); });
   S.apps.forEach(function (a) { if (a.hasSource) l.push({ n: a.name, s: 'replaces ' + a.alternativeTo, img: '/_icons/' + a.slug + '.png', run: function () { launch(a.slug); } }); });
   if (S.ins.data) S.ins.data.resources.forEach(function (r) { l.push({ n: r.n, s: r.t + ' · ' + r.p, ic: 'cloud', run: function () { S.rf = 'all'; S.rq = r.n; go('insights'); } }); });
@@ -429,6 +529,12 @@ document.addEventListener('click', function (ev) {
     case 'rf': S.rf = d.f; redraw(); break;
     case 'refresh': loadIns(true); break;
     case 'cat': S.appCat = d.c; redraw(); break;
+    case 'vlock': vLock(); break;
+    case 'vsel': S.vault.sel = d.id; S.vault.show = false; redraw(); vTick(); if (innerWidth < 900) { var vp = $('.dpanel'); if (vp) vp.scrollIntoView({ block: 'start' }); } break;
+    case 'vreveal': S.vault.show = !S.vault.show; redraw(); vTick(); break;
+    case 'vfold': S.vault.folder = d.f; redraw(); vTick(); break;
+    case 'vcopy': { var vi = vSel(); if (!vi) break; if (d.k === 'totp') window.AOSVault.totp(vi.totp).then(function (r) { if (r) vClip(r.code, 'Code'); }); else vClip(d.k === 'pw' ? vi.pw : vi.user, d.k === 'pw' ? 'Password' : 'Username'); break; }
+    case 'vsettings': go('settings'); break;
     case 'dgo': loadDrive(d.p); break;
     case 'dsel': S.drive.sel = d.p; redraw(); break;
     case 'dopen': if (LAUNCHES.indexOf(d.s) < 0) toast('This app has no direct file hand-off. Use its Open dialog and choose ' + d.p + '.'); launch(d.s, LAUNCHES.indexOf(d.s) < 0 ? null : d.p); break;
@@ -446,6 +552,7 @@ document.addEventListener('click', function (ev) {
 document.addEventListener('input', function (ev) {
   var t = ev.target, k = t.getAttribute && t.getAttribute('data-in'); if (!k) return;
   if (k === 'pq') runSearch(t.value);
+  else if (k === 'vq') { S.vault.q = t.value; var vl = $('#vlist'); if (vl) vl.innerHTML = vListHtml(); }
   else if (k === 'aq') { S.aq = t.value; var g = $('#appgrid'); if (g) { var dd = document.createElement('div'); dd.innerHTML = appsV(); g.innerHTML = dd.querySelector('#appgrid').innerHTML; } }
   else if (k === 'rq') { S.rq = t.value; var dd2 = document.createElement('div'); dd2.innerHTML = insightsV(); var n = dd2.querySelector('#rows'); if (n && $('#rows')) $('#rows').innerHTML = n.innerHTML; }
   else if (k === 'pal') palDraw(t.value);
@@ -462,7 +569,8 @@ document.addEventListener('keydown', function (ev) {
 });
 document.addEventListener('submit', function (ev) {
   var id = ev.target.id;
-  if (id === 'cf') { ev.preventDefault(); var i = $('#ci'), v = i.value; i.value = ''; i.style.height = 'auto'; send(v); }
+  if (id === 'vf') { ev.preventDefault(); vSubmit(); }
+  else if (id === 'cf') { ev.preventDefault(); var i = $('#ci'), v = i.value; i.value = ''; i.style.height = 'auto'; send(v); }
   else if (id === 'hf') { ev.preventDefault(); var q = $('#hq').value; $('#hq').value = ''; openChat(q.trim() ? q : undefined); }
   else if (id === 'pwf') { ev.preventDefault(); var e = $('#lerr'); e.textContent = ''; fetch('/auth/password', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-aos': '1' }, body: JSON.stringify({ password: $('#pw').value }) }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not sign in'); }); }).then(function () { boot(); }).catch(function (x) { e.textContent = x.message; }); }
 });

@@ -9,12 +9,13 @@ import { handlePhotos, status as immichStatus } from './immich.js';
 import { handleInsights, insights, clearInsightsCache } from './coolify.js';
 import { handleChat } from './chat.js';
 import { ping as davPing } from './webdav.js';
+import { handleVault, status as vaultStatus } from './vault.js';
 import { handleLocal } from './local.js';
 import { serveStatic } from './static.js';
 
 const CONNECT_EXTRA = (env.CONNECT_SRC_EXTRA || '').trim();
 const BASE_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'permissions-policy': 'camera=(self), microphone=(self), geolocation=()' };
-const UI_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+const UI_CSP = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 /* Apps can only talk to this server. puter.com is not reachable from them: nothing else is in connect-src. */
 const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
 
@@ -26,10 +27,12 @@ async function api(req, res, url) {
     const { target } = await readJson(req, 1024);
     if (target === 'immich') return json(res, 200, await immichStatus());
     if (target === 'dav') return json(res, 200, await davPing());
+    if (target === 'vault') return json(res, 200, await vaultStatus());
     if (target === 'coolify') { try { const d = await insights(true); return json(res, 200, { configured: true, connected: true, resources: d.resources.length }); } catch (e) { return json(res, 200, { configured: e.code !== 'not_configured', connected: false, reason: e.message }); } }
     throw httpError(400, 'Unknown target');
   }
   if (p === '/api/drive/status') return json(res, 200, await davPing());
+  if (p.startsWith('/api/vault/')) return handleVault(req, res, url);
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
   if (p === '/api/insights') return handleInsights(req, res, url);
   if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url);
