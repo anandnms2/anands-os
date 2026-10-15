@@ -49,11 +49,12 @@ export const csState = { logins: 0, cards: [], groups: [{ id: '11111111-1111-111
 const cid = (n) => '00000000-0000-0000-0000-' + String(n).padStart(12, '0');
 export function resetCards() { csState.cards = [
   { id: cid(1), name: 'Amina Wanjiru', designation: 'Fleet Manager', company: 'Kilimo Logistics', phone: '+254700111222', email: 'amina@kilimo.co.ke', website: 'kilimo.co.ke', address: 'Nairobi', notes: 'Met at expo', tags: ['fleet'], group_id: csState.groups[0].id, group_name: 'Fleet', image: 'data:image/png;base64,AAAA', image_thumb: 'data:image/png;base64,AAAA', has_back: false, created_at: '2026-10-01T10:00:00Z', last_contacted_at: null },
-  { id: cid(2), name: 'Brian Otieno', designation: 'Sales', company: 'Tyre Hub', phone: '+254700333444', email: 'b@tyrehub.co.ke', tags: [], group_id: csState.groups[1].id, group_name: 'Suppliers', image_thumb: 'data:image/png;base64,AAAA', has_back: false, created_at: '2026-10-02T10:00:00Z', last_contacted_at: null }]; }
+  { id: cid(2), name: 'Brian Otieno', designation: 'Sales', company: 'Tyre Hub', phone: '+254700333444', email: 'b@tyrehub.co.ke', tags: [], group_id: csState.groups[1].id, group_name: 'Suppliers', image_thumb: '/img/t.png', has_back: false, created_at: '2026-10-02T10:00:00Z', last_contacted_at: null }]; }
 resetCards();
 export async function startCards() {
   return listen(http.createServer(async (req, res) => {
     const u = new URL(req.url, 'http://x'), p = u.pathname;
+    if (p === '/img/t.png') { res.writeHead(200, { 'content-type': 'image/png' }); return res.end(Buffer.from('iVBORw0KGgo=', 'base64')); }
     if (p === '/api/auth/login') { const b = await body(req); if (b.email === 'anand@x.io' && b.password === 'cspw') { csState.logins++; return send(res, 200, { user: { id: 1 } }, { 'set-cookie': 'cs_session=S' + csState.logins + '; Path=/; HttpOnly' }); } return send(res, 401, { error: 'Incorrect email or password.' }); }
     if (!(req.headers.cookie || '').includes('cs_session=S' + csState.logins)) return send(res, 401, { error: 'Not authenticated.' });
     if (p === '/api/groups') return send(res, 200, { groups: csState.groups, role: 'admin' });

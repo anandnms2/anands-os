@@ -42,6 +42,7 @@ try {
     r = await api('GET', '/api/cards?q=tyre'); assert.equal(r.data.cards.length, 1); assert.equal(r.data.cards[0].company, 'Tyre Hub');
     r = await api('GET', '/api/cards?group=' + csState.groups[0].id); assert.equal(r.data.cards.length, 1);
   });
+  await t('cards inline linked photos so the OS can show them', async () => { const r = await api('GET', '/api/cards?q=tyre'); assert.match(r.data.cards[0].image_thumb, /^data:image\/png;base64,/); });
   await t('cards re-login after session loss', async () => { csState.logins += 3; const r = await api('GET', '/api/cards'); assert.equal(r.status, 200); });
   await t('cards open, edit, mark contacted, delete', async () => {
     const id = '00000000-0000-0000-0000-000000000001';

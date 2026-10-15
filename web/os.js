@@ -8,6 +8,7 @@ var LS = { get: function (k, d) { try { var v = localStorage.getItem('aos.' + k)
 var P = {
   doc: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z M14 3v6h6 M8 13h8 M8 17h5',
   home: 'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z', photos: 'M3 3h18v18H3z M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z M21 15l-5-5L5 21',
+  vpn: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z M9 12l2 2 4-4', cards: 'M3 6h18v12H3z M7 10h6 M7 14h4 M16 10h2v4h-2z',
   insights: 'M3 3v18h18 M7 15l4-5 3 3 5-7', apps: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7H3z'.replace('H3z', 'h-7z'), settings: 'M4 6h10 M18 6h2 M4 12h4 M12 12h8 M4 18h12 M20 18h0 M14 4v4 M8 10v4 M16 16v4',
   chat: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z', heart: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z',
   x: 'M18 6L6 18M6 6l12 12', send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z', upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12',
@@ -68,7 +69,7 @@ function boot() {
 }
 
 /* ---------- shell ---------- */
-var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['apps', 'Suite', 'apps']];
+var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['vpn', 'VPN', 'vpn'], ['cards', 'Cards', 'cards'], ['apps', 'Suite', 'apps']];
 function cur(v) { if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; return S.view === v || (v === 'apps' && S.view === 'app'); }
 function buildNav() {
   var h = '<button class="logo" data-act="nav" data-v="home" aria-label="Home"><img src="/logo-white.png" alt=""></button><div class="rsep"></div>';
@@ -79,7 +80,7 @@ function buildNav() {
   var t = ''; NAV.concat([['pal', 'Search', 'search']]).forEach(function (n) { t += '<button ' + (n[0] === 'pal' ? 'data-act="pal"' : 'data-act="nav" data-v="' + n[0] + '"') + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
   $('#tabs').innerHTML = t;
 }
-function go(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); }
+function go(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); }
 function redraw() { var y = $('#view').scrollTop; render(); $('#view').scrollTop = y; }
 function render() {
   var app = $('#app'), tabs = $('#tabs'), fab = $('#fab');
@@ -93,6 +94,8 @@ function render() {
   else if (S.view === 'vault') v.innerHTML = vaultV();
   else if (S.view === 'dedit') v.innerHTML = dedV();
   else if (S.view === 'insights') v.innerHTML = insightsV();
+  else if (S.view === 'vpn') v.innerHTML = window.AOSInt ? window.AOSInt.vpnView() : '';
+  else if (S.view === 'cards') v.innerHTML = window.AOSInt ? window.AOSInt.cardsView() : '';
   else if (S.view === 'apps') v.innerHTML = appsV();
   else if (S.view === 'app') v.innerHTML = appWinV();
   else if (S.view === 'settings') v.innerHTML = settingsV();
@@ -214,6 +217,12 @@ function runSearch(q) {
 function mmss(s) { return s == null ? 'n/a' : Math.floor(s / 60) + 'm ' + ('0' + (s % 60)).slice(-2) + 's'; }
 function pill(s) { return s === 'ok' ? '<span class="pill ok"><i class="dot"></i>Healthy</span>' : s === 'nohc' ? '<span class="pill warn"><i class="dot warn"></i>No health check</span>' : '<span class="pill bad"><i class="dot bad"></i>Not healthy</span>'; }
 function insightsV() {
+  var h = insightsV0(), sv = window.AOSInt ? window.AOSInt.servers() : '';
+  if (!sv) return h;
+  var i = h.indexOf('<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px');
+  return i > 0 ? h.slice(0, i) + sv + h.slice(i) : h.replace(/<\/div>$/, sv + '</div>');
+}
+function insightsV0() {
   var head = '<div class="wrap"><div class="pagehead"><div><h1>Anand Cloud Insights</h1><p>What is running on your Coolify server, what is healthy, and what changed lately.</p></div><div style="display:flex;gap:10px"><button class="btn" data-act="coolify">Coolify settings</button><button class="btn" data-act="refresh">' + (S.ins.loading ? 'Refreshing...' : 'Refresh') + '</button></div></div>';
   var d = S.ins.data;
   if (!d) {
@@ -273,6 +282,7 @@ function settingsV() {
     '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Drive (Cloudreve, WebDAV)</h2><p class="note" style="margin:0 0 14px">In Cloudreve: Settings, WebDAV, create an account. Use its address (for example https://drive.anands.xyz/dav), name and password.</p>' + field('s_du', 'WebDAV address', c.dav.url, 'https://drive.anands.xyz/dav') + field('s_dn', 'Account name', c.dav.user, 'you@example.com') + field('s_dp', 'Password' + (c.dav.passSet ? ' (saved, leave blank to keep)' : ''), '', c.dav.passSet ? '••••••••' : 'WebDAV account password', 'password') + '<div id="r_dav" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="dav">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Email (SMTP)</h2><p class="note" style="margin:0 0 14px">Used by Calendar for invitations, RSVP replies and booking confirmations. Use your provider\'s SMTP details (for Gmail, an app password).</p>' + field('s_mh', 'SMTP server', c.mail.host, 'smtp.gmail.com') + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' + field('s_mp', 'Port', c.mail.port || '', '587') + '<div class="field"><label for="s_ms">Security</label><select class="input" id="s_ms">' + [['starttls', 'STARTTLS (587)'], ['ssl', 'SSL/TLS (465)'], ['none', 'None (not recommended)']].map(function (o) { return '<option value="' + o[0] + '"' + (c.mail.security === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div></div>' + field('s_mu', 'Username', c.mail.user, 'you@example.com') + field('s_mw', 'Password' + (c.mail.passSet ? ' (saved, leave blank to keep)' : ''), '', c.mail.passSet ? '••••••••' : 'SMTP password or app password', 'password') + field('s_mf', 'From address', c.mail.from, 'you@example.com') + field('s_mn', 'From name', c.mail.fromName, 'Anand') + field('s_mc', 'Daily email limit', c.mail.dailyCap, '200') + field('s_pu', 'Public address of this site (links in emails)', (c.public || {}).url, 'https://os.anands.xyz') + '<div id="r_mail" class="note" role="status"></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn primary" data-act="save" data-k="mail">Save and test</button><button class="btn" data-act="mtest">Send a test email</button></div></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Anands Meeting relay (optional)</h2><p class="note" style="margin:0 0 14px">Meetings connect browsers directly. Guests behind strict firewalls need a TURN relay such as coturn (set <code>use-auth-secret</code> and <code>static-auth-secret</code> in its config). Leave empty to use direct connections only.</p>' + field('s_tu', 'TURN address(es), comma separated', c.turn && c.turn.urls, 'turn:turn.anands.xyz:3478,turns:turn.anands.xyz:5349') + field('s_tw', 'TURN shared secret' + (c.turn && c.turn.secretSet ? ' (saved, leave blank to keep)' : ''), '', c.turn && c.turn.secretSet ? '••••••••' : 'static-auth-secret', 'password') + field('s_ts', 'STUN address(es) (optional)', c.turn && c.turn.stun, 'stun:stun.l.google.com:19302') + '<div id="r_turn" class="note" role="status"></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn primary" data-act="save" data-k="turn">Save</button></div></div>' +
+    (window.AOSInt ? window.AOSInt.settingsCards(field) : '') +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Assistant (FreeLLMAPI)</h2>' + field('s_lb', 'API address (OpenAI compatible)', c.llm.base, 'https://llm.anands.xyz/v1') + field('s_lk', 'API key' + (c.llm.keySet ? ' (saved, leave blank to keep)' : ''), '', c.llm.keySet ? '••••••••' : 'sk-...', 'password') + field('s_lm', 'Model', c.llm.model, 'gpt-4o-mini') + '<div id="r_llm" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="llm">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Local mode (no Puter cloud)</h2><dl class="dl"><dt>Sign-in</dt><dd>' + (S.login.method === 'oidc' ? 'Your SSO' : 'Password') + ', handled by this server</dd><dt>puter.kv</dt><dd>Database in your data volume</dd><dt>puter.fs</dt><dd>Folder in your data volume</dd><dt>puter.ai</dt><dd>Your FreeLLMAPI</dd><dt>puter.com</dt><dd>Apps cannot connect (CSP)</dd></dl></div></div></div>';
 }
@@ -306,6 +316,7 @@ function saveGroup(k, after) {
   if (k === 'immich') body.immich = { url: v('s_iu'), key: v('s_ik') };
   if (k === 'coolify') body.coolify = { url: v('s_cu'), token: v('s_ct') };
   if (k === 'vault') body.vault = { url: v('s_vu') };
+  if (k === 'status' || k === 'vpn' || k === 'cards') body[k] = { url: v('s_' + k + 'u'), user: v('s_' + k + 'n'), pass: v('s_' + k + 'p') };
   if (k === 'dav') body.dav = { url: v('s_du'), user: v('s_dn'), pass: v('s_dp') };
   if (k === 'llm') body.llm = { base: v('s_lb'), key: v('s_lk'), model: v('s_lm') };
   if (k === 'mail') { body.mail = { host: v('s_mh'), port: v('s_mp'), security: v('s_ms'), user: v('s_mu'), pass: v('s_mw'), from: v('s_mf'), fromName: v('s_mn'), dailyCap: v('s_mc') }; body.public = { url: v('s_pu') }; }
@@ -317,8 +328,9 @@ function saveGroup(k, after) {
       if (k === 'immich') { S.imm = r; S.tl = { items: [], next: 1, loading: false, error: null, loaded: false }; S.albums = null; if (r.connected) loadPage(S.tl, '/api/photos/timeline'); }
       if (k === 'dav') { S.drive.status = r; S.drive.items = []; }
       if (k === 'vault') { S.vault.status = r; }
+      if (window.AOSInt && (k === 'status' || k === 'vpn' || k === 'cards')) window.AOSInt.after(k, r);
       if (k === 'coolify') { S.ins = { data: null, error: null, code: null, loading: false }; if (r.connected) loadIns(true); }
-      note('r_' + k, r.connected ? (k === 'mail' ? 'Connected and signed in to your mail server. Send a test email to be sure.' : 'Connected') + (r.version ? ' (Immich ' + r.version + ')' : r.resources ? ' (' + r.resources + ' resources)' : '') + '.' : 'Saved, but not reachable: ' + (r.reason || 'no answer') + '.', r.connected ? 'ok' : 'bad'); if (after) after(r); });
+      note('r_' + k, r.connected ? (k === 'mail' ? 'Connected and signed in to your mail server. Send a test email to be sure.' : 'Connected') + (r.version ? ' (Immich ' + r.version + ')' : r.resources != null ? ' (' + r.resources + ' ' + (r.unit || 'resources') + ')' : '') + '.' : 'Saved, but not reachable: ' + (r.reason || 'no answer') + '.', r.connected ? 'ok' : 'bad'); if (after) after(r); });
   }).catch(function (e) { note('r_' + k, e.message, 'bad'); });
 }
 function modal(html) { var m = $('#modal'); if (!html) { m.hidden = true; m.innerHTML = ''; return; } m.hidden = false; m.innerHTML = '<div class="modal" data-act="mx"><div class="card" role="dialog" aria-modal="true">' + html + '</div></div>'; }

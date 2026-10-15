@@ -513,3 +513,34 @@ tr:last-child td{border-bottom:0}
   .gd-grid,.gd-grid-f{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
   .gd-pvb{padding:0 8px 16px}
 }
+
+/* Status, VPN and Cards (integrations.js) */
+.isrv{text-align:left;display:flex;flex-direction:column;gap:2px;cursor:pointer;color:inherit;font:inherit;transition:border-color .15s}
+.isrv:hover{border-color:var(--accent-line)}
+.isrv-h{display:flex;align-items:center;gap:9px;margin-bottom:8px;font-size:16px}
+.isrv-f{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ibar{display:grid;grid-template-columns:62px 1fr 42px;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin:5px 0}
+.ibar b{text-align:right;color:var(--fg);font-weight:600}
+.ibar .track{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.ibar .fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+.ibar .fill.warn{background:var(--warn)} .ibar .fill.bad{background:var(--bad)}
+.ispark{width:100%;height:64px;display:block;margin:2px 0 8px}
+.ih{font-size:14px;font-weight:600;margin:16px 0 6px;color:var(--muted);letter-spacing:.02em}
+.ikv{display:grid;grid-template-columns:max-content 1fr;gap:8px 18px;font-size:14.5px;margin-bottom:4px}
+.ikv span{color:var(--muted)} .ikv b{font-weight:500;overflow-wrap:anywhere}
+.iacts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.iqr{background:#fff;border-radius:14px;padding:14px;width:min(300px,100%);margin:0 auto}
+.iqr img{display:block;width:100%;height:auto}
+.icards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.icard{display:flex;gap:14px;text-align:left;padding:12px;cursor:pointer;color:inherit;font:inherit;align-items:flex-start;transition:border-color .15s}
+.icard:hover{border-color:var(--accent-line)}
+.icard-img{width:104px;height:68px;flex:none;border-radius:8px;overflow:hidden;background:var(--accent-soft);color:var(--accent-text);display:grid;place-items:center;font-size:26px;font-family:var(--display)}
+.icard-img img{width:100%;height:100%;object-fit:cover;display:block}
+.icard-t{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:14px}
+.icard-t b{font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icard-t span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icard-big{position:relative;margin-bottom:14px;border-radius:12px;overflow:hidden;background:var(--bg);border:1px solid var(--line);text-align:center}
+.icard-big img{max-width:100%;max-height:260px;display:block;margin:0 auto}
+.icard-big .btn{position:absolute;right:8px;bottom:8px}
+.icform{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media (max-width:640px){.icform{grid-template-columns:1fr}.ibar{grid-template-columns:56px 1fr 40px}#tabs{overflow-x:auto;justify-content:flex-start}#tabs button{flex:0 0 auto;min-width:64px}}
