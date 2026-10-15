@@ -20,8 +20,10 @@ export function mapAsset(a) {
     camera: [e.make, e.model].filter(Boolean).join(' ') || null, bytes: e.fileSizeInByte || null
   };
 }
-const SEARCH = { size: 60, order: 'desc', withExif: true };
-async function page(extra, n) { const r = await post('/search/metadata', { ...SEARCH, ...extra, page: n }); return { items: (r.assets?.items || []).map(mapAsset), next: r.assets?.nextPage ? Number(r.assets.nextPage) : null }; }
+const SEARCH = { size: 60, order: 'desc', withExif: true, withDeleted: false, isOffline: false };
+/* Deleted (trashed) and offline (file gone from an external library) assets must not show here. */
+const live = (a) => !a.isTrashed && !a.isOffline && !a.deletedAt;
+async function page(extra, n) { const r = await post('/search/metadata', { ...SEARCH, ...extra, page: n }); return { items: (r.assets?.items || []).filter(live).map(mapAsset), next: r.assets?.nextPage ? Number(r.assets.nextPage) : null }; }
 
 export async function status() {
   const { url, key } = effective().immich;
@@ -47,13 +49,13 @@ export async function handlePhotos(req, res, url) {
   if ((m = p.match(/^\/albums\/([^/]+)$/))) {
     if (!UUID.test(m[1])) throw httpError(400, 'Bad album id');
     const a = await api('/albums/' + m[1]);
-    const items = (a.assets || []).map(mapAsset).sort((x, y) => String(y.takenAt).localeCompare(String(x.takenAt)));
+    const items = (a.assets || []).filter(live).map(mapAsset).sort((x, y) => String(y.takenAt).localeCompare(String(x.takenAt)));
     return json(res, 200, { id: a.id, name: a.albumName, items, next: null });
   }
   if (p === '/search') {
     const text = (q.get('q') || '').trim().slice(0, 200);
     if (!text) return json(res, 200, { items: [], next: null });
-    try { const r = await post('/search/smart', { query: text, page: 1, size: 100, withExif: true }); return json(res, 200, { items: (r.assets?.items || []).map(mapAsset), next: null, mode: 'smart' }); }
+    try { const r = await post('/search/smart', { query: text, page: 1, size: 100, withExif: true }); return json(res, 200, { items: (r.assets?.items || []).filter(live).map(mapAsset), next: null, mode: 'smart' }); }
     catch { const r = await page({ originalFileName: text }, 1); return json(res, 200, { ...r, next: null, mode: 'filename' }); }
   }
   if ((m = p.match(/^\/asset\/([^/]+)\/(thumb|preview|original)$/))) {

@@ -78,6 +78,7 @@ export async function startCards() {
 }
 
 /* ---- Card Scan extras ---- */
+csState.mine = [{ id: '88888888-8888-8888-8888-888888888880', name: 'Anand Shah', title: 'Director', company: 'Anands', phone: '+255700000000', whatsapp: '+255700000000', email: 'anand@anands.xyz', theme: 'forest', active: true, view_count: 4, share_token: 'anand', social_links: [], showcase_items: [], custom_fields: [] }];
 csState.notes = []; csState.reminders = []; csState.notifications = [{ id: 'n1', type: 'x', message: 'Reminder due', read: false, created_at: '2026-10-15T00:00:00Z' }]; csState.calls = [];
 export function extendCards(srv) {
   const orig = srv.listeners('request')[0]; srv.removeAllListeners('request');
@@ -101,6 +102,16 @@ export function extendCards(srv) {
     if ((m = p.match(/^\/api\/reminders\/([0-9a-f-]{36})$/)) && req.method === 'PATCH') { const b = await body(req); csState.lastRem = b; csState.reminders = csState.reminders.filter((r) => r.id !== m[1] || !b.done); return send(res, 200, { ok: true }); }
     if (p === '/api/notifications') return send(res, 200, { notifications: csState.notifications, unreadCount: csState.notifications.filter((n) => !n.read).length });
     if (p === '/api/notifications/mark-read') { csState.notifications.forEach((n) => (n.read = true)); return send(res, 200, { ok: true }); }
+    /* My Cards */
+    if (p === '/api/my-cards' && req.method === 'GET') return send(res, 200, { cards: csState.mine });
+    if (p === '/api/my-cards' && req.method === 'POST') { const b = await body(req); csState.lastMineCreate = b; const c = { id: '88888888-8888-8888-8888-88888888888' + csState.mine.length, active: true, view_count: 0, share_token: null, theme: 'classic', ...b }; csState.mine.push(c); return send(res, 201, { card: c }); }
+    let mc; if ((mc = p.match(/^\/api\/my-cards\/([0-9a-f-]{36})(?:\/(share))?$/i))) {
+      const c = csState.mine.find((x) => x.id === mc[1]); if (!c) return send(res, 404, { error: 'Not found.' });
+      if (mc[2]) { if (req.method === 'POST') { c.share_token = 'mtok' + csState.mine.indexOf(c); c.active = true; return send(res, 200, { shareToken: c.share_token, url: '/m/' + c.share_token }); } const b = await body(req); c.share_token = b.customSlug; return send(res, 200, { shareToken: c.share_token }); }
+      if (req.method === 'GET') return send(res, 200, { card: c });
+      if (req.method === 'PATCH') { const b = await body(req); Object.assign(c, b); csState.lastMinePatch = b; return send(res, 200, { card: c }); }
+      if (req.method === 'DELETE') { csState.mine = csState.mine.filter((x) => x !== c); return send(res, 200, { ok: true }); }
+    }
     if (p === '/api/ai/status') return send(res, 200, { configured: true });
     if (p === '/api/ai/extract-card') { const b = await body(req); csState.lastExtract = b; return send(res, 200, { fields: { name: 'Zed Test', company: 'ZedCo', phone: '+255700000001', email: 'zed@zedco.com' }, model: 'm' }); }
     return orig(req, res);
@@ -127,5 +138,33 @@ export async function startPulse() {
     if (p === '/api/v1/health') return send(res, 200, { ok: true, problems: [] });
     if (p === '/api/v1/me') return send(res, 200, { name: 'Anand', read_only: true });
     send(res, 404, { error: 'Unknown endpoint' });
+  }));
+}
+
+/* ---- Pulse session API ---- */
+export const psState = { logins: 0, calls: [], mode: 'personal', tasks: [{ id: 't1', title: 'Approve fuel advance', status: 'open', key: 'today', due: 'Today', dom: 'work', pri: 'high' }], read: [] };
+export async function startPulseSession() {
+  const items = () => [
+    { id: 'e12', ch: 'EO', from: 'Kilimo Logistics', subj: 'Invoice 5521 overdue', snip: 'Please settle', text: 'Please settle', ts: '2026-10-15 08:10', read: psState.read.includes('e12'), cls: 'urgent', reply: true, att: [{ name: 'inv.pdf' }] },
+    { id: 'w34', ch: 'WA', g: 'g7', from: 'Joseph', sum: 'Truck stuck at border', snip: 'Truck stuck at border', text: 'Truck stuck at border', ts: '2026-10-15 07:50', read: false, cls: 'normal', chat: true, stats: { unread: 3, urgent: 1 } }];
+  return listen(http.createServer(async (req, res) => {
+    const u = new URL(req.url, 'http://x'), p = u.pathname; psState.calls.push(req.method + ' ' + p);
+    if (p === '/api/auth/login') { const b = await body(req); if (b.email === 'anand@pulse.io' && b.password === 'pupw') { psState.logins++; return send(res, 200, { ok: true }, { 'set-cookie': 'am_session=P' + psState.logins + '; Path=/; HttpOnly' }); } return send(res, 401, { error: 'Wrong email or password.' }); }
+    if (!(req.headers.cookie || '').includes('am_session=P' + psState.logins) || !psState.logins) return send(res, 401, { error: 'Not signed in.' });
+    if (p === '/api/p/bootstrap') return send(res, 200, { now: { today: '2026-10-15', monday: '2026-10-12', tz: 'Africa/Dar_es_Salaam' }, items: items(), itemsMore: false, tasks: psState.tasks, events: [{ id: 'ev1', d: '2026-10-15', s: 14, e: 15, title: 'Fleet review', loc: 'Office' }], notes: [], groups: [{ id: 'g7', name: 'Ops line', ch: 'WA', last: '07:50', today: 5 }], sources: [], sched: [], sent: [], links: [], waits: 1, waitsList: [{ id: 'q1', title: 'POD for T482', who: 'Clearing desk', overdue: true }], health: { ok: true }, settings: { mode: psState.mode, names: { EO: 'Office mail', EP: 'Personal mail', WA: 'WhatsApp' } } });
+    if (p === '/api/p/groups/g7/messages') return send(res, 200, { digest: null, group: { id: 'g7', name: 'Ops line', ch: 'WA' }, earlier: false, messages: [{ id: 'm1', at: '2026-10-15', ts: '2026-10-15 07:40', from: 'Joseph', mine: false, text: 'Truck stuck at border', read: false }, { id: 'm2', at: '2026-10-15', ts: '2026-10-15 07:45', from: 'Me', mine: true, text: 'On it', read: true }] });
+    let m;
+    if ((m = p.match(/^\/api\/p\/items\/(e12|w34)$/)) && req.method === 'GET') return send(res, 200, { ...items().find((i) => i.id === m[1]), text: 'Hello, invoice is overdue.', sum: 'Invoice chase', files: [{ idx: 0, name: 'inv.pdf', size: 2048 }], html: true });
+    if ((m = p.match(/^\/api\/p\/items\/(e12|w34)\/read$/))) { psState.read.push(m[1]); return send(res, 200, { ok: true }); }
+    if ((m = p.match(/^\/api\/p\/items\/(e12|w34)\/handled$/))) return send(res, 200, { ok: true });
+    if (p === '/api/p/tasks' && req.method === 'POST') { const b = await body(req); psState.lastTask = b; psState.tasks.push({ id: 't' + (psState.tasks.length + 1), title: b.title, status: 'open', key: 'today', due: 'Today', dom: 'work' }); return send(res, 200, { ok: true }); }
+    if ((m = p.match(/^\/api\/p\/tasks\/(t\d+)$/))) { const b = await body(req); const t = psState.tasks.find((x) => x.id === m[1]); if (req.method === 'PATCH' && t) { Object.assign(t, b); psState.lastTaskPatch = b; } if (req.method === 'DELETE') psState.tasks = psState.tasks.filter((x) => x !== t); return send(res, 200, { ok: true }); }
+    if (p === '/api/p/settings' && req.method === 'PUT') { const b = await body(req); psState.mode = b.mode; return send(res, 200, { ok: true, mode: b.mode }); }
+    if (p === '/api/p/waits') return send(res, 200, { waits: [] });
+    if (p === '/api/p/lists') return send(res, 200, { lists: [] });
+    if (p === '/api/p/entities') return send(res, 200, { entities: [] });
+    if (p === '/api/p/health') return send(res, 200, { ok: true });
+    if (p.startsWith('/api/emails/') && p.endsWith('/html')) { res.writeHead(200, { 'content-type': 'text/html' }); return res.end('<p>Mail body</p>'); }
+    send(res, 404, { error: 'Unknown' });
   }));
 }

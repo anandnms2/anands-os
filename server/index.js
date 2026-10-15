@@ -61,7 +61,7 @@ async function api(req, res, url) {
   if (p === '/api/pulse' || p.startsWith('/api/pulse/')) return handlePulse(req, res, url);
   if (p === '/api/status' || p.startsWith('/api/status/')) return handleStatus(req, res, url);
   if (p === '/api/vpn' || p.startsWith('/api/vpn/')) return handleVpn(req, res, url);
-  if (p === '/api/cards' || p.startsWith('/api/cards/') || p.startsWith('/api/cs/')) return handleCards(req, res, url);
+  if (p === '/api/cards' || p === '/api/my-cards' || p.startsWith('/api/my-cards/') || p.startsWith('/api/cards/') || p.startsWith('/api/cs/')) return handleCards(req, res, url);
   if (p === '/api/insights') return handleInsights(req, res, url);
   if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url);
   throw httpError(404, 'Unknown API route');

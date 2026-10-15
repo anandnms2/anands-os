@@ -64,6 +64,35 @@ export async function handleCards(req, res, url) {
     if (m === 'POST' && r === '/ai/extract-card') { const b = await readJson(req, 12 * 1024 * 1024); return json(res, 200, await cs('/api/ai/extract-card', { method: 'POST', body: JSON.stringify(PICK(b, ['front', 'back'])) })); }
     throw httpError(404, 'Unknown cards route');
   }
+  /* ---- My Cards (the user's own digital business cards) ---- */
+  if (p === '/api/my-cards' || p.startsWith('/api/my-cards/')) {
+    const MY_KEYS = ['name', 'title', 'company', 'tagline', 'phone', 'phone2', 'email', 'email2', 'whatsapp', 'whatsapp2', 'website', 'address', 'theme', 'style', 'fontStyle', 'shapeStyle', 'iconStyle', 'customAccent', 'customBg', 'customSurface'];
+    const MY_IMG = ['photo', 'logo_dark', 'logo_light'];
+    const clean = (b) => {
+      const o = {}; for (const k of MY_KEYS) if (k in b) o[k] = b[k] == null ? '' : String(b[k]).slice(0, 2000);
+      for (const k of ['photo', 'logoDark', 'logoLight']) if (k in b) o[k] = typeof b[k] === 'string' && b[k].startsWith('data:image/') ? b[k] : null;
+      if (Array.isArray(b.socialLinks)) o.socialLinks = b.socialLinks.slice(0, 20).map((x) => ({ type: String(x.type || 'other').slice(0, 20), url: String(x.url || '').slice(0, 500) }));
+      if (Array.isArray(b.showcaseItems)) o.showcaseItems = b.showcaseItems.slice(0, 30).map((x) => ({ ...x, title: String(x.title || '').slice(0, 200), url: String(x.url || '').slice(0, 500) }));
+      if (Array.isArray(b.customFields)) o.customFields = b.customFields.slice(0, 30).map((x) => ({ label: String(x.label || '').slice(0, 100), value: String(x.value || '').slice(0, 500) }));
+      if (Array.isArray(b.fieldOrder)) o.fieldOrder = b.fieldOrder.map(String).slice(0, 10);
+      if (typeof b.active === 'boolean') o.active = b.active;
+      return o;
+    };
+    if (p === '/api/my-cards' && m === 'GET') { const d = await cs('/api/my-cards'); await Promise.all((d.cards || []).map((c) => inlineCard(c, base(), MY_IMG))); return json(res, 200, d); }
+    if (p === '/api/my-cards' && m === 'POST') { const b = await readJson(req, 8 * 1024 * 1024); const d = await cs('/api/my-cards', { method: 'POST', body: JSON.stringify(clean(b)) }); if (d.card) await inlineCard(d.card, base(), MY_IMG); return json(res, 201, d); }
+    const my = p.match(/^\/api\/my-cards\/([0-9a-f-]{36})(?:\/(share))?$/i);
+    if (!my) throw httpError(404, 'Unknown cards route');
+    const mid = uid(my[1]);
+    if (my[2] === 'share') {
+      if (m === 'POST') return json(res, 200, await cs(`/api/my-cards/${mid}/share`, { method: 'POST', body: '{}' }));
+      if (m === 'PATCH') { const b = await readJson(req, 4096); return json(res, 200, await cs(`/api/my-cards/${mid}/share`, { method: 'PATCH', body: JSON.stringify({ customSlug: String(b.customSlug || '') }) })); }
+      throw httpError(405, 'Method not allowed');
+    }
+    if (m === 'GET') { const d = await cs('/api/my-cards/' + mid); await inlineCard(d.card, base(), MY_IMG); return json(res, 200, d); }
+    if (m === 'PATCH') { const b = await readJson(req, 8 * 1024 * 1024); const d = await cs('/api/my-cards/' + mid, { method: 'PATCH', body: JSON.stringify(clean(b)) }); if (d.card) await inlineCard(d.card, base(), MY_IMG); return json(res, 200, d); }
+    if (m === 'DELETE') { await cs('/api/my-cards/' + mid, { method: 'DELETE' }); return json(res, 200, { ok: true }); }
+    throw httpError(405, 'Method not allowed');
+  }
   /* ---- cards ---- */
   if (p === '/api/cards' && m === 'GET') {
     const q = new URLSearchParams(); for (const k of ['q', 'group', 'tag', 'limit', 'offset']) { const v = url.searchParams.get(k); if (v) q.set(k, v); }

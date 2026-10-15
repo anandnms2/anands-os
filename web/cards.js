@@ -26,7 +26,7 @@
   }
   function tabs() {
     var unread = T.notes ? T.notes.unreadCount : 0, rc = T.rem ? (T.rem.reminders || []).length : 0;
-    return '<div class="toolbar"><div class="seg" role="tablist">' + [['cards', 'Cards'], ['reminders', 'Reminders' + (rc ? ' (' + rc + ')' : '')], ['alerts', 'Alerts' + (unread ? ' (' + unread + ')' : '')]].map(function (t) { return '<button data-ca="tab" data-t="' + t[0] + '" aria-pressed="' + (T.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>';
+    return '<div class="toolbar"><div class="seg" role="tablist">' + [['cards', 'Cards'], ['mine', 'My cards'], ['reminders', 'Reminders' + (rc ? ' (' + rc + ')' : '')], ['alerts', 'Alerts' + (unread ? ' (' + unread + ')' : '')]].map(function (t) { return '<button data-ca="tab" data-t="' + t[0] + '" aria-pressed="' + (T.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>';
   }
   function bulkBar() {
     var ids = selIds(); if (!C.selecting) return '';
@@ -34,6 +34,7 @@
       '<button class="btn sm" data-ca="bmove"' + (ids.length ? '' : ' disabled') + '>Move to group</button><button class="btn sm" data-ca="bmerge"' + (ids.length === 2 ? '' : ' disabled title="Pick exactly two cards"') + '>Merge two</button><button class="btn sm" data-ca="bexport"' + (ids.length ? '' : ' disabled') + '>Export</button><button class="btn sm danger" data-ca="bdel"' + (ids.length ? '' : ' disabled') + '>Delete</button></div>';
   }
   function tabView() {
+    if (T.tab === 'mine') return window.AOSMine ? window.AOSMine.view() : '';
     if (T.tab === 'reminders') {
       if (T.remErr) return '<div class="banner"><i class="dot bad"></i><span>' + esc(T.remErr) + '</span></div>'; if (!T.rem) return '<p class="note">Loading reminders...</p>';
       var l = T.rem.reminders || []; if (!l.length) return '<div class="empty"><h2>No open reminders</h2><p>Open a card and choose Remind me to follow up.</p></div>';
@@ -137,8 +138,9 @@
   /* ---------- events ---------- */
   document.addEventListener('click', function (ev) {
     var el = ev.target.closest && ev.target.closest('[data-ca]'); if (!el) return; var a = el.getAttribute('data-ca'), id = el.getAttribute('data-id');
-    if (a === 'tab') { T.tab = el.getAttribute('data-t'); A.redraw(); if (T.tab === 'reminders') loadRem(); if (T.tab === 'alerts') loadNotes(); return; }
+    if (a === 'tab') { T.tab = el.getAttribute('data-t'); A.redraw(); if (T.tab === 'reminders') loadRem(); if (T.tab === 'alerts') loadNotes(); if (T.tab === 'mine' && window.AOSMine) window.AOSMine.onGo(); return; }
     if (a === 'new') return void newCard();
+    if (a === 'cshare') { var cc = C.open && C.open.card; return void (cc && window.AOSMine && window.AOSMine.contactShare(cc)); }
     if (a === 'export') return void (location.href = '/api/cards/export' + (C.group ? '?groupId=' + encodeURIComponent(C.group) : ''));
     if (a === 'bexport') return void (location.href = '/api/cards/export?ids=' + encodeURIComponent(selIds().join(',')));
     if (a === 'selmode') { C.selecting = !C.selecting; if (!C.selecting) C.sel = {}; return void A.redraw(); }
@@ -168,6 +170,6 @@
     if (t.id === 'mg_p' && MG) { MG.primary = t.value; MG.pick = {}; drawMerge(); }
     if (t.getAttribute && t.getAttribute('data-ca') === 'selone') { C.sel[t.getAttribute('data-id')] = t.checked; A.redraw(); }
   });
-  function onGo(v) { if (v !== 'cards') return; if (T.tab === 'reminders') loadRem(); if (T.tab === 'alerts' || !T.notes) loadNotes(); }
+  function onGo(v) { if (v !== 'cards') return; if (T.tab === 'mine' && window.AOSMine) window.AOSMine.onGo(); if (T.tab === 'reminders') loadRem(); if (T.tab === 'alerts' || !T.notes) loadNotes(); }
   window.AOSCards = { head: head, tabs: tabs, bulkBar: bulkBar, tab: function () { return T.tab; }, tabView: tabView, onGo: onGo, state: T };
 })();

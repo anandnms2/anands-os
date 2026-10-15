@@ -50,7 +50,7 @@
     if (tab === 'lists') return get('lists', '/lists', function (d) { I.d.lists = d; });
     if (tab === 'health') return get('health', '/health', function (d) { I.d.health = d; });
   }
-  function onGo(v) { if (v !== 'pulse') return; if (I.tab !== 'search' && !I.d[I.tab] && !I.busy[I.tab]) load(I.tab); }
+  function onGo(v) { if (v !== 'pulse') return; if (window.AOSPulse2 && window.AOSPulse2.on()) return window.AOSPulse2.onGo(v); if (I.tab !== 'search' && !I.d[I.tab] && !I.busy[I.tab]) load(I.tab); }
 
   function head(sub) {
     var u = url();
@@ -61,6 +61,7 @@
   function notConnected() { return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div></div><div class="banner"><i class="dot warn"></i><span>Add your Pulse address and a read-only token in Settings. Create the token in Pulse: Settings, Automation, Access for your AI tools.</span></div></div>'; }
 
   function view() {
+    if (window.AOSPulse2 && window.AOSPulse2.on()) return window.AOSPulse2.view();
     if (Object.keys(I.err).some(function (k) { return I.err[k] === 'not_configured'; })) return notConnected();
     var h = head(), t = I.tab, d = I.d;
     h += fail(t);
