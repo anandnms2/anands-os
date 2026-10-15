@@ -67,7 +67,7 @@ try {
   });
   await t('guest page serves the Meetings app without sign-in, and nothing else', async () => {
     const r = await fetch(B + '/meet/'); if (!process.env.E2E_SUITE) return assert.ok([200, 404].includes(r.status));
-    assert.equal(r.status, 200); assert.match(await r.text(), /Meetings/);
+    assert.equal(r.status, 200); assert.match(await r.text(), /Meeting/);
     assert.equal((await fetch(B + '/meet/../calendar/index.html')).status === 200, false);
     assert.equal((await fetch(B + '/apps/meetings/')).status, 401);
   });
@@ -145,6 +145,18 @@ try {
       await g2.waitForFunction(three, null, { timeout: 30000 }); await guest.waitForFunction(three, null, { timeout: 30000 }); await host.waitForFunction(three, null, { timeout: 30000 });
       assert.deepEqual(errs.filter((e) => !/ResizeObserver/.test(e)), []);
       await guest.getByRole('button', { name: /leave call/i }).first().click().catch(() => {});
+    });
+    if (process.env.E2E_SUITE) await t('meetings: a link made with "create for later" can be started by the signed-in host from the shared /meet link', async () => {
+      const mk = await A.c.newPage(); await mk.goto(B + '/apps/meetings/'); await mk.getByRole('button', { name: /new meeting/i }).first().click(); await mk.getByText('Create a meeting for later').click();
+      await mk.waitForFunction(() => /\/meet\/#\/m\/[a-z-]+/.test(document.body.innerText), null, { timeout: 10000 });
+      const link = (await mk.evaluate(() => document.body.innerText)).match(/https?:\/\/\S+\/meet\/#\/m\/[a-z-]+/)[0]; assert.ok(link.startsWith(B + '/meet/'));
+      const host = await A.c.newPage(); await host.goto(link); await host.waitForSelector('text=Ready to join?', { timeout: 10000 });
+      assert.ok(await host.locator('input').first().inputValue(), 'the signed-in host is greeted by name');
+      await host.getByRole('button', { name: 'Join now' }).click();
+      await host.waitForFunction(() => document.body.innerText.includes('Meeting details') || document.body.innerText.includes('(You)'), null, { timeout: 15000 });
+      const code = link.split('/m/')[1]; assert.ok((await api('/v1/rooms/' + code)).j.room, 'the host started it');
+      const gc = await browser.newContext(); const guest = await gc.newPage(); await guest.goto(link); await guest.waitForSelector('text=Ready to join?', { timeout: 10000 });
+      assert.equal(await guest.locator('input').first().inputValue(), '', 'an anonymous visitor is still a guest');
     });
   }
 } finally { if (browser) await browser.close(); srv.kill(); console.log(`\n${pass} passed`); if (process.env.SHOWLOG) console.log(log); }

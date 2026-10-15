@@ -5,8 +5,11 @@
 (function (g) {
   'use strict';
   /* /meet/ is the guest copy of the Meetings app: no account, no stored files. */
-  var GUEST = location.pathname.indexOf('/meet/') === 0 || location.pathname === '/meet';
-  var APP = GUEST ? 'meetings' : ((location.pathname.match(/^\/apps\/([^\/]+)/) || [])[1] || 'os');
+  var ON_MEET = location.pathname.indexOf('/meet/') === 0 || location.pathname === '/meet';
+  /* Someone who is signed in to this OS and opens a meeting link is the host, not a guest: they can start the meeting. One quick check, before the app starts. */
+  var GUEST = ON_MEET;
+  if (ON_MEET) { try { var x = new XMLHttpRequest(); x.open('GET', '/_local/auth/user', false); x.send(); if (x.status === 200) GUEST = false; } catch (e) {} }
+  var APP = ON_MEET ? 'meetings' : ((location.pathname.match(/^\/apps\/([^\/]+)/) || [])[1] || 'os');
   function mk(code, msg) { var e = new Error(msg || code); e.code = code; return e; }
   function post(path, body, extra) {
     var h = { 'x-aos': '1', 'x-app': APP };

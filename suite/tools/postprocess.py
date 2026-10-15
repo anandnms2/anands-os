@@ -27,6 +27,18 @@ WORDING = [
 MEETINGS = [
     (b'"https://puter-meetings-rooms.puter.work"', b"location.origin"),
     (b"location.origin+location.pathname", b'location.origin+"/meet/"'),
+    # Branding: this is Anands Meeting, not Puter Meetings
+    ('r("b",{},"Puter")," Meetings"'.encode(), 'r("b",{},"Anands")," Meeting"'.encode()),
+    ("Puter Meetings".encode(), "Anands Meeting".encode()),
+    ("Open Meetings from your Puter desktop to see".encode(), "Open Meeting from Anands OS to see".encode()),
+    ("Sign in with Puter to continue".encode(), "Sign in to Anands OS to continue".encode()),
+    ("Can’t reach Puter’s connection service — retrying…".encode(), "Can’t reach the meeting server — retrying…".encode()),
+    ("Can’t reach Puter’s connection service. Check your connection and try again.".encode(), "Can’t reach the meeting server. Check your connection and try again.".encode()),
+    ("or sign in with Puter to start it yourself.".encode(), "or sign in to Anands OS to start it yourself.".encode()),
+    ("Guests without a Puter account may not be able to connect until Puter can be reached again.".encode(), "Guests may not be able to connect until the meeting server can be reached again.".encode()),
+    ("Puter can be reached again — guests without an account can connect.".encode(), "The meeting server can be reached again — guests can connect.".encode()),
+    ("Your browser blocked the Puter window. Allow pop-ups for this site, then try again.".encode(), "Your browser blocked the sign-in window. Allow pop-ups for this site, then try again.".encode()),
+    ("The Puter window closed before we could get you in. Try again.".encode(), "The sign-in window closed before we could get you in. Try again.".encode()),
 ]
 
 for dp, _, files in os.walk(root):
@@ -67,6 +79,14 @@ for dp, _, files in os.walk(root):
                 if SDK.encode() in nb and SDK_RE.search(b): js_n += 1
                 if b'serviceWorker.register("./sw.js"' in nb and b'serviceWorker.register("/sw.js"' in b: sw += 1
                 open(p, "wb").write(nb)
+
+# Anands Meeting: page title and install name
+for rel, pairs in (("meetings/index.html", [("<title>Puter Meetings</title>", "<title>Anands Meeting</title>")]), ("meetings/manifest.json", [("Puter Meetings", "Anands Meeting"), ('"short_name": "Meetings"', '"short_name": "Meeting"')])):
+    q = os.path.join(root, rel)
+    if os.path.exists(q):
+        t = open(q, encoding="utf-8", errors="surrogateescape").read()
+        for x, y in pairs: t = t.replace(x, y)
+        open(q, "w", encoding="utf-8", errors="surrogateescape").write(t)
 
 # verify: nothing that loads or calls the SDK from puter.com remains
 left = 0

@@ -48,6 +48,7 @@ built=set(ok.split())
 for a in apps:
     # an app that did not build (or was skipped) must not be launchable
     if a["slug"] not in built: a["hasSource"]=False
+    if a["slug"]=="meetings": a["name"]="Anands Meeting"
 json.dump(apps,open(f"{out}/apps.json","w"),indent=2)
 print("built",len(built),"failed",failed.split() or "none")
 PY
