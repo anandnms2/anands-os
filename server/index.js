@@ -1,0 +1,70 @@
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { PORT, WEB, SUITE, SHIM, OIDC, PASSWORD, PASSWORD_GENERATED, DATA, publicSettings, updateSettings, env } from './config.js';
+import { sessionOf } from './session.js';
+import { handleAuth, sessionInfo } from './auth.js';
+import { json, readJson, httpError } from './util.js';
+import { handlePhotos, status as immichStatus } from './immich.js';
+import { handleInsights, insights, clearInsightsCache } from './coolify.js';
+import { handleChat } from './chat.js';
+import { handleLocal } from './local.js';
+import { serveStatic } from './static.js';
+
+const CONNECT_EXTRA = (env.CONNECT_SRC_EXTRA || '').trim();
+const BASE_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'permissions-policy': 'camera=(self), microphone=(self), geolocation=()' };
+const UI_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+/* Apps can only talk to this server. puter.com is not reachable from them: nothing else is in connect-src. */
+const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
+
+async function api(req, res, url) {
+  const p = url.pathname;
+  if (p === '/api/settings' && req.method === 'GET') return json(res, 200, publicSettings());
+  if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); return json(res, 200, publicSettings()); }
+  if (p === '/api/settings/test' && req.method === 'POST') {
+    const { target } = await readJson(req, 1024);
+    if (target === 'immich') return json(res, 200, await immichStatus());
+    if (target === 'coolify') { try { const d = await insights(true); return json(res, 200, { configured: true, connected: true, resources: d.resources.length }); } catch (e) { return json(res, 200, { configured: e.code !== 'not_configured', connected: false, reason: e.message }); } }
+    throw httpError(400, 'Unknown target');
+  }
+  if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
+  if (p === '/api/insights') return handleInsights(req, res, url);
+  if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url);
+  throw httpError(404, 'Unknown API route');
+}
+
+const server = http.createServer(async (req, res) => {
+  for (const [k, v] of Object.entries(BASE_HEADERS)) res.setHeader(k, v);
+  try {
+    const url = new URL(req.url, 'http://x'); const p = url.pathname;
+    if (p === '/healthz') return json(res, 200, { ok: true });
+    if (p.startsWith('/auth/')) { if (await handleAuth(req, res, url) !== false) return; throw httpError(404, 'Not found'); }
+    if (p === '/api/session') return json(res, 200, sessionInfo(req));
+    if (p === '/_suite/puter.js') { return serveStatic(req, res, path.dirname(SHIM), path.basename(SHIM), {}); }
+    const protectedPath = p.startsWith('/api/') || p.startsWith('/_local/') || p.startsWith('/apps/');
+    if (protectedPath && !sessionOf(req)) {
+      if (p.startsWith('/apps/')) { res.writeHead(401, { 'content-type': 'text/html; charset=utf-8' }); return res.end('<!doctype html><meta charset=utf-8><body style="font:16px system-ui;padding:2rem">Sign in at <a href="/">Anands OS</a> first.'); }
+      throw httpError(401, 'Sign in first', 'auth_required');
+    }
+    if (req.method !== 'GET' && req.method !== 'HEAD' && (p.startsWith('/api/') || p.startsWith('/_local/')) && req.headers['x-aos'] !== '1') throw httpError(403, 'Missing x-aos header', 'csrf');
+    if (p.startsWith('/api/')) return await api(req, res, url);
+    if (p.startsWith('/_local/')) return await handleLocal(req, res, url);
+    if (p.startsWith('/apps/')) {
+      if (/^\/apps\/[^/]+$/.test(p)) { res.writeHead(302, { location: p + '/' }); return res.end(); }
+      return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': APP_CSP });
+    }
+    if (p === '/apps.json' || p.startsWith('/_icons/')) return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': UI_CSP });
+    return serveStatic(req, res, WEB, p === '/' ? 'index.html' : p.slice(1), { 'content-security-policy': UI_CSP });
+  } catch (e) {
+    const status = e.status || 500;
+    if (status >= 500 && status !== 502 && status !== 504) console.error(e);
+    if (!res.headersSent) json(res, status, { error: e.message || 'Server error', code: e.code });
+    else res.destroy();
+  }
+});
+server.requestTimeout = 0; server.headersTimeout = 30000;
+server.listen(PORT, () => {
+  console.log(`Anands OS listening on :${PORT}  data=${DATA}  suite=${fs.existsSync(SUITE) ? 'ok' : 'MISSING ' + SUITE}`);
+  if (OIDC) console.log(`Sign-in: SSO (${OIDC.issuer})${PASSWORD ? ' and password' : ''}`);
+  else console.log('Sign-in: password' + (PASSWORD_GENERATED ? ` (generated; also in ${DATA}/initial-password): ${PASSWORD}` : ' (APP_PASSWORD)'));
+});

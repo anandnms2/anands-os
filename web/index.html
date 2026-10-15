@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Anands OS</title>
+<meta name="theme-color" content="#0b0b0c">
+<meta name="robots" content="noindex,nofollow">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/os.css">
+<script src="/os.js" defer></script>
+</head>
+<body>
+<div id="login" hidden></div>
+<div id="app" hidden>
+  <nav id="rail" aria-label="Main"></nav>
+  <main id="main">
+    <header id="top">
+      <div class="tbrand"><img src="/logo-orange.png" alt=""><span>Anands <b>OS</b></span></div>
+      <span class="sp"></span>
+      <button class="tsearch" type="button" data-act="pal" aria-label="Search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:17px;height:17px"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M21 21l-4.3-4.3"/></svg><span>Search apps, albums, server resources</span><kbd>Ctrl K</kbd></button>
+      <span class="pill ok lm"><i class="dot"></i>Local mode</span>
+      <div class="avatar" id="avatar" aria-hidden="true">A</div>
+    </header>
+    <div id="view"></div>
+  </main>
+</div>
+<nav id="tabs" aria-label="Main" hidden></nav>
+<button id="fab" type="button" aria-label="Open assistant" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:26px;height:26px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+<section id="chat" hidden aria-label="Assistant"></section>
+<div id="lb" hidden></div>
+<div id="modal" hidden></div>
+<div id="toast" class="toast" hidden role="status"></div>
+<noscript><p style="padding:24px;font-family:sans-serif">Anands OS needs JavaScript.</p></noscript>
+</body>
+</html>

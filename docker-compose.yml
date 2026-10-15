@@ -1,0 +1,27 @@
+services:
+  anands-os:
+    image: ${IMAGE:-ghcr.io/anandnms2/anands-os:latest}
+    build: .
+    restart: unless-stopped
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL}
+      APP_PASSWORD: ${APP_PASSWORD:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_ALLOWED: ${OIDC_ALLOWED:-}
+      OWNER_NAME: ${OWNER_NAME:-Anand}
+      IMMICH_URL: ${IMMICH_URL:-}
+      IMMICH_API_KEY: ${IMMICH_API_KEY:-}
+      COOLIFY_URL: ${COOLIFY_URL:-}
+      COOLIFY_TOKEN: ${COOLIFY_TOKEN:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      CONNECT_SRC_EXTRA: ${CONNECT_SRC_EXTRA:-}
+    volumes:
+      - anands-os-data:/data
+    expose:
+      - "8080"
+volumes:
+  anands-os-data:

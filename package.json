@@ -1,0 +1,9 @@
+{
+  "name": "anands-os",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Anands OS: personal OS shell, local Puter apps, Immich photos, Coolify insights and an assistant, in one container.",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node server/index.js", "test": "node test/run.mjs" }
+}
