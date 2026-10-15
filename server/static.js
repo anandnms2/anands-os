@@ -2,10 +2,12 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { rebrand, rebrandable } from './rebrand.js';
+const RB = new Map();
 
 const MIME = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', mjs: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', webmanifest: 'application/manifest+json', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', ico: 'image/x-icon', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', txt: 'text/plain; charset=utf-8', wasm: 'application/wasm', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', mp4: 'video/mp4', webm: 'video/webm', map: 'application/json', xml: 'application/xml', pdf: 'application/pdf', glb: 'model/gltf-binary', gltf: 'model/gltf+json', bin: 'application/octet-stream' };
 
-export async function serveStatic(req, res, root, rel, extraHeaders = {}) {
+export async function serveStatic(req, res, root, rel, extraHeaders = {}, opts = {}) {
   let p = decodeURIComponent(rel);
   if (p.includes('\0')) { res.writeHead(400); return res.end(); }
   const abs = path.join(root, path.normalize('/' + p));
@@ -15,9 +17,13 @@ export async function serveStatic(req, res, root, rel, extraHeaders = {}) {
   catch { res.writeHead(404, { 'content-type': 'text/plain', ...extraHeaders }); return res.end('Not found'); }
   const ext = path.extname(file).slice(1).toLowerCase();
   const hashed = /[.-][A-Za-z0-9_-]{8,}\.(js|css|woff2?|png|jpg|svg|wasm)$/.test(file);
-  const etag = 'W/"' + st.size.toString(36) + '-' + Math.floor(st.mtimeMs).toString(36) + '"';
-  const h = { 'content-type': MIME[ext] || 'application/octet-stream', 'cache-control': hashed ? 'public, max-age=31536000, immutable' : 'no-cache', etag, 'last-modified': st.mtime.toUTCString(), ...extraHeaders };
+  const etag = 'W/"' + (opts.rebrand ? 'rb1-' : '') + st.size.toString(36) + '-' + Math.floor(st.mtimeMs).toString(36) + '"';
+  const h = { 'content-type': MIME[ext] || 'application/octet-stream', 'cache-control': hashed && !opts.rebrand ? 'public, max-age=31536000, immutable' : 'no-cache', etag, 'last-modified': st.mtime.toUTCString(), ...extraHeaders };
   if (req.headers['if-none-match'] === etag) { res.writeHead(304, h); return res.end(); }
+  if (opts.rebrand && rebrandable(file, st.size) && !req.headers.range) {
+    let c = RB.get(file); if (!c || c.m !== st.mtimeMs) { c = { m: st.mtimeMs, buf: Buffer.from(rebrand(await fsp.readFile(file, 'utf8'))) }; if (RB.size > 400) RB.clear(); RB.set(file, c); }
+    res.writeHead(200, { ...h, 'content-length': c.buf.length }); return req.method === 'HEAD' ? res.end() : res.end(c.buf);
+  }
   const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
   if (range && (range[1] || range[2])) {
     let a = range[1] ? Number(range[1]) : st.size - Number(range[2]), z = range[1] && range[2] ? Number(range[2]) : st.size - 1;

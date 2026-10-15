@@ -70,8 +70,7 @@
   }
   var GROUPS = [
     ['Everyday', [['Pulse', 'pulse', '#pulse', 'Anands Control Center'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Cards', 'card', '#cards', 'Anands Cards'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password'], ['AI Chat', 'chat', 'https://ai.anands.xyz', 'Anands AI'], ['Files', 'folder', 'https://files.anands.xyz', 'Anands Filemanager']]],
-    ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'folder', 'https://storage.anands.xyz', 'Anands S3 Storage'], ['Desktop (Linux)', 'monitor', 'https://desktop.anands.xyz', '']]],
-    ['Apps', [['Anands Suite', 'apps', '#apps', '']]]
+    ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'folder', 'https://storage.anands.xyz', 'Anands S3 Storage']]]
   ];
   function tile(s, state) {
     var st = state(s[3]), inner = '<span class="ic">' + ic(s[1]) + '</span><span class="tx"><b>' + s[0] + '</b></span><i class="dot ' + st[0] + '" title="' + st[1] + '" role="img" aria-label="' + st[1] + '"></i>';

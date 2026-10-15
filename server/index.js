@@ -76,7 +76,7 @@ const server = http.createServer(async (req, res) => {
     if ((req.method === 'GET' || req.method === 'HEAD') && isGuestPage(p)) return serveGuestPage(req, res, p);
     /* Meetings for guests: the link /meet/#/m/<code> opens the Meetings app without signing in. Only that app's files are served here. */
     if (p === '/meet') { res.writeHead(302, { location: '/meet/' + url.search }); return res.end(); }
-    if (p.startsWith('/meet/') && (req.method === 'GET' || req.method === 'HEAD')) { res.setHeader('referrer-policy', 'same-origin'); return serveStatic(req, res, SUITE, 'apps/meetings/' + p.slice(6), { 'content-security-policy': APP_CSP }); }
+    if (p.startsWith('/meet/') && (req.method === 'GET' || req.method === 'HEAD')) { res.setHeader('referrer-policy', 'same-origin'); return serveStatic(req, res, SUITE, 'apps/meetings/' + p.slice(6), { 'content-security-policy': APP_CSP }, { rebrand: true }); }
     if (isPeerPath(p)) return await handlePeer(req, res, url);
     if (isRoomPath(p)) return await handleRooms(req, res, url);
     if (isWorkerPath(p) && ['GET', 'HEAD', 'POST', 'PUT'].includes(req.method)) return await handleWorkerRequest(req, res, url);
@@ -92,7 +92,7 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/apps/')) {
       if (/^\/apps\/[^/]+$/.test(p)) { res.writeHead(302, { location: p + '/' }); return res.end(); }
       res.setHeader('referrer-policy', 'same-origin');
-      return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': APP_CSP });
+      return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': APP_CSP }, { rebrand: true });
     }
     /* Apps are built for the site root: they ask for /icons/x.png, /app.wasm and so on. Resolve those inside the app that asked. */
     if ((req.method === 'GET' || req.method === 'HEAD') && p !== '/' && req.headers.referer) {
@@ -100,7 +100,7 @@ const server = http.createServer(async (req, res) => {
       if (slug && sessionOf(req)) {
         const root = path.join(SUITE, 'apps', slug); let hit = false;
         try { const abs = path.join(root, path.normalize('/' + decodeURIComponent(p))); hit = abs.startsWith(root + path.sep) && fs.statSync(abs).isFile(); } catch {}
-        if (hit) return serveStatic(req, res, root, p.slice(1), { 'content-security-policy': APP_CSP });
+        if (hit) return serveStatic(req, res, root, p.slice(1), { 'content-security-policy': APP_CSP }, { rebrand: true });
       }
     }
     if (p === '/apps.json' || p.startsWith('/_icons/')) return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': uiCsp() });
