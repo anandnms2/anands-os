@@ -1,6 +1,6 @@
 # Full Chromium for the Anands OS Desktop (Neko: Chromium streamed over WebRTC).
 # Deploy this as its own Coolify "Docker Compose" resource, give the `browser` service a domain (for example browser.anands.xyz, port 8080),
-# then paste  https://browser.anands.xyz/?usr=anand&pwd=<BROWSER_PASSWORD>&embed=1  into Anands OS > Settings > Full browser.
+# then paste  https://browser.anands.xyz/?usr=anand&pwd=<BROWSER_PASSWORD>  into Anands OS > Settings > Full browser.
 # Open the media port below (TCP and UDP 52000) in the Hetzner firewall. Without it the page loads but the video stays black.
 services:
   browser:
