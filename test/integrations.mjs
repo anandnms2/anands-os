@@ -1,9 +1,9 @@
 // Status (Beszel), VPN (wg-easy) and Card Scan against in-memory mocks, through the real server API.
 import { spawn } from 'node:child_process'; import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import assert from 'node:assert/strict'; import { fileURLToPath } from 'node:url';
-import { startBeszel, beszel, startWg, wgState, startCards, csState, resetCards } from './integrations-mock.mjs';
+import { startBeszel, beszel, startWg, wgState, startCards, csState, resetCards, startPulse, pulseState } from './integrations-mock.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const [bz, wg, cs] = [await startBeszel(), await startWg(), await startCards()];
+const [bz, wg, cs, pu] = [await startBeszel(), await startWg(), await startCards(), await startPulse()];
 const addr = (s) => `http://127.0.0.1:${s.address().port}`;
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-int-')); const port = 20000 + Math.floor(Math.random() * 20000);
 const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'pw', SESSION_SECRET: 'x'.repeat(40) } });
@@ -19,10 +19,10 @@ try {
 
   await t('not connected gives a clear 409', async () => { for (const p of ['/api/status', '/api/vpn', '/api/cards']) { const r = await api('GET', p); assert.equal(r.status, 409); assert.equal(r.data.code, 'not_configured'); } });
   await t('settings accept and hide passwords', async () => {
-    const r = await api('PUT', '/api/settings', { status: { url: addr(bz), user: 'ro@x.io', pass: 'pw' }, vpn: { url: addr(wg), user: 'admin', pass: 'wgpw' }, cards: { url: addr(cs), user: 'anand@x.io', pass: 'cspw' } });
-    assert.equal(r.status, 200); assert.equal(r.data.status.passSet, true); assert.equal(r.data.vpn.user, 'admin'); assert.ok(!JSON.stringify(r.data).includes('wgpw') && !JSON.stringify(r.data).includes('cspw'));
+    const r = await api('PUT', '/api/settings', { status: { url: addr(bz), user: 'ro@x.io', pass: 'pw' }, vpn: { url: addr(wg), user: 'admin', pass: 'wgpw' }, cards: { url: addr(cs), user: 'anand@x.io', pass: 'cspw' }, pulse: { url: addr(pu), token: 'pulse_testtokentesttokentest' } });
+    assert.equal(r.status, 200); assert.equal(r.data.status.passSet, true); assert.equal(r.data.vpn.user, 'admin'); assert.ok(!JSON.stringify(r.data).includes('wgpw') && !JSON.stringify(r.data).includes('cspw') && !JSON.stringify(r.data).includes('testtoken')); assert.equal(r.data.pulse.tokenSet, true);
   });
-  await t('settings test buttons', async () => { for (const [k, n] of [['status', 2], ['vpn', 2], ['cards', 2]]) { const r = await api('POST', '/api/settings/test', { target: k }); assert.equal(r.data.connected, true, k + JSON.stringify(r.data)); assert.equal(r.data.resources, n); } });
+  await t('settings test buttons', async () => { for (const [k, n] of [['status', 2], ['vpn', 2], ['cards', 2], ['pulse', 7]]) { const r = await api('POST', '/api/settings/test', { target: k }); assert.equal(r.data.connected, true, k + JSON.stringify(r.data)); assert.equal(r.data.resources, n); } });
   await t('status overview lists servers and alerts', async () => { const r = await api('GET', '/api/status?refresh=1'); assert.equal(r.status, 200); assert.equal(r.data.up, 1); assert.equal(r.data.down, 1); assert.equal(r.data.alertsFiring, 1); const s = r.data.systems[0]; assert.equal(s.name, 'oracle-1'); const a = r.data.systems.find((x) => x.name === 'oracle-1'); assert.equal(a.cpu, 12.3); assert.equal(a.services.failed, 1); });
   await t('status re-logs in when the token is rejected', async () => { beszel.logins += 5; const r = await api('GET', '/api/status?refresh=1'); assert.equal(r.status, 200); });
   await t('status detail has series, containers, info', async () => { const r = await api('GET', '/api/status/system?id=sysaaa111'); assert.equal(r.status, 200); assert.equal(r.data.series.length, 2); assert.equal(r.data.series[0].cpu, 10); assert.equal(r.data.containers[0].name, 'immich'); assert.equal(r.data.info.os, 'Ubuntu 24.04'); const bad = await api('GET', '/api/status/system?id=a"b'); assert.equal(bad.status, 400); });
@@ -65,7 +65,40 @@ try {
     r = await api('PATCH', '/api/cards/' + id, { markContacted: true }); assert.ok(r.data.card.last_contacted_at);
     r = await api('DELETE', '/api/cards/' + id); assert.equal(r.data.ok, true); assert.equal((await api('GET', '/api/cards/' + id)).status, 404); assert.equal((await api('GET', '/api/cards/not-an-id')).status, 404);
   });
+  await t('cards: add a card (scan, duplicate check, create)', async () => {
+    let r = await api('POST', '/api/cs/ai/extract-card', { front: 'data:image/jpeg;base64,AAAA' }); assert.equal(r.data.fields.name, 'Zed Test'); assert.equal(csState.lastExtract.front, 'data:image/jpeg;base64,AAAA');
+    assert.equal((await api('GET', '/api/cs/ai/status')).data.configured, true);
+    r = await api('GET', '/api/cards/check-duplicate?phone=%2B254700333444'); assert.equal(r.data.matches.length, 1); assert.match(r.data.matches[0].image_thumb, /^data:image/);
+    r = await api('POST', '/api/cards', { name: 'Zed Test', company: 'ZedCo', phone: '+255700000001', groupId: csState.groups[0].id, tags: ['new'], image: 'data:image/jpeg;base64,AAAA', evil: 'x' }); assert.equal(r.status, 201); assert.ok(!('evil' in csState.lastCreate)); assert.equal(csState.lastCreate.image, 'data:image/jpeg;base64,AAAA');
+  });
+  await t('cards: notes, timeline, reminders, share, notifications', async () => {
+    const id = '00000000-0000-0000-0000-000000000002';
+    let r = await api('POST', '/api/cards/' + id + '/notes', { note: 'Call back Monday' }); assert.equal(r.status, 200);
+    r = await api('GET', '/api/cards/' + id + '/timeline'); assert.equal(r.data.events[0].note, 'Call back Monday');
+    r = await api('POST', '/api/cards/' + id + '/reminders', { dueDate: '2026-10-20', note: 'Ring' }); assert.equal(r.status, 200);
+    r = await api('GET', '/api/cs/reminders'); assert.equal(r.data.reminders[0].note, 'Ring'); assert.match(r.data.reminders[0].card_image_thumb, /^data:image/);
+    await api('PATCH', '/api/cs/reminders/' + r.data.reminders[0].id, { done: true }); assert.equal(csState.lastRem.done, true); assert.equal((await api('GET', '/api/cs/reminders')).data.reminders.length, 0);
+    r = await api('POST', '/api/cards/' + id + '/share', { validityDays: 7, maxViews: null }); assert.equal(r.data.url, addr(cs) + '/c/tok123'); assert.equal((await api('DELETE', '/api/cards/' + id + '/share')).data.ok, true);
+    r = await api('GET', '/api/cs/notifications'); assert.equal(r.data.unreadCount, 1); await api('POST', '/api/cs/notifications/mark-read', {}); assert.equal((await api('GET', '/api/cs/notifications')).data.unreadCount, 0);
+  });
+  await t('cards: bulk move, merge, bulk delete, export', async () => {
+    const [a, b] = csState.cards.map((c) => c.id);
+    let r = await api('POST', '/api/cards/bulk-move', { ids: [a, 'bad id'], groupId: csState.groups[1].id }); assert.deepEqual(csState.lastMove.ids, [a]);
+    r = await api('POST', '/api/cards/merge', { primaryId: a, duplicateId: b, fields: { phone: 'x' } }); assert.equal(csState.lastMerge.primaryId, a); assert.ok(!csState.cards.some((c) => c.id === b));
+    const e = await api('GET', '/api/cards/export?groupId=' + csState.groups[0].id); assert.match(e.data, /^Name,Company/);
+    const n = csState.cards.length; r = await api('POST', '/api/cards/bulk-delete', { ids: [csState.cards[csState.cards.length - 1].id] }); assert.equal(csState.cards.length, n - 1);
+  });
+  await t('pulse: today, chats, tasks, waiting, search, tracked, health (read only)', async () => {
+    let r = await api('GET', '/api/pulse/today'); assert.equal(r.data.unread_items, 7);
+    assert.equal((await api('GET', '/api/pulse/tasks')).data.tasks[0].title, 'Approve fuel advance'); assert.equal((await api('GET', '/api/pulse/waiting')).data.waiting[0].overdue, true);
+    assert.equal((await api('GET', '/api/pulse/chats')).data.chats[0].chat_id, 'g12'); assert.equal((await api('GET', '/api/pulse/chats/g12/messages')).data.messages[0].from, 'Joseph');
+    r = await api('GET', '/api/pulse/search?q=from%3Ajoseph%20T482'); assert.equal(r.data.q, 'from:joseph T482'); assert.equal((await api('GET', '/api/pulse/search?q=')).status, 400);
+    assert.equal((await api('GET', '/api/pulse/tracked')).data.items[0].mentions, 9); assert.equal((await api('GET', '/api/pulse/tracked/plate%3AT482DKP')).data.key, 'plate:T482DKP'); assert.equal((await api('GET', '/api/pulse/health')).data.ok, true);
+    assert.equal((await api('POST', '/api/pulse/today', {})).status, 405); assert.equal((await api('GET', '/api/pulse/chats/..%2Fx/messages')).status, 404);
+    assert.ok(pulseState.calls.every((c) => c.startsWith('GET ')));
+  });
+  await t('pulse: a bad token reads clearly', async () => { await api('PUT', '/api/settings', { pulse: { token: 'pulse_wrongwrongwrongwrongwrong' } }); const r = await api('GET', '/api/pulse/health'); assert.equal(r.status, 502); assert.match(r.data.error, /rejected the token/); await api('PUT', '/api/settings', { pulse: { token: 'pulse_testtokentesttokentest' } }); });
   await t('cards wrong password reads clearly', async () => { await api('PUT', '/api/settings', { cards: { pass: 'bad' } }); const r = await api('GET', '/api/cards'); assert.equal(r.status, 502); assert.match(r.data.error, /rejected/); });
   await t('needs sign-in and the x-aos header', async () => { assert.equal((await fetch(B + '/api/vpn')).status, 401); const r = await fetch(B + '/api/vpn/1', { method: 'DELETE', headers: { cookie } }); assert.equal(r.status, 403); });
-} finally { srv.kill(); bz.close(); wg.close(); cs.close(); }
+} finally { srv.kill(); bz.close(); wg.close(); cs.close(); pu.close(); }
 console.log(`\n${pass} passed, ${failed} failed`); if (failed) { console.log(log.slice(-1500)); process.exit(1); } process.exit(0);

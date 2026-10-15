@@ -60,7 +60,7 @@ export function resetCards() { csState.cards = [
   { id: cid(2), name: 'Brian Otieno', designation: 'Sales', company: 'Tyre Hub', phone: '+254700333444', email: 'b@tyrehub.co.ke', tags: [], group_id: csState.groups[1].id, group_name: 'Suppliers', image_thumb: '/img/t.png', has_back: false, created_at: '2026-10-02T10:00:00Z', last_contacted_at: null }]; }
 resetCards();
 export async function startCards() {
-  return listen(http.createServer(async (req, res) => {
+  return extendCards(await listen(http.createServer(async (req, res) => {
     const u = new URL(req.url, 'http://x'), p = u.pathname;
     if (p === '/img/t.png') { res.writeHead(200, { 'content-type': 'image/png' }); return res.end(Buffer.from('iVBORw0KGgo=', 'base64')); }
     if (p === '/api/auth/login') { const b = await body(req); if (b.email === 'anand@x.io' && b.password === 'cspw') { csState.logins++; return send(res, 200, { user: { id: 1 } }, { 'set-cookie': 'cs_session=S' + csState.logins + '; Path=/; HttpOnly' }); } return send(res, 401, { error: 'Incorrect email or password.' }); }
@@ -74,5 +74,58 @@ export async function startCards() {
       if (req.method === 'DELETE') { csState.cards.splice(i, 1); return send(res, 200, { ok: true }); }
       if (req.method === 'PATCH') { const b = await body(req); csState.lastPatch = b; const c = csState.cards[i]; for (const k of Object.keys(b)) { if (k === 'markContacted') c.last_contacted_at = new Date().toISOString(); else if (k === 'groupId') { c.group_id = b[k]; c.group_name = csState.groups.find((g) => g.id === b[k])?.name; } else c[k] = b[k]; } return send(res, 200, { card: c }); } }
     send(res, 404, { error: 'nope' });
+  })));
+}
+
+/* ---- Card Scan extras ---- */
+csState.notes = []; csState.reminders = []; csState.notifications = [{ id: 'n1', type: 'x', message: 'Reminder due', read: false, created_at: '2026-10-15T00:00:00Z' }]; csState.calls = [];
+export function extendCards(srv) {
+  const orig = srv.listeners('request')[0]; srv.removeAllListeners('request');
+  srv.on('request', async (req, res) => {
+    const u = new URL(req.url, 'http://x'), p = u.pathname;
+    if (p !== '/api/auth/login' && !(req.headers.cookie || '').includes('cs_session=S' + csState.logins)) return orig(req, res);
+    let m;
+    if (p === '/api/cards' && req.method === 'POST') { const b = await body(req); csState.lastCreate = b; const c = { id: cid(csState.cards.length + 50), name: b.name, company: b.company, group_id: b.groupId, tags: b.tags || [], created_at: new Date().toISOString() }; csState.cards.push(c); return send(res, 201, { card: c }); }
+    if (p === '/api/cards/check-duplicate') { const ph = u.searchParams.get('phone'); return send(res, 200, { matches: csState.cards.filter((c) => ph && c.phone === ph).map((c) => ({ id: c.id, name: c.name, company: c.company, image_thumb: '/img/t.png', matched_phone: true })) }); }
+    if (p === '/api/cards/export') { res.writeHead(200, { 'content-type': 'text/csv' }); return res.end('Name,Company\n' + csState.cards.map((c) => c.name + ',' + (c.company || '')).join('\n')); }
+    if (p === '/api/cards/bulk-delete') { const b = await body(req); csState.cards = csState.cards.filter((c) => !b.ids.includes(c.id)); return send(res, 200, { deleted: b.ids.length }); }
+    if (p === '/api/cards/bulk-move') { const b = await body(req); csState.lastMove = b; return send(res, 200, { moved: b.ids.length }); }
+    if (p === '/api/cards/merge') { const b = await body(req); csState.lastMerge = b; csState.cards = csState.cards.filter((c) => c.id !== b.duplicateId); return send(res, 200, { card: csState.cards.find((c) => c.id === b.primaryId) }); }
+    if ((m = p.match(/^\/api\/cards\/([0-9a-f-]{36})\/(timeline|notes|reminders|share)$/))) {
+      if (m[2] === 'timeline') return send(res, 200, { createdAt: '2026-10-01', events: [...csState.notes.map((n) => ({ kind: 'note', id: n.id, note: n.note, userName: 'Anand', createdAt: n.at })), { kind: 'activity', action: 'create', label: 'Amina', userName: 'Anand', createdAt: '2026-10-01' }] });
+      if (m[2] === 'notes') { const b = await body(req); const n = { id: 'nt' + csState.notes.length, note: b.note, at: new Date().toISOString() }; csState.notes.push(n); return send(res, 200, { note: n }); }
+      if (m[2] === 'reminders') { const b = await body(req); csState.reminders.push({ id: '99999999-9999-9999-9999-99999999999' + csState.reminders.length, card_id: m[1], note: b.note, due_date: b.dueDate, card_name: 'Amina', card_image_thumb: '/img/t.png' }); return send(res, 200, { ok: true }); }
+      if (m[2] === 'share') { if (req.method === 'DELETE') return send(res, 200, { ok: true }); const b = await body(req); csState.lastShare = b; return send(res, 200, { shareToken: 'tok123', expiresAt: '2026-11-01', maxViews: b.maxViews }); }
+    }
+    if (p === '/api/reminders') return send(res, 200, { reminders: csState.reminders });
+    if ((m = p.match(/^\/api\/reminders\/([0-9a-f-]{36})$/)) && req.method === 'PATCH') { const b = await body(req); csState.lastRem = b; csState.reminders = csState.reminders.filter((r) => r.id !== m[1] || !b.done); return send(res, 200, { ok: true }); }
+    if (p === '/api/notifications') return send(res, 200, { notifications: csState.notifications, unreadCount: csState.notifications.filter((n) => !n.read).length });
+    if (p === '/api/notifications/mark-read') { csState.notifications.forEach((n) => (n.read = true)); return send(res, 200, { ok: true }); }
+    if (p === '/api/ai/status') return send(res, 200, { configured: true });
+    if (p === '/api/ai/extract-card') { const b = await body(req); csState.lastExtract = b; return send(res, 200, { fields: { name: 'Zed Test', company: 'ZedCo', phone: '+255700000001', email: 'zed@zedco.com' }, model: 'm' }); }
+    return orig(req, res);
+  });
+  return srv;
+}
+
+/* ---- Pulse (read-only /api/v1) ---- */
+export const pulseState = { calls: [] };
+export async function startPulse() {
+  return listen(http.createServer((req, res) => {
+    const u = new URL(req.url, 'http://x'), p = u.pathname; pulseState.calls.push(req.method + ' ' + p + u.search);
+    if (req.headers.authorization !== 'Bearer pulse_testtokentesttokentest') return send(res, 401, { error: 'bad token' });
+    if (req.method !== 'GET') return send(res, 405, { error: 'read-only' });
+    if (p === '/api/v1/today') return send(res, 200, { date: '2026-10-15', unread_items: 7, urgent: [{ id: 'w1', from: 'Joseph', what: 'Truck T482DKP stuck' }], overdue_tasks: [], meetings: [] });
+    if (p === '/api/v1/tasks') return send(res, 200, { count: 1, tasks: [{ id: 't1', title: 'Approve fuel advance', priority: 'high', due: '2026-10-16', status: 'open' }] });
+    if (p === '/api/v1/waiting') return send(res, 200, { count: 1, waiting: [{ id: 'q1', what: 'POD for T482', from: 'Clearing desk', asked_hours_ago: 30, overdue: true }] });
+    if (p === '/api/v1/chats') return send(res, 200, { count: 1, chats: [{ chat_id: 'g12', name: 'Ops line', unread: 4, urgent: 1, asks: 2 }] });
+    if (p === '/api/v1/chats/g12/messages') return send(res, 200, { chat: 'Ops line', chat_id: 'g12', members: 5, messages: [{ at: '2026-10-15T08:00:00Z', from: 'Joseph', text: 'Truck stuck at border' }] });
+    if (p === '/api/v1/search') return send(res, 200, { understood: [], count: 1, results: [{ id: 'e5', source: 'email', from: 'a@b.c', where: 'Invoice', at: '2026-10-14T10:00:00Z' }], q: u.searchParams.get('q') });
+    if (p === '/api/v1/tracked') return send(res, 200, { count: 1, items: [{ key: 'plate:T482DKP', name: 'T 482 DKP', kind: 'vehicle', mentions: 9 }] });
+    if (p.startsWith('/api/v1/tracked/')) return send(res, 200, { key: decodeURIComponent(p.slice(16)), name: 'T 482 DKP', timeline: [{ at: '2026-10-15T08:00:00Z', who: 'Joseph' }] });
+    if (p === '/api/v1/lists') return send(res, 200, { lists: [] });
+    if (p === '/api/v1/health') return send(res, 200, { ok: true, problems: [] });
+    if (p === '/api/v1/me') return send(res, 200, { name: 'Anand', read_only: true });
+    send(res, 404, { error: 'Unknown endpoint' });
   }));
 }
