@@ -12,6 +12,7 @@ function conn() {
   if (!url || !key) throw httpError(409, 'Immich is not connected. Add its address and an API key in Settings.', 'not_configured');
   return { url: url.replace(/\/+$/, ''), key };
 }
+export const conn_ = () => conn();
 const api = (path, init = {}, t) => { const c = conn(); return fetchJson(c.url + '/api' + path, { ...init, headers: { 'x-api-key': c.key, accept: 'application/json', ...(init.headers || {}) } }, t); };
 const post = (path, body) => api(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 
@@ -54,6 +55,7 @@ export function mapAsset(a) {
     camera: [e.make, e.model].filter(Boolean).join(' ') || null, bytes: e.fileSizeInByte || null
   };
 }
+export { api as iapi, post as ipost, live };
 const SEARCH = { size: 60, order: 'desc', withExif: true, withDeleted: false, isOffline: false };
 /* Deleted (trashed) and offline (file gone from an external library) assets must not show here. */
 const live = (a) => !a.isTrashed && !a.isOffline && !a.deletedAt;

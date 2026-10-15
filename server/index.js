@@ -6,6 +6,7 @@ import { sessionOf } from './session.js';
 import { handleAuth, sessionInfo } from './auth.js';
 import { json, readJson, httpError } from './util.js';
 import { handlePhotos, status as immichStatus } from './immich.js';
+import { handleX, handleImmichProxy } from './immich-x.js';
 import { handleInsights, insights, clearInsightsCache } from './coolify.js';
 import { handleStatus, test as statusTest, clearStatusCache } from './status.js';
 import { handleVpn, test as vpnTest } from './vpn.js';
@@ -61,6 +62,8 @@ async function api(req, res, url) {
   }
   if (p === '/api/drive/status') return json(res, 200, await davPing());
   if (p.startsWith('/api/vault/')) return handleVault(req, res, url);
+  if (p.startsWith('/api/photos/x/')) return handleX(req, res, url);
+  if (p.startsWith('/api/immich/')) return handleImmichProxy(req, res, url);
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
   if (p === '/api/mailboxes' || p.startsWith('/api/mailboxes/')) return handleMailboxes(req, res, url);
   if (p === '/api/rb' || p.startsWith('/api/rb/')) return handleRb(req, res, url);

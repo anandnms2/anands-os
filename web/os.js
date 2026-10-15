@@ -179,15 +179,19 @@ function photosShell() {
   if (!im.configured) return h + connectBlock('Photos are not connected yet', 'immich', 'Add your Immich address and an API key (Immich: Account settings, API keys). Photos then show up here like they do in Nextcloud.') + '</div>';
   if (!im.connected) return h + '<div class="banner"><i class="dot bad"></i><span>Immich is configured but not reachable (' + esc(im.reason || 'no answer') + '). Check the address and key.</span></div></div>';
   h += '<div class="toolbar"><div class="seg" role="group" aria-label="View">';
-  [['timeline', 'Timeline'], ['albums', 'Albums'], ['favs', 'Favourites']].forEach(function (t) { h += '<button data-act="ptab" data-t="' + t[0] + '" aria-pressed="' + (S.tab === t[0] && !S.album && !S.pq) + '">' + t[1] + '</button>'; });
-  return h + '</div><div class="search">' + ic('search') + '<input class="input" id="pq" type="search" placeholder="Search your photos (people, places, things)" value="' + esc(S.pq) + '" aria-label="Search photos" data-in="pq"></div></div><div id="pg"></div></div>';
+  [['timeline', 'Timeline'], ['albums', 'Albums'], ['favs', 'Favourites']].concat(window.AOSPX ? window.AOSPX.tabs : []).forEach(function (t) { h += '<button data-act="ptab" data-t="' + t[0] + '" aria-pressed="' + (S.tab === t[0] && !S.album && !S.pq) + '">' + t[1] + '</button>'; });
+  return h + '</div><div class="search">' + ic('search') + '<input class="input" id="pq" type="search" placeholder="Search your photos (people, places, things)" value="' + esc(S.pq) + '" aria-label="Search photos" data-in="pq"></div>' + (window.AOSPX ? '<button class="btn sm" data-px="filters">Filters</button><button class="btn sm" data-px="selmode" aria-pressed="' + !!window.AOSPX.selMode + '">Select</button>' : '') + '</div><div id="pg"></div></div>';
 }
 var thumb = function (id) { return '/api/photos/asset/' + id + '/thumb'; };
-function photoCard(p) { return '<div class="ph"><button style="all:unset;display:block;width:100%;height:100%;cursor:pointer" data-act="lb" data-id="' + p.id + '" aria-label="Open ' + esc(p.name) + '"><img class="phimg" data-id="' + p.id + '" loading="lazy" src="' + thumb(p.id) + '" alt="' + esc(p.name) + '">' + (p.type === 'video' ? '<span style="position:absolute;left:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;border-radius:6px;padding:1px 6px;font-size:12px">Video</span>' : '') + '</button><button class="heart' + (p.fav ? ' on' : '') + '" data-act="fav" data-id="' + p.id + '" aria-label="' + (p.fav ? 'Remove from favourites' : 'Add to favourites') + '">' + ic('heart') + '</button></div>'; }
-function curSet() { if (S.pq) return S.sr; if (S.album) return S.album; return S.tab === 'favs' ? S.fav : S.tl; }
+function photoCard(p) { var X = window.AOSPX, sl = X && X.isSel(p.id); return '<div class="ph' + (sl ? ' sel' : '') + '" data-pid="' + p.id + '">' + (X ? '<button class="pcheck" data-act="psel" data-id="' + p.id + '" aria-label="Select">&#10003;</button>' : '') + '<button style="all:unset;display:block;width:100%;height:100%;cursor:pointer" data-act="lb" data-id="' + p.id + '" aria-label="Open ' + esc(p.name) + '"><img class="phimg" data-id="' + p.id + '" loading="lazy" src="' + thumb(p.id) + '" alt="' + esc(p.name) + '">' + (p.type === 'video' ? '<span style="position:absolute;left:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;border-radius:6px;padding:1px 6px;font-size:12px">Video</span>' : '') + '</button><button class="heart' + (p.fav ? ' on' : '') + '" data-act="fav" data-id="' + p.id + '" aria-label="' + (p.fav ? 'Remove from favourites' : 'Add to favourites') + '">' + ic('heart') + '</button></div>'; }
+function curSet() { var xs = window.AOSPX && window.AOSPX.curSet(); if (xs) return xs; if (S.pq) return S.sr; if (S.album) return S.album; return S.tab === 'favs' ? S.fav : S.tl; }
 function curItems() { return curSet().items || []; }
 function photosGrid() {
   var el = $('#pg'); if (!el) return;
+  if (window.AOSPX && window.AOSPX.owns(S.tab) && !S.album && !S.pq) { window.AOSPX.grid(el); return; }
+  photosGrid0(el); if (window.AOSPX) window.AOSPX.after(el);
+}
+function photosGrid0(el) {
   if (S.tab === 'albums' && !S.album && !S.pq) {
     if (!S.albums) { el.innerHTML = '<p style="color:var(--muted)">Loading albums...</p>'; return; }
     el.innerHTML = S.albums.length ? '<div class="albums">' + S.albums.map(function (a) { return '<button class="album" data-act="album" data-id="' + a.id + '" data-name="' + esc(a.name) + '"><div class="mosaic" style="grid-template-columns:1fr;grid-template-rows:1fr">' + (a.thumb ? '<img src="' + thumb(a.thumb) + '" alt="">' : '<div style="background:var(--surface2)"></div>') + '</div><h3>' + esc(a.name) + '</h3><small>' + a.count + ' item' + (a.count === 1 ? '' : 's') + '</small></button>'; }).join('') + '</div>' : '<div class="empty"><h2>No albums</h2><p>' + esc(S.albumErr || 'Create an album in Immich and it will appear here.') + '</p></div>';
@@ -204,8 +208,8 @@ function photosGrid() {
   if (set.next) h += '<button class="btn more" data-act="more">' + (set.loading ? 'Loading...' : 'Load more') + '</button>';
   el.innerHTML = h;
 }
-function findPhoto(id) { var sets = [S.tl.items, S.fav.items, S.sr.items, S.album ? S.album.items : []]; for (var i = 0; i < sets.length; i++) for (var j = 0; j < sets[i].length; j++) if (sets[i][j].id === id) return sets[i][j]; return null; }
-function setFav(id, v) { [S.tl.items, S.fav.items, S.sr.items, S.album ? S.album.items : [], S.albumItems || []].forEach(function (l) { l.forEach(function (p) { if (p.id === id) p.fav = v; }); }); }
+function findPhoto(id) { var sets = [S.tl.items, S.fav.items, S.sr.items, S.album ? S.album.items : [], window.AOSPX ? window.AOSPX.items() : []]; for (var i = 0; i < sets.length; i++) for (var j = 0; j < sets[i].length; j++) if (sets[i][j].id === id) return sets[i][j]; return null; }
+function setFav(id, v) { [S.tl.items, S.fav.items, S.sr.items, S.album ? S.album.items : [], S.albumItems || [], window.AOSPX ? window.AOSPX.items() : []].forEach(function (l) { l.forEach(function (p) { if (p.id === id) p.fav = v; }); }); }
 function toggleFav(id) {
   var p = findPhoto(id); if (!p) return; var v = !p.fav; setFav(id, v); if (S.view === 'photos') photosGrid(); if (S.lb) drawLb();
   api('/api/photos/favorite', { method: 'POST', json: { ids: [id], value: v } }).then(function () { S.fav = { items: [], next: 1, loading: false, error: null, loaded: false }; }).catch(function (e) { setFav(id, !v); toast('Could not update favourite: ' + e.message); if (S.view === 'photos') photosGrid(); if (S.lb) drawLb(); });
@@ -219,6 +223,7 @@ function drawLb() {
   el.innerHTML = '<div class="stage"><div class="bar"><button class="ib" data-act="lbx" aria-label="Close">' + ic('x') + '</button><span style="padding-left:6px">' + esc(p.name) + '</span><span class="sp"></span><a class="ib" href="/api/photos/asset/' + p.id + '/original" download="' + esc(p.name) + '" aria-label="Download original">' + ic('upload', ' style="transform:rotate(180deg)"') + '</a><button class="ib' + (p.fav ? ' on' : '') + '" data-act="lbfav" aria-label="Favourite">' + ic('heart') + '</button><button class="ib" data-act="lbinfo" aria-label="Details">' + ic('info') + '</button></div>' +
     (i > 0 ? '<button class="ib nx l" data-act="lbp" aria-label="Previous">' + ic('l') + '</button>' : '') + media + (i < l.length - 1 ? '<button class="ib nx r" data-act="lbn" aria-label="Next">' + ic('r') + '</button>' : '') + '</div>' +
     (S.info ? '<aside><h3 style="font-size:20px;word-break:break-all">' + esc(p.name) + '</h3><dl><dt>Taken</dt><dd>' + fmt(new Date(p.takenAt), { day: 'numeric', month: 'long', year: 'numeric' }) + '</dd>' + (p.where ? '<dt>Place</dt><dd>' + esc(p.where) + '</dd>' : '') + (p.camera ? '<dt>Camera</dt><dd>' + esc(p.camera) + '</dd>' : '') + (p.w ? '<dt>Size</dt><dd>' + p.w + ' x ' + p.h + '</dd>' : '') + (p.bytes ? '<dt>File</dt><dd>' + bytes(p.bytes) + '</dd>' : '') + '<dt>Type</dt><dd>' + p.type + '</dd></dl></aside>' : '');
+  if (window.AOSPX) window.AOSPX.lbExtra(p, el);
   var b = el.querySelector('[data-act="lbx"]'); if (b) b.focus();
   if (i === l.length - 1 && curSet().next) { var set = curSet(); if (set === S.tl) loadPage(S.tl, '/api/photos/timeline'); else if (set === S.fav) loadPage(S.fav, '/api/photos/favorites'); }
 }
@@ -550,10 +555,11 @@ document.addEventListener('click', function (ev) {
     case 'pick': { var it = PAL[+d.i]; modal(); if (it) it.run(); break; }
     case 'ask': openChat(d.q); break;
     case 'chat': openChat(); break;
-    case 'ptab': S.tab = d.t; S.album = null; S.pq = ''; S.sr = { q: '', items: [], mode: '', loading: false }; render(); if (d.t === 'albums') loadAlbums(); if (d.t === 'favs') loadPage(S.fav, '/api/photos/favorites'); break;
+    case 'ptab': S.tab = d.t; S.album = null; S.pq = ''; S.sr = { q: '', items: [], mode: '', loading: false }; if (window.AOSPX) window.AOSPX.onTab(d.t); render(); if (d.t === 'albums') loadAlbums(); if (d.t === 'favs') loadPage(S.fav, '/api/photos/favorites'); break;
     case 'album': if (d.id) openAlbum(d.id, d.name); else { S.album = null; S.tab = 'albums'; render(); loadAlbums(); } break;
-    case 'more': { var set = curSet(); if (set === S.fav) loadPage(S.fav, '/api/photos/favorites'); else if (set === S.tl) loadPage(S.tl, '/api/photos/timeline'); break; }
-    case 'lb': openLb(d.id); break;
+    case 'more': { var set = curSet(); if (window.AOSPX && window.AOSPX.more(set)) break; if (set === S.fav) loadPage(S.fav, '/api/photos/favorites'); else if (set === S.tl) loadPage(S.tl, '/api/photos/timeline'); break; }
+    case 'lb': if (window.AOSPX && (window.AOSPX.sel.length || window.AOSPX.selMode)) window.AOSPX.toggle(d.id); else openLb(d.id); break;
+    case 'psel': ev.stopPropagation(); window.AOSPX.selMode = true; window.AOSPX.toggle(d.id); break;
     case 'fav': toggleFav(d.id); break;
     case 'lbx': S.lb = null; drawLb(); break;
     case 'lbp': lbMove(-1); break; case 'lbn': lbMove(1); break;
@@ -633,6 +639,6 @@ document.addEventListener('change', function (ev) { if (ev.target.id === 'x_pr')
 $('#fab').innerHTML = ic('chat', ' style="width:26px;height:26px"');
 $('#fab').addEventListener('click', function () { openChat(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function () {});
-window.AOS = { insTabs: insTabs, S: S, $: $, esc: esc, api: api, toast: toast, LS: LS, fmt: fmt, bytes: bytes, modal: modal, OPENWITH: OPENWITH, LAUNCHES: LAUNCHES, TEXTEXT: TEXTEXT, dedOpen: dedOpen, launch: launch, connectBlock: connectBlock, ic: ic, go: go, redraw: redraw };
+window.AOS = { insTabs: insTabs, S: S, $: $, esc: esc, api: api, toast: toast, LS: LS, fmt: fmt, bytes: bytes, modal: modal, OPENWITH: OPENWITH, LAUNCHES: LAUNCHES, TEXTEXT: TEXTEXT, dedOpen: dedOpen, launch: launch, connectBlock: connectBlock, ic: ic, go: go, redraw: redraw, photoCard: photoCard, curItems: curItems, openAlbum: openAlbum, loadPage: loadPage, loadAlbums: loadAlbums, photosGrid: photosGrid, drawLb: drawLb, render: render };
 boot();
 })();
