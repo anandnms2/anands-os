@@ -92,8 +92,8 @@ try {
     await p.click('[data-ca="new"]'); await p.waitForSelector('#nf_name'); await p.fill('#nf_name', 'Dup'); await p.fill('#nf_phone', '+254700111222'); await p.click('[data-ca="savenew"]'); await p.waitForSelector('[data-ca="savenew"][data-force="1"]'); await p.click('#modal [data-act="mx2"]');
     await p.click('.icard >> nth=0'); await p.waitForSelector('[data-ca="notes"]');
     await p.click('[data-ca="notes"]'); await p.fill('#nn', 'Called about rates'); await p.click('[data-ca="noteadd"]'); await p.waitForFunction(() => /Called about rates/.test(document.querySelector('#modal').innerText)); await shot(p, 'cards-notes');
-    await p.click('[data-ca="backcard"]'); await p.click('[data-ca="remind"]'); await p.fill('#rn', 'Send quote'); await p.click('[data-ca="remadd"]'); await p.waitForSelector('[data-ca="share"]');
-    await p.click('[data-ca="share"]'); await p.selectOption('#sd', '30'); await p.selectOption('#sv', '1'); await p.click('[data-ca="sharemake"]'); await p.waitForSelector('#surl'); assert.match(await p.inputValue('#surl'), /\/c\/tok123$/); assert.equal(csState.lastShare.validityDays, 30); assert.equal(csState.lastShare.maxViews, 1); await shot(p, 'cards-share');
+    await p.click('[data-ca="backcard"]'); await p.click('[data-ca="remind"]'); await p.fill('#rn', 'Send quote'); await p.click('[data-ca="remadd"]'); await p.waitForSelector('[data-ca="cshare"]');
+    await p.click('[data-ca="cshare"]'); await p.click('[data-ca="share"]'); await p.selectOption('#sd', '30'); await p.selectOption('#sv', '1'); await p.click('[data-ca="sharemake"]'); await p.waitForSelector('#surl'); assert.match(await p.inputValue('#surl'), /\/c\/tok123$/); assert.equal(csState.lastShare.validityDays, 30); assert.equal(csState.lastShare.maxViews, 1); await shot(p, 'cards-share');
     await p.keyboard.press('Escape');
   });
   await t('Cards: reminders tab, select, move, merge', async () => {

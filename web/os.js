@@ -17,7 +17,7 @@ var P = {
   folder: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z', lock: 'M5 11h14v10H5z M8 11V7a4 4 0 0 1 8 0v4', card: 'M2 5h20v14H2z M2 10h20',
   shield: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', pulse: 'M22 12h-4l-3 9L9 3l-3 9H2', monitor: 'M2 3h20v14H2z M8 21h8 M12 17v4', play: 'M6 4l14 8-14 8z', out: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9'
 };
-P.apps = 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z';
+P.apps = 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z'; P.check = 'M20 6L9 17l-5-5'; P.calendar = 'M3 5h18v16H3z M3 10h18 M8 3v4 M16 3v4';
 var ic = function (n, extra) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"' + (extra || '') + '><path d="' + P[n] + '"/></svg>'; };
 function toast(t) { var el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(function () { el.hidden = true; }, 4200); }
 var TZ = 'Africa/Dar_es_Salaam';
@@ -99,7 +99,8 @@ function go(v, x) {
   return go0(v, x);
 }
 window.addEventListener('popstate', function () { if (!S.user) return; var r = routeNow() || 'home'; popping = true; try { go0(r); } finally { popping = false; } });
-function go0(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); }
+var lastSeen = Date.now(); document.addEventListener('visibilitychange', function () { if (document.hidden) { lastSeen = Date.now(); return; } if (S.user && Date.now() - lastSeen > 30000 && S.view === 'photos' && S.imm && S.imm.connected && !S.lb) { var fresh = function () { return { items: [], next: 1, loading: false, error: null, loaded: false }; }; S.tl = fresh(); S.fav = fresh(); S.albums = null; loadImm(); loadAlbums(); } });
+function go0(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); if (window.AOSHome) window.AOSHome.onGo(v); }
 function redraw() { var y = $('#view').scrollTop; render(); $('#view').scrollTop = y; }
 function render() {
   var app = $('#app'), tabs = $('#tabs'), fab = $('#fab');
@@ -131,18 +132,10 @@ function loginV() {
 }
 
 /* ---------- home ---------- */
-var SVC = [['AI Chat', 'Anands AI', 'chat', 'https://ai.anands.xyz', 'Anands AI'], ['Pulse', 'Mail, chat, tasks', 'pulse', 'https://pulse.anands.xyz', 'Anands Control Center'], ['Drive', 'Files and sharing', 'cloud', '#drive', 'Anands Drive'], ['Files', 'Whole server', 'folder', 'https://files.anands.xyz', 'Anands Filemanager'],
-  ['Photos', 'Your library', 'photos', '#photos', 'Anands Photos'], ['Cards', 'Scan and contacts', 'card', 'https://cards.anands.xyz', 'Anands Cards'], ['Vault', 'Passwords', 'lock', '#vault', 'Anands Password'], ['Desktop', 'Linux in a browser', 'monitor', 'https://desktop.anands.xyz', ''],
-  ['Remote', 'Your Puter, Suite', 'apps', '#apps', ''], ['VPN', 'WireGuard', 'shield', 'https://vpn.anands.xyz', 'Anands VPN'], ['Status', 'Server health', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'S3 buckets', 'folder', 'https://storage.anands.xyz', 'Anands S3 Storage']];
 function svcState(n) {
   var d = S.ins.data; if (!n || !d) return ['na', 'Not tracked'];
   var r = d.resources.filter(function (x) { return x.n === n; })[0]; if (!r) return ['na', 'Not tracked in Coolify'];
   return r.s === 'ok' ? ['', 'Healthy'] : r.s === 'nohc' ? ['warn', 'Running, no health check'] : ['bad', 'Not healthy'];
-}
-function svcTile(s) {
-  var st = svcState(s[4]), inner = '<span class="ic">' + ic(s[2]) + '</span><span class="tx"><b>' + s[0] + '</b><small>' + s[1] + '</small></span><i class="dot ' + st[0] + '" title="' + st[1] + '" role="img" aria-label="' + st[1] + '"></i>';
-  if (s[3].charAt(0) === '#') return '<button class="svc" data-act="nav" data-v="' + s[3].slice(1) + '">' + inner + '</button>';
-  return '<a class="svc" href="' + s[3] + '" target="_blank" rel="noopener">' + inner + '</a>';
 }
 var ICONROW = ['spreadsheet', 'documents', 'presentation', 'whiteboard', 'pdf', 'email', 'calendar', 'notes', 'photo-studio', 'video-studio', 'chess'];
 function homeV() {
@@ -162,10 +155,9 @@ function homeV() {
   return '<div class="wrap"><section class="hello" style="padding:26px 0 22px"><h1>' + g + ', ' + esc((S.user.name || 'Anand').split(' ')[0]) + '</h1></section>' +
     '<section class="hgrid"><div class="ask"><div class="eyebrow">' + ic('chat') + 'Anands AI</div><form class="askbox" id="hf"><input id="hq" placeholder="Ask anything, or tell it what to do across your apps" aria-label="Ask the assistant" autocomplete="off"><button type="submit" aria-label="Ask">' + ic('send') + '</button></form><div class="chips" style="margin-top:16px">' + prompts.map(function (q) { return '<button class="chip" data-act="ask" data-q="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') + '</div></div>' +
     '<div class="srv">' + srv + '<div class="row"><span>Puter backend</span><span style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted)">this container<i class="dot"></i></span></div><button class="link" style="margin-top:auto;text-align:left" data-act="nav" data-v="insights">Open Cloud Insights &rarr;</button></div></section>' +
-    '<div class="sech"><h2>My services</h2><span style="color:var(--muted);font-size:14px">Your self-hosted apps</span></div><div class="svcs">' + SVC.map(svcTile).join('') + '</div>' +
+    (window.AOSHome ? window.AOSHome.right() + window.AOSHome.services(svcState) : '') +
     '<section class="suitep"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap"><div><h2 style="font-size:22px;margin-bottom:4px">Anands Suite</h2><p style="margin:0;color:var(--muted);font-size:14.5px;max-width:62ch">' + live + ' apps that replace Excel, Word, PowerPoint, Slack, Photoshop, QuickBooks and more. Their data lives in your container, not on puter.com.</p></div><button class="btn primary" data-act="nav" data-v="apps">Open Suite</button></div><div class="chips" style="margin-top:18px">' + cc + '</div><div class="icons">' + ics + '<button class="more" style="margin:0" data-act="nav" data-v="apps" aria-label="All apps">+' + Math.max(0, live - 11) + '</button></div></section>' +
-    '<section class="hgrid" style="margin-top:38px"><div class="today"><div class="eyebrow">Today</div><p style="margin:10px 0 0;font-family:var(--display);font-size:20px;font-weight:500">Calendar, tasks and messages land here</p><p style="margin:6px 0 0;color:var(--muted);font-size:14.5px">The slot for your communication centre (email, WhatsApp, calendar, to-dos). It stays empty until that is connected.</p></div>' +
-    '<div class="recent"><div class="eyebrow">Recent</div>' + recent + '</div></section></div>';
+    '<section class="hgrid" style="margin-top:38px">' + (window.AOSHome ? window.AOSHome.today() : '<div class="today"></div>') + '<div class="recent"><div class="eyebrow">Recent</div>' + recent + '</div></section></div>';
 }
 
 /* ---------- photos ---------- */
@@ -338,7 +330,7 @@ function saveGroup(k, after) {
   if (k === 'coolify') body.coolify = { url: v('s_cu'), token: v('s_ct') };
   if (k === 'vault') body.vault = { url: v('s_vu') };
   if (k === 'status' || k === 'vpn' || k === 'cards') body[k] = { url: v('s_' + k + 'u'), user: v('s_' + k + 'n'), pass: v('s_' + k + 'p') };
-  if (k === 'pulse') body.pulse = { url: v('s_pulseu'), token: v('s_pulset') };
+  if (k === 'pulse') body.pulse = { url: v('s_pulseu'), token: v('s_pulset'), user: v('s_pulseus'), pass: v('s_pulsepw') };
   if (k === 'dav') body.dav = { url: v('s_du'), user: v('s_dn'), pass: v('s_dp') };
   if (k === 'llm') body.llm = { base: v('s_lb'), key: v('s_lk'), model: v('s_lm') };
   if (k === 'mail') { body.mail = { host: v('s_mh'), port: v('s_mp'), security: v('s_ms'), user: v('s_mu'), pass: v('s_mw'), from: v('s_mf'), fromName: v('s_mn'), dailyCap: v('s_mc') }; body.public = { url: v('s_pu') }; }
@@ -348,7 +340,7 @@ function saveGroup(k, after) {
     if (k === 'llm') return api('/api/chat/test', { method: 'POST', json: {} }).then(function (r) { note('r_llm', r.ok ? 'Connected. Model replied (' + (r.model || '?') + ').' : 'Saved, but the test failed: ' + r.message, r.ok ? 'ok' : 'bad'); });
     return api('/api/settings/test', { method: 'POST', json: { target: k } }).then(function (r) {
       if (k === 'immich') { S.imm = r; S.tl = { items: [], next: 1, loading: false, error: null, loaded: false }; S.albums = null; if (r.connected) loadPage(S.tl, '/api/photos/timeline'); }
-      if (k === 'pulse' && window.AOSPulse) { var pst = window.AOSPulse.state; pst.d = {}; pst.err = {}; }
+      if (k === 'pulse' && window.AOSPulse) { var pst = window.AOSPulse.state; pst.d = {}; pst.err = {}; if (window.AOSPulse2) window.AOSPulse2.state.boot = null; }
       if (k === 'dav') { S.drive.status = r; S.drive.items = []; }
       if (k === 'vault') { S.vault.status = r; }
       if (window.AOSInt && (k === 'status' || k === 'vpn' || k === 'cards')) window.AOSInt.after(k, r);

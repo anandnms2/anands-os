@@ -107,9 +107,20 @@
       var title = c.name || c.company || 'Unnamed';
       var sel = window.AOSCards && C.selecting; return '<div class="icardw' + (sel && C.sel[c.id] ? ' sel' : '') + '">' + (sel ? '<input type="checkbox" class="icsel" data-ca="selone" data-id="' + esc(c.id) + '"' + (C.sel[c.id] ? ' checked' : '') + ' aria-label="Select ' + esc(title) + '">' : '') + '<button class="card icard" data-ia="' + (sel ? 'csel' : 'copen') + '" data-id="' + esc(c.id) + '"><div class="icard-img">' + (c.image_thumb ? '<img src="' + esc(c.image_thumb) + '" alt="" loading="lazy">' : '<span>' + esc(title.charAt(0).toUpperCase()) + '</span>') + '</div><div class="icard-t"><b>' + esc(title) + '</b>' + (c.name && c.company ? '<span>' + esc(c.company) + '</span>' : '') + (c.designation ? '<span class="note">' + esc(c.designation) + '</span>' : '') + '<span class="note mono">' + esc(c.phone || c.email || '') + '</span>' + (c.group_name ? '<em class="tag" style="font-style:normal;align-self:flex-start">' + esc(c.group_name) + '</em>' : '') + '</div></button></div>';
     }).join('');
-    return head + '<div class="toolbar"><div class="search">' + ic('search') + '<input class="input" id="cq" type="search" placeholder="Search name, company, phone, email" value="' + esc(C.q) + '" data-ii="cq" aria-label="Search cards"></div><div class="chips">' + chips + '</div></div>' +
+    var mode = A.LS.get('cardsview', 'cards') === 'table' ? 'table' : 'cards';
+    var seg = '<div class="seg" role="group" aria-label="Layout"><button data-ia="cview2" data-m="cards" aria-pressed="' + (mode === 'cards') + '">Cards</button><button data-ia="cview2" data-m="table" aria-pressed="' + (mode === 'table') + '">Table</button></div>';
+    var sel0 = window.AOSCards && C.selecting;
+    var rowsT = C.cards.map(function (c) {
+      var pc = [c.phone, c.phone2, c.phone3].filter(Boolean).length, ec = [c.email, c.email2, c.email3].filter(Boolean).length, dash = '<span class="note">-</span>';
+      return '<tr class="trow' + (sel0 && C.sel[c.id] ? ' sel' : '') + '" tabindex="0" data-ia="' + (sel0 ? 'csel' : 'copen') + '" data-id="' + esc(c.id) + '">' + (sel0 ? '<td><input type="checkbox" data-ca="selone" data-id="' + esc(c.id) + '"' + (C.sel[c.id] ? ' checked' : '') + ' aria-label="Select"></td>' : '') +
+        '<td>' + (c.image_thumb ? '<img class="tbl-thumb" src="' + esc(c.image_thumb) + '" alt="" loading="lazy">' : '<span class="tbl-thumb"></span>') + '</td><td><b>' + esc(c.name || '(no name)') + '</b></td><td>' + (c.company ? esc(c.company) : dash) + '</td><td class="note">' + (esc(c.designation || '') || '-') + '</td>' +
+        '<td>' + (c.phone ? '<a href="tel:' + esc(c.phone) + '" data-stop="1">' + esc(c.phone) + '</a>' + (pc > 1 ? ' <span class="note">+' + (pc - 1) + '</span>' : '') : dash) + '</td><td>' + (c.email ? '<a href="mailto:' + esc(c.email) + '" data-stop="1">' + esc(c.email) + '</a>' + (ec > 1 ? ' <span class="note">+' + (ec - 1) + '</span>' : '') : dash) + '</td>' +
+        '<td class="note">' + esc(c.group_name || '-') + '</td><td class="note">' + (c.created_at ? A.fmt(new Date(c.created_at), { day: 'numeric' }) : '-') + '</td></tr>';
+    }).join('');
+    var tableT = '<div class="tablewrap"><table class="ctable"><thead><tr>' + (sel0 ? '<th></th>' : '') + '<th></th><th>Name</th><th>Company</th><th>Designation</th><th>Phone</th><th>Email</th><th>Group</th><th>Added</th></tr></thead><tbody>' + rowsT + '</tbody></table></div>';
+    return head + '<div class="toolbar"><div class="search">' + ic('search') + '<input class="input" id="cq" type="search" placeholder="Search name, company, phone, email" value="' + esc(C.q) + '" data-ii="cq" aria-label="Search cards"></div>' + seg + '<div class="chips">' + chips + '</div></div>' +
       (C.error ? fail(C, 'cards') : '') + (window.AOSCards ? window.AOSCards.bulkBar() : '') +
-      (C.cards.length ? '<div class="icards">' + tiles + '</div>' : '<div class="empty"><h2>' + (C.q || C.group ? 'No cards match' : 'No cards yet') + '</h2><p>' + (C.q || C.group ? 'Try another search or group.' : 'Scan cards in Card Scan and they appear here.') + '</p></div>') +
+      (C.cards.length ? (mode === 'table' ? tableT : '<div class="icards">' + tiles + '</div>') : '<div class="empty"><h2>' + (C.q || C.group ? 'No cards match' : 'No cards yet') + '</h2><p>' + (C.q || C.group ? 'Try another search or group.' : 'Scan cards in Card Scan and they appear here.') + '</p></div>') +
       (C.cards.length < d.total ? '<div style="text-align:center;margin:18px 0"><button class="btn" data-ia="cmore">' + (C.loading ? 'Loading...' : 'Show more (' + (d.total - C.cards.length) + ' left)') + '</button></div>' : '') + '</div>';
   }
   function cardModal(c, mode, side) {
@@ -133,7 +144,7 @@
       rows.push('<span>Added</span><b>' + (c.created_at ? A.fmt(new Date(c.created_at), { day: 'numeric', month: 'short', year: 'numeric' }) : '') + (c.added_by_name ? ' by ' + esc(c.added_by_name) : '') + '</b>');
       rows.push('<span>Last contacted</span><b>' + (c.last_contacted_at ? ago(c.last_contacted_at) : 'Not yet') + '</b>');
       body = '<div class="ikv">' + rows.join('') + '</div>' + (c.notes ? '<h3 class="ih">Notes</h3><p style="white-space:pre-wrap;margin:0 0 6px">' + esc(c.notes) + '</p>' : '') + '<div id="cm" class="note" role="status"></div>' +
-        (C.open.confirm ? '' : '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px">' + (window.AOSCards ? '<button class="btn" data-ca="notes">Notes</button><button class="btn" data-ca="remind">Remind me</button><button class="btn" data-ca="share">Share</button>' : '') + '<button class="btn danger" data-ia="cdelask">Delete</button><button class="btn" data-ia="ccont">Mark contacted</button><button class="btn primary" data-ia="cedit">Edit</button></div>');
+        (C.open.confirm ? '' : '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px">' + (window.AOSCards ? '<button class="btn" data-ca="notes">Notes</button><button class="btn" data-ca="remind">Remind me</button><button class="btn" data-ca="cshare">Share</button>' : '') + '<button class="btn danger" data-ia="cdelask">Delete</button><button class="btn" data-ia="ccont">Mark contacted</button><button class="btn primary" data-ia="cedit">Edit</button></div>');
     }
     modal('<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:12px"><div><h2 style="font-size:22px">' + esc(c.name || c.company || 'Card') + '</h2>' + (c.name && c.company ? '<div class="note">' + esc((c.designation ? c.designation + ', ' : '') + c.company) + '</div>' : '') + '</div><button class="btn sm" data-act="mx2">Close</button></div>' + imgBox + body);
     var box = $('#modal .card'); if (box) box.style.width = 'min(680px,100%)';
@@ -161,7 +172,7 @@
 
   /* ---------- events ---------- */
   document.addEventListener('click', function (ev) {
-    var el = ev.target.closest && ev.target.closest('[data-ia]'); if (!el) return; var a = el.getAttribute('data-ia'), id = el.getAttribute('data-id');
+    if (ev.target.closest && ev.target.closest('a[data-stop]')) return; var el = ev.target.closest && ev.target.closest('[data-ia]'); if (!el) return; var a = el.getAttribute('data-ia'), id = el.getAttribute('data-id');
     if (a === 'stref') return void load('st', '/api/status?refresh=1');
     if (a === 'srv') return void (window.AOSSrv ? window.AOSSrv.open(id) : srvModal(id));
     if (a === 'vpref') return void load('vpn', '/api/vpn');
@@ -173,10 +184,12 @@
     if (a === 'vdelyes') return void api('/api/vpn/' + id, { method: 'DELETE' }).then(function () { modal(); toast('Device deleted'); return load('vpn', '/api/vpn'); }).catch(function (x) { modal(); vErr(x); });
     if (a === 'cgrp') { I.cards.group = el.getAttribute('data-g') || ''; return void loadCards(); }
     if (a === 'cmore') return void loadCards(true);
+    if (a === 'cview2') { A.LS.set('cardsview', el.getAttribute('data-m')); return void A.redraw(); }
     if (a === 'copen') return void openCard(id);
     if (a === 'csel') { C0().sel[id] = !C0().sel[id]; return void A.redraw(); }
     if (/^c(flip|edit|view|cont|save|delask|delyes)$/.test(a) && I.cards.open) return void cardAct(a, el);
   });
+  document.addEventListener('keydown', function (ev) { var r = ev.target.closest && ev.target.closest('tr.trow'); if (r && (ev.key === 'Enter' || ev.key === ' ') && ev.target === r) { ev.preventDefault(); r.click(); } });
   document.addEventListener('input', function (ev) { var t = ev.target; if (t.getAttribute && t.getAttribute('data-ii') === 'cq') { I.cards.q = t.value; clearTimeout(qt); qt = setTimeout(function () { loadCards(); }, 280); } });
 
   /* ---------- hooks used by os.js ---------- */
@@ -194,7 +207,7 @@
     };
     return card('status', 'Status (Beszel, in Insights)', 'Shows CPU, memory, disk, containers and alerts for each server. Create a read-only user in Beszel for this.', 'https://status.anands.xyz', 'Email', 'viewer@example.com', 'Beszel user password') +
       card('vpn', 'VPN (wg-easy)', 'Lists devices and lets you add, switch off and delete them. Use a wg-easy user without two-factor sign-in.', 'https://vpn.anands.xyz', 'Username', 'admin', 'wg-easy password') +
-      '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Pulse (Anands Control Center)</h2><p class="note" style="margin:0 0 14px">Shows your Pulse data here and lets the assistant read it. In Pulse open Settings, Automation, Access for your AI tools, and create a read-only token.</p>' + field('s_pulseu', 'Address', g('pulse').url, 'https://control.anands.xyz') + field('s_pulset', 'Access token' + (g('pulse').tokenSet ? ' (saved, leave blank to keep)' : ''), '', g('pulse').tokenSet ? '••••••••' : 'pulse_…', 'password') + '<div id="r_pulse" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="pulse">Save and test</button></div>' +
+      '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Pulse (Anands Control Center)</h2><p class="note" style="margin:0 0 14px">Sign in with your Pulse email and password to get the full Pulse here: inbox, WhatsApp chats, tasks, calendar and the Personal/Work switch. The access token is optional and gives the assistant a read-only view. Create it in Pulse under Settings, Automation, Access for your AI tools.</p>' + field('s_pulseu', 'Address', g('pulse').url, 'https://control.anands.xyz') + field('s_pulseus', 'Pulse email', g('pulse').user || '', 'you@example.com') + field('s_pulsepw', 'Pulse password' + (g('pulse').passSet ? ' (saved, leave blank to keep)' : ''), '', g('pulse').passSet ? '••••••••' : '', 'password') + field('s_pulset', 'Access token' + (g('pulse').tokenSet ? ' (saved, leave blank to keep)' : ''), '', g('pulse').tokenSet ? '••••••••' : 'pulse_…', 'password') + '<div id="r_pulse" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="pulse">Save and test</button></div>' +
       card('cards', 'Cards (Card Scan)', 'Browse, edit and delete scanned business cards. Sign in with the email and password you use in Card Scan.', 'https://cards.anands.xyz', 'Email', 'you@example.com', 'Card Scan password');
   }
   function reset(k) { if (k === 'status') I.st = { data: null, loading: false, error: null, code: null }; if (k === 'vpn') I.vpn = { data: null, loading: false, error: null, code: null }; if (k === 'cards') { var q = I.cards; I.cards = { data: null, loading: false, error: null, code: null, q: q.q, group: '', cards: [], offset: 0, open: null }; } }
