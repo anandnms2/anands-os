@@ -102,19 +102,19 @@ try {
     await ctx.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } }); const p = await ctx.newPage(); p.setDefaultTimeout(6000); const errs = []; p.on('pageerror', (e) => errs.push(e.message));
     await p.goto(B + '/#photos'); await p.waitForSelector('.ph');
     await t('UI: memories row, select photos, bar actions', async () => {
-      await p.waitForSelector('.pxmcard'); await p.click('[data-px="selmode"]'); await p.click('.ph >> nth=0'); await p.click('.ph >> nth=1'); await p.waitForSelector('#pxbar'); assert.match(await p.locator('#pxbar').innerText(), /2 selected/);
-      await p.click('#pxbar [data-px="toalbum"]'); await p.waitForSelector('[data-px="pickalbum"]'); await p.click('[data-px="pickalbum"]'); await p.waitForFunction(() => !document.querySelector('#pxbar')); assert.ok(calls.some((c) => c.m === 'PUT' && c.p === '/api/albums/' + AL + '/assets' && c.b.ids.length === 2));
+      await p.waitForSelector('.pxmcard'); await p.click('[data-phx="selmode"]'); await p.click('.ph >> nth=0'); await p.click('.ph >> nth=1'); await p.waitForSelector('#pxbar'); assert.match(await p.locator('#pxbar').innerText(), /2 selected/);
+      await p.click('#pxbar [data-phx="toalbum"]'); await p.waitForSelector('[data-phx="pickalbum"]'); await p.click('[data-phx="pickalbum"]'); await p.waitForFunction(() => !document.querySelector('#pxbar')); assert.ok(calls.some((c) => c.m === 'PUT' && c.p === '/api/albums/' + AL + '/assets' && c.b.ids.length === 2));
     });
     await t('UI: People, Places, Archive, Trash, Shared and Duplicates tabs', async () => {
-      for (const [tab, sel] of [['people', '.pxperson'], ['places', '[data-px="place"]'], ['archive', '.ph'], ['trash', '.ph'], ['links', '[data-px="dellink"]'], ['dups', '[data-px="keep"]']]) { await p.click('[data-act="ptab"][data-t="' + tab + '"]'); await p.waitForSelector(sel); }
-      await p.click('[data-act="ptab"][data-t="people"]'); await p.click('.pxperson'); await p.waitForSelector('.ph'); await p.click('[data-px="back"]'); await p.waitForSelector('.pxperson');
+      for (const [tab, sel] of [['people', '.pxperson'], ['places', '[data-phx="place"]'], ['archive', '.ph'], ['trash', '.ph'], ['links', '[data-phx="dellink"]'], ['dups', '[data-phx="keep"]']]) { await p.click('[data-act="ptab"][data-t="' + tab + '"]'); await p.waitForSelector(sel); }
+      await p.click('[data-act="ptab"][data-t="people"]'); await p.click('.pxperson'); await p.waitForSelector('.ph'); await p.click('[data-phx="back"]'); await p.waitForSelector('.pxperson');
     });
     await t('UI: viewer has details, people, description and extra actions', async () => {
-      await p.click('[data-act="ptab"][data-t="timeline"]'); await p.waitForSelector('.ph'); await p.click('.ph [data-act="lb"] >> nth=0'); await p.waitForSelector('#lb [data-px="lbalbum"]'); await p.waitForSelector('#lb #pxdesc'); assert.equal(await p.inputValue('#pxdesc'), 'Nice');
+      await p.click('[data-act="ptab"][data-t="timeline"]'); await p.waitForSelector('.ph'); await p.click('.ph [data-act="lb"] >> nth=0'); await p.waitForSelector('#lb [data-phx="lbalbum"]'); await p.waitForSelector('#lb #pxdesc'); assert.equal(await p.inputValue('#pxdesc'), 'Nice');
       assert.ok(await p.locator('#lb .pxchip', { hasText: 'Amina' }).count()); await p.click('#lb [data-act="lbx"]');
     });
     await t('UI: filters dialog runs a filtered search', async () => {
-      await p.click('[data-px="filters"]'); await p.waitForSelector('#pxf1'); await p.selectOption('#pxf1', 'video'); await p.fill('#pxf4', 'Arusha'); await p.click('[data-px="mok"]'); await p.waitForFunction(() => /Filtered results/.test(document.body.innerText)); await p.click('[data-px="clearfilters"]');
+      await p.click('[data-phx="filters"]'); await p.waitForSelector('#pxf1'); await p.selectOption('#pxf1', 'video'); await p.fill('#pxf4', 'Arusha'); await p.click('[data-phx="mok"]'); await p.waitForFunction(() => /Filtered results/.test(document.body.innerText)); await p.click('[data-phx="clearfilters"]');
     });
     await t('UI: nothing threw', async () => assert.deepEqual(errs, []));
   }

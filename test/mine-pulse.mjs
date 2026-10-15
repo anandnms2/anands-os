@@ -86,10 +86,9 @@ try {
     const q = await m.newPage(); await q.goto(B + '/'); await q.waitForSelector('.live'); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'home'); await shot(q, 'home-mobile');
     await q.goto(B + '/#pulse'); await q.waitForSelector('[data-px="mode"]'); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'pulse'); await shot(q, 'pulse-mobile');
   });
-  await t('Pulse opens as the real Pulse app in a frame by default, and the built-in view is one click away', async () => {
+  await t('Pulse is built into the OS: no frame, no app-view or open-in-tab buttons', async () => {
     const c2 = await browser.newContext({ viewport: { width: 1280, height: 860 } }); await c2.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
-    const q = await c2.newPage(); await q.goto(B + '/#pulse'); await q.waitForSelector('iframe[title="Anands Pulse"]'); assert.equal(await q.locator('iframe[title="Anands Pulse"]').getAttribute('src'), addr(ps) + '/');
-    await q.click('[data-pa="builtin"]'); await q.waitForSelector('[data-px="mode"]'); assert.equal(await q.locator('iframe[title="Anands Pulse"]').count(), 0); await c2.close();
+    const q = await c2.newPage(); await q.goto(B + '/#pulse'); await q.waitForSelector('[data-px="mode"]'); assert.equal(await q.locator('iframe').count(), 0); assert.equal(await q.locator('[data-pa="nativeon"], [data-pa="builtin"]').count(), 0); await c2.close();
   });
   await t('no page errors', async () => assert.deepEqual(errs, []));
 } finally { await browser.close(); srv.kill(); imm.close(); cs.close(); ps.close(); bz.close(); wg.close(); }

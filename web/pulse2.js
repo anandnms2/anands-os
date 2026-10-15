@@ -47,11 +47,11 @@
     var unread = items().filter(function (i) { return !i.read && i.cls !== 'noise' && !i.handled; }).length;
     return '<div class="wrap pxwrap"><div class="pagehead"><div><h1>Pulse</h1></div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
       (m ? '<div class="seg" role="group" aria-label="Life mode"><button data-px="mode" data-m="personal" aria-pressed="' + (m !== 'work') + '">Personal</button><button data-px="mode" data-m="work" aria-pressed="' + (m === 'work') + '">Work</button></div>' : '') +
-      '<button class="btn" data-pa="nativeon">Pulse app view</button><button class="btn" data-px="refresh">Refresh</button></div></div>' +
+      '<button class="btn" data-px="refresh">Refresh</button></div></div>' +
       '<div class="toolbar"><div class="seg pxtabs" role="tablist">' + VIEWS.filter(function (v) { return v[0] !== 'lists' || work(); }).map(function (v) { var lbl = v[0] === 'tracked' ? (work() ? 'Trucks' : 'Parcels') : v[1]; return '<button data-px="view" data-v="' + v[0] + '" aria-pressed="' + (P.view === v[0]) + '">' + lbl + (v[0] === 'inbox' && unread ? ' <b class="pxn">' + unread + '</b>' : '') + '</button>'; }).join('') + '</div></div>';
   }
   function notReady() {
-    return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div></div><div class="banner"><i class="dot warn"></i><span>Add your Pulse address, email and password in Settings to see mail, WhatsApp, tasks and the calendar here.</span></div></div>';
+    return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div></div><div class="banner"><i class="dot warn"></i><span>Add your Pulse address, email and password in Settings to see mail, WhatsApp, tasks and the calendar here.</span><button class="btn sm" data-act="nav" data-v="settings">Open Settings</button></div></div>';
   }
   function view() {
     if (!on()) return notReady();
