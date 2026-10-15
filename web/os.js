@@ -259,11 +259,15 @@ function insightsV0() {
 
 /* ---------- suite ---------- */
 function appsV() {
-  var cats = ['All']; S.apps.forEach(function (a) { if (cats.indexOf(a.category) < 0) cats.push(a.category); });
-  var list = S.apps.filter(function (a) { return (S.appCat === 'All' || a.category === S.appCat) && (!S.aq || (a.name + ' ' + a.alternativeTo).toLowerCase().indexOf(S.aq.toLowerCase()) > -1); });
-  var tiles = list.map(function (a) { return '<button class="app' + (a.hasSource ? '' : ' soon') + '" ' + (a.hasSource ? 'data-act="app" data-s="' + a.slug + '"' : 'disabled') + '><img src="/_icons/' + a.slug + '.png" alt=""><span style="min-width:0"><b>' + esc(a.name) + '</b><small>' + esc(a.alternativeTo) + '</small></span>' + (a.hasSource ? '' : '<em class="tag" style="font-style:normal">Soon</em>') + '</button>'; }).join('');
-  return '<div class="wrap"><div class="pagehead"><div><h1>Suite</h1><p>Open-source apps built from source and served by this container. They sign in through your SSO and save to your own storage.</p></div></div><div class="banner"><i class="dot"></i><span><b>Local mode.</b> The Puter SDK is replaced by a local one served from this container. The apps cannot reach puter.com.</span></div>' +
-    '<div class="toolbar"><div class="search">' + ic('search') + '<input class="input" id="aq" type="search" placeholder="Search apps, or what they replace" value="' + esc(S.aq) + '" data-in="aq" aria-label="Search apps"></div></div><div class="chips" style="margin-bottom:18px">' + cats.map(function (c) { return '<button class="chip" data-act="cat" data-c="' + esc(c) + '" aria-pressed="' + (S.appCat === c) + '">' + esc(c) + '</button>'; }).join('') + '</div><div class="apps" id="appgrid">' + (tiles || '<div class="card" style="color:var(--muted)">No app matches.</div>') + '</div></div>';
+  var ORDER = ['Office', 'Productivity', 'Collaboration', 'Business', 'Finance', 'Creative Tools', 'Engineering', 'Developer Tools', 'Games'];
+  var q = (S.aq || '').toLowerCase();
+  var list = S.apps.filter(function (a) { return !q || (a.name + ' ' + a.alternativeTo + ' ' + a.category).toLowerCase().indexOf(q) > -1; });
+  var cats = []; list.forEach(function (a) { if (cats.indexOf(a.category) < 0) cats.push(a.category); });
+  cats.sort(function (x, y) { var i = ORDER.indexOf(x), j = ORDER.indexOf(y); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || (x < y ? -1 : 1); });
+  var tile = function (a) { return '<button class="app' + (a.hasSource ? '' : ' soon') + '" ' + (a.hasSource ? 'data-act="app" data-s="' + a.slug + '"' : 'disabled') + '><img src="/_icons/' + a.slug + '.png" alt=""><span style="min-width:0"><b>' + esc(a.name) + '</b><small>' + esc(a.alternativeTo) + '</small></span>' + (a.hasSource ? '' : '<em class="tag" style="font-style:normal">Soon</em>') + '</button>'; };
+  var sections = cats.map(function (c) { var l = list.filter(function (a) { return a.category === c; }); return '<section class="appcat" aria-label="' + esc(c) + '"><h2>' + esc(c) + ' <span>' + l.length + '</span></h2><div class="apps">' + l.map(tile).join('') + '</div></section>'; }).join('');
+  return '<div class="wrap"><div class="pagehead"><div><h1>Suite</h1><p>Open-source apps built from source and served by this container. They sign in through your SSO and save to your own storage.</p></div></div>' +
+    '<div class="toolbar"><div class="search">' + ic('search') + '<input class="input" id="aq" type="search" placeholder="Search apps, or what they replace" value="' + esc(S.aq) + '" data-in="aq" aria-label="Search apps"></div></div><div id="appgrid">' + (sections || '<div class="card" style="color:var(--muted)">No app matches.</div>') + '</div></div>';
 }
 function launch(slug, file) { var a = S.apps.filter(function (x) { return x.slug === slug; })[0]; if (!a || !a.hasSource) return; S.openApp = slug; S.openFile = file || null; var r = (LS.get('recent', []) || []).filter(function (x) { return x !== slug; }); r.unshift(slug); LS.set('recent', r.slice(0, 6)); go('app'); }
 function appWinV() {
