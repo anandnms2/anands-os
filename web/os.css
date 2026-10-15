@@ -715,3 +715,29 @@ body.dk-on{overflow:hidden}
 .today .trow time{flex:0 0 64px;color:var(--accent-text);font-size:13px}
 .today .trow span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .today .tnone{margin:2px 0;color:var(--muted);font-size:14px}
+
+/* Embedded in a Desktop window */
+html.embed #rail, html.embed #top, html.embed #tabs, html.embed #fab, html.embed #toast.dkhide{display:none!important}
+html.embed body{padding-bottom:0}
+html.embed #main{width:100%}
+html.embed #view{padding-bottom:0}
+
+/* Desktop Browser */
+.dk-br{display:flex;flex-direction:column;height:100%;min-height:0}
+.dk-bts{display:flex;gap:2px;padding:6px 8px 0;background:var(--surface2);overflow-x:auto;flex:0 0 auto}
+.dk-bt{display:flex;align-items:center;gap:6px;max-width:200px;min-width:90px;padding:7px 10px;border-radius:9px 9px 0 0;color:var(--muted);font-size:13px;cursor:pointer;background:transparent}
+.dk-bt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.dk-bt.on{background:var(--surface);color:var(--fg)}
+.dk-bt button,.dk-bnew{border:0;background:none;color:inherit;cursor:pointer;border-radius:6px;padding:2px 6px}
+.dk-bt button:hover,.dk-bnew:hover{background:var(--line)}
+.dk-bnew{font-size:18px;align-self:center;margin-left:4px;color:var(--muted)}
+.dk-barw{flex:0 0 auto;background:var(--surface);border-bottom:1px solid var(--line)}
+.dk-bar2{display:flex;gap:6px;align-items:center;padding:8px}
+.dk-bar2 .dk-url{flex:1;min-width:0}
+.dk-bv{position:relative;flex:1;min-height:0;background:#fff}
+.dk-bv .dk-bf{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+.dk-sw{position:absolute;inset:0;overflow:auto;background:var(--bg)}
+.dk-start2{max-width:560px;margin:0 auto;padding:48px 20px;display:flex;flex-direction:column;gap:18px}
+.dk-start2 h2{font-size:28px;margin:0}
+.dk-sf{display:flex;gap:8px}.dk-sf .input{flex:1;min-width:0}
+.dk-q{display:flex;gap:8px;flex-wrap:wrap}

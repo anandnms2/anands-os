@@ -17,9 +17,11 @@ var P = {
   folder: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z', lock: 'M5 11h14v10H5z M8 11V7a4 4 0 0 1 8 0v4', card: 'M2 5h20v14H2z M2 10h20',
   shield: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', pulse: 'M22 12h-4l-3 9L9 3l-3 9H2', monitor: 'M2 3h20v14H2z M8 21h8 M12 17v4', play: 'M6 4l14 8-14 8z', out: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9'
 };
-P.apps = 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z'; P.check = 'M20 6L9 17l-5-5'; P.calendar = 'M3 5h18v16H3z M3 10h18 M8 3v4 M16 3v4';
+P.apps = 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z'; P.globe = 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M2 12h20 M12 2a15 15 0 0 1 0 20 M12 2a15 15 0 0 0 0 20'; P.check = 'M20 6L9 17l-5-5'; P.calendar = 'M3 5h18v16H3z M3 10h18 M8 3v4 M16 3v4';
 var ic = function (n, extra) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"' + (extra || '') + '><path d="' + P[n] + '"/></svg>'; };
 function toast(t) { var el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(function () { el.hidden = true; }, 4200); }
+/* Inside a Desktop window the OS hides its own frame (rail, header, tabs). */
+try { if (window.top !== window.self || /[?&]embed=1/.test(location.search)) document.documentElement.classList.add('embed'); } catch (e) { document.documentElement.classList.add('embed'); }
 var TZ = 'Africa/Dar_es_Salaam';
 /* Every date in the OS: dd/mm/yyyy and 24-hour time in Dar es Salaam. A month-only heading keeps its name. */
 function fmt(d, o) {

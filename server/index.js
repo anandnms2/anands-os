@@ -12,6 +12,7 @@ import { handleVpn, test as vpnTest } from './vpn.js';
 import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
 import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
+import { handleBrowse } from './browse.js';
 import { handleGdrive, googleCallback, gConnected, gConfigured } from './gdrive.js';
 import { ping as davPing } from './webdav.js';
 import { handleVault, status as vaultStatus } from './vault.js';
@@ -25,7 +26,7 @@ import { serveStatic } from './static.js';
 const CONNECT_EXTRA = (env.CONNECT_SRC_EXTRA || '').trim();
 const BASE_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'permissions-policy': 'camera=(self), microphone=(self), geolocation=()' };
 const UI_CSP_PARTS = ["default-src 'self'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self' blob:", "connect-src 'self'"];
-const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self'", "manifest-src 'self'", "worker-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'"].join('; ');
+const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self'", "manifest-src 'self'", "worker-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'self'"].join('; ');
 /* Apps can only talk to this server. puter.com is not reachable from them: nothing else is in connect-src. */
 const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
 
@@ -57,6 +58,7 @@ async function api(req, res, url) {
   if (p === '/api/drive/status') return json(res, 200, await davPing());
   if (p.startsWith('/api/vault/')) return handleVault(req, res, url);
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
+  if (p === '/api/browse' && req.method === 'GET') return handleBrowse(req, res, url);
   if (p === '/api/gdrive' || p.startsWith('/api/gdrive/')) return handleGdrive(req, res, url);
   if (p === '/api/pulse' || p.startsWith('/api/pulse/')) return handlePulse(req, res, url);
   if (p === '/api/status' || p.startsWith('/api/status/')) return handleStatus(req, res, url);

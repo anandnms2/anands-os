@@ -26,8 +26,19 @@ await new Promise((r) => google.listen(0, '127.0.0.1', r)); const gb = 'http://1
 /* mock LLM */
 const seen = []; const llm = http.createServer(async (req, res) => { const chunks = []; for await (const c of req) chunks.push(c); const b = JSON.parse(Buffer.concat(chunks).toString() || '{}'); seen.push(b); const last = b.messages[b.messages.length - 1].content; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ model: 'm', choices: [{ message: { role: 'assistant', content: /open notes/i.test(last) ? 'Opening Notes.\nACTION: open notes' : 'The file says the truck is late.' } }] })); });
 await new Promise((r) => llm.listen(0, '127.0.0.1', r));
+/* mock website for the Browser */
+const site = http.createServer((req, res) => {
+  const u = new URL(req.url, 'http://x'); const h = (b, x = {}) => { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...x }); res.end(b); };
+  if (u.pathname === '/') return h('<!doctype html><html><head><title>Mock Home</title><base href="/"></head><body><h1>Mock site home</h1><a id="l2" href="/page2">Second page</a><form id="sf" action="/search"><input name="q" value="trucks"><button>Go</button></form></body></html>', { 'x-frame-options': 'DENY', 'content-security-policy': "frame-ancestors 'none'" });
+  if (u.pathname === '/page2') return h('<!doctype html><title>Second</title><h1>Page two</h1><a id="ext" target="_blank" href="/page3">New tab link</a>');
+  if (u.pathname === '/page3') return h('<!doctype html><title>Third</title><h1>Page three</h1>');
+  if (u.pathname === '/search') return h('<!doctype html><title>Results</title><h1>Results for ' + (u.searchParams.get('q') || '') + '</h1>');
+  if (u.pathname === '/old') { res.writeHead(302, { location: '/page2' }); return res.end(); }
+  res.writeHead(404); res.end('nope');
+});
+await new Promise((r) => site.listen(0, '127.0.0.1', r)); const SITE = 'http://127.0.0.1:' + site.address().port;
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-dk-')); const port = 20000 + Math.floor(Math.random() * 20000);
-const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', SESSION_SECRET: 'x'.repeat(40), DAV_URL: `http://127.0.0.1:${dav.address().port}/dav`, DAV_USER: 'anand@example.com', DAV_PASSWORD: 'dav-secret', GOOGLE_CLIENT_ID: 'cid', GOOGLE_CLIENT_SECRET: 'sec', GDRIVE_API_BASE: gb, GOOGLE_OAUTH_TOKEN: gb + '/token', GOOGLE_OAUTH_AUTH: gb + '/auth', LLM_BASE_URL: 'http://127.0.0.1:' + llm.address().port + '/v1', LLM_API_KEY: 'k', LLM_MODEL: 'm' } });
+const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, BROWSE_ALLOW_PRIVATE: '1', PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', SESSION_SECRET: 'x'.repeat(40), DAV_URL: `http://127.0.0.1:${dav.address().port}/dav`, DAV_USER: 'anand@example.com', DAV_PASSWORD: 'dav-secret', GOOGLE_CLIENT_ID: 'cid', GOOGLE_CLIENT_SECRET: 'sec', GDRIVE_API_BASE: gb, GOOGLE_OAUTH_TOKEN: gb + '/token', GOOGLE_OAUTH_AUTH: gb + '/auth', LLM_BASE_URL: 'http://127.0.0.1:' + llm.address().port + '/v1', LLM_API_KEY: 'k', LLM_MODEL: 'm' } });
 let log = ''; srv.stdout.on('data', (d) => (log += d)); srv.stderr.on('data', (d) => (log += d));
 const B = `http://127.0.0.1:${port}`;
 for (let i = 0; i < 50; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
@@ -84,6 +95,42 @@ try {
     const last = seen[seen.length - 1]; assert.match(last.messages[0].content, /google text/); assert.match(last.messages[0].content, /Anands Desktop/);
     const before = await p.locator('.dkw iframe[src^="/apps/notes/"]').count(); await p.fill('#dkain', 'open notes'); await p.press('#dkain', 'Enter'); await p.waitForFunction((n) => document.querySelectorAll('.dkw iframe[src^="/apps/notes/"]').length > n, before); assert.doesNotMatch(await p.locator('.dk-aim').innerText(), /ACTION/);
   });
+  await t('Desktop has Photos, Pulse, Cards, Vault, Insights, VPN and Browser as apps', async () => {
+    for (const v of ['browser', 'os:photos', 'os:pulse', 'os:cards', 'os:vault', 'os:insights', 'os:vpn']) assert.equal(await p.locator('#dkicons [data-dk="launch"][data-w="' + v + '"]').count(), 1, v);
+    await p.click('.dk-start'); await p.waitForSelector('#dkmenu:not([hidden])'); for (const v of ['browser', 'os:photos', 'os:pulse']) assert.equal(await p.locator('#dkmenu [data-w="' + v + '"]').count(), 1, v); await p.click('.dk-start');
+  });
+  await t('Photos and Pulse open in windows without the OS frame', async () => {
+    await p.dblclick('#dkicons [data-w="os:photos"]').catch(() => {}); if (!(await p.locator('.dkw[aria-label="Photos"]').count())) await p.click('#dkicons [data-w="os:photos"]');
+    await p.waitForSelector('.dkw[aria-label="Photos"] iframe'); const fr = p.frameLocator('.dkw[aria-label="Photos"] iframe'); await fr.locator('#view h1').first().waitFor(); assert.equal(await fr.locator('#view h1').first().innerText(), 'Photos');
+    assert.equal(await fr.locator('#rail').isVisible(), false); assert.equal(await fr.locator('#top').isVisible(), false); await shot(p, 'desktop-photos');
+    await p.click('#dkicons [data-w="os:pulse"]'); await p.waitForSelector('.dkw[aria-label="Pulse"] iframe'); await p.frameLocator('.dkw[aria-label="Pulse"] iframe').locator('#view h1').first().waitFor();
+    assert.equal(await p.locator('.dkw[aria-label="Pulse"]').count(), 1); await p.click('#dkicons [data-w="os:pulse"]'); assert.equal(await p.locator('.dkw[aria-label="Pulse"]').count(), 1, 'reuses the open window');
+  });
+  await t('Browser: start page, address bar, links, forms, back and forward', async () => {
+    await p.click('#dkicons [data-w="browser"]'); await p.waitForSelector('.dkw[aria-label="Browser"] .dk-start2'); await shot(p, 'desktop-browser-start');
+    const win = p.locator('.dkw[aria-label="Browser"]'); await win.locator('.dk-sw .dk-url').fill(SITE + '/'); await win.locator('.dk-sw .dk-url').press('Enter');
+    const fr = win.frameLocator('iframe.dk-bf'); await fr.locator('h1').waitFor(); assert.equal(await fr.locator('h1').innerText(), 'Mock site home');
+    await p.waitForFunction(() => /Mock Home/.test(document.querySelector('.dk-bt.on').innerText)); await shot(p, 'desktop-browser-page');
+    await fr.locator('#l2').click(); await p.waitForFunction(() => /Page two/.test(document.querySelector('iframe.dk-bf:not([hidden])').contentDocument ? '' : '') || true); await fr.locator('h1:has-text("Page two")').waitFor();
+    assert.equal(await win.locator('.dk-bar2 .dk-url').inputValue(), SITE + '/page2');
+    await win.locator('[data-dk="bback"]').click(); await fr.locator('h1:has-text("Mock site home")').waitFor(); await win.locator('[data-dk="bfwd"]').click(); await fr.locator('h1:has-text("Page two")').waitFor();
+    await win.locator('[data-dk="bback"]').click(); await fr.locator('#sf button').click(); await fr.locator('h1:has-text("Results for trucks")').waitFor();
+  });
+  await t('Browser: new tab link, tabs switch, redirects, search words, errors', async () => {
+    const win = p.locator('.dkw[aria-label="Browser"]'); await win.locator('[data-dk="bnew"]').click(); await win.locator('.dk-sw .dk-url').fill(SITE + '/old'); await win.locator('.dk-sw .dk-url').press('Enter');
+    let fr = win.frameLocator('iframe.dk-bf:not([hidden])'); await fr.locator('h1:has-text("Page two")').waitFor(); await fr.locator('#ext').click(); await p.waitForFunction(() => document.querySelectorAll('.dk-bt').length === 3); await win.frameLocator('iframe.dk-bf:not([hidden])').locator('h1:has-text("Page three")').waitFor();
+    await win.locator('.dk-bt').first().click(); await win.frameLocator('iframe.dk-bf:not([hidden])').locator('h1:has-text("Results for trucks")').waitFor();
+    await win.locator('.dk-bt button[data-dk="bclose"]').last().click(); assert.equal(await p.locator('.dk-bt').count(), 2);
+    await win.locator('.dk-bar2 .dk-url').fill(SITE + '/missing'); await win.locator('.dk-bar2 .dk-url').press('Enter'); await p.waitForTimeout(500);
+    const r = await (await ctx.request.get(B + '/api/browse?url=' + encodeURIComponent(SITE + '/'))).text(); assert.match(r, /<base href="http:\/\/127\.0\.0\.1:\d+\/">/); assert.ok(!/frame-ancestors/i.test(r));
+    const hd = (await ctx.request.get(B + '/api/browse?url=' + encodeURIComponent(SITE + '/'))).headers(); assert.match(hd['content-security-policy'], /sandbox/); assert.ok(!hd['x-frame-options']); assert.ok(!('set-cookie' in hd));
+    const bad = await ctx.request.get(B + '/api/browse?url=' + encodeURIComponent('ftp://x.example/')); assert.equal(bad.status(), 400);
+  });
+  await t('Browser: private addresses are refused unless allowed', async () => {
+    const { fetchPage } = await import('../server/browse.js'); const prev = process.env.BROWSE_ALLOW_PRIVATE; delete process.env.BROWSE_ALLOW_PRIVATE;
+    try { for (const u of ['http://127.0.0.1:1/', 'http://localhost/', 'http://10.1.2.3/', 'http://192.168.0.5/', 'http://169.254.169.254/latest/meta-data/', 'http://[::1]/', 'http://[::ffff:127.0.0.1]/']) { const r = await fetchPage(u); assert.equal(r.code, 403, u); } } finally { if (prev !== undefined) process.env.BROWSE_ALLOW_PRIVATE = prev; }
+  });
+  await t('Browser needs sign-in', async () => { const r = await fetch(B + '/api/browse?url=' + encodeURIComponent(SITE + '/')); assert.ok(r.status === 401 || r.status === 302 || r.status === 403); });
   await t('refresh keeps the desktop, Exit returns to the OS, Back works', async () => {
     await p.reload(); await p.waitForSelector('#desk:not([hidden])'); await p.click('.dk-exit'); await p.waitForSelector('#desk', { state: 'hidden' }); assert.ok(await p.locator('#rail').isVisible()); assert.equal(await p.locator('#view h1').first().innerText().then((x) => x.length > 0), true);
   });
@@ -93,5 +140,5 @@ try {
     const bb = await q.locator('.dkw').boundingBox(); assert.ok(bb.width >= 385); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await shot(q, 'desktop-mobile'); await m.close();
   });
   await t('no page errors', async () => assert.deepEqual(errs, []));
-} finally { await browser.close(); srv.kill(); dav.close(); google.close(); llm.close(); }
+} finally { await browser.close(); srv.kill(); dav.close(); google.close(); llm.close(); site.close(); }
 console.log(`\n${pass} passed, ${failed} failed`); if (failed) console.log(log.slice(-1500)); process.exit(failed ? 1 : 0);

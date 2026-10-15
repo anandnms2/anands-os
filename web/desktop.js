@@ -9,6 +9,9 @@
   var CATS = ['Office', 'Productivity', 'Collaboration', 'Business', 'Finance', 'Creative Tools', 'Engineering', 'Developer Tools', 'Games'];
   var D = { open: false, wins: [], z: 10, n: 0, menu: false, wall: LS.get('deskwall', 'dusk'), g: null, ai: { msgs: [], busy: false, file: null, win: null }, ctxm: null, q: '' };
 
+  var OSAPPS = [['photos', 'Photos', 'photos'], ['pulse', 'Pulse', 'pulse'], ['cards', 'Cards', 'card'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['vpn', 'VPN', 'vpn'], ['servers', 'Servers', 'monitor']];
+  var OSICON = {}; OSAPPS.forEach(function (o) { OSICON[o[0]] = o[2]; });
+  var KIND_IC = { ai: 'chat', browser: 'globe', files: 'folder' };
   function ext(n) { var m = /\.([a-z0-9]+)$/i.exec(n || ''); return m ? m[1].toLowerCase() : ''; }
   function parent(p) { return p.replace(/\/[^/]*$/, '') || '/'; }
   function join(d, n) { return (d === '/' ? '' : d) + '/' + n; }
@@ -26,15 +29,15 @@
   function wallStyle() { var w = WALLS.filter(function (x) { return x[0] === D.wall; })[0] || WALLS[0]; $('#dkwall').style.background = w[2]; root.classList.toggle('dk-light', w[0] === 'paper'); }
 
   function icons() {
-    var items = [['files', 'Files', 'folder'], ['ai', 'Assistant', 'chat']];
+    var items = [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['ai', 'Assistant', 'chat']].concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; }));
     var h = items.map(function (i) { return '<button class="dk-ic" data-dk="launch" data-w="' + i[0] + '"><span class="dk-icg">' + ic(i[2]) + '</span><span>' + i[1] + '</span></button>'; }).join('');
     h += '<button class="dk-ic" data-dk="launch" data-w="google"><span class="dk-icg">' + ic('cloud') + '</span><span>Google Drive</span></button>';
     (LS.get('recent', []) || []).slice(0, 4).forEach(function (s) { var a = appBy(s); if (a) h += '<button class="dk-ic" data-dk="app" data-s="' + esc(a.slug) + '"><img src="/_icons/' + esc(a.slug) + '.png" alt=""><span>' + esc(a.name) + '</span></button>'; });
     $('#dkicons').innerHTML = h;
   }
   function task() {
-    var h = '<button class="dk-start' + (D.menu ? ' on' : '') + '" data-dk="menu" aria-label="Start"><img src="/logo-orange.png" alt=""></button><div class="dk-pins"><button class="dk-pin" data-dk="launch" data-w="files" title="Files">' + ic('folder') + '</button><button class="dk-pin" data-dk="launch" data-w="ai" title="Assistant">' + ic('chat') + '</button></div><div class="dk-run">';
-    D.wins.forEach(function (w) { h += '<button class="dk-rb' + (w.min ? ' min' : '') + (w.id === D.top && !w.min ? ' on' : '') + '" data-dk="tb" data-id="' + w.id + '" title="' + esc(w.title) + '">' + (w.icon ? '<img src="' + esc(w.icon) + '" alt="">' : '<span class="dk-rg">' + ic(w.kind === 'ai' ? 'chat' : 'folder') + '</span>') + '<span>' + esc(w.title) + '</span></button>'; });
+    var h = '<button class="dk-start' + (D.menu ? ' on' : '') + '" data-dk="menu" aria-label="Start"><img src="/logo-orange.png" alt=""></button><div class="dk-pins"><button class="dk-pin" data-dk="launch" data-w="browser" title="Browser">' + ic('globe') + '</button><button class="dk-pin" data-dk="launch" data-w="files" title="Files">' + ic('folder') + '</button><button class="dk-pin" data-dk="launch" data-w="ai" title="Assistant">' + ic('chat') + '</button></div><div class="dk-run">';
+    D.wins.forEach(function (w) { h += '<button class="dk-rb' + (w.min ? ' min' : '') + (w.id === D.top && !w.min ? ' on' : '') + '" data-dk="tb" data-id="' + w.id + '" title="' + esc(w.title) + '">' + (w.icon ? '<img src="' + esc(w.icon) + '" alt="">' : '<span class="dk-rg">' + ic(KIND_IC[w.kind] || (w.view && OSICON[w.view]) || 'folder') + '</span>') + '<span>' + esc(w.title) + '</span></button>'; });
     h += '</div><span class="sp"></span><button class="dk-tray" data-dk="wall" title="Wallpaper">' + ic('photos') + '</button><span class="dk-clock" id="dkclock">' + esc(clock()) + '</span><button class="dk-exit" data-dk="exit" title="Back to Anands OS">' + ic('out') + 'Exit</button>';
     $('#dktask').innerHTML = h;
   }
@@ -42,7 +45,7 @@
     var m = $('#dkmenu'); m.hidden = !D.menu; if (!D.menu) return;
     var q = D.q.toLowerCase(), list = apps().filter(function (a) { return !q || (a.name + ' ' + (a.category || '') + ' ' + (a.alternativeTo || '')).toLowerCase().indexOf(q) >= 0; });
     var h = '<div class="dk-mh"><input class="input" id="dkq" type="search" placeholder="Search apps" value="' + esc(D.q) + '" autocomplete="off"></div><div class="dk-ml">';
-    if (!q || 'files drive assistant google settings'.indexOf(q) >= 0) h += '<div class="dk-mc">System</div>' + [['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat']].map(function (i) { return '<button class="dk-mi" data-dk="launch" data-w="' + i[0] + '"><span class="dk-icg sm">' + ic(i[2]) + '</span>' + i[1] + '</button>'; }).join('') + '<button class="dk-mi" data-dk="settings"><span class="dk-icg sm">' + ic('settings') + '</span>Settings</button>';
+    if (!q || 'browser web internet files drive assistant google settings photos pulse cards vault insights vpn servers'.indexOf(q) >= 0) h += '<div class="dk-mc">System</div>' + [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat']].concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; })).map(function (i) { return '<button class="dk-mi" data-dk="launch" data-w="' + i[0] + '"><span class="dk-icg sm">' + ic(i[2]) + '</span>' + i[1] + '</button>'; }).join('') + '<button class="dk-mi" data-dk="settings"><span class="dk-icg sm">' + ic('settings') + '</span>Settings</button>';
     CATS.concat(['Other']).forEach(function (c) { var l = list.filter(function (a) { return (CATS.indexOf(a.category) >= 0 ? a.category : 'Other') === c; }); if (!l.length) return; h += '<div class="dk-mc">' + esc(c) + '</div>' + l.map(function (a) { return '<button class="dk-mi" data-dk="app" data-s="' + esc(a.slug) + '"><img src="/_icons/' + esc(a.slug) + '.png" alt="">' + esc(a.name) + '</button>'; }).join(''); });
     m.innerHTML = h + '</div>';
   }
@@ -50,7 +53,7 @@
   /* ---------- windows ---------- */
   function area() { return { w: root.clientWidth, h: root.clientHeight - TASK }; }
   function mk(kind, title, o) {
-    o = o || {}; var ar = area(), small = ar.w < 760, n = D.n++, w = { id: 'w' + (++D.id0), kind: kind, title: title, icon: o.icon || '', x: 70 + (n % 8) * 30, y: 40 + (n % 8) * 26, w: Math.min(o.w || 900, ar.w - 20), h: Math.min(o.h || 580, ar.h - 20), min: false, max: small, z: ++D.z, data: o.data || {} };
+    o = o || {}; var ar = area(), small = ar.w < 760, n = D.n++, w = { id: 'w' + (++D.id0), kind: kind, title: title, icon: o.icon || '', x: 230 + (n % 8) * 30, y: 40 + (n % 8) * 26, w: Math.min(o.w || 900, ar.w - 20), h: Math.min(o.h || 580, ar.h - 20), min: false, max: small, z: ++D.z, data: o.data || {} };
     w.x = Math.max(0, Math.min(w.x, ar.w - w.w)); w.y = Math.max(0, Math.min(w.y, ar.h - w.h));
     var el = document.createElement('div'); el.className = 'dkw'; el.setAttribute('data-id', w.id); el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', title);
     el.innerHTML = '<div class="dkw-bar" data-bar><span class="dkw-t">' + (w.icon ? '<img src="' + esc(w.icon) + '" alt="">' : '') + '<b>' + esc(title) + '</b></span><span class="sp"></span><button data-dk="wmin" data-id="' + w.id + '" aria-label="Minimise">&#8211;</button><button data-dk="wmax" data-id="' + w.id + '" aria-label="Maximise">&#9633;</button><button class="x" data-dk="wclose" data-id="' + w.id + '" aria-label="Close">&#10005;</button></div><div class="dkw-body"></div><i class="rz rz-r" data-rz="r"></i><i class="rz rz-b" data-rz="b"></i><i class="rz rz-br" data-rz="br"></i>';
@@ -74,6 +77,79 @@
     if (/^(jpe?g|png|gif|webp|svg|bmp|avif|pdf|mp4|webm|mov|m4v|mp3|wav|ogg|m4a|flac)$/.test(e) || A.TEXTEXT.test(e)) return viewer(path);
     if (m && m.length) { var slug = m[0]; if (A.LAUNCHES.indexOf(slug) < 0) { toast('Opening ' + (appBy(slug) || {}).name + '. Use its Open dialog and choose ' + path); return openApp(slug); } return openApp(slug, path); }
     return viewer(path);
+  }
+
+  /* ---------- Anands OS pages as windows (Photos, Pulse, Cards...) ---------- */
+  function osWin(view) {
+    var o = OSAPPS.filter(function (x) { return x[0] === view; })[0]; if (!o) return;
+    var ex = D.wins.filter(function (x) { return x.kind === 'os' && x.view === view; })[0]; if (ex) { focus(ex); return ex; }
+    var w = mk('os', o[1], { w: 1040, h: 660 }); w.view = view;
+    w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(o[1]) + '" src="/?embed=1#' + esc(view) + '" allow="clipboard-read; clipboard-write; fullscreen"></iframe>'; return w;
+  }
+
+  /* ---------- browser ---------- */
+  var SEARCH = 'https://html.duckduckgo.com/html/?q=';
+  var QUICK = [['Wikipedia', 'https://en.wikipedia.org/'], ['Hacker News', 'https://news.ycombinator.com/'], ['DuckDuckGo', 'https://html.duckduckgo.com/html/'], ['BBC News', 'https://www.bbc.com/news'], ['Example', 'https://example.com/']];
+  function normUrl(t) {
+    t = String(t || '').trim(); if (!t) return '';
+    if (/^https?:\/\//i.test(t)) return t;
+    if (!/\s/.test(t) && /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$/i.test(t)) return 'https://' + t;
+    if (/^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?([/?#].*)?$/i.test(t)) return 'http://' + t;
+    return SEARCH + enc(t);
+  }
+  function btab(w) { var b = w.b; return b.tabs.filter(function (t) { return t.id === b.cur; })[0]; }
+  function browserWin(url) {
+    var w = mk('browser', 'Browser', { w: 1000, h: 640 }); w.b = { tabs: [], cur: 0, n: 0 }; newTab(w, url); return w;
+  }
+  function newTab(w, url) { var t = { id: ++w.b.n, url: '', title: 'New tab', hist: [], i: -1 }; w.b.tabs.push(t); w.b.cur = t.id; paintBrowser(w); if (url) nav(w, t, url); else { var q = w.body.querySelector('.dk-url'); if (q) q.focus(); } return t; }
+  function nav(w, t, input, noPush) {
+    var u = normUrl(input); if (!u) return; t.url = u; t.want = u; t.force = true; t.title = u.replace(/^https?:\/\//, '').slice(0, 40);
+    if (!noPush) { t.hist = t.hist.slice(0, t.i + 1); t.hist.push(u); t.i = t.hist.length - 1; }
+    paintBrowser(w);
+  }
+  function bstart(w) {
+    return '<div class="dk-start2"><h2>Browser</h2><form data-dk-form="url" data-id="' + w.id + '" class="dk-sf"><input class="input dk-url" placeholder="Search the web or type an address" autocomplete="off" aria-label="Search"><button class="btn primary">Go</button></form><div class="dk-q">' + QUICK.map(function (q) { return '<button class="btn" data-dk="bgo" data-id="' + w.id + '" data-u="' + esc(q[1]) + '">' + esc(q[0]) + '</button>'; }).join('') + '</div>' +
+      '<p class="note">Pages open through your Anands server in a sandbox, so sites cannot see your Anands session. Simple pages work best. Sign-in, payments and heavy web apps may not work; use Open in a real tab (top right) for those, or the Linux Desktop on Kasm.</p></div>';
+  }
+  function paintBrowser(w) {
+    var b = w.b, t = btab(w);
+    if (!w.body.querySelector('.dk-br')) w.body.innerHTML = '<div class="dk-br"><div class="dk-bts" role="tablist"></div><div class="dk-barw"></div><div class="dk-bv"><div class="dk-sw"></div></div></div>';
+    w.body.querySelector('.dk-bts').innerHTML = b.tabs.map(function (x) { return '<div class="dk-bt' + (x.id === b.cur ? ' on' : '') + '" data-dk="btab" data-id="' + w.id + '" data-t="' + x.id + '" role="tab" aria-selected="' + (x.id === b.cur) + '"><span>' + esc(x.title) + '</span>' + (b.tabs.length > 1 ? '<button data-dk="bclose" data-id="' + w.id + '" data-t="' + x.id + '" aria-label="Close tab">&#10005;</button>' : '') + '</div>'; }).join('') + '<button class="dk-bnew" data-dk="bnew" data-id="' + w.id + '" aria-label="New tab">+</button>';
+    var keep = (document.activeElement && document.activeElement.classList.contains('dk-url') && w.body.contains(document.activeElement)) ? document.activeElement.value : null;
+    w.body.querySelector('.dk-barw').innerHTML = '<form class="dk-bar2" data-dk-form="url" data-id="' + w.id + '"><button type="button" class="btn sm" data-dk="bback" data-id="' + w.id + '"' + (t.i > 0 ? '' : ' disabled') + ' aria-label="Back">' + ic('back') + '</button><button type="button" class="btn sm" data-dk="bfwd" data-id="' + w.id + '"' + (t.i < t.hist.length - 1 ? '' : ' disabled') + ' aria-label="Forward">' + ic('r') + '</button><button type="button" class="btn sm" data-dk="breload" data-id="' + w.id + '" aria-label="Reload"' + (t.url ? '' : ' disabled') + '>&#8635;</button><button type="button" class="btn sm" data-dk="bhome" data-id="' + w.id + '" aria-label="Start page">' + ic('home') + '</button>' +
+      '<input class="input dk-url" aria-label="Address or search" placeholder="Search or type a web address" value="' + esc(t.url) + '" autocomplete="off" spellcheck="false"><button type="button" class="btn sm" data-dk="bext" data-id="' + w.id + '"' + (t.url ? '' : ' disabled') + ' title="Open this page in a real browser tab" aria-label="Open in a real tab">' + ic('ext') + '</button></form>';
+    if (keep !== null) { var ui = w.body.querySelector('.dk-bar2 .dk-url'); ui.value = keep; ui.focus(); }
+    var bv = w.body.querySelector('.dk-bv'), sw = bv.querySelector('.dk-sw'); sw.hidden = !!t.url; if (!t.url) sw.innerHTML = bstart(w);
+    var have = {}; bv.querySelectorAll('iframe.dk-bf').forEach(function (f) { have[f.getAttribute('data-tab')] = f; });
+    Object.keys(have).forEach(function (k) { if (!b.tabs.some(function (x) { return String(x.id) === k; })) have[k].remove(); });
+    b.tabs.forEach(function (x) {
+      var f = have[x.id];
+      if (x.url && !f) { f = document.createElement('iframe'); f.className = 'dkw-frame dk-bf'; f.setAttribute('data-tab', x.id); f.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads'); f.setAttribute('referrerpolicy', 'no-referrer'); f.title = 'Web page'; bv.appendChild(f); x.force = true; }
+      if (f && x.force && x.want) { f.src = '/api/browse?url=' + enc(x.want); x.force = false; }
+      if (f) f.hidden = !(x.id === b.cur && x.url);
+    });
+    w.title = t.url && t.title ? t.title + ' - Browser' : 'Browser'; task();
+  }
+  window.addEventListener('message', function (ev) {
+    var d = ev.data; if (!d || typeof d !== 'object' || (!d.aosBrowse && !d.aosTitle)) return;
+    for (var i = 0; i < D.wins.length; i++) { var w = D.wins[i]; if (w.kind !== 'browser') continue;
+      var fr = Array.prototype.filter.call(w.body.querySelectorAll('iframe.dk-bf'), function (f) { return f.contentWindow === ev.source; })[0]; if (!fr) continue;
+      var t = w.b.tabs.filter(function (x) { return String(x.id) === fr.getAttribute('data-tab'); })[0]; if (!t) return;
+      if (d.aosBrowse) { if (d.tab) newTab(w, d.aosBrowse); else nav(w, t, d.aosBrowse); return; }
+      if (d.aosTitle !== undefined) { t.loading = false; if (d.aosTitle) t.title = String(d.aosTitle).slice(0, 60); if (d.aosUrl && d.aosUrl !== t.url && /^https?:/i.test(d.aosUrl)) { t.url = d.aosUrl; if (t.hist[t.i] !== d.aosUrl) t.hist[t.i] = d.aosUrl; } var cur = w.b.cur === t.id; var tb = w.body.querySelector('.dk-bt[data-t="' + t.id + '"] span'); if (tb) tb.textContent = t.title; var ui = w.body.querySelector('.dk-bar2 .dk-url'); if (ui && cur) ui.value = t.url; w.title = t.title + ' - Browser'; task(); return; }
+    }
+  });
+  function bhand(a, b, w) {
+    var t = btab(w);
+    if (a === 'bnew') return void newTab(w);
+    if (a === 'btab') { w.b.cur = Number(b.getAttribute('data-t')); return void paintBrowser(w); }
+    if (a === 'bclose') { var id = Number(b.getAttribute('data-t')); w.b.tabs = w.b.tabs.filter(function (x) { return x.id !== id; }); if (!w.b.tabs.length) return void closeWin(w); if (w.b.cur === id) w.b.cur = w.b.tabs[w.b.tabs.length - 1].id; return void paintBrowser(w); }
+    if (a === 'bback' && t.i > 0) { t.i--; return void nav(w, t, t.hist[t.i], true); }
+    if (a === 'bfwd' && t.i < t.hist.length - 1) { t.i++; return void nav(w, t, t.hist[t.i], true); }
+    if (a === 'breload') { t.want = t.url; t.force = true; return void paintBrowser(w); }
+    if (a === 'bhome') { t.url = ''; t.title = 'New tab'; t.i = -1; t.hist = []; return void paintBrowser(w); }
+    if (a === 'bgo') return void nav(w, t, b.getAttribute('data-u'));
+    if (a === 'bext') return void window.open(t.url, '_blank', 'noopener');
   }
 
   /* ---------- viewer ---------- */
@@ -154,6 +230,7 @@
     api('/api/chat', { method: 'POST', json: { messages: ai.msgs.slice(-12), ctx: { photos: false, insights: false, cards: false, pulse: false, files: true, apps: true }, desktop: { windows: D.wins.map(function (x) { return x.title; }), folder: fw ? (fw.f.src === 'google' ? 'Google Drive' : ROOT + fw.f.path) : '', file: ai.file } } }).then(function (r) {
       var t = String(r.text || ''), act = null; t = t.replace(/^\s*ACTION:\s*(open|openfile)\s+(.+?)\s*$/gim, function (_, k, v) { act = { k: k, v: v.trim() }; return ''; }).trim();
       ai.msgs.push({ role: 'assistant', content: t || 'Done.' }); ai.busy = false; paintAi();
+      if (act && act.k === 'open' && (act.v.toLowerCase() === 'browser' || OSICON[act.v.toLowerCase()])) { if (act.v.toLowerCase() === 'browser') browserWin(); else osWin(act.v.toLowerCase()); act = null; }
       if (act && act.k === 'open') { var a = apps().filter(function (x) { return x.slug === act.v || x.name.toLowerCase() === act.v.toLowerCase(); })[0]; if (a) openApp(a.slug); }
       if (act && act.k === 'openfile' && /^\/Drive\//.test(act.v)) openFileInApp(act.v);
     }).catch(function (e) { ai.msgs.push({ role: 'assistant', content: 'Sorry, that did not work: ' + e.message }); ai.busy = false; paintAi(); });
@@ -178,10 +255,11 @@
     if (a === 'exit') return void hide(true);
     if (a === 'menu') { D.menu = !D.menu; D.q = ''; menu(); task(); var q = $('#dkq'); if (q) q.focus(); return; }
     if (D.menu && (a === 'launch' || a === 'app' || a === 'settings')) { D.menu = false; menu(); task(); }
-    if (a === 'launch') { var k = b.getAttribute('data-w'); if (k === 'ai') return void aiWin(); return void filesWin(k === 'google' ? 'google' : 'cloud'); }
+    if (a === 'launch') { var k = b.getAttribute('data-w'); if (k === 'ai') return void aiWin(); if (k === 'browser') return void browserWin(); if (k.indexOf('os:') === 0) return void osWin(k.slice(3)); return void filesWin(k === 'google' ? 'google' : 'cloud'); }
     if (a === 'app') return void openApp(b.getAttribute('data-s'));
     if (a === 'settings') { hide(); return void A.go('settings'); }
     if (a === 'tb') { if (!w) return; if (!w.min && D.top === w.id) { w.min = true; place(w); task(); } else focus(w); return; }
+    if (w && w.kind === 'browser' && /^b/.test(a) && a !== 'bar') return void bhand(a, b, w);
     if (a === 'wmin' && w) { w.min = true; place(w); task(); return; }
     if (a === 'wmax' && w) { w.max = !w.max; place(w); return; }
     if (a === 'wclose' && w) return void closeWin(w);
@@ -208,7 +286,7 @@
     var r = ev.target.closest && ev.target.closest('tr[data-dk="frow"]'); if (r && ev.key === 'Enter') { var w = byId(r.getAttribute('data-id')); if (w) fOpen(w, w.f.items[Number(r.getAttribute('data-i'))]); }
     if (ev.key === 'Enter' && !ev.shiftKey && ev.target.id === 'dkain') { ev.preventDefault(); var v = ev.target.value; ev.target.value = ''; aiSend(v); }
   });
-  document.addEventListener('submit', function (ev) { if (ev.target.getAttribute && ev.target.getAttribute('data-dk-form') === 'ai') { ev.preventDefault(); var i = $('#dkain'); var v = i.value; i.value = ''; aiSend(v); } });
+  document.addEventListener('submit', function (ev) { var fm = ev.target; if (fm.getAttribute && fm.getAttribute('data-dk-form') === 'url') { ev.preventDefault(); var bw = byId(fm.getAttribute('data-id')); if (bw) { var inp = fm.querySelector('.dk-url'); nav(bw, btab(bw), inp.value); } return; } if (ev.target.getAttribute && ev.target.getAttribute('data-dk-form') === 'ai') { ev.preventDefault(); var i = $('#dkain'); var v = i.value; i.value = ''; aiSend(v); } });
   document.addEventListener('input', function (ev) {
     var t = ev.target; if (t.id === 'dkq') { D.q = t.value; var pos = t.selectionStart; menu(); var n = $('#dkq'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
     if (t.getAttribute && t.getAttribute('data-dkq')) { var w = byId(t.getAttribute('data-dkq')); if (w) { w.f.q = t.value; clearTimeout(w.qt); w.qt = setTimeout(function () { var pos2 = t.selectionStart; filesLoad(w); setTimeout(function () { var n2 = w.body.querySelector('.dk-fq'); if (n2) { n2.focus(); n2.setSelectionRange(pos2, pos2); } }, 0); }, 350); } }
