@@ -44,26 +44,66 @@
     }; im.onerror = function () { URL.revokeObjectURL(u); if (n) n.textContent = 'That file could not be read as a picture (HEIC is not supported here).'; }; im.src = u;
   }
 
-  function icons() {
-    var items = [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['ai', 'Assistant', 'chat']].concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; }));
-    var h = items.map(function (i) { return '<button class="dk-ic" data-dk="launch" data-w="' + i[0] + '"><span class="dk-icg">' + ic(i[2]) + '</span><span>' + i[1] + '</span></button>'; }).join('');
-    h += '<button class="dk-ic" data-dk="launch" data-w="google"><span class="dk-icg">' + ic('cloud') + '</span><span>Google Drive</span></button>';
-    (LS.get('recent', []) || []).slice(0, 4).forEach(function (s) { var a = appBy(s); if (a) h += '<button class="dk-ic" data-dk="app" data-s="' + esc(a.slug) + '"><img src="/_icons/' + esc(a.slug) + '.png" alt=""><span>' + esc(a.name) + '</span></button>'; });
-    $('#dkicons').innerHTML = h;
+  /* ---------- launcher: catalog, desktop icons, taskbar pins, Start menu, icon chooser ---------- */
+  var SYS = [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat']].concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; }));
+  var DEF_ICONS = ['browser', 'files', 'ai'].concat(OSAPPS.map(function (o) { return 'os:' + o[0]; })).concat(['google']), DEF_PINS = ['browser', 'files', 'ai'];
+  function catalog() {
+    var l = SYS.map(function (i) { return { id: i[0], name: i[1], ic: i[2], cat: 'System', hay: i[1] + ' system' + (i[0] === 'google' ? ' drive cloud' : '') + (i[0] === 'browser' ? ' web internet' : '') }; });
+    apps().forEach(function (a) { l.push({ id: 'app:' + a.slug, name: a.name, img: '/_icons/' + a.slug + '.png', slug: a.slug, cat: CATS.indexOf(a.category) >= 0 ? a.category : 'Other', hay: a.name + ' ' + (a.category || '') + ' ' + (a.alternativeTo || '') }); });
+    return l;
   }
+  function itemBy(id) { return catalog().filter(function (i) { return i.id === id; })[0]; }
+  function itAttr(it) { return (it.slug ? 'data-dk="app" data-s="' + esc(it.slug) + '"' : 'data-dk="launch" data-w="' + esc(it.id) + '"') + ' data-k="' + esc(it.id) + '"'; }
+  function itGlyph(it, cls) { return it.img ? '<img src="' + esc(it.img) + '" alt="">' : '<span class="dk-icg' + (cls ? ' ' + cls : '') + '">' + ic(it.ic) + '</span>'; }
+  function lsList(k, d) { var v = LS.get(k, null); return Array.isArray(v) ? v : d.slice(); }
+  function deskIds() { return lsList('deskicons', DEF_ICONS); }
+  function pinIds() { return lsList('deskpins', DEF_PINS); }
+  function setIcons(l) { LS.set('deskicons', l); icons(); }
+  function setPins(l) { LS.set('deskpins', l); task(); }
+  function used(id) { var u = LS.get('deskuse', {}) || {}; u[id] = (u[id] || 0) + 1; LS.set('deskuse', u); var r = (LS.get('deskrecent', []) || []).filter(function (x) { return x !== id; }); r.unshift(id); LS.set('deskrecent', r.slice(0, 6)); }
+  function toggle(list, id, on) { var l = list.filter(function (x) { return x !== id; }); if (on) l.push(id); return l; }
+  function icons() {
+    var cat = catalog();
+    $('#dkicons').innerHTML = deskIds().map(function (id) { return cat.filter(function (i) { return i.id === id; })[0]; }).filter(Boolean).map(function (it) { return '<button class="dk-ic" ' + itAttr(it) + '>' + itGlyph(it) + '<span>' + esc(it.name) + '</span></button>'; }).join('');
+  }
+  function pinBtn(it) { return '<button class="dk-pin" ' + itAttr(it) + ' title="' + esc(it.name) + '">' + (it.img ? '<img src="' + esc(it.img) + '" alt="">' : ic(it.ic)) + '</button>'; }
   function task() {
-    var h = '<button class="dk-start' + (D.menu ? ' on' : '') + '" data-dk="menu" aria-label="Start"><img src="/logo-orange.png" alt=""></button><div class="dk-pins"><button class="dk-pin" data-dk="launch" data-w="browser" title="Browser">' + ic('globe') + '</button><button class="dk-pin" data-dk="launch" data-w="files" title="Files">' + ic('folder') + '</button><button class="dk-pin" data-dk="launch" data-w="ai" title="Assistant">' + ic('chat') + '</button></div><div class="dk-run">';
+    var cat = catalog(), pins = pinIds().map(function (id) { return cat.filter(function (i) { return i.id === id; })[0]; }).filter(Boolean);
+    var h = '<button class="dk-start' + (D.menu ? ' on' : '') + '" data-dk="menu" aria-label="Start"><img src="/logo-orange.png" alt=""></button><div class="dk-pins">' + pins.map(pinBtn).join('') + '</div><div class="dk-run">';
     D.wins.forEach(function (w) { h += '<button class="dk-rb' + (w.min ? ' min' : '') + (w.id === D.top && !w.min ? ' on' : '') + '" data-dk="tb" data-id="' + w.id + '" title="' + esc(w.title) + '">' + (w.icon ? '<img src="' + esc(w.icon) + '" alt="">' : '<span class="dk-rg">' + ic(KIND_IC[w.kind] || (w.view && OSICON[w.view]) || 'folder') + '</span>') + '<span>' + esc(w.title) + '</span></button>'; });
     h += '</div><span class="sp"></span><button class="dk-tray" data-dk="wall" title="Wallpaper">' + ic('photos') + '</button><span class="dk-clock" id="dkclock">' + esc(clock()) + '</span><button class="dk-exit" data-dk="exit" title="Back to Anands OS">' + ic('out') + 'Exit</button>';
     $('#dktask').innerHTML = h;
   }
   function menu() {
     var m = $('#dkmenu'); m.hidden = !D.menu; if (!D.menu) return;
-    var q = D.q.toLowerCase(), list = apps().filter(function (a) { return !q || (a.name + ' ' + (a.category || '') + ' ' + (a.alternativeTo || '')).toLowerCase().indexOf(q) >= 0; });
-    var h = '<div class="dk-mh"><input class="input" id="dkq" type="search" placeholder="Search apps" value="' + esc(D.q) + '" autocomplete="off"></div><div class="dk-ml">';
-    if (!q || 'browser web internet files drive assistant google settings photos pulse cards vault insights vpn servers'.indexOf(q) >= 0) h += '<div class="dk-mc">System</div>' + [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat']].concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; })).map(function (i) { return '<button class="dk-mi" data-dk="launch" data-w="' + i[0] + '"><span class="dk-icg sm">' + ic(i[2]) + '</span>' + i[1] + '</button>'; }).join('') + '<button class="dk-mi" data-dk="settings"><span class="dk-icg sm">' + ic('settings') + '</span>Settings</button>';
-    CATS.concat(['Other']).forEach(function (c) { var l = list.filter(function (a) { return (CATS.indexOf(a.category) >= 0 ? a.category : 'Other') === c; }); if (!l.length) return; h += '<div class="dk-mc">' + esc(c) + '</div>' + l.map(function (a) { return '<button class="dk-mi" data-dk="app" data-s="' + esc(a.slug) + '"><img src="/_icons/' + esc(a.slug) + '.png" alt="">' + esc(a.name) + '</button>'; }).join(''); });
-    m.innerHTML = h + '</div>';
+    var q = D.q.toLowerCase().trim(), all = catalog(), row = function (it) { return '<button class="dk-mi" ' + itAttr(it) + '>' + itGlyph(it, 'sm') + '<span>' + esc(it.name) + '</span></button>'; };
+    var h = '<div class="dk-mh"><input class="input" id="dkq" type="search" placeholder="Search apps, then press Enter" value="' + esc(D.q) + '" autocomplete="off"></div>';
+    var cats = ['System'].concat(CATS, ['Other']).filter(function (c) { return all.some(function (i) { return i.cat === c; }); });
+    if (!q) h += '<div class="dk-chips">' + ['All'].concat(cats).map(function (c) { var on = (D.cat || 'All') === c; return '<button class="dk-chip' + (on ? ' on' : '') + '" data-dk="mcat" data-c="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>';
+    h += '<div class="dk-ml">';
+    if (q) { var r = all.filter(function (i) { return i.hay.toLowerCase().indexOf(q) >= 0; }); h += r.length ? '<div class="dk-mg">' + r.map(row).join('') + '</div>' : '<p class="note" style="padding:14px 8px">Nothing matches "' + esc(D.q) + '".</p>'; }
+    else {
+      var rec = (!D.cat || D.cat === 'All') ? (LS.get('deskrecent', []) || []).map(function (id) { return all.filter(function (i) { return i.id === id; })[0]; }).filter(Boolean).slice(0, 6) : [], seen = {};
+      if (rec.length) { h += '<div class="dk-mc">Recent</div><div class="dk-mg">' + rec.map(function (i) { seen[i.id] = 1; return row(i); }).join('') + '</div>'; }
+      cats.forEach(function (c) { if (D.cat && D.cat !== 'All' && D.cat !== c) return; var l = all.filter(function (i) { return i.cat === c && !seen[i.id]; }); if (!l.length) return; h += '<div class="dk-mc">' + esc(c === 'System' ? 'System' : c) + '</div><div class="dk-mg">' + l.map(row).join('') + '</div>'; });
+    }
+    h += '</div><div class="dk-mf"><button class="dk-mi" data-dk="settings"><span class="dk-icg sm">' + ic('settings') + '</span><span>Settings</span></button><button class="dk-mi" data-dk="chooser"><span class="dk-icg sm">' + ic('folder') + '</span><span>Choose desktop icons</span></button></div>';
+    m.innerHTML = h;
+  }
+  function chooser() {
+    var ex = D.wins.filter(function (x) { return x.kind === 'chooser'; })[0]; if (ex) { focus(ex); return ex; }
+    var w = mk('chooser', 'Desktop icons', { w: 560, h: 620 }); w.q = ''; paintChooser(w); return w;
+  }
+  function paintChooser(w) {
+    var all = catalog(), on = deskIds(), pins = pinIds(), u = LS.get('deskuse', {}) || {}, q = (w.q || '').toLowerCase();
+    var cats = ['System'].concat(CATS, ['Other']), h = '<div class="dk-ch"><p class="note">Tick what you want on your desktop. Everything stays in the Start menu either way.</p><input class="input" id="dkcq" type="search" placeholder="Search" value="' + esc(w.q || '') + '" autocomplete="off"><div class="dk-cb"><button class="btn sm" data-dk="chsuggest">Suggest for me</button><button class="btn sm" data-dk="chall">Select all</button><button class="btn sm" data-dk="chnone">Clear all</button><button class="btn sm" data-dk="chreset">Reset</button><span class="sp"></span><span class="note" id="dkcn">' + on.length + ' on desktop</span><button class="btn sm primary" data-dk="chdone" data-id="' + w.id + '">Done</button></div><div class="dk-cl">';
+    cats.forEach(function (c) { var l = all.filter(function (i) { return i.cat === c && (!q || i.hay.toLowerCase().indexOf(q) >= 0); }); if (!l.length) return; h += '<div class="dk-mc">' + esc(c) + '</div>' + l.map(function (i) { return '<div class="dk-cr"><label>' + '<input type="checkbox" class="dk-cki" data-k="' + esc(i.id) + '"' + (on.indexOf(i.id) >= 0 ? ' checked' : '') + '>' + itGlyph(i, 'sm') + '<span>' + esc(i.name) + '</span></label><em>' + (u[i.id] ? 'opened ' + u[i.id] + (u[i.id] === 1 ? ' time' : ' times') : '') + '</em><button class="btn sm' + (pins.indexOf(i.id) >= 0 ? ' on' : '') + '" data-dk="chpin" data-k="' + esc(i.id) + '" title="Show on the taskbar">' + (pins.indexOf(i.id) >= 0 ? 'On taskbar' : 'Pin') + '</button></div>'; }).join(''); });
+    w.body.innerHTML = h + '</div></div>';
+  }
+  function chRepaint() { D.wins.forEach(function (x) { if (x.kind === 'chooser') { var s = x.body.querySelector('.dk-cl'), t = s ? s.scrollTop : 0; paintChooser(x); var n = x.body.querySelector('.dk-cl'); if (n) n.scrollTop = t; } }); }
+  function suggest() {
+    var u = LS.get('deskuse', {}) || {}, top = Object.keys(u).sort(function (a, b) { return u[b] - u[a]; }).filter(itemBy).slice(0, 8);
+    var l = ['browser', 'files', 'ai'].concat(top); return l.filter(function (x, i) { return l.indexOf(x) === i; });
   }
 
   /* ---------- windows ---------- */
@@ -304,7 +344,18 @@
     if (a === 'open') return void show();
     if (a === 'exit') return void hide(true);
     if (a === 'menu') { D.menu = !D.menu; D.q = ''; menu(); task(); var q = $('#dkq'); if (q) q.focus(); return; }
-    if (D.menu && (a === 'launch' || a === 'app' || a === 'settings')) { D.menu = false; menu(); task(); }
+    if (D.menu && (a === 'launch' || a === 'app' || a === 'settings' || a === 'chooser')) { D.menu = false; menu(); task(); }
+    if (a === 'launch' || a === 'app') { try { used(a === 'app' ? 'app:' + b.getAttribute('data-s') : b.getAttribute('data-w')); } catch (e) {} }
+    if (a === 'mcat') { D.cat = b.getAttribute('data-c'); return void menu(); }
+    if (a === 'chooser') { D.menu = false; menu(); task(); return void chooser(); }
+    if (a === 'chdone' && w) return void closeWin(w);
+    if (a === 'chsuggest') { setIcons(suggest()); return void chRepaint(); }
+    if (a === 'chall') { setIcons(catalog().map(function (i) { return i.id; })); return void chRepaint(); }
+    if (a === 'chnone') { setIcons([]); return void chRepaint(); }
+    if (a === 'chreset') { setIcons(DEF_ICONS); setPins(DEF_PINS); return void chRepaint(); }
+    if (a === 'chpin') { var pk = b.getAttribute('data-k'); setPins(toggle(pinIds(), pk, pinIds().indexOf(pk) < 0)); return void chRepaint(); }
+    if (a === 'deskadd' || a === 'deskrm') { var dk = b.getAttribute('data-k'); setIcons(toggle(deskIds(), dk, a === 'deskadd')); return void chRepaint(); }
+    if (a === 'pinadd' || a === 'pinrm') { setPins(toggle(pinIds(), b.getAttribute('data-k'), a === 'pinadd')); return void chRepaint(); }
     if (a === 'launch') { var k = b.getAttribute('data-w'); if (k === 'ai') return void aiWin(); if (k === 'browser') return void openBrowser(); if (k.indexOf('os:') === 0) return void osWin(k.slice(3)); return void filesWin(k === 'google' ? 'google' : 'cloud'); }
     if (a === 'app') return void openApp(b.getAttribute('data-s'));
     if (a === 'settings') { hide(); return void A.go('settings'); }
@@ -326,13 +377,15 @@
     if (a === 'aidrop') { D.ai.file = null; return void paintAi(); }
   });
   document.addEventListener('keydown', function (ev) {
-    if (!D.open) return; if (ev.key === 'Escape' && !$('#dkctx').hidden) { $('#dkctx').hidden = true; return; } if (ev.key === 'Escape') { if (D.menu) { D.menu = false; menu(); task(); } return; }
+    if (!D.open) return; if (ev.key === 'Escape' && !$('#dkctx').hidden) { $('#dkctx').hidden = true; return; } if (ev.key === 'Enter' && ev.target.id === 'dkq') { ev.preventDefault(); var f0 = $('#dkmenu .dk-ml .dk-mi'); if (f0) f0.click(); return; }
+    if (ev.key === 'Escape') { if (D.menu) { D.menu = false; menu(); task(); } return; }
     if (ev.key === 'Enter' && !ev.shiftKey && ev.target.id === 'dkain') { ev.preventDefault(); var v = ev.target.value; ev.target.value = ''; aiSend(v); }
   });
   document.addEventListener('submit', function (ev) { var fm = ev.target; if (fm.getAttribute && fm.getAttribute('data-dk-form') === 'rburl') { ev.preventDefault(); var rw = byId(fm.getAttribute('data-id')); if (rw) { var ri = fm.querySelector('.dk-url'), u = normUrl(ri.value); if (u) { rbPost(rw, rw.r.active ? '/nav' : '/open', { tab: rw.r.active, url: u }); var cvv = rw.body.querySelector('.dk-rc'); if (cvv) cvv.focus(); } } return; }
     if (fm.getAttribute && fm.getAttribute('data-dk-form') === 'url') { ev.preventDefault(); var bw = byId(fm.getAttribute('data-id')); if (bw) { var inp = fm.querySelector('.dk-url'); nav(bw, btab(bw), inp.value); } return; } if (ev.target.getAttribute && ev.target.getAttribute('data-dk-form') === 'ai') { ev.preventDefault(); var i = $('#dkain'); var v = i.value; i.value = ''; aiSend(v); } });
   document.addEventListener('input', function (ev) {
-    var t = ev.target; if (t.id === 'dkq') { D.q = t.value; var pos = t.selectionStart; menu(); var n = $('#dkq'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
+    var t = ev.target; if (t.id === 'dkcq') { var cw = byId(t.closest('.dkw').getAttribute('data-id')); if (cw) { cw.q = t.value; var p2 = t.selectionStart; paintChooser(cw); var n2 = cw.body.querySelector('#dkcq'); if (n2) { n2.focus(); n2.setSelectionRange(p2, p2); } } return; }
+    if (t.id === 'dkq') { D.q = t.value; var pos = t.selectionStart; menu(); var n = $('#dkq'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
   });
   /* right-click menus: desktop, icons, pinned apps, window title bars, taskbar buttons and the taskbar itself */
   function ctx(ev, items) {
@@ -343,11 +396,11 @@
   document.addEventListener('contextmenu', function (ev) {
     if (!D.open) return; var t = ev.target; if (!t.closest || t.closest('#dkctx')) return ev.preventDefault();
     if (t.closest('input, textarea, [contenteditable], canvas, iframe')) return;
-    var deskItems = [['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
+    var deskItems = [['Choose desktop icons...', 'chooser'], ['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
     var el;
     if ((el = t.closest('.dkw-bar'))) { var w = byId(el.closest('.dkw').getAttribute('data-id')); if (!w) return; ev.preventDefault(); return ctx(ev, winItems(w).concat([['Close all windows', 'closeall']])); }
     if ((el = t.closest('.dk-rb'))) { var w2 = byId(el.getAttribute('data-id')); if (!w2) return; ev.preventDefault(); return ctx(ev, winItems(w2)); }
-    if ((el = t.closest('.dk-ic, .dk-pin'))) { var d = el.getAttribute('data-dk'); ev.preventDefault(); var open = [['Open', d, (el.getAttribute('data-w') ? ' data-w="' + el.getAttribute('data-w') + '"' : '') + (el.getAttribute('data-s') ? ' data-s="' + esc(el.getAttribute('data-s')) + '"' : '')]]; return ctx(ev, open.concat(['-', ['Wallpaper...', 'wall'], ['Show desktop', 'showdesk']])); }
+    if ((el = t.closest('.dk-ic, .dk-pin, .dk-mi[data-k]'))) { var d = el.getAttribute('data-dk'), kk = el.getAttribute('data-k'), onD = deskIds().indexOf(kk) >= 0, onP = pinIds().indexOf(kk) >= 0; ev.preventDefault(); var kat = ' data-k="' + esc(kk) + '"'; var open = [['Open', d, (el.getAttribute('data-w') ? ' data-w="' + el.getAttribute('data-w') + '"' : '') + (el.getAttribute('data-s') ? ' data-s="' + esc(el.getAttribute('data-s')) + '"' : '')]]; return ctx(ev, open.concat(['-', onD ? ['Remove from desktop', 'deskrm', kat] : ['Add to desktop', 'deskadd', kat], onP ? ['Unpin from taskbar', 'pinrm', kat] : ['Pin to taskbar', 'pinadd', kat], '-', ['Choose desktop icons...', 'chooser'], ['Wallpaper...', 'wall']])); }
     if (t.closest('.dk-task')) { ev.preventDefault(); return ctx(ev, [['Show desktop', 'showdesk'], ['Close all windows', 'closeall', '', !D.wins.length], '-', ['Wallpaper...', 'wall'], ['Exit to Anands OS', 'exit']]); }
     if (t.closest('#dkicons, .dk-wall, .dk-wins') && !t.closest('.dkw')) { ev.preventDefault(); return ctx(ev, deskItems); }
     if (t.closest('.dkw, #dkmenu')) { if (t.closest('.dkw-body') && !t.closest('a, button')) return; ev.preventDefault(); }
@@ -373,7 +426,7 @@
   root.addEventListener('pointerup', end); root.addEventListener('pointercancel', end);
   window.addEventListener('resize', function () { if (D.open) D.wins.forEach(place); });
   setInterval(function () { var c = $('#dkclock'); if (c && D.open) c.textContent = clock(); }, 20000);
-  document.addEventListener('change', function (ev) { if (ev.target.id === 'dkwf') { wallFile(ev.target.files[0]); ev.target.value = ''; } });
+  document.addEventListener('change', function (ev) { if (ev.target.classList && ev.target.classList.contains('dk-cki')) { setIcons(toggle(deskIds(), ev.target.getAttribute('data-k'), ev.target.checked)); var cn = ev.target.closest('.dk-ch').querySelector('#dkcn'); if (cn) cn.textContent = deskIds().length + ' on desktop'; return; } if (ev.target.id === 'dkwf') { wallFile(ev.target.files[0]); ev.target.value = ''; } });
   window.addEventListener('popstate', function () { if (location.hash === '#desktop') { if (!D.open) show(); } else if (D.open) hide(false); });
   (function wait(n) { if (S.user) { if (location.hash === '#desktop') show(); return; } if (n < 80) setTimeout(function () { wait(n + 1); }, 150); })(0);
 

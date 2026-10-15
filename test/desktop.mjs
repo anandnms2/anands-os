@@ -59,6 +59,30 @@ try {
     await p.click('.dk-start'); await p.waitForSelector('#dkmenu:not([hidden])'); assert.ok(await p.locator('.dk-mc').count() >= 2); await shot(p, 'desktop-start');
     await p.fill('#dkq', 'notes'); await p.click('#dkmenu [data-dk="app"][data-s="notes"]'); await p.waitForSelector('.dkw iframe[src^="/apps/notes/"]'); assert.ok(await p.locator('#dkmenu').isHidden()); assert.equal(await p.locator('.dk-rb').count(), 1);
   });
+  await t('launcher: Enter launches the first search hit, Recent and category chips work', async () => {
+    await p.click('.dk-start'); await p.waitForSelector('#dkmenu:not([hidden])'); assert.ok(await p.locator('#dkmenu .dk-chip').count() >= 2); assert.equal(await p.locator('#dkmenu .dk-mc', { hasText: 'Recent' }).count(), 1);
+    await p.click('#dkmenu .dk-chip[data-c="System"]'); assert.equal(await p.locator('#dkmenu .dk-mc').count(), 1);
+    await p.fill('#dkq', 'zzzz-nothing'); assert.equal(await p.locator('#dkmenu .dk-mi[data-k]').count(), 0);
+    await p.fill('#dkq', 'photos'); await p.press('#dkq', 'Enter'); await p.waitForSelector('.dkw[aria-label="Photos"]'); assert.ok(await p.locator('#dkmenu').isHidden());
+  });
+  await t('choose which icons stay on the desktop, and it persists', async () => {
+    await p.click('.dk-start'); await p.click('#dkmenu [data-dk="chooser"]'); await p.waitForSelector('.dkw[aria-label="Desktop icons"] .dk-cki');
+    const cb = (k) => p.locator('.dk-cki[data-k="' + k + '"]');
+    assert.ok(await cb('os:vpn').isChecked()); await cb('os:vpn').uncheck(); assert.equal(await p.locator('#dkicons [data-w="os:vpn"]').count(), 0);
+    await cb('app:notes').check(); assert.equal(await p.locator('#dkicons [data-s="notes"]').count(), 1);
+    await p.click('[data-dk="chnone"]'); assert.equal(await p.locator('#dkicons .dk-ic').count(), 0); await p.click('[data-dk="chsuggest"]'); assert.ok(await p.locator('#dkicons [data-w="browser"]').count() === 1 && await p.locator('#dkicons [data-s="photos"], #dkicons [data-w="os:photos"]').count() === 1, 'suggest keeps defaults + most used');
+    await p.click('[data-dk="chall"]'); assert.ok(await p.locator('#dkicons .dk-ic').count() > 10); await p.click('[data-dk="chreset"]'); assert.equal(await p.locator('#dkicons [data-s="notes"]').count(), 0);
+    await cb('os:cards').uncheck(); await p.click('.dkw[aria-label="Desktop icons"] [data-dk="chdone"]'); assert.equal(await p.locator('.dkw[aria-label="Desktop icons"]').count(), 0);
+    await p.reload(); await p.waitForSelector('#desk:not([hidden])'); assert.equal(await p.locator('#dkicons [data-w="os:cards"]').count(), 0); assert.equal(await p.locator('#dkicons [data-w="os:pulse"]').count(), 1);
+    await p.click('.dk-start'); await p.click('#dkmenu .dk-mi[data-k="os:cards"]', { button: 'right' }); await p.click('#dkctx [data-dk="deskadd"]'); assert.equal(await p.locator('#dkicons [data-w="os:cards"]').count(), 1);
+    await p.fill('#dkq', 'notes'); await p.click('#dkmenu [data-dk="app"][data-s="notes"]'); await p.waitForSelector('.dkw iframe[src^="/apps/notes/"]');
+  });
+  await t('right-click an icon or Start tile: remove, add to desktop, pin to taskbar', async () => {
+    await p.click('#dkicons [data-w="os:pulse"]', { button: 'right' }); await p.click('#dkctx [data-dk="deskrm"]'); assert.equal(await p.locator('#dkicons [data-w="os:pulse"]').count(), 0);
+    await p.click('.dk-start'); await p.click('#dkmenu .dk-mi[data-k="os:pulse"]', { button: 'right' }); await p.click('#dkctx [data-dk="deskadd"]'); assert.equal(await p.locator('#dkicons [data-w="os:pulse"]').count(), 1);
+    await p.click('#dkmenu .dk-mi[data-k="os:pulse"]', { button: 'right' }); await p.click('#dkctx [data-dk="pinadd"]'); assert.equal(await p.locator('.dk-pin[data-w="os:pulse"]').count(), 1);
+    await p.click('.dk-pin[data-w="os:pulse"]', { button: 'right' }); await p.click('#dkctx [data-dk="pinrm"]'); assert.equal(await p.locator('.dk-pin[data-w="os:pulse"]').count(), 0);
+  });
   await t('windows drag, resize, maximise, minimise and restore from the taskbar', async () => {
     const w = p.locator('.dkw').first(); const before = await w.boundingBox(); const bar = await p.locator('.dkw-bar').first().boundingBox();
     await p.mouse.move(bar.x + 200, bar.y + 15); await p.mouse.down(); await p.mouse.move(bar.x + 320, bar.y + 95, { steps: 4 }); await p.mouse.up(); const moved = await w.boundingBox(); assert.ok(moved.x > before.x + 80 && moved.y > before.y + 50);
