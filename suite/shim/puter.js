@@ -186,6 +186,25 @@
     txt: function (p, o) { return ai.chat(p, o).then(asText); }
   }, unsupported);
 
+  /* Workers: the Calendar's RSVP and booking endpoint runs on this server (see server/workers.js). Its public address is this site's own address. */
+  function withUrl(r) { return r.json().then(function (j) { if (j && j.name) j.url = location.origin; return j; }); }
+  var workers = bagOf('workers', {
+    create: function (name, path) { return post('/workers/create', { name: name, path: path }).then(withUrl); },
+    get: function (name) { return post('/workers/get', { name: name }).then(withUrl); },
+    list: function () { return post('/workers/list', {}).then(function (r) { return r.json(); }); },
+    delete: function (name) { return post('/workers/delete', { name: name }).then(function (r) { return r.json(); }); },
+    exec: function (url, opts) {
+      var u; try { u = new URL(url, location.href); } catch (e) { return Promise.reject(mk('bad_url', 'Bad worker address')); }
+      if (u.hostname === 'calendar-email.puter.work' && /^\/(invites|cancellations|replies)$/.test(u.pathname)) {
+        return fetch('/_local/mail-service' + u.pathname, { method: 'POST', credentials: 'same-origin', headers: { 'x-aos': '1', 'x-app': APP, 'content-type': 'application/json' }, body: (opts && opts.body) || '{}' });
+      }
+      if (u.origin === location.origin && /^\/(rsvp|book|booking|api\/(rsvp|book|booking)|admin)\//.test(u.pathname)) return fetch(u.href, { method: (opts && opts.method) || 'GET', headers: opts && opts.headers, body: opts && opts.body, credentials: 'omit' });
+      return unsupported('workers.exec')();
+    }
+  }, unsupported);
+  /* Email goes out through the SMTP server you set in Settings. */
+  var email = bagOf('email', { send: function (m) { return post('/mail/send', m || {}).then(function (r) { return r.json(); }); } }, unsupported);
+
   var P = {
     env: 'web', appID: 'anands-' + APP, version: 'v2-local', local: true,
     auth: auth, kv: kv, fs: fs, ui: ui, ai: ai,
@@ -194,7 +213,7 @@
     exit: function () {}, getUser: function () { return auth.getUser(); },
     events: bagOf('events', { onLocal: function () {}, on: function () {} }, lenient),
     perms: bagOf('perms', {}, unsupported), hosting: bagOf('hosting', {}, unsupported),
-    workers: bagOf('workers', {}, unsupported), peer: bagOf('peer', {}, unsupported),
+    workers: workers, email: email, peer: bagOf('peer', {}, unsupported),
     apps: bagOf('apps', {}, unsupported), net: bagOf('net', {}, unsupported)
   };
   g.puter = new Proxy(P, { get: function (t, k) { if (k in t) return t[k]; if (typeof k !== 'string' || k === 'then') return undefined; return bagOf(k, {}, unsupported); } });

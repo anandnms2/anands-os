@@ -1,5 +1,7 @@
 (function () {
 'use strict';
+/* A booking link shared by this server (https://os.example.com/#/name/page) goes to the public booking page, not the sign-in screen. */
+if (/^#\/[a-z0-9][a-z0-9-]{0,58}\/[a-z0-9][a-z0-9-]{2,30}[a-z0-9]$/i.test(location.hash)) { location.replace('/book.html' + location.hash); return; }
 var $ = function (s, r) { return (r || document).querySelector(s); };
 var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
 var LS = { get: function (k, d) { try { var v = localStorage.getItem('aos.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set: function (k, v) { try { localStorage.setItem('aos.' + k, JSON.stringify(v)); } catch (e) {} } };
@@ -262,13 +264,14 @@ function appWinV() {
 
 /* ---------- settings ---------- */
 function settingsV() {
-  var c = S.settings || { immich: {}, coolify: {}, llm: {} }; c.dav = c.dav || {};
+  var c = S.settings || { immich: {}, coolify: {}, llm: {} }; c.dav = c.dav || {}; c.mail = c.mail || {};
   var field = function (id, label, val, ph, type) { return '<div class="field"><label for="' + id + '">' + label + '</label><input class="input" id="' + id + '" type="' + (type || 'text') + '" value="' + esc(val || '') + '" placeholder="' + esc(ph || '') + '" autocomplete="off"></div>'; };
   return '<div class="wrap"><div class="pagehead"><div><h1>Settings</h1><p>Connections the OS uses. Keys are stored on the server in your data volume and are never sent back to the browser.</p></div><a class="btn" href="/auth/logout">' + ic('out') + 'Sign out</a></div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Immich (Photos)</h2>' + field('s_iu', 'Server address', c.immich.url, 'https://photos.anands.xyz') + field('s_ik', 'API key' + (c.immich.keySet ? ' (saved, leave blank to keep)' : ''), '', c.immich.keySet ? '••••••••' : 'Immich: Account settings, API keys', 'password') + '<div id="r_immich" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="immich">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Coolify (Cloud Insights)</h2>' + field('s_cu', 'Coolify address', c.coolify.url, 'https://coolify.anands.xyz') + field('s_ct', 'API token, read only' + (c.coolify.tokenSet ? ' (saved, leave blank to keep)' : ''), '', c.coolify.tokenSet ? '••••••••' : 'Coolify: Keys and tokens', 'password') + '<div id="r_coolify" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="coolify">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Vault (Vaultwarden)</h2><p class="note" style="margin:0 0 14px">Only the address is saved. Your email and master password are typed on the Vault screen and are never stored.</p>' + field('s_vu', 'Vault address', (c.vault || {}).url, 'https://pass.anands.xyz') + '<div id="r_vault" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="vault">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Drive (Cloudreve, WebDAV)</h2><p class="note" style="margin:0 0 14px">In Cloudreve: Settings, WebDAV, create an account. Use its address (for example https://drive.anands.xyz/dav), name and password.</p>' + field('s_du', 'WebDAV address', c.dav.url, 'https://drive.anands.xyz/dav') + field('s_dn', 'Account name', c.dav.user, 'you@example.com') + field('s_dp', 'Password' + (c.dav.passSet ? ' (saved, leave blank to keep)' : ''), '', c.dav.passSet ? '••••••••' : 'WebDAV account password', 'password') + '<div id="r_dav" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="dav">Save and test</button></div>' +
+    '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Email (SMTP)</h2><p class="note" style="margin:0 0 14px">Used by Calendar for invitations, RSVP replies and booking confirmations. Use your provider\'s SMTP details (for Gmail, an app password).</p>' + field('s_mh', 'SMTP server', c.mail.host, 'smtp.gmail.com') + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' + field('s_mp', 'Port', c.mail.port || '', '587') + '<div class="field"><label for="s_ms">Security</label><select class="input" id="s_ms">' + [['starttls', 'STARTTLS (587)'], ['ssl', 'SSL/TLS (465)'], ['none', 'None (not recommended)']].map(function (o) { return '<option value="' + o[0] + '"' + (c.mail.security === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></div></div>' + field('s_mu', 'Username', c.mail.user, 'you@example.com') + field('s_mw', 'Password' + (c.mail.passSet ? ' (saved, leave blank to keep)' : ''), '', c.mail.passSet ? '••••••••' : 'SMTP password or app password', 'password') + field('s_mf', 'From address', c.mail.from, 'you@example.com') + field('s_mn', 'From name', c.mail.fromName, 'Anand') + field('s_mc', 'Daily email limit', c.mail.dailyCap, '200') + field('s_pu', 'Public address of this site (links in emails)', (c.public || {}).url, 'https://os.anands.xyz') + '<div id="r_mail" class="note" role="status"></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn primary" data-act="save" data-k="mail">Save and test</button><button class="btn" data-act="mtest">Send a test email</button></div></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Assistant (FreeLLMAPI)</h2>' + field('s_lb', 'API address (OpenAI compatible)', c.llm.base, 'https://llm.anands.xyz/v1') + field('s_lk', 'API key' + (c.llm.keySet ? ' (saved, leave blank to keep)' : ''), '', c.llm.keySet ? '••••••••' : 'sk-...', 'password') + field('s_lm', 'Model', c.llm.model, 'gpt-4o-mini') + '<div id="r_llm" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="llm">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Local mode (no Puter cloud)</h2><dl class="dl"><dt>Sign-in</dt><dd>' + (S.login.method === 'oidc' ? 'Your SSO' : 'Password') + ', handled by this server</dd><dt>puter.kv</dt><dd>Database in your data volume</dd><dt>puter.fs</dt><dd>Folder in your data volume</dd><dt>puter.ai</dt><dd>Your FreeLLMAPI</dd><dt>puter.com</dt><dd>Apps cannot connect (CSP)</dd></dl></div></div></div>';
 }
@@ -339,6 +342,7 @@ function saveGroup(k, after) {
   if (k === 'vault') body.vault = { url: v('s_vu') };
   if (k === 'dav') body.dav = { url: v('s_du'), user: v('s_dn'), pass: v('s_dp') };
   if (k === 'llm') body.llm = { base: v('s_lb'), key: v('s_lk'), model: v('s_lm') };
+  if (k === 'mail') { body.mail = { host: v('s_mh'), port: v('s_mp'), security: v('s_ms'), user: v('s_mu'), pass: v('s_mw'), from: v('s_mf'), fromName: v('s_mn'), dailyCap: v('s_mc') }; body.public = { url: v('s_pu') }; }
   note('r_' + k, 'Saving...');
   return api('/api/settings', { method: 'PUT', json: body }).then(function (s) { S.settings = s; note('r_' + k, 'Saved. Testing...');
     if (k === 'llm') return api('/api/chat/test', { method: 'POST', json: {} }).then(function (r) { note('r_llm', r.ok ? 'Connected. Model replied (' + (r.model || '?') + ').' : 'Saved, but the test failed: ' + r.message, r.ok ? 'ok' : 'bad'); });
@@ -347,7 +351,7 @@ function saveGroup(k, after) {
       if (k === 'dav') { S.drive.status = r; S.drive.items = []; }
       if (k === 'vault') { S.vault.status = r; }
       if (k === 'coolify') { S.ins = { data: null, error: null, code: null, loading: false }; if (r.connected) loadIns(true); }
-      note('r_' + k, r.connected ? 'Connected' + (r.version ? ' (Immich ' + r.version + ')' : r.resources ? ' (' + r.resources + ' resources)' : '') + '.' : 'Saved, but not reachable: ' + (r.reason || 'no answer') + '.', r.connected ? 'ok' : 'bad'); if (after) after(r); });
+      note('r_' + k, r.connected ? (k === 'mail' ? 'Connected and signed in to your mail server. Send a test email to be sure.' : 'Connected') + (r.version ? ' (Immich ' + r.version + ')' : r.resources ? ' (' + r.resources + ' resources)' : '') + '.' : 'Saved, but not reachable: ' + (r.reason || 'no answer') + '.', r.connected ? 'ok' : 'bad'); if (after) after(r); });
   }).catch(function (e) { note('r_' + k, e.message, 'bad'); });
 }
 function modal(html) { var m = $('#modal'); if (!html) { m.hidden = true; m.innerHTML = ''; return; } m.hidden = false; m.innerHTML = '<div class="modal" data-act="mx"><div class="card" role="dialog" aria-modal="true">' + html + '</div></div>'; }
@@ -550,6 +554,7 @@ document.addEventListener('click', function (ev) {
         else { out.style.color = 'var(--bad)'; out.textContent = 'Saved, but it is not reachable: ' + (r.reason || 'no answer') + '. Check the address and key.'; }
       }).catch(function (e) { out.style.color = 'var(--bad)'; out.textContent = e.message; }); break; }
     case 'save': saveGroup(d.k); break;
+    case 'mtest': { var to = ($('#s_mf') || {}).value || ''; note('r_mail', 'Sending...'); api('/api/mail/test', { method: 'POST', json: { to: to } }).then(function (r) { note('r_mail', 'Sent to ' + r.sentTo + '. Check that inbox.', 'ok'); }).catch(function (e) { note('r_mail', e.message, 'bad'); }); break; }
     case 'rf': S.rf = d.f; redraw(); break;
     case 'refresh': loadIns(true); break;
     case 'cat': S.appCat = d.c; redraw(); break;

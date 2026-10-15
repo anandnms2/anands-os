@@ -53,3 +53,17 @@ bash suite/build.sh  # builds the apps into suite/dist (slow)
 node server/index.js
 ```
 Server config: `server/config.js`. UI: `web/` (no build step, no inline script). MIT-licensed upstream apps: see `UPSTREAM-LICENSE-MIT.txt`.
+
+## Calendar: booking page, RSVP page and email
+
+The Calendar app normally uses a Puter-hosted service for guest links and emails. Here both run on your own server.
+
+1. Settings > Email (SMTP): host, port, security (STARTTLS, SSL or none), user, password, From address. Press "Send a test email". Or set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_FROM_NAME`, `SMTP_DAILY_CAP`.
+2. Set "Public address of this site" (or `PUBLIC_URL`). It is put in every emailed link, so it must be the HTTPS address guests can reach.
+3. In the Calendar, enable RSVP links and booking pages as usual. Guests open `/rsvp/<token>` and `/book/<page>` without signing in; everything else still needs sign-in.
+
+Safeguards: the guest-facing script runs in a sandbox with no network or file access; public routes are rate limited; there is a daily email cap (default 200); the SMTP password is write-only; links never use the visitor's Host header.
+
+Limits: tested against a mock SMTP server only. Booking pages created with "add a meeting link" still point at meetings.puter.com; turn that off per page until the Meetings app is supported. The Meetings app itself needs Puter's peer service and is not supported yet.
+
+`node test/calendar.mjs` runs the mock-SMTP tests; set `WORKER_SRC` and `E2E_SUITE` to include the real worker and guest pages.

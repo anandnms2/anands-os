@@ -47,6 +47,8 @@ export function effective() {
     coolify: { url: clean(s.coolify?.url) || clean(env.COOLIFY_URL), token: clean(s.coolify?.token) || clean(env.COOLIFY_TOKEN) },
     dav: { url: clean(s.dav?.url) || clean(env.DAV_URL), user: clean(s.dav?.user) || clean(env.DAV_USER), pass: clean(s.dav?.pass) || clean(env.DAV_PASSWORD) },
     vault: { url: clean(s.vault?.url) || clean(env.VAULT_URL) },
+    mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
+    public: { url: clean(s.public?.url) || PUBLIC_URL },
     llm: { base: clean(s.llm?.base) || clean(env.LLM_BASE_URL), key: clean(s.llm?.key) || clean(env.LLM_API_KEY), model: clean(s.llm?.model) || clean(env.LLM_MODEL) || 'gpt-4o-mini' }
   };
 }
@@ -57,6 +59,8 @@ export function publicSettings() {
     coolify: { url: e.coolify.url, tokenSet: !!e.coolify.token },
     dav: { url: e.dav.url, user: e.dav.user, passSet: !!e.dav.pass },
     vault: { url: e.vault.url },
+    mail: { host: e.mail.host, port: e.mail.port, security: e.mail.security, user: e.mail.user, passSet: !!e.mail.pass, from: e.mail.from, fromName: e.mail.fromName, dailyCap: e.mail.dailyCap },
+    public: { url: e.public.url },
     llm: { base: e.llm.base, keySet: !!e.llm.key, model: e.llm.model }
   };
 }
@@ -67,7 +71,7 @@ export function updateSettings(patch) {
     if (v === undefined) return;
     v = clean(v);
     if (secret && v === '') return;
-    if (!secret && v && field !== 'model' && field !== 'user' && !urlOk(v)) throw Object.assign(new Error(`${group} address must start with http:// or https://`), { status: 400 });
+    if (!secret && v && !['model', 'user', 'host', 'fromName'].includes(field) && !urlOk(v)) throw Object.assign(new Error(`${group} address must start with http:// or https://`), { status: 400 });
     next[group] = next[group] || {}; next[group][field] = v;
   };
   const p = patch || {};
@@ -75,6 +79,16 @@ export function updateSettings(patch) {
   set('coolify', 'url', p.coolify?.url); set('coolify', 'token', p.coolify?.token, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
   set('vault', 'url', p.vault?.url);
+  if (p.mail) {
+    const m = p.mail;
+    set('mail', 'host', m.host === undefined ? undefined : String(m.host).replace(/^[a-z]+:\/\//i, '').replace(/[\/\s].*$/, ''));
+    if (m.port !== undefined) { const n = Number(m.port); if (m.port !== '' && (!Number.isInteger(n) || n < 1 || n > 65535)) throw Object.assign(new Error('Mail port must be a number from 1 to 65535'), { status: 400 }); next.mail = next.mail || {}; next.mail.port = m.port === '' ? 0 : n; }
+    if (m.security !== undefined) { if (!['starttls', 'ssl', 'none'].includes(m.security)) throw Object.assign(new Error('Mail security must be starttls, ssl or none'), { status: 400 }); next.mail = next.mail || {}; next.mail.security = m.security; }
+    set('mail', 'user', m.user); set('mail', 'pass', m.pass, true); set('mail', 'fromName', m.fromName === undefined ? undefined : String(m.fromName).replace(/[\r\n<>"]/g, ''));
+    if (m.from !== undefined) { const f = clean(m.from); if (f && !/^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/.test(f)) throw Object.assign(new Error('The From address must look like name@example.com'), { status: 400 }); next.mail = next.mail || {}; next.mail.from = f; }
+    if (m.dailyCap !== undefined && m.dailyCap !== '') { const n = Number(m.dailyCap); if (!Number.isInteger(n) || n < 1 || n > 2000) throw Object.assign(new Error('Daily email limit must be between 1 and 2000'), { status: 400 }); next.mail = next.mail || {}; next.mail.dailyCap = n; }
+  }
+  set('public', 'url', p.public?.url === undefined ? undefined : String(p.public.url).replace(/\/+$/, ''));
   set('llm', 'base', p.llm?.base); set('llm', 'key', p.llm?.key, true); set('llm', 'model', p.llm?.model);
   stored = next;
   const tmp = sfile + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(stored, null, 2), { mode: 0o600 }); fs.renameSync(tmp, sfile);

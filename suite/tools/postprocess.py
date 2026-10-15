@@ -12,6 +12,14 @@ root = sys.argv[1]
 SDK = "/_suite/puter.js"
 SDK_RE = re.compile(rb"https://js\.puter\.com/v2/?")
 html_n = js_n = stripped = rewired = sw = 0
+# The Calendar's error messages name Puter and its hosted email service. Here, invitations go out through your own SMTP settings.
+WORDING = [
+    (b"The invitation service is unavailable right now.", b"Email is not set up yet. Open Settings in Anands OS, add your SMTP server, then try again."),
+    (b"The email service needs an update before it can send cancellations.", b"Cancellation email could not be sent. Check Email (SMTP) in Anands OS Settings."),
+    (b"The email service needs an update before it can send your reply.", b"Your reply could not be sent. Check Email (SMTP) in Anands OS Settings."),
+    (b"The email service needs an update before it can send this event.", b"The invitation could not be prepared. Check Email (SMTP) in Anands OS Settings."),
+    (b"Sign in to Puter again", b"Sign in to Anands OS again"),
+]
 
 for dp, _, files in os.walk(root):
     for f in files:
@@ -42,6 +50,8 @@ for dp, _, files in os.walk(root):
             b = open(p, "rb").read()
             nb = SDK_RE.sub(SDK.encode(), b)
             nb = nb.replace(b'serviceWorker.register("/sw.js"', b'serviceWorker.register("./sw.js"')
+            for a, b2 in WORDING:
+                nb = nb.replace(a, b2)
             if nb != b:
                 if SDK.encode() in nb and SDK_RE.search(b): js_n += 1
                 if b'serviceWorker.register("./sw.js"' in nb and b'serviceWorker.register("/sw.js"' in b: sw += 1

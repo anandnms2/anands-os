@@ -11,6 +11,9 @@ import { handleChat } from './chat.js';
 import { ping as davPing } from './webdav.js';
 import { handleVault, status as vaultStatus } from './vault.js';
 import { handleLocal } from './local.js';
+import { isWorkerPath, handleWorkerRequest, isGuestPage, serveGuestPage } from './workers.js';
+import { noteOrigin, publicOrigin } from './origin.js';
+import * as mail from './mail.js';
 import { serveStatic } from './static.js';
 
 const CONNECT_EXTRA = (env.CONNECT_SRC_EXTRA || '').trim();
@@ -28,8 +31,16 @@ async function api(req, res, url) {
     if (target === 'immich') return json(res, 200, await immichStatus());
     if (target === 'dav') return json(res, 200, await davPing());
     if (target === 'vault') return json(res, 200, await vaultStatus());
+    if (target === 'mail') return json(res, 200, await mail.verify());
     if (target === 'coolify') { try { const d = await insights(true); return json(res, 200, { configured: true, connected: true, resources: d.resources.length }); } catch (e) { return json(res, 200, { configured: e.code !== 'not_configured', connected: false, reason: e.message }); } }
     throw httpError(400, 'Unknown target');
+  }
+  if (p === '/api/mail/status') return json(res, 200, { configured: mail.configured(), ...mail.usage(), recent: mail.recentLog(), publicAddress: publicOrigin() });
+  if (p === '/api/mail/test' && req.method === 'POST') {
+    const { to } = await readJson(req, 1024); const m = publicSettings().mail; const dest = String(to || m.from || '').trim();
+    if (!mail.validEmail(dest)) throw httpError(400, 'Enter an address to send the test to');
+    await mail.sendMail({ to: dest, subject: 'Anands OS test email', text: 'This is a test from Anands OS. If you can read it, your email settings work.\n\nInvitations, RSVP replies and booking confirmations will be sent the same way.' });
+    return json(res, 200, { ok: true, sentTo: dest });
   }
   if (p === '/api/drive/status') return json(res, 200, await davPing());
   if (p.startsWith('/api/vault/')) return handleVault(req, res, url);
@@ -47,6 +58,9 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/auth/')) { if (await handleAuth(req, res, url) !== false) return; throw httpError(404, 'Not found'); }
     if (p === '/api/session') return json(res, 200, sessionInfo(req));
     if (p === '/_suite/puter.js') { return serveStatic(req, res, path.dirname(SHIM), path.basename(SHIM), {}); }
+    if ((req.method === 'GET' || req.method === 'HEAD') && isGuestPage(p)) return serveGuestPage(req, res, p);
+    if (isWorkerPath(p) && ['GET', 'HEAD', 'POST', 'PUT'].includes(req.method)) return await handleWorkerRequest(req, res, url);
+    if (sessionOf(req)) noteOrigin(req);
     const protectedPath = p.startsWith('/api/') || p.startsWith('/_local/') || p.startsWith('/apps/');
     if (protectedPath && !sessionOf(req)) {
       if (p.startsWith('/apps/')) { res.writeHead(401, { 'content-type': 'text/html; charset=utf-8' }); return res.end('<!doctype html><meta charset=utf-8><body style="font:16px system-ui;padding:2rem">Sign in at <a href="/">Anands OS</a> first.'); }
