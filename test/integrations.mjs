@@ -26,6 +26,20 @@ try {
   await t('status overview lists servers and alerts', async () => { const r = await api('GET', '/api/status?refresh=1'); assert.equal(r.status, 200); assert.equal(r.data.up, 1); assert.equal(r.data.down, 1); assert.equal(r.data.alertsFiring, 1); const s = r.data.systems[0]; assert.equal(s.name, 'oracle-1'); const a = r.data.systems.find((x) => x.name === 'oracle-1'); assert.equal(a.cpu, 12.3); assert.equal(a.services.failed, 1); });
   await t('status re-logs in when the token is rejected', async () => { beszel.logins += 5; const r = await api('GET', '/api/status?refresh=1'); assert.equal(r.status, 200); });
   await t('status detail has series, containers, info', async () => { const r = await api('GET', '/api/status/system?id=sysaaa111'); assert.equal(r.status, 200); assert.equal(r.data.series.length, 2); assert.equal(r.data.series[0].cpu, 10); assert.equal(r.data.containers[0].name, 'immich'); assert.equal(r.data.info.os, 'Ubuntu 24.04'); const bad = await api('GET', '/api/status/system?id=a"b'); assert.equal(bad.status, 400); });
+  await t('status detail has full metrics for the chosen range', async () => { const r = await api('GET', '/api/status/system?id=sysaaa111&range=20m'); assert.equal(r.data.range, '20m'); const l = r.data.last; assert.equal(l.temp, 55); assert.deepEqual(l.la, [1, 2, 3]); assert.deepEqual(l.cpub, [10, 5, 1, 0, 84]); assert.equal(l.efs.sdb.du, 40); assert.deepEqual(l.b, [1000, 2000]); assert.equal(r.data.info.threads, null); assert.equal((await api('GET', '/api/status/system?id=sysaaa111&range=bogus')).data.range, '1m'); });
+  await t('status containers history, services, disks', async () => {
+    let r = await api('GET', '/api/status/containers?id=sysaaa111&range=1m'); assert.equal(r.data.names[0], 'immich'); assert.deepEqual(r.data.cpu.immich, [3, 5]); assert.deepEqual(r.data.cpu.db, [null, 1]);
+    r = await api('GET', '/api/status/services?id=sysaaa111'); assert.equal(r.data.services[1].state, 'failed'); assert.equal(r.data.services[0].sub, 'running');
+    r = await api('GET', '/api/status/smart?id=sysaaa111'); assert.equal(r.data.devices[0].state, 'PASSED'); assert.equal(r.data.devices[0].attributes[0].name, 'Reallocated_Sector_Ct');
+  });
+  await t('status alerts: rules, history, probes, add, change and remove', async () => {
+    let r = await api('GET', '/api/status/alerts'); assert.equal(r.data.rules.length, 1); assert.equal(r.data.rules[0].systemName, 'home-nas'); assert.equal(r.data.history[0].name, 'Status'); assert.equal(r.data.quiet[0].start, '22:00');
+    r = await api('POST', '/api/status/alerts', { system: 'sysaaa111', name: 'CPU', value: 85, min: 5 }); assert.equal(r.data.rules.length, 2); assert.equal(beszel.alerts[1].user, 'usr000001');
+    r = await api('POST', '/api/status/alerts', { system: 'sysaaa111', name: 'CPU', value: 90, min: 5 }); assert.equal(r.data.rules.length, 2); assert.equal(beszel.alerts[1].value, 90);
+    assert.equal((await api('POST', '/api/status/alerts', { system: 'sysaaa111', name: 'Bogus', value: 1 })).status, 400); assert.equal((await api('POST', '/api/status/alerts', { system: 'sysaaa111', name: 'CPU', value: 'x' })).status, 400);
+    r = await api('DELETE', '/api/status/alerts?id=' + beszel.alerts[1].id); assert.equal(r.data.rules.length, 1);
+    r = await api('GET', '/api/status/probes'); assert.equal(r.data.probes[0].ok, 99); assert.equal(r.data.probes[0].avg, 50);
+  });
   await t('vpn lists devices with online state', async () => { const r = await api('GET', '/api/vpn'); assert.equal(r.data.total, 2); assert.equal(r.data.online, 1); assert.equal(r.data.clients[0].online, true); assert.equal(r.data.clients[0].rx, 1000); assert.ok(!JSON.stringify(r.data).includes('SK')); });
   await t('vpn create, disable, enable, rename, delete', async () => {
     let r = await api('POST', '/api/vpn', { name: 'Tablet' }); assert.equal(r.data.ok, true);

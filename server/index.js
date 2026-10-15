@@ -1,7 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { PORT, WEB, SUITE, SHIM, OIDC, PASSWORD, PASSWORD_GENERATED, DATA, publicSettings, updateSettings, env } from './config.js';
+import { frameOrigins, PORT, WEB, SUITE, SHIM, OIDC, PASSWORD, PASSWORD_GENERATED, DATA, publicSettings, updateSettings, env } from './config.js';
 import { sessionOf } from './session.js';
 import { handleAuth, sessionInfo } from './auth.js';
 import { json, readJson, httpError } from './util.js';
@@ -10,6 +10,7 @@ import { handleInsights, insights, clearInsightsCache } from './coolify.js';
 import { handleStatus, test as statusTest, clearStatusCache } from './status.js';
 import { handleVpn, test as vpnTest } from './vpn.js';
 import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
+import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
 import { ping as davPing } from './webdav.js';
 import { handleVault, status as vaultStatus } from './vault.js';
@@ -22,20 +23,23 @@ import { serveStatic } from './static.js';
 
 const CONNECT_EXTRA = (env.CONNECT_SRC_EXTRA || '').trim();
 const BASE_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'permissions-policy': 'camera=(self), microphone=(self), geolocation=()' };
-const UI_CSP = "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; frame-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+/* The OS shows the full Pulse and Card Scan apps in a frame, so their addresses (from Settings) are added to frame-src. */
+const UI_CSP_PARTS = ["default-src 'self'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self' blob:", "connect-src 'self'"];
+const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self' " + frameOrigins().join(' '), "manifest-src 'self'", "worker-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'"].join('; ');
 /* Apps can only talk to this server. puter.com is not reachable from them: nothing else is in connect-src. */
 const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
 
 async function api(req, res, url) {
   const p = url.pathname;
   if (p === '/api/settings' && req.method === 'GET') return json(res, 200, publicSettings());
-  if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); clearStatusCache(); clearCardsCache(); return json(res, 200, publicSettings()); }
+  if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); clearStatusCache(); clearCardsCache(); clearPulseCache(); return json(res, 200, publicSettings()); }
   if (p === '/api/settings/test' && req.method === 'POST') {
     const { target } = await readJson(req, 1024);
     if (target === 'immich') return json(res, 200, await immichStatus());
     if (target === 'dav') return json(res, 200, await davPing());
     if (target === 'vault') return json(res, 200, await vaultStatus());
     if (target === 'mail') return json(res, 200, await mail.verify());
+    if (target === 'pulse') return json(res, 200, await pulseTest());
     if (target === 'status') return json(res, 200, await statusTest());
     if (target === 'vpn') return json(res, 200, await vpnTest());
     if (target === 'cards') return json(res, 200, await cardsTest());
@@ -52,9 +56,10 @@ async function api(req, res, url) {
   if (p === '/api/drive/status') return json(res, 200, await davPing());
   if (p.startsWith('/api/vault/')) return handleVault(req, res, url);
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
-  if (p === '/api/status' || p === '/api/status/system') return handleStatus(req, res, url);
+  if (p === '/api/pulse' || p.startsWith('/api/pulse/')) return handlePulse(req, res, url);
+  if (p === '/api/status' || p.startsWith('/api/status/')) return handleStatus(req, res, url);
   if (p === '/api/vpn' || p.startsWith('/api/vpn/')) return handleVpn(req, res, url);
-  if (p === '/api/cards' || p.startsWith('/api/cards/')) return handleCards(req, res, url);
+  if (p === '/api/cards' || p.startsWith('/api/cards/') || p.startsWith('/api/cs/')) return handleCards(req, res, url);
   if (p === '/api/insights') return handleInsights(req, res, url);
   if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url);
   throw httpError(404, 'Unknown API route');
@@ -99,8 +104,8 @@ const server = http.createServer(async (req, res) => {
         if (hit) return serveStatic(req, res, root, p.slice(1), { 'content-security-policy': APP_CSP });
       }
     }
-    if (p === '/apps.json' || p.startsWith('/_icons/')) return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': UI_CSP });
-    return serveStatic(req, res, WEB, p === '/' ? 'index.html' : p.slice(1), { 'content-security-policy': UI_CSP });
+    if (p === '/apps.json' || p.startsWith('/_icons/')) return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': uiCsp() });
+    return serveStatic(req, res, WEB, p === '/' ? 'index.html' : p.slice(1), { 'content-security-policy': uiCsp() });
   } catch (e) {
     const status = e.status || 500;
     if (status >= 500 && status !== 502 && status !== 504) console.error(e);
