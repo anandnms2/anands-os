@@ -33,7 +33,7 @@ try {
   });
   await t('Home: live cards, Today from Pulse, services grouped', async () => {
     await p.waitForSelector('.live'); await p.waitForFunction(() => /Fleet review/.test(document.querySelector('#view').innerText)); const txt = await p.locator('#view').innerText();
-    for (const w of ['Pulse', 'Tasks today', 'Next event', 'Cards', 'Photos', 'VPN', 'Everyday', 'Servers and network', 'Apps', 'Vault', 'Invoice 5521 overdue']) assert.ok(txt.includes(w), w); assert.match(txt, /needs you/i);
+    for (const w of ['Pulse', 'Tasks today', 'Next event', 'Cards', 'Photos', 'VPN', 'Everyday', 'Servers and network', 'Suite', 'Vault', 'Invoice 5521 overdue']) assert.ok(txt.includes(w), w); assert.match(txt, /needs you/i);
     assert.match(await p.locator('.live', { hasText: 'Next event' }).innerText(), /14:00/); await shot(p, 'home');
   });
   await t('Cards: Cards/Table toggle matches the real app', async () => {

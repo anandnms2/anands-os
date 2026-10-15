@@ -741,3 +741,7 @@ html.embed #view{padding-bottom:0}
 .dk-start2 h2{font-size:28px;margin:0}
 .dk-sf{display:flex;gap:8px}.dk-sf .input{flex:1;min-width:0}
 .dk-q{display:flex;gap:8px;flex-wrap:wrap}
+.ph .nothumb,.nothumb{background:var(--surface2)}
+.nothumb img{visibility:hidden}
+.nothumb::after{content:"No preview";position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:12px}
+.dk-bfull{margin-left:auto;align-self:center}.dk-bfull.on{background:var(--accent,#e8590c);color:#fff}

@@ -235,7 +235,7 @@
   ['serve', 'connect', 'ensureTurnRelays', 'createGuestGrant'].forEach(function (n) { peer[n] = function () { var a = arguments; return loadPeer().then(function (p) { return p[n].apply(p, a); }); }; });
 
   var P = {
-    env: 'web', appID: 'anands-' + APP, version: 'v2-local', local: true,
+    env: 'web', authToken: 'anands-local', appID: 'anands-' + APP, version: 'v2-local', local: true,
     auth: auth, kv: kv, fs: fs, ui: ui, ai: ai,
     randName: function () { var w = ['amber', 'basalt', 'cedar', 'delta', 'ember', 'fjord', 'granite', 'harbor', 'indigo', 'juniper']; return w[Math.floor(Math.random() * w.length)] + '-' + w[Math.floor(Math.random() * w.length)] + '-' + Math.floor(Math.random() * 1000); },
     print: function (t) { try { document.body.insertAdjacentHTML('beforeend', t); } catch (e) {} },

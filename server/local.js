@@ -9,6 +9,7 @@ import { DATA, effective } from './config.js';
 import { createWorker, getWorker, deleteWorker, listWorkers } from './workers.js';
 import { handleMailService } from './calmail.js';
 import * as mail from './mail.js';
+import * as mailbox from './mailbox.js';
 import { sessionOf, userFromSession } from './session.js';
 import { json, readJson, httpError } from './util.js';
 import { llmChat } from './chat.js';
@@ -152,7 +153,7 @@ export async function handleLocal(req, res, url) {
   const s = sessionOf(req); if (!s) throw httpError(401, 'Sign in first', 'auth_required');
   const user = userFromSession(s);
   const p = url.pathname.replace(/^\/_local/, '');
-  if (p === '/auth/user' && req.method === 'GET') return json(res, 200, { ...user, email: user.email || effective().mail.from || null });
+  if (p === '/auth/user' && req.method === 'GET') return json(res, 200, { ...user, email: mailbox.defaultAddress() || user.email || effective().mail.from || null });
   if (p === '/fs/get' && req.method === 'GET') { if (driveRel(url.searchParams.get('path'), user) !== null) return driveFs(p, req, res, url, {}, user); const { abs } = resolve(url.searchParams.get('path'), user); let st; try { st = await fsp.stat(abs); } catch { throw notFound(); } if (st.isDirectory()) throw httpError(400, 'Is a directory'); return sendFile(res, abs, st); }
   if (req.method !== 'POST') throw httpError(405, 'Method not allowed');
   const app = slug(req.headers['x-app']);
@@ -180,7 +181,7 @@ export async function handleLocal(req, res, url) {
     if (p.startsWith('/mail-service/')) return json(res, 200, await handleMailService(p.slice('/mail-service'.length), b));
     if (p === '/mail/send') { // puter.email.send
       if (app !== 'calendar' && app !== 'email') throw httpError(403, 'This app cannot send email', 'forbidden');
-      const to = [].concat(b.to || []); try { await mail.sendMail({ to, subject: b.subject, text: b.text || '', html: b.html, replyTo: b.replyTo, attachments: (b.attachments || []).map((a) => ({ filename: a.filename, contentType: a.contentType, content: a.content })) }); } catch (e) { return json(res, 200, { code: e.code || 'send_failed', message: e.message, delivered: [] }); }
+      const to = [].concat(b.to || []); const acct = app === 'email' ? mailbox.smtpFor(b.from) : null; try { await mail.sendMail({ to, subject: b.subject, text: b.text || '', html: b.html, replyTo: b.replyTo, attachments: (b.attachments || []).map((a) => ({ filename: a.filename, contentType: a.contentType, content: a.content })) }, acct || undefined); } catch (e) { return json(res, 200, { code: e.code || 'send_failed', message: e.message, delivered: [] }); }
       return json(res, 200, { delivered: to });
     }
   }

@@ -9,6 +9,12 @@ export function rebrand(s) {
   return s
     .replace(URLS, (m) => (m.includes('/relationships/') ? m : (/\\\//.test(m) ? '\\/' : '/')))
     .replace(/Puter Technologies Inc\.?/g, 'Anands')
+    .replace(/your @puter\.email address/g, 'your email address')
+    .replace(/to any address on Puter or off/g, 'to any address')
+    .replace(/\bPuter Mail\b/g, 'Anands Email')
+    .replace(/\bPuter Meetings\b/g, 'Anands Meeting')
+    .replace(/\bPUTER\b(?!_)/g, 'ANANDS')
+    .replace(/\b(?!js\.|api\.)(?:[a-z0-9-]+\.)+puter\.com\b(?!\/v2)/gi, 'anands.xyz')
     .replace(/\bPuter\.(com|js)\b/g, 'Anands')
     .replace(/\bPuter\b/g, 'Anands');
 }

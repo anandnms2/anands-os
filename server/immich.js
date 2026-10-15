@@ -58,15 +58,16 @@ export async function handlePhotos(req, res, url) {
     try { const r = await post('/search/smart', { query: text, page: 1, size: 100, withExif: true }); return json(res, 200, { items: (r.assets?.items || []).filter(live).map(mapAsset), next: null, mode: 'smart' }); }
     catch { const r = await page({ originalFileName: text }, 1); return json(res, 200, { ...r, next: null, mode: 'filename' }); }
   }
-  if ((m = p.match(/^\/asset\/([^/]+)\/(thumb|preview|original)$/))) {
+  if ((m = p.match(/^\/asset\/([^/]+)\/(thumb|preview|original|video)$/))) {
     if (!UUID.test(m[1])) throw httpError(400, 'Bad asset id');
     const c = conn();
-    const target = m[2] === 'original' ? `/assets/${m[1]}/original` : `/assets/${m[1]}/thumbnail?size=${m[2] === 'preview' ? 'preview' : 'thumbnail'}`;
+    const target = m[2] === 'original' ? `/assets/${m[1]}/original` : m[2] === 'video' ? `/assets/${m[1]}/video/playback` : `/assets/${m[1]}/thumbnail?size=${m[2] === 'preview' ? 'preview' : 'thumbnail'}`;
     const headers = { 'x-api-key': c.key }; if (req.headers.range) headers.range = req.headers.range;
     let r;
     try { r = await fetch(c.url + '/api' + target, { headers }); } catch (e) { throw httpError(502, 'Could not reach Immich', 'upstream_unreachable'); }
     const out = { 'content-type': r.headers.get('content-type') || 'application/octet-stream', 'cache-control': r.ok ? 'private, max-age=86400' : 'no-store' };
     for (const h of ['content-length', 'content-range', 'accept-ranges']) if (r.headers.get(h)) out[h] = r.headers.get(h);
+    if (m[2] === 'video' && !r.ok && r.status !== 416) { try { r = await fetch(c.url + '/api/assets/' + m[1] + '/original', { headers }); } catch {} out['content-type'] = r.headers.get('content-type') || out['content-type']; for (const h of ['content-length', 'content-range', 'accept-ranges']) if (r.headers.get(h)) out[h] = r.headers.get(h); }
     res.writeHead(r.status, out);
     if (!r.body) return res.end();
     return Readable.fromWeb(r.body).on('error', () => res.destroy()).pipe(res);

@@ -52,6 +52,7 @@ export function effective() {
     pulse: { url: clean(s.pulse?.url) || clean(env.PULSE_URL), token: clean(s.pulse?.token) || clean(env.PULSE_TOKEN), user: clean(s.pulse?.user) || clean(env.PULSE_USER), pass: clean(s.pulse?.pass) || clean(env.PULSE_PASSWORD) },
     dav: { url: clean(s.dav?.url) || clean(env.DAV_URL), user: clean(s.dav?.user) || clean(env.DAV_USER), pass: clean(s.dav?.pass) || clean(env.DAV_PASSWORD) },
     vault: { url: clean(s.vault?.url) || clean(env.VAULT_URL) },
+    rbrowser: { url: clean(s.rbrowser?.url) || clean(env.REMOTE_BROWSER_URL) },
     mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
     public: { url: clean(s.public?.url) || PUBLIC_URL },
     turn: { urls: clean(s.turn?.urls) || clean(env.TURN_URLS), secret: clean(s.turn?.secret) || clean(env.TURN_SECRET), stun: clean(s.turn?.stun) || clean(env.STUN_URLS) },
@@ -70,6 +71,7 @@ export function publicSettings() {
     pulse: { url: e.pulse.url, tokenSet: !!e.pulse.token, user: e.pulse.user, passSet: !!e.pulse.pass },
     dav: { url: e.dav.url, user: e.dav.user, passSet: !!e.dav.pass },
     vault: { url: e.vault.url },
+    rbrowser: { url: e.rbrowser.url },
     mail: { host: e.mail.host, port: e.mail.port, security: e.mail.security, user: e.mail.user, passSet: !!e.mail.pass, from: e.mail.from, fromName: e.mail.fromName, dailyCap: e.mail.dailyCap },
     public: { url: e.public.url },
     turn: { urls: e.turn.urls, secretSet: !!e.turn.secret, stun: e.turn.stun },
@@ -94,6 +96,8 @@ export function updateSettings(patch) {
   set('pulse', 'url', p.pulse?.url); set('pulse', 'token', p.pulse?.token, true); set('pulse', 'user', p.pulse?.user); set('pulse', 'pass', p.pulse?.pass, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
   set('vault', 'url', p.vault?.url);
+  if (p.rbrowser?.url !== undefined && String(p.rbrowser.url).trim() && !/^https?:\/\/[^\s]+$/i.test(String(p.rbrowser.url).trim())) throw Object.assign(new Error('Enter the full address, starting with https://'), { status: 400 });
+  set('rbrowser', 'url', p.rbrowser?.url === undefined ? undefined : String(p.rbrowser.url).trim().replace(/\/+$/, ''));
   if (p.mail) {
     const m = p.mail;
     set('mail', 'host', m.host === undefined ? undefined : String(m.host).replace(/^[a-z]+:\/\//i, '').replace(/[\/\s].*$/, ''));

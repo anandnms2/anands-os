@@ -109,6 +109,7 @@ async function session(cfg, fn) {
 const settingsOrThrow = () => { const m = effective().mail; if (!m.host || !m.from) throw httpError(404, 'Email is not set up. Add your SMTP server in Settings.', 'smtp_not_configured'); return m; };
 
 /* Checks the connection and the login. Sends nothing. */
+export async function verifyAccount(cfg) { try { await session(cfg, async () => true); return { ok: true }; } catch (e) { return { ok: false, reason: e.message }; } }
 export async function verify() {
   const m = effective().mail; if (!m.host || !m.from) return { configured: false, connected: false };
   try { await session(m, async () => true); return { configured: true, connected: true, from: m.from, ...usage() }; }
@@ -116,15 +117,15 @@ export async function verify() {
 }
 let queue = Promise.resolve();
 /* msg: { to, subject, text, html?, replyTo?, fromName?, calendar?:{method,text}, attachments?, headers? }. Resolves { messageId } or throws. */
-export function sendMail(msg) {
-  const run = queue.then(() => doSend(msg)); queue = run.catch(() => {}); return run;
+export function sendMail(msg, cfg) {
+  const run = queue.then(() => doSend(msg, cfg)); queue = run.catch(() => {}); return run;
 }
-async function doSend(msg) {
-  const m = settingsOrThrow();
+async function doSend(msg, cfg) {
+  const m = cfg || settingsOrThrow();
   const to = (Array.isArray(msg.to) ? msg.to : [msg.to]).map(clean).filter(Boolean);
   if (!to.length || !to.every(validEmail) || to.length > 20) throw httpError(400, 'Bad recipient address', 'bad_recipient');
   if (msg.replyTo && !validEmail(clean(msg.replyTo))) msg = { ...msg, replyTo: '' };
-  const u = usage(); if (u.remaining < to.length) throw httpError(429, `Today's email limit (${u.cap}) is used up. Raise it in Settings or try tomorrow.`, 'daily_limit');
+  const u = cfg ? { remaining: 1e9 } : usage(); if (u.remaining < to.length) throw httpError(429, `Today's email limit (${u.cap}) is used up. Raise it in Settings or try tomorrow.`, 'daily_limit');
   const { id, raw } = buildMessage({ ...msg, to }, { email: m.from, name: m.fromName });
   if (raw.length > 8 * 1024 * 1024) throw httpError(413, 'The message is too large', 'too_large');
   const entry = { t: new Date().toISOString(), to: to.join(', ').slice(0, 200), subject: clean(msg.subject).slice(0, 120) };
@@ -137,7 +138,7 @@ async function doSend(msg) {
       await expect([2], 'Message');
     });
   } catch (e) { entry.ok = false; entry.err = String(e.message).slice(0, 160); log.push(entry); saveSoon(); throw e; }
-  counts[day()] = (counts[day()] || 0) + to.length; for (const k of Object.keys(counts)) if (k < day() && Object.keys(counts).length > 8) delete counts[k];
+  if (!cfg) counts[day()] = (counts[day()] || 0) + to.length; for (const k of Object.keys(counts)) if (k < day() && Object.keys(counts).length > 8) delete counts[k];
   entry.ok = true; log.push(entry); saveSoon();
   return { messageId: id };
 }

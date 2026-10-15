@@ -7,6 +7,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
 import { DATA, SUITE } from './config.js';
+import { rebrand } from './rebrand.js';
 import { httpError, readBody, clientIp } from './util.js';
 import { publicOrigin } from './origin.js';
 import * as mail from './mail.js';
@@ -153,7 +154,7 @@ export function guestPage(p) {
   const c = cache.get(file); if (c && c.m === st.mtimeMs) return c.html;
   let html = fs.readFileSync(abs, 'utf8');
   for (const [from, to] of PATCHES[file]) { if (!html.includes(from)) { console.error(`[workers] guest page ${file} did not match the expected code; refusing to serve it`); return null; } html = html.split(from).join(to); }
-  cache.set(file, { m: st.mtimeMs, html }); return html;
+  html = rebrand(html); cache.set(file, { m: st.mtimeMs, html }); return html;
 }
 export function serveGuestPage(req, res, p) {
   const html = guestPage(p);

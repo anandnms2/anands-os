@@ -17,7 +17,7 @@ export async function serveStatic(req, res, root, rel, extraHeaders = {}, opts =
   catch { res.writeHead(404, { 'content-type': 'text/plain', ...extraHeaders }); return res.end('Not found'); }
   const ext = path.extname(file).slice(1).toLowerCase();
   const hashed = /[.-][A-Za-z0-9_-]{8,}\.(js|css|woff2?|png|jpg|svg|wasm)$/.test(file);
-  const etag = 'W/"' + (opts.rebrand ? 'rb1-' : '') + st.size.toString(36) + '-' + Math.floor(st.mtimeMs).toString(36) + '"';
+  const etag = 'W/"' + (opts.rebrand ? 'rb2-' : '') + st.size.toString(36) + '-' + Math.floor(st.mtimeMs).toString(36) + '"';
   const h = { 'content-type': MIME[ext] || 'application/octet-stream', 'cache-control': hashed && !opts.rebrand ? 'public, max-age=31536000, immutable' : 'no-cache', etag, 'last-modified': st.mtime.toUTCString(), ...extraHeaders };
   if (req.headers['if-none-match'] === etag) { res.writeHead(304, h); return res.end(); }
   if (opts.rebrand && rebrandable(file, st.size) && !req.headers.range) {
