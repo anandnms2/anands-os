@@ -169,12 +169,12 @@ function homeV() {
 }
 
 /* ---------- photos ---------- */
-function connectBlock(what, act, why) { return '<div class="empty"><h2>' + what + '</h2><p>' + why + '</p><button class="btn primary" data-act="' + act + '">Connect</button></div>'; }
+function connectBlock(what, act, why) { return '<div class="empty"><h2>' + what + '</h2><p>' + why + ' Set it up in Settings.</p></div>'; }
 function photosShell() {
-  var im = S.imm, h = '<div class="wrap"><div class="pagehead"><div><h1>Photos</h1></div><div style="display:flex;gap:10px;flex-wrap:wrap">' + (im && im.connected ? '<button class="btn" data-act="photoref">Refresh</button><button class="btn" data-act="upload">' + ic('upload') + 'Upload</button>' : '') + '<button class="btn' + (im && im.connected ? '' : ' primary') + '" data-act="immich">' + (im && im.configured ? 'Immich settings' : 'Connect Immich') + '</button><input type="file" id="fileIn" accept="image/*,video/*" multiple hidden></div></div>';
+  var im = S.imm, h = '<div class="wrap"><div class="pagehead"><div><h1>Photos</h1></div><div style="display:flex;gap:10px;flex-wrap:wrap">' + (im && im.connected ? '<button class="btn" data-act="photoref">Refresh</button><button class="btn" data-act="upload">' + ic('upload') + 'Upload</button>' : '') + '<input type="file" id="fileIn" accept="image/*,video/*" multiple hidden></div></div>';
   if (!im) return h + '<p style="color:var(--muted)">Checking Immich...</p></div>';
   if (!im.configured) return h + connectBlock('Photos are not connected yet', 'immich', 'Add your Immich address and an API key (Immich: Account settings, API keys). Photos then show up here like they do in Nextcloud.') + '</div>';
-  if (!im.connected) return h + '<div class="banner"><i class="dot bad"></i><span>Immich is configured but not reachable (' + esc(im.reason || 'no answer') + '). Check the address and key.</span><button class="btn sm" data-act="immich">Settings</button></div></div>';
+  if (!im.connected) return h + '<div class="banner"><i class="dot bad"></i><span>Immich is configured but not reachable (' + esc(im.reason || 'no answer') + '). Check the address and key.</span></div></div>';
   h += '<div class="toolbar"><div class="seg" role="group" aria-label="View">';
   [['timeline', 'Timeline'], ['albums', 'Albums'], ['favs', 'Favourites']].forEach(function (t) { h += '<button data-act="ptab" data-t="' + t[0] + '" aria-pressed="' + (S.tab === t[0] && !S.album && !S.pq) + '">' + t[1] + '</button>'; });
   return h + '</div><div class="search">' + ic('search') + '<input class="input" id="pq" type="search" placeholder="Search your photos (people, places, things)" value="' + esc(S.pq) + '" aria-label="Search photos" data-in="pq"></div></div><div id="pg"></div></div>';
@@ -240,7 +240,7 @@ function pill(s) { return s === 'ok' ? '<span class="pill ok"><i class="dot"></i
 function insightsV() { return insightsV0(); }
 function insTabs(a) { return '<div class="toolbar"><div class="seg" role="tablist">' + [['insights', 'Cloud'], ['servers', 'Servers']].map(function (t) { return '<button data-act="nav" data-v="' + t[0] + '" aria-pressed="' + (a === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>'; }
 function insightsV0() {
-  var head = '<div class="wrap"><div class="pagehead"><div><h1>Insights</h1></div><div style="display:flex;gap:10px"><button class="btn" data-act="coolify">Coolify settings</button><button class="btn" data-act="refresh">' + (S.ins.loading ? 'Refreshing...' : 'Refresh') + '</button></div></div>' + insTabs('insights');
+  var head = '<div class="wrap"><div class="pagehead"><div><h1>Insights</h1></div><div style="display:flex;gap:10px"><button class="btn" data-act="refresh">' + (S.ins.loading ? 'Refreshing...' : 'Refresh') + '</button></div></div>' + insTabs('insights');
   var d = S.ins.data;
   if (!d) {
     if (S.ins.loading) return head + '<p style="color:var(--muted)">Loading from Coolify...</p></div>';

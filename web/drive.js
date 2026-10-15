@@ -161,12 +161,12 @@ var dl = function (k, v) { return '<div class="gd-dr"><span>' + k + '</span><div
 function sideHtml() {
   var n = function (id, label, icon) { return '<button class="gd-nav' + (D.sec === id ? ' on' : '') + '" data-d="sec" data-s="' + id + '"' + (id === 'my' ? ' data-dir="/"' : '') + '>' + g(icon, 20) + '<span>' + label + '</span></button>'; };
   return '<button class="gd-new" data-d="newmenu">' + g('plus', 22) + '<span>New</span></button><div class="gd-navs">' + n('my', 'My Drive', 'drive') + n('recent', 'Recent', 'clock') + n('starred', 'Starred', 'star') + '</div>' +
-    '<div class="gd-conn"><span class="pill ok"><i class="dot"></i>Drive connected</span><button class="link" data-act="nav" data-v="settings">Drive settings</button></div>';
+    '<div class="gd-conn"><span class="pill ok"><i class="dot"></i>Drive connected</span></div>';
 }
 function view() {
   var st = D.status;
   if (D.code === 'not_configured' || (st && !st.configured)) return '<div class="wrap"><div class="pagehead"><div><h1>Drive</h1></div></div>' + A.connectBlock('Connect your Cloudreve', 'dsettings', 'In Cloudreve, open Settings, then WebDAV, and create an account. Enter its address, name and password in Settings here.') + '</div>';
-  if (D.error) return '<div class="wrap"><div class="pagehead"><div><h1>Drive</h1></div></div><div class="banner"><i class="dot bad"></i><span>' + esc(D.error) + '</span><button class="btn sm" data-d="retry">Retry</button><button class="btn sm" data-act="nav" data-v="settings">Drive settings</button></div></div>';
+  if (D.error) return '<div class="wrap"><div class="pagehead"><div><h1>Drive</h1></div></div><div class="banner"><i class="dot bad"></i><span>' + esc(D.error) + '</span><button class="btn sm" data-d="retry">Retry</button></div></div>';
   return '<div class="gd' + (D.det ? ' det' : '') + '" id="gd"><aside class="gd-side" id="gd-side">' + sideHtml() + '</aside><section class="gd-main"><div class="gd-top"><label class="gd-search">' + g('search_', 18) + '<input id="gd-q" type="search" placeholder="Search in ' + (D.sec === 'my' ? (D.path === '/' ? 'My Drive' : esc(baseOf(D.path))) : D.sec === 'starred' ? 'Starred' : 'Recent') + '" value="' + esc(D.q) + '" autocomplete="off" aria-label="Search files"></label></div>' +
     '<div class="gd-bar" id="gd-bar">' + barHtml() + '</div><div class="gd-body" id="gd-body" tabindex="0" aria-label="Files">' + bodyHtml() + '</div></section><aside class="gd-det" id="gd-det">' + detHtml() + '</aside><div class="gd-drop" id="gd-drop" hidden><div>' + g('ul', 40) + '<b>Drop to upload</b><span id="gd-dropt"></span></div></div></div>';
 }

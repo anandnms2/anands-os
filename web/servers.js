@@ -87,7 +87,7 @@
     var head = '<div class="wrap"><div class="pagehead"><div><h1>Insights</h1></div><div style="display:flex;gap:10px"><button class="btn" data-sa="refresh">' + (I.busy.sys ? 'Refreshing...' : 'Refresh') + '</button></div></div>' + A.insTabs('servers') + '<div class="chips" style="margin-bottom:16px">' + tabs + '</div>';
     if (!d) {
       if (st.loading || I.busy.sys) return head + '<p class="note">Loading from Status...</p></div>';
-      if (st.code === 'not_configured' || I.err.sys === 'not_configured') return head + '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Status is not connected yet</h2><p class="note" style="margin:0 0 14px">Add your Status (Beszel) address and a user in Settings.</p><button class="btn primary" data-act="nav" data-v="settings">Open Settings</button></div></div>';
+      if (st.code === 'not_configured' || I.err.sys === 'not_configured') return head + '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Status is not connected yet</h2><p class="note" style="margin:0 0 14px">Add your Status (Beszel) address and a user in Settings.</p></div></div>';
       return head + '<div class="banner"><i class="dot bad"></i><span>' + esc(st.error || I.err.sys || 'Could not load.') + '</span></div></div>';
     }
     if (I.tab === 'alerts') return head + alertsPage() + '</div>';

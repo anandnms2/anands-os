@@ -58,7 +58,7 @@
       '<div class="toolbar"><div class="seg" role="tablist">' + TABS.map(function (t) { return '<button data-pa="tab" data-t="' + t[0] + '" aria-pressed="' + (I.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>';
   }
   function fail(key) { var e = I.err[key]; return e ? '<div class="banner"><i class="dot bad"></i><span>' + esc(e) + '</span><button class="btn sm" data-pa="refresh">Try again</button></div>' : ''; }
-  function notConnected() { return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div></div><div class="banner"><i class="dot warn"></i><span>Add your Pulse address and a read-only token in Settings. Create the token in Pulse: Settings, Automation, Access for your AI tools.</span><button class="btn primary" data-act="nav" data-v="settings">Open Settings</button></div></div>'; }
+  function notConnected() { return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div></div><div class="banner"><i class="dot warn"></i><span>Add your Pulse address and a read-only token in Settings. Create the token in Pulse: Settings, Automation, Access for your AI tools.</span></div></div>'; }
 
   function view() {
     if (Object.keys(I.err).some(function (k) { return I.err[k] === 'not_configured'; })) return notConnected();

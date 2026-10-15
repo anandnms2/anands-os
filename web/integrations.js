@@ -10,7 +10,7 @@
   function dur(sec) { if (sec == null) return ''; var d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600); return d ? d + 'd ' + h + 'h' : h + 'h ' + Math.floor(sec % 3600 / 60) + 'm'; }
   function tone(v) { return v == null ? '' : v >= 90 ? 'bad' : v >= 75 ? 'warn' : ''; }
   function bar(label, v) { return '<div class="ibar"><span>' + label + '</span><div class="track"><div class="fill ' + tone(v) + '" style="width:' + Math.min(100, v || 0) + '%"></div></div><b class="mono">' + (v == null ? '–' : Math.round(v) + '%') + '</b></div>'; }
-  function connectCard(title, text, where) { return '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">' + esc(title) + '</h2><p class="note" style="margin:0 0 14px">' + esc(text) + '</p><button class="btn primary" data-act="nav" data-v="settings">Open Settings</button></div>'; }
+  function connectCard(title, text, where) { return '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">' + esc(title) + '</h2><p class="note" style="margin:0 0 14px">' + esc(text) + '</p></div>'; }
   function fail(st, label) { return '<div class="banner"><i class="dot bad"></i><span>' + esc(st.error || ('Could not load ' + label + '.')) + '</span></div>'; }
   function load(key, url, after, quiet) {
     var st = I[key]; st.loading = true; if (!quiet && current(key)) A.redraw();
