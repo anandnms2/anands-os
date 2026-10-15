@@ -4,6 +4,7 @@
 #   suite/build.sh [upstream-dir] [out-dir]
 # Env: UPSTREAM_REF (git ref, pinned by default), ONLY="chess notes" (subset)
 set -uo pipefail
+export npm_config_fetch_retries=5 npm_config_fetch_retry_mintimeout=4000 npm_config_fetch_retry_maxtimeout=60000
 HERE="$(cd "$(dirname "$0")" && pwd)"
 UPSTREAM_REF="${UPSTREAM_REF:-e4b187b39ef1b7094948bf1794c1a5de66e27a80}"
 UP="${1:-$HERE/.upstream}"
@@ -23,7 +24,7 @@ for slug in $(python3 -c "import json;print(' '.join(a['slug'] for a in json.loa
   if [ -n "${ONLY:-}" ] && ! [[ " $ONLY " == *" $slug "* ]]; then continue; fi
   echo "=== $slug"
   dir="$UP/src/$slug"
-  if (cd "$dir" && npm ci --no-audit --no-fund --loglevel=error \
+  if (cd "$dir" && { npm ci --no-audit --no-fund --loglevel=error || { sleep 5; npm ci --no-audit --no-fund --loglevel=error; } || { sleep 15; npm ci --no-audit --no-fund --loglevel=error; }; } \
         && npm run build -- --base=./ --outDir "$OUT/apps/$slug" --emptyOutDir); then
     ok+=("$slug")
   else
