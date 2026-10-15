@@ -73,10 +73,11 @@
     w.x = Math.max(0, Math.min(w.x, ar.w - w.w)); w.y = Math.max(0, Math.min(w.y, ar.h - w.h));
     var el = document.createElement('div'); el.className = 'dkw'; el.setAttribute('data-id', w.id); el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', title);
     el.innerHTML = '<div class="dkw-bar" data-bar><span class="dkw-t">' + (w.icon ? '<img src="' + esc(w.icon) + '" alt="">' : '') + '<b>' + esc(title) + '</b></span><span class="sp"></span><button data-dk="wmin" data-id="' + w.id + '" aria-label="Minimise">&#8211;</button><button data-dk="wmax" data-id="' + w.id + '" aria-label="Maximise">&#9633;</button><button class="x" data-dk="wclose" data-id="' + w.id + '" aria-label="Close">&#10005;</button></div><div class="dkw-body"></div><i class="rz rz-r" data-rz="r"></i><i class="rz rz-b" data-rz="b"></i><i class="rz rz-br" data-rz="br"></i>';
+    el.insertAdjacentHTML('beforeend', '<div class="dk-wc"><button data-dk="wmin" data-id="' + w.id + '" aria-label="Minimise">&#8211;</button><button data-dk="wmax" data-id="' + w.id + '" aria-label="Exit full screen">&#10530;</button><button data-dk="wclose" data-id="' + w.id + '" aria-label="Close">&#10005;</button></div>');
     w.el = el; w.body = el.querySelector('.dkw-body'); $('#dkwins').appendChild(el); D.wins.push(w); place(w); focus(w); task(); return w;
   }
   D.id0 = 0;
-  function place(w) { var el = w.el, ar = area(); el.hidden = w.min; el.style.zIndex = w.z; if (w.max) { el.style.left = 0; el.style.top = 0; el.style.width = ar.w + 'px'; el.style.height = ar.h + 'px'; } else { el.style.left = w.x + 'px'; el.style.top = w.y + 'px'; el.style.width = w.w + 'px'; el.style.height = w.h + 'px'; } el.classList.toggle('max', !!w.max); }
+  function place(w) { var el = w.el, ar = area(); el.hidden = w.min; el.style.zIndex = w.z; if (w.max) { el.style.left = 0; el.style.top = 0; el.style.width = ar.w + 'px'; el.style.height = ar.h + 'px'; } else { el.style.left = w.x + 'px'; el.style.top = w.y + 'px'; el.style.width = w.w + 'px'; el.style.height = w.h + 'px'; } el.classList.toggle('max', !!w.max); el.classList.toggle('bare', !!w.max && (w.kind === 'rbrowser' || w.kind === 'browser')); }
   function focus(w) { w.z = ++D.z; D.top = w.id; if (w.min) { w.min = false; } D.wins.forEach(function (x) { x.el.classList.toggle('act', x === w); place(x); }); task(); }
   function byId(id) { return D.wins.filter(function (w) { return w.id === id; })[0]; }
   function closeWin(w) { if (w.onclose) { try { w.onclose(); } catch (e) {} } w.el.remove(); D.wins = D.wins.filter(function (x) { return x !== w; }); if (D.ai.win === w) D.ai.win = null; if (D.top === w.id) { var t = D.wins.filter(function (x) { return !x.min; }).sort(function (a, b) { return b.z - a.z; })[0]; D.top = t ? t.id : null; if (t) focus(t); } task(); }
@@ -176,12 +177,12 @@
     rbBar(w); var cv = w.body.querySelector('.dk-rc'); rbWire(w, cv);
     var es = new EventSource('/api/rb/events'); w.r.es = es; w.onclose = function () { try { es.close(); } catch (e) {} clearInterval(w.r.tick); };
     es.addEventListener('tabs', function (e) { var d = JSON.parse(e.data); w.r.tabs = d.tabs; w.r.active = d.active; rbBar(w); var t = rbTab(w); w.title = (t && t.title ? t.title + ' - ' : '') + 'Browser'; task(); });
-    es.addEventListener('frame', function (e) { var d = JSON.parse(e.data); if (d.tab !== w.r.active) return; var im = new Image(); im.onload = function () { if (cv.width !== d.w || cv.height !== d.h) { cv.width = d.w; cv.height = d.h; } cv.getContext('2d').drawImage(im, 0, 0, d.w, d.h); w.r.fw = d.w; w.r.fh = d.h; var m = w.body.querySelector('.dk-rmsg'); if (m) m.hidden = true; }; im.src = 'data:image/jpeg;base64,' + d.d; });
+    es.addEventListener('frame', function (e) { var d = JSON.parse(e.data); if (d.tab !== w.r.active) return; var im = new Image(); im.onload = function () { if (cv.width !== im.width || cv.height !== im.height) { cv.width = im.width; cv.height = im.height; } cv.getContext('2d').drawImage(im, 0, 0); w.r.fw = d.w; w.r.fh = d.h; var m = w.body.querySelector('.dk-rmsg'); if (m) m.hidden = true; }; im.src = 'data:image/jpeg;base64,' + d.d; });
     es.addEventListener('down', function () { var m = w.body.querySelector('.dk-rmsg'); if (m) { m.hidden = false; m.textContent = 'The browser stopped. It restarts when you open a page.'; } });
     es.onerror = function () { var m = w.body.querySelector('.dk-rmsg'); if (m && es.readyState === 2) { m.hidden = false; m.textContent = 'The browser is not available right now. Use Simple browser from the top bar.'; } };
     w.r.tick = setInterval(function () { rbFlush(w); }, 40);
-    var ro = new ResizeObserver(function () { clearTimeout(w.r.rt); w.r.rt = setTimeout(function () { var v = w.body.querySelector('.dk-rv'); if (v && v.clientWidth > 100) rbPost(w, '/size', { w: v.clientWidth, h: v.clientHeight }, true); }, 250); }); ro.observe(w.body.querySelector('.dk-rv'));
-    setTimeout(function () { var v = w.body.querySelector('.dk-rv'); if (v) rbPost(w, '/size', { w: v.clientWidth, h: v.clientHeight }, true); if (url) rbPost(w, '/open', { url: normUrl(url) }); else cv.focus(); }, 300);
+    var ro = new ResizeObserver(function () { clearTimeout(w.r.rt); w.r.rt = setTimeout(function () { var v = w.body.querySelector('.dk-rv'); if (v && v.clientWidth > 100) rbPost(w, '/size', { w: v.clientWidth, h: v.clientHeight, dpr: window.devicePixelRatio || 1 }, true); }, 250); }); ro.observe(w.body.querySelector('.dk-rv'));
+    setTimeout(function () { var v = w.body.querySelector('.dk-rv'); if (v) rbPost(w, '/size', { w: v.clientWidth, h: v.clientHeight, dpr: window.devicePixelRatio || 1 }, true); if (url) rbPost(w, '/open', { url: normUrl(url) }); else cv.focus(); }, 300);
     return w;
   }
   function rbTab(w) { return w.r.tabs.filter(function (t) { return t.id === w.r.active; })[0]; }
@@ -199,7 +200,7 @@
     if (ev.length) rbPost(w, '/input', { tab: r.active, ev: ev }, true);
   }
   function rbWire(w, cv) {
-    function pos(e) { var b = cv.getBoundingClientRect(), fw = cv.width || 1, fh = cv.height || 1; return { x: Math.round((e.clientX - b.left) * fw / b.width), y: Math.round((e.clientY - b.top) * fh / b.height) }; }
+    function pos(e) { var b = cv.getBoundingClientRect(), fw = w.r.fw || cv.width || 1, fh = w.r.fh || cv.height || 1; return { x: Math.round((e.clientX - b.left) * fw / b.width), y: Math.round((e.clientY - b.top) * fh / b.height) }; }
     var mod = function (e) { return (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.metaKey ? 4 : 0) | (e.shiftKey ? 8 : 0); };
     cv.addEventListener('mousemove', function (e) { var p = pos(e); w.r.mv = { t: 'm', k: 'move', x: p.x, y: p.y, mod: mod(e), held: e.buttons ? 1 : 0, b: e.buttons & 4 ? 1 : e.buttons & 2 ? 2 : 0 }; });
     cv.addEventListener('mousedown', function (e) { cv.focus(); var p = pos(e); w.r.down = true; rbQ(w, { t: 'm', k: 'down', x: p.x, y: p.y, b: e.button, cc: e.detail || 1, mod: mod(e) }, true); e.preventDefault(); });
@@ -254,51 +255,12 @@
     return w;
   }
 
-  /* ---------- files ---------- */
+  /* ---------- files: the same Drive as in Anands OS (Cloudreve + Google Drive), with all its menus, in a window ---------- */
   function filesWin(src) {
-    var w = mk('files', src === 'google' ? 'Google Drive' : 'Files', { w: 940, h: 600 });
-    w.f = { src: src || 'cloud', path: '/', stack: [{ id: 'root', name: 'My Drive' }], items: [], loading: false, err: null, code: null, sel: null, q: '', gst: null };
-    filesLoad(w); return w;
-  }
-  function filesLoad(w) {
-    var f = w.f; f.loading = true; f.err = null; paintFiles(w); w.title = f.src === 'google' ? 'Google Drive' : 'Files'; w.el.querySelector('.dkw-t b').textContent = w.title; task();
-    var p;
-    if (f.src === 'google') {
-      p = api('/api/gdrive/status').then(function (st) { f.gst = st; if (!st.configured || !st.connected) { f.items = []; return; } var cur = f.stack[f.stack.length - 1]; return api('/api/gdrive/list?folder=' + enc(cur.id) + (f.q ? '&q=' + enc(f.q) : '')).then(function (d) { f.items = d.files || []; }); });
-    } else p = api('/_local/fs/readdir', { method: 'POST', json: { path: abs(f.path) } }).then(function (l) { f.items = l.sort(function (a, b) { return (b.is_dir - a.is_dir) || a.name.localeCompare(b.name, undefined, { numeric: true }); }); }).then(function () { return fetch('/api/drive/status').catch(function () {}); });
-    p.catch(function (e) { f.err = e.message; f.code = e.code; f.items = []; }).then(function () { f.loading = false; paintFiles(w); });
-  }
-  function paintFiles(w) {
-    var f = w.f, g = f.src === 'google', h = '<div class="dk-fm"><aside class="dk-side"><button data-dk="fsrc" data-id="' + w.id + '" data-s="cloud" aria-pressed="' + !g + '">' + ic('folder') + 'Drive</button><button data-dk="fsrc" data-id="' + w.id + '" data-s="google" aria-pressed="' + g + '">' + ic('cloud') + 'Google Drive</button></aside><section class="dk-main">';
-    var crumbs = g ? f.stack.map(function (s, i) { return '<button data-dk="fcrumb" data-id="' + w.id + '" data-i="' + i + '">' + esc(s.name) + '</button>'; }).join('<i>/</i>') : ['Drive'].concat(f.path.split('/').filter(Boolean)).map(function (s, i, a) { return '<button data-dk="fcrumb" data-id="' + w.id + '" data-i="' + i + '">' + esc(s) + '</button>'; }).join('<i>/</i>');
-    var sel = f.sel != null ? f.items[f.sel] : null;
-    h += '<div class="dk-tb"><button class="btn sm" data-dk="fup" data-id="' + w.id + '"' + ((g ? f.stack.length < 2 : f.path === '/') ? ' disabled' : '') + ' aria-label="Up">' + ic('back') + '</button><div class="dk-cr">' + crumbs + '</div><span class="sp"></span>' + (g ? '<input class="input dk-fq" data-dkq="' + w.id + '" type="search" placeholder="Search Google Drive" value="' + esc(f.q) + '">' : '') +
-      '<button class="btn sm" data-dk="fref" data-id="' + w.id + '">Refresh</button>' + (g ? '' : '<button class="btn sm" data-dk="fnew" data-id="' + w.id + '">New folder</button><button class="btn sm" data-dk="fup2" data-id="' + w.id + '">Upload</button>') +
-      (sel && !sel.is_dir ? '<button class="btn sm" data-dk="fai" data-id="' + w.id + '">Ask AI</button>' : '') + (sel && g && !sel.is_dir ? '<button class="btn sm primary" data-dk="fimp" data-id="' + w.id + '">Import to Drive</button>' : '') + (sel && !g ? '<button class="btn sm" data-dk="fren" data-id="' + w.id + '">Rename</button><button class="btn sm danger" data-dk="fdel" data-id="' + w.id + '">Delete</button>' : '') + '</div><div class="dk-list">';
-    if (g && f.gst && (!f.gst.configured || !f.gst.connected)) h += '<div class="empty"><h2>Google Drive is not connected</h2><p>' + (f.gst.configured ? 'Connect your Google account in Settings, Google Drive.' : 'Add a Google client ID and secret in Settings, then connect.') + '</p><button class="btn primary" data-dk="settings">Open Settings</button></div>';
-    else if (f.err) h += '<div class="banner"><i class="dot bad"></i><span>' + esc(f.err) + (f.code === 'not_configured' ? ' Set it up in Settings.' : '') + '</span></div>' + (f.code === 'not_configured' ? '<button class="btn primary" data-dk="settings">Open Settings</button>' : '');
-    else if (f.loading && !f.items.length) h += '<p class="note" style="padding:14px">Loading...</p>';
-    else if (!f.items.length) h += '<p class="note" style="padding:14px">This folder is empty.</p>';
-    else h += '<table class="dk-t"><thead><tr><th>Name</th><th>Size</th><th>Modified</th></tr></thead><tbody>' + f.items.map(function (it, i) { return '<tr class="' + (f.sel === i ? 'sel' : '') + '" data-dk="frow" data-id="' + w.id + '" data-i="' + i + '" tabindex="0"><td>' + glyph(it.name, it.is_dir) + '<span>' + esc(it.name) + '</span></td><td>' + (it.is_dir ? '' : bytes(it.size || 0)) + '</td><td>' + (it.modified ? A.fmt(new Date(it.modified * 1000), { day: 'numeric' }) : '') + '</td></tr>'; }).join('') + '</tbody></table>';
-    w.body.innerHTML = h + '</div></section></div><input type="file" id="dkup' + w.id + '" multiple hidden>';
-  }
-  function fOpen(w, it) {
-    var f = w.f;
-    if (f.src === 'google') {
-      if (it.is_dir) { f.stack.push({ id: it.id, name: it.name }); f.sel = null; f.q = ''; return filesLoad(w); }
-      var e = ext(it.name); if (/^(jpe?g|png|gif|webp|svg|pdf|mp4|webm|mp3|wav)$/.test(e) || A.TEXTEXT.test(e)) return viewer(it.name, { url: '/api/gdrive/file?id=' + enc(it.id) });
-      return gImport(w, it, true);
-    }
-    var p = join(f.path, it.name); if (it.is_dir) { f.path = p; f.sel = null; return filesLoad(w); }
-    openFileInApp(abs(p));
-  }
-  function gImport(w, it, open) {
-    toast('Copying to your Drive...'); api('/api/gdrive/import', { method: 'POST', json: { id: it.id } }).then(function (r) { toast('Saved to Drive: Google Drive/' + r.name); if (open) openFileInApp(r.path); }).catch(function (e) { toast(e.message); });
-  }
-  function selFile(w) { var f = w.f, it = f.sel != null ? f.items[f.sel] : null; return it; }
-  function textOf(w, it) {
-    var f = w.f, url = f.src === 'google' ? '/api/gdrive/file?id=' + enc(it.id) : '/_local/fs/get?path=' + enc(abs(join(f.path, it.name)));
-    return fetch(url, { credentials: 'same-origin' }).then(function (r) { if (!r.ok) throw new Error('Could not read that file'); var e = ext(it.name); if (!(A.TEXTEXT.test(e) || e === '')) throw new Error('The assistant can read text files (txt, md, csv, json, html and similar).'); return r.text(); });
+    var url = '/?embed=1' + (src === 'google' ? '&root=google' : '') + '#drive', ex = D.wins.filter(function (x) { return x.kind === 'files'; })[0];
+    if (ex) { var fr = ex.body.querySelector('iframe'); if (fr && ex.src !== src) { fr.src = url; ex.src = src; } ex.title = src === 'google' ? 'Google Drive' : 'Files'; ex.el.querySelector('.dkw-t b').textContent = ex.title; focus(ex); return ex; }
+    var w = mk('files', src === 'google' ? 'Google Drive' : 'Files', { w: 1080, h: 680 }); w.src = src;
+    w.body.innerHTML = '<iframe class="dkw-frame" title="Files" src="' + url + '" allow="clipboard-read; clipboard-write; fullscreen"></iframe>'; return w;
   }
 
   /* ---------- assistant ---------- */
@@ -314,7 +276,7 @@
   function aiSend(text) {
     var ai = D.ai; if (!text.trim() || ai.busy) return; ai.msgs.push({ role: 'user', content: text.trim() }); ai.busy = true; paintAi();
     var fw = D.wins.filter(function (x) { return x.kind === 'files'; })[0];
-    api('/api/chat', { method: 'POST', json: { messages: ai.msgs.slice(-12), ctx: { photos: false, insights: false, cards: false, pulse: false, files: true, apps: true }, desktop: { windows: D.wins.map(function (x) { return x.title; }), folder: fw ? (fw.f.src === 'google' ? 'Google Drive' : ROOT + fw.f.path) : '', file: ai.file } } }).then(function (r) {
+    api('/api/chat', { method: 'POST', json: { messages: ai.msgs.slice(-12), ctx: { photos: false, insights: false, cards: false, pulse: false, files: true, apps: true }, desktop: { windows: D.wins.map(function (x) { return x.title; }), folder: fw ? (fw.src === 'google' ? 'Google Drive' : 'Files') : '', file: ai.file } } }).then(function (r) {
       var t = String(r.text || ''), act = null; t = t.replace(/^\s*ACTION:\s*(open|openfile)\s+(.+?)\s*$/gim, function (_, k, v) { act = { k: k, v: v.trim() }; return ''; }).trim();
       ai.msgs.push({ role: 'assistant', content: t || 'Done.' }); ai.busy = false; paintAi();
       if (act && act.k === 'open' && (act.v.toLowerCase() === 'browser' || OSICON[act.v.toLowerCase()])) { if (act.v.toLowerCase() === 'browser') openBrowser(); else osWin(act.v.toLowerCase()); act = null; }
@@ -337,6 +299,7 @@
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest && ev.target.closest('[data-dk]'); var t = ev.target;
     if (!b) { if (D.menu && !t.closest('#dkmenu')) { D.menu = false; menu(); task(); } if (!t.closest('#dkctx') && !$('#dkctx').hidden) $('#dkctx').hidden = true; var inWin = t.closest && t.closest('.dkw'); if (inWin) { var w0 = byId(inWin.getAttribute('data-id')); if (w0 && D.top !== w0.id) focus(w0); } return; }
+    if (b.classList.contains('cm')) $('#dkctx').hidden = true;
     var a = b.getAttribute('data-dk'), id = b.getAttribute('data-id'), w = id ? byId(id) : null;
     if (a === 'open') return void show();
     if (a === 'exit') return void hide(true);
@@ -351,57 +314,49 @@
     if (a === 'wmin' && w) { w.min = true; place(w); task(); return; }
     if (a === 'wmax' && w) { w.max = !w.max; place(w); return; }
     if (a === 'wclose' && w) return void closeWin(w);
+    if (a === 'showdesk') { D.wins.forEach(function (x) { x.min = true; place(x); }); task(); return; }
+    if (a === 'closeall') { D.wins.slice().forEach(closeWin); return; }
     if (a === 'wall') return void wallPanel();
     if (a === 'wallset') { D.wall = b.getAttribute('data-k'); LS.set('deskwall', D.wall); wallStyle(); return void wallPanel(); }
     if (a === 'wallup') { var wf = $('#dkwf'); if (wf) wf.click(); return; }
     if (a === 'walldel') { try { localStorage.removeItem('aos.deskwallimg'); } catch (e) {} if (D.wall === 'custom') { D.wall = 'dusk'; LS.set('deskwall', 'dusk'); } wallStyle(); return void wallPanel(); }
     /* files */
-    if (a === 'fsrc' && w) { w.f.src = b.getAttribute('data-s'); w.f.sel = null; w.f.items = []; w.f.q = ''; w.f.stack = [{ id: 'root', name: 'My Drive' }]; w.f.path = '/'; return void filesLoad(w); }
-    if (a === 'fcrumb' && w) { var ci = Number(b.getAttribute('data-i')); if (w.f.src === 'google') w.f.stack = w.f.stack.slice(0, ci + 1); else w.f.path = '/' + w.f.path.split('/').filter(Boolean).slice(0, ci).join('/'); w.f.sel = null; return void filesLoad(w); }
-    if (a === 'fup' && w) { if (w.f.src === 'google') w.f.stack.pop(); else w.f.path = parent(w.f.path); w.f.sel = null; return void filesLoad(w); }
-    if (a === 'fref' && w) return void filesLoad(w);
-    if (a === 'frow' && w) { var it = w.f.items[Number(b.getAttribute('data-i'))]; var was = w.f.sel === Number(b.getAttribute('data-i')); w.f.sel = Number(b.getAttribute('data-i')); w.body.querySelectorAll('tr.sel').forEach(function (x) { x.classList.remove('sel'); }); b.classList.add('sel'); clearTimeout(w.pt); w.pt = setTimeout(function () { paintFiles(w); }, 350); return; }
-    if (a === 'fnew' && w) return void prompt2('New folder name', '', function (nm) { api('/_local/fs/mkdir', { method: 'POST', json: { path: abs(join(w.f.path, nm)) } }).then(function () { filesLoad(w); }).catch(function (e) { toast(e.message); }); });
-    if (a === 'fren' && w) { var it2 = selFile(w); if (!it2) return; return void prompt2('Rename to', it2.name, function (nn) { if (nn === it2.name) return; api('/_local/fs/rename', { method: 'POST', json: { path: abs(join(w.f.path, it2.name)), name: nn } }).then(function () { w.f.sel = null; filesLoad(w); }).catch(function (e) { toast(e.message); }); }); }
-    if (a === 'fdel' && w) { var it3 = selFile(w); if (!it3) return; return void confirm2('Delete ' + it3.name + '?', function () { api('/_local/fs/delete', { method: 'POST', json: { path: abs(join(w.f.path, it3.name)) } }).then(function () { w.f.sel = null; filesLoad(w); toast('Deleted'); }).catch(function (e) { toast(e.message); }); }); }
-    if (a === 'fup2' && w) { var inp = $('#dkup' + w.id); if (inp) inp.click(); return; }
-    if (a === 'fai' && w) { var it4 = selFile(w); return void (it4 && askAboutFile(it4.name, textOf(w, it4))); }
-    if (a === 'fimp' && w) { var it5 = selFile(w); return void (it5 && gImport(w, it5, false)); }
     if (a === 'vsave' && w) { var ta = w.body.querySelector('textarea'), st = $('#vs' + w.id); st.textContent = 'Saving...'; return void api('/_local/fs/write?path=' + enc(w.data.path) + '&overwrite=1', { method: 'POST', body: ta.value, headers: { 'content-type': 'text/plain' } }).then(function () { st.textContent = 'Saved to Drive'; }).catch(function (e) { st.textContent = 'Could not save: ' + e.message; }); }
     if (a === 'vai' && w) { var ta2 = w.body.querySelector('textarea'); return void askAboutFile(w.title, Promise.resolve(ta2.value)); }
     if (a === 'aidrop') { D.ai.file = null; return void paintAi(); }
   });
-  document.addEventListener('dblclick', function (ev) { var r = ev.target.closest && ev.target.closest('tr[data-dk="frow"]'); if (!r) return; var w = byId(r.getAttribute('data-id')); if (w) { clearTimeout(w.pt); fOpen(w, w.f.items[Number(r.getAttribute('data-i'))]); } });
   document.addEventListener('keydown', function (ev) {
-    if (!D.open) return; if (ev.key === 'Escape') { if (D.menu) { D.menu = false; menu(); task(); } return; }
-    var r = ev.target.closest && ev.target.closest('tr[data-dk="frow"]'); if (r && ev.key === 'Enter') { var w = byId(r.getAttribute('data-id')); if (w) fOpen(w, w.f.items[Number(r.getAttribute('data-i'))]); }
+    if (!D.open) return; if (ev.key === 'Escape' && !$('#dkctx').hidden) { $('#dkctx').hidden = true; return; } if (ev.key === 'Escape') { if (D.menu) { D.menu = false; menu(); task(); } return; }
     if (ev.key === 'Enter' && !ev.shiftKey && ev.target.id === 'dkain') { ev.preventDefault(); var v = ev.target.value; ev.target.value = ''; aiSend(v); }
   });
   document.addEventListener('submit', function (ev) { var fm = ev.target; if (fm.getAttribute && fm.getAttribute('data-dk-form') === 'rburl') { ev.preventDefault(); var rw = byId(fm.getAttribute('data-id')); if (rw) { var ri = fm.querySelector('.dk-url'), u = normUrl(ri.value); if (u) { rbPost(rw, rw.r.active ? '/nav' : '/open', { tab: rw.r.active, url: u }); var cvv = rw.body.querySelector('.dk-rc'); if (cvv) cvv.focus(); } } return; }
     if (fm.getAttribute && fm.getAttribute('data-dk-form') === 'url') { ev.preventDefault(); var bw = byId(fm.getAttribute('data-id')); if (bw) { var inp = fm.querySelector('.dk-url'); nav(bw, btab(bw), inp.value); } return; } if (ev.target.getAttribute && ev.target.getAttribute('data-dk-form') === 'ai') { ev.preventDefault(); var i = $('#dkain'); var v = i.value; i.value = ''; aiSend(v); } });
   document.addEventListener('input', function (ev) {
     var t = ev.target; if (t.id === 'dkq') { D.q = t.value; var pos = t.selectionStart; menu(); var n = $('#dkq'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
-    if (t.getAttribute && t.getAttribute('data-dkq')) { var w = byId(t.getAttribute('data-dkq')); if (w) { w.f.q = t.value; clearTimeout(w.qt); w.qt = setTimeout(function () { var pos2 = t.selectionStart; filesLoad(w); setTimeout(function () { var n2 = w.body.querySelector('.dk-fq'); if (n2) { n2.focus(); n2.setSelectionRange(pos2, pos2); } }, 0); }, 350); } }
   });
-  document.addEventListener('change', function (ev) {
-    var t = ev.target; if (!t.id || t.id.indexOf('dkup') !== 0 || !t.files || !t.files.length) return; var w = byId(t.id.slice(4)); if (!w) return;
-    var files = Array.prototype.slice.call(t.files); t.value = ''; var done = 0;
-    files.reduce(function (p, file) { return p.then(function () { return api('/_local/fs/write?path=' + enc(abs(join(w.f.path, file.name))) + '&overwrite=0', { method: 'POST', body: file, headers: { 'content-type': file.type || 'application/octet-stream' } }).then(function () { done++; }).catch(function (e) { toast(file.name + ': ' + e.message); }); }); }, Promise.resolve()).then(function () { if (done) toast(done + ' uploaded'); filesLoad(w); });
-  });
-  document.addEventListener('contextmenu', function (ev) { if (!D.open || !ev.target.closest('#dkicons, .dk-wall')) return; ev.preventDefault(); var c = $('#dkctx'); c.innerHTML = '<button data-dk="wall">Wallpaper...</button><button data-dk="launch" data-w="files">Open Files</button><button data-dk="exit">Exit to Anands OS</button>'; c.style.left = Math.min(ev.clientX, innerWidth - 190) + 'px'; c.style.top = Math.min(ev.clientY, innerHeight - 140) + 'px'; c.hidden = false; });
-  function dlg(html, onOk) {
-    var d = document.createElement('div'); d.className = 'dk-dlg'; d.innerHTML = '<form class="dk-dlgc">' + html + '<div class="dk-dlgb"><button type="button" class="btn sm" data-x="1">Cancel</button><button class="btn sm primary" type="submit">OK</button></div></form>';
-    root.appendChild(d); var f = d.querySelector('form'), i = d.querySelector('input'); if (i) { i.focus(); i.select(); }
-    d.addEventListener('click', function (ev) { if (ev.target === d || ev.target.getAttribute('data-x')) d.remove(); });
-    d.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') d.remove(); });
-    f.addEventListener('submit', function (ev) { ev.preventDefault(); ev.stopPropagation(); var v = i ? i.value.trim() : true; d.remove(); if (v) onOk(v); });
+  /* right-click menus: desktop, icons, pinned apps, window title bars, taskbar buttons and the taskbar itself */
+  function ctx(ev, items) {
+    var c = $('#dkctx'); c.innerHTML = items.map(function (x) { return x === '-' ? '<hr>' : '<button class="cm" data-dk="' + x[1] + '"' + (x[2] || '') + (x[3] ? ' disabled' : '') + '>' + esc(x[0]) + '</button>'; }).join('');
+    c.hidden = false; c.style.left = Math.max(4, Math.min(ev.clientX, innerWidth - c.offsetWidth - 6)) + 'px'; c.style.top = Math.max(4, Math.min(ev.clientY, innerHeight - c.offsetHeight - 6)) + 'px';
   }
-  function prompt2(label, val, ok) { dlg('<label>' + esc(label) + '</label><input class="dk-dlgi" value="' + esc(val || '') + '">', ok); }
-  function confirm2(msg, yes) { dlg('<p>' + esc(msg) + '</p>', yes); }
+  var winItems = function (w) { return [[w.min ? 'Restore' : 'Minimise', w.min ? 'tb' : 'wmin', ' data-id="' + w.id + '"'], [w.max ? 'Restore size' : 'Maximise', 'wmax', ' data-id="' + w.id + '"'], '-', ['Close', 'wclose', ' data-id="' + w.id + '"']]; };
+  document.addEventListener('contextmenu', function (ev) {
+    if (!D.open) return; var t = ev.target; if (!t.closest || t.closest('#dkctx')) return ev.preventDefault();
+    if (t.closest('input, textarea, [contenteditable], canvas, iframe')) return;
+    var deskItems = [['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
+    var el;
+    if ((el = t.closest('.dkw-bar'))) { var w = byId(el.closest('.dkw').getAttribute('data-id')); if (!w) return; ev.preventDefault(); return ctx(ev, winItems(w).concat([['Close all windows', 'closeall']])); }
+    if ((el = t.closest('.dk-rb'))) { var w2 = byId(el.getAttribute('data-id')); if (!w2) return; ev.preventDefault(); return ctx(ev, winItems(w2)); }
+    if ((el = t.closest('.dk-ic, .dk-pin'))) { var d = el.getAttribute('data-dk'); ev.preventDefault(); var open = [['Open', d, (el.getAttribute('data-w') ? ' data-w="' + el.getAttribute('data-w') + '"' : '') + (el.getAttribute('data-s') ? ' data-s="' + esc(el.getAttribute('data-s')) + '"' : '')]]; return ctx(ev, open.concat(['-', ['Wallpaper...', 'wall'], ['Show desktop', 'showdesk']])); }
+    if (t.closest('.dk-task')) { ev.preventDefault(); return ctx(ev, [['Show desktop', 'showdesk'], ['Close all windows', 'closeall', '', !D.wins.length], '-', ['Wallpaper...', 'wall'], ['Exit to Anands OS', 'exit']]); }
+    if (t.closest('#dkicons, .dk-wall, .dk-wins') && !t.closest('.dkw')) { ev.preventDefault(); return ctx(ev, deskItems); }
+    if (t.closest('.dkw, #dkmenu')) { if (t.closest('.dkw-body') && !t.closest('a, button')) return; ev.preventDefault(); }
+  });
 
   /* drag and resize */
   var drag = null;
   root.addEventListener('pointerdown', function (ev) {
+    if (ev.button) return;
     var bar = ev.target.closest && ev.target.closest('[data-bar]'), rz = ev.target.closest && ev.target.closest('[data-rz]'); if (!bar && !rz) return; if (ev.target.closest('button') && !rz) return;
     var el = ev.target.closest('.dkw'), w = byId(el.getAttribute('data-id')); if (!w) return; focus(w);
     if (bar && w.max) { if (ev.target.closest('button')) return; w.max = false; w.x = Math.max(0, ev.clientX - w.w / 2); w.y = 0; place(w); }

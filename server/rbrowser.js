@@ -78,8 +78,8 @@ async function attach(t) {
   if (B.ua) await c.send('Emulation.setUserAgentOverride', { userAgent: B.ua, acceptLanguage: 'en-US,en' }).catch(() => {});
   return c;
 }
-async function sizeTab(t) { const c = await attach(t); await c.send('Emulation.setDeviceMetricsOverride', { width: B.view.w, height: B.view.h, deviceScaleFactor: 1, mobile: false }); }
-async function cast(t, on) { const c = await attach(t); if (!on) return c.send('Page.stopScreencast').catch(() => {}); await sizeTab(t); await c.send('Page.stopScreencast').catch(() => {}); await c.send('Page.startScreencast', { format: 'jpeg', quality: 65, maxWidth: B.view.w, maxHeight: B.view.h, everyNthFrame: 1 }); }
+async function sizeTab(t) { const c = await attach(t); await c.send('Emulation.setDeviceMetricsOverride', { width: B.view.w, height: B.view.h, deviceScaleFactor: B.view.d || 1, mobile: false }); }
+async function cast(t, on) { const c = await attach(t); if (!on) return c.send('Page.stopScreencast').catch(() => {}); await sizeTab(t); await c.send('Page.stopScreencast').catch(() => {}); await c.send('Page.startScreencast', { format: 'jpeg', quality: 82, maxWidth: Math.round(B.view.w * (B.view.d || 1)), maxHeight: Math.round(B.view.h * (B.view.d || 1)), everyNthFrame: 1 }); }
 async function activate(id) {
   const t = B.tabs.get(id); if (!t) throw httpError(404, 'No such tab', 'no_tab');
   if (B.active && B.active !== id) { const o = B.tabs.get(B.active); if (o?.cdp && !o.cdp.closed) cast(o, false).catch(() => {}); }
@@ -132,7 +132,7 @@ export async function handleRb(req, res, url) {
     return json(res, 200, { ok: true });
   }
   if (p === '/input') { const t = tab(), l = Array.isArray(b.ev) ? b.ev.slice(0, 50) : []; for (const ev of l) await input(t, ev).catch(() => {}); return json(res, 200, { ok: true }); }
-  if (p === '/size') { const w = Math.min(2560, Math.max(320, Math.round(+b.w || 0))), h = Math.min(1600, Math.max(240, Math.round(+b.h || 0))); if (w === B.view.w && h === B.view.h) return json(res, 200, { ok: true }); B.view = { w, h }; if (B.active && B.tabs.get(B.active)) await cast(B.tabs.get(B.active), true).catch(() => {}); return json(res, 200, { ok: true }); }
+  if (p === '/size') { const w = Math.min(2560, Math.max(320, Math.round(+b.w || 0))), h = Math.min(1600, Math.max(240, Math.round(+b.h || 0))); const d = Math.min(2, Math.max(1, Math.round((+b.dpr || 1) * 4) / 4)); if (w === B.view.w && h === B.view.h && d === (B.view.d || 1)) return json(res, 200, { ok: true }); B.view = { w, h, d }; if (B.active && B.tabs.get(B.active)) await cast(B.tabs.get(B.active), true).catch(() => {}); return json(res, 200, { ok: true }); }
   if (p === '/copy') { const t = tab(), c = await attach(t); const r = await c.send('Runtime.evaluate', { expression: 'String(getSelection())', returnByValue: true }); return json(res, 200, { text: String(r.result?.value || '').slice(0, 100000) }); }
   throw httpError(404, 'Unknown route');
 }

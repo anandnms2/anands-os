@@ -749,3 +749,9 @@ html.embed #view{padding-bottom:0}
 .dk-wp{padding:10px;width:300px}.dk-wg{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}.dk-wsw{aspect-ratio:16/10;border-radius:8px;border:2px solid transparent;cursor:pointer;padding:0}.dk-wsw.on{border-color:var(--accent)}.dk-wa{display:flex;gap:8px;flex-wrap:wrap}
 .dk-ctx .dk-wsw{display:block;width:auto;padding:0;border:2px solid transparent}.dk-ctx .dk-wsw.on{border-color:var(--accent)}.dk-ctx .dk-wa .btn{width:auto;display:inline-flex}
 .dk-rc{position:absolute;inset:0;width:100%;height:100%;background:#fff;outline:none;cursor:default}.dk-rv{overflow:hidden}.dk-rmsg{position:absolute;left:0;right:0;top:0;padding:10px 14px;background:var(--surface);color:var(--fg);border-bottom:1px solid var(--line);font-size:14px}
+.dk-ctx hr{border:0;border-top:1px solid var(--line);margin:4px 2px}.dk-ctx button:disabled{opacity:.45;cursor:default}
+
+.dk-wc{display:none}.dkw.bare .dkw-bar{display:none}.dkw.bare{border-radius:0}.dkw.bare .dk-wc{display:flex;position:absolute;top:0;right:0;z-index:6;height:38px}
+.dk-wc button{width:46px;border:0;background:none;color:inherit;font-size:15px;cursor:pointer}.dk-wc button:hover{background:rgba(128,128,128,.25)}.dk-wc button:last-child:hover{background:#c42b1c;color:#fff}
+.dkw.bare .dk-bts{padding-right:140px}.dk-rc{image-rendering:auto}
+.dk-ctx{z-index:99999}

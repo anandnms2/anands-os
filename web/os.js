@@ -73,10 +73,19 @@ function loadIns(force) {
   return api('/api/insights' + (force ? '?refresh=1' : '')).then(function (d) { S.ins = { data: d, error: null, code: null, loading: false }; }).catch(function (e) { S.ins = { data: null, error: e.message, code: e.code, loading: false }; }).then(function () { if (S.view === 'insights' || S.view === 'home') redraw(); });
 }
 function loadSettings() { api('/api/mailboxes').then(function (r) { S.mbx = r.accounts; if (S.view === 'settings') render(); }).catch(function () {}); return api('/api/settings').then(function (s) { S.settings = s; }).catch(function () {}); }
+function googleBack() {
+  try {
+    var q = new URLSearchParams(location.search), r = q.get('g'); if (!r) return;
+    var m = q.get('m') || (r === 'ok' ? 'Google Drive connected.' : 'Google sign-in failed.');
+    history.replaceState(null, '', location.pathname + location.hash);
+    if (r === 'ok') { toast(m); if (S.drive) { S.drive.root = '/Google Drive'; S.drive.path = '/'; S.drive.sec = 'my'; } go('drive'); }
+    else { S.settingsMsg = m; go('settings'); setTimeout(function () { var e = document.getElementById('r_google'); if (e) { e.textContent = m; e.className = 'note bad'; } toast(m); }, 300); }
+  } catch (e) {}
+}
 function boot() {
   Promise.all([api('/api/session'), fetch('/apps.json').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })]).then(function (x) {
     S.login = x[0]; S.user = x[0].user; S.apps = x[1];
-    if (S.user) { return Promise.all([loadSettings()]).then(function () { buildNav(); var r0 = routeNow(); if (r0 && r0 !== 'home') { popping = true; try { go0(r0); } finally { popping = false; } } else render(); loadImm(); loadIns(false); }); }
+    if (S.user) { return Promise.all([loadSettings()]).then(function () { buildNav(); var r0 = routeNow(); if (r0 && r0 !== 'home') { popping = true; try { go0(r0); } finally { popping = false; } } else render(); loadImm(); loadIns(false); googleBack(); }); }
     render();
   }).catch(function () { $('#view').innerHTML = '<div class="center"><div class="empty"><h2>Cannot reach the server</h2><p>Reload the page in a moment.</p></div></div>'; });
 }

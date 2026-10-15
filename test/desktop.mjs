@@ -66,34 +66,37 @@ try {
     await p.click('[data-dk="wmax"]'); const mx = await w.boundingBox(); assert.ok(mx.width >= 1430); await p.click('[data-dk="wmax"]');
     await p.click('[data-dk="wmin"]'); assert.ok(await w.isHidden()); await p.click('.dk-rb'); assert.ok(await w.isVisible());
   });
-  await t('Files shows Cloudreve Drive, opens folders, text and image viewers', async () => {
-    await p.click('.dk-pin[data-w="files"]'); await p.waitForSelector('.dk-t tbody tr'); let tx = await p.locator('.dkw.act').innerText(); assert.match(tx, /Notes\.md/); assert.match(tx, /Photos/); await shot(p, 'desktop-files');
-    await p.dblclick('tr:has-text("Photos")'); await p.waitForFunction(() => /Sunset\.png/.test(document.querySelector('.dkw.act').innerText)); await p.dblclick('tr:has-text("Sunset.png")'); await p.waitForSelector('.dk-vw img', { state: 'attached' }); await p.click('.dkw.act [data-dk="wclose"]');
-    await p.click('.dkw-t:has-text("Files") >> xpath=ancestor::div[contains(@class,"dkw")]'); await p.click('[data-dk="fcrumb"] >> nth=0'); await p.waitForFunction(() => /Notes\.md/.test(document.querySelector('.dkw.act').innerText));
-    await p.dblclick('tr:has-text("Notes.md")'); await p.waitForFunction(() => document.querySelector('.dk-ta') && /Truck T412/.test(document.querySelector('.dk-ta').value)); await shot(p, 'desktop-editor');
-    await p.fill('.dk-ta', '# Notes\nTruck T412 arrived'); await p.click('[data-dk="vsave"]'); await p.waitForFunction(() => /Saved to Drive/.test(document.body.innerText)); assert.match(tree.get('/Notes.md').data.toString(), /arrived/);
+  const files = () => p.frameLocator('.dkw[aria-label="Files"] iframe');
+  await t('Files is the full Drive app in a window: Cloudreve files, folders, right-click menu, new folder', async () => {
+    await p.click('.dk-pin[data-w="files"]'); await p.waitForSelector('.dkw[aria-label="Files"] iframe'); const f = files(); await f.locator('.gd-row').first().waitFor();
+    const tx = await f.locator('#gd-body').innerText(); assert.match(tx, /Notes\.md/); assert.match(tx, /Photos/); assert.equal(await f.locator('#rail').isVisible(), false); await shot(p, 'desktop-files');
+    await f.locator('.gd-row', { hasText: 'Notes.md' }).click({ button: 'right' }); await f.locator('.gd-menu:visible').first().waitFor(); assert.ok(await f.locator('.gd-menu .gd-mit', { hasText: 'Rename' }).count() > 0); await p.keyboard.press('Escape');
+    await f.locator('.gd-new').click(); await f.locator('.gd-menu .gd-mit', { hasText: 'New folder' }).first().click(); await f.locator('#gd-in').fill('Reports'); await f.locator('#gd-in').press('Enter');
+    await p.waitForFunction(() => true); for (let i = 0; i < 40 && !tree.has('/Reports'); i++) await new Promise((r) => setTimeout(r, 100)); assert.ok(tree.has('/Reports'));
+    await p.click('.dkw[aria-label="Files"] [data-dk="wclose"]');
   });
-  await t('Files: new folder, rename, delete, upload on Cloudreve', async () => {
-    const fw = p.locator('.dkw:has(.dk-fm)').first(); await fw.locator('.dkw-bar').click(); await p.click('.dkw:has(.dk-fm) [data-dk="fnew"]'); await p.fill('.dk-dlgi', 'Reports'); await p.keyboard.press('Enter'); await p.waitForFunction(() => /Reports/.test(document.querySelector('.dkw.act').innerText)); assert.ok(tree.has('/Reports'));
-    await p.click('.dkw.act tr:has-text("Reports")'); await p.click('.dkw.act [data-dk="fren"]'); await p.fill('.dk-dlgi', 'Reports2'); await p.keyboard.press('Enter'); await p.waitForFunction(() => /Reports2/.test(document.querySelector('.dkw.act').innerText)); assert.ok(tree.has('/Reports2'));
-    await p.setInputFiles('.dkw.act input[type=file]', { name: 'up.txt', mimeType: 'text/plain', buffer: Buffer.from('uploaded') }); await p.waitForFunction(() => /up\.txt/.test(document.querySelector('.dkw.act').innerText)); assert.ok(tree.has('/up.txt'));
-    await p.click('.dkw.act tr:has-text("up.txt")'); await p.click('.dkw.act [data-dk="fdel"]'); await p.click('.dk-dlg button.primary'); await p.waitForFunction(() => !/up\.txt/.test(document.querySelector('.dkw.act').innerText)); assert.equal(tree.has('/up.txt'), false);
-  });
-  await t('Google Drive: connect, browse, preview, import into Cloudreve', async () => {
+  await t('Google Drive opens as a root of the same app: connect, list, open a folder', async () => {
     const r0 = await ctx.request.get(B + '/api/gdrive/status'); assert.equal((await r0.json()).connected, false);
-    const auth = await ctx.request.get(B + '/api/gdrive/auth', { maxRedirects: 0 }); assert.equal(auth.status(), 302); const loc = new URL(auth.headers().location); assert.equal(loc.searchParams.get('client_id'), 'cid'); assert.match(loc.searchParams.get('scope'), /drive\.readonly/);
+    const auth = await ctx.request.get(B + '/api/gdrive/auth', { maxRedirects: 0 }); assert.equal(auth.status(), 302); const loc = new URL(auth.headers().location); assert.equal(loc.searchParams.get('client_id'), 'cid'); assert.match(loc.searchParams.get('scope'), /auth\/drive/);
     const cb = await ctx.request.get(B + '/auth/google/callback?code=abc&state=' + encodeURIComponent(loc.searchParams.get('state')), { maxRedirects: 0 }); assert.equal(cb.status(), 302); assert.equal((await (await ctx.request.get(B + '/api/gdrive/status')).json()).email, 'anand@gmail.com');
-    assert.equal((await ctx.request.get(B + '/auth/google/callback?code=abc&state=bad', { maxRedirects: 0 })).status(), 400);
-    await p.click('.dk-pin[data-w="files"]'); await p.waitForSelector('.dkw.act .dk-side'); await p.click('.dkw.act [data-dk="fsrc"][data-s="google"]'); await p.waitForFunction(() => /Quarter plan/.test(document.querySelector('.dkw.act').innerText)); await shot(p, 'desktop-google');
-    await p.dblclick('tr:has-text("Clients")'); await p.waitForFunction(() => /inner\.txt/.test(document.querySelector('.dkw.act').innerText)); await p.click('.dkw.act [data-dk="fup"]'); await p.waitForFunction(() => /Quarter plan/.test(document.querySelector('.dkw.act').innerText));
-    await p.click('.dkw.act tr:has-text("Quarter plan")'); await p.click('.dkw.act [data-dk="fimp"]'); await p.waitForFunction(() => /Saved to Drive: Google Drive/.test(document.body.innerText)); assert.equal(tree.get('/Google Drive/Quarter plan.docx').data.toString(), 'DOCXBYTES');
-    await p.dblclick('tr:has-text("notes.txt")'); await p.waitForFunction(() => document.querySelector('.dkw.act .dk-ta') && document.querySelector('.dkw.act .dk-ta').value === 'google text');
-    assert.equal((await ctx.request.get(B + '/api/gdrive/file?id=bad%20id')).status(), 400);
+    assert.equal((await ctx.request.get(B + '/auth/google/callback?code=abc&state=bad', { maxRedirects: 0 })).status(), 302);
+    await p.click('#dkicons [data-w="google"]'); await p.waitForSelector('.dkw[aria-label="Google Drive"] iframe'); const f = p.frameLocator('.dkw[aria-label="Google Drive"] iframe');
+    await f.locator('#gd-body').getByText('Quarter plan').waitFor(); await shot(p, 'desktop-google');
+    await f.locator('.gd-row', { hasText: 'Clients' }).dblclick(); await f.locator('#gd-body').getByText('inner.txt').waitFor();
+    await p.click('.dkw[aria-label="Google Drive"] [data-dk="wclose"]');
   });
-  await t('Assistant answers about a selected file and can open an app', async () => {
-    await p.click('.dkw.act [data-dk="vai"]'); await p.waitForSelector('.dk-att'); await p.fill('#dkain', 'What does it say?'); await p.press('#dkain', 'Enter'); await p.waitForFunction(() => /truck is late/.test(document.querySelector('.dk-aim').innerText)); await shot(p, 'desktop-ai');
-    const last = seen[seen.length - 1]; assert.match(last.messages[0].content, /google text/); assert.match(last.messages[0].content, /Anands Desktop/);
-    const before = await p.locator('.dkw iframe[src^="/apps/notes/"]').count(); await p.fill('#dkain', 'open notes'); await p.press('#dkain', 'Enter'); await p.waitForFunction((n) => document.querySelectorAll('.dkw iframe[src^="/apps/notes/"]').length > n, before); assert.doesNotMatch(await p.locator('.dk-aim').innerText(), /ACTION/);
+  await t('right-click menus: desktop, icon, window title bar, taskbar button', async () => {
+    await p.click('#dkicons [data-w="os:photos"]'); await p.waitForSelector('.dkw[aria-label="Photos"]');
+    await p.dispatchEvent('.dk-wall', 'contextmenu', { clientX: 600, clientY: 500, bubbles: true }); assert.ok(await p.locator('#dkctx button', { hasText: 'Open Files' }).isVisible()); assert.ok(await p.locator('#dkctx button', { hasText: 'Show desktop' }).isVisible());
+    await p.keyboard.press('Escape');
+    await p.click('#dkicons [data-w="browser"]', { button: 'right' }); assert.ok(await p.locator('#dkctx button', { hasText: /^Open$/ }).isVisible()); await p.keyboard.press('Escape');
+    await p.locator('.dkw[aria-label="Photos"] .dkw-bar').click({ button: 'right' }); assert.ok(await p.locator('#dkctx button', { hasText: 'Close' }).first().isVisible()); await p.locator('#dkctx button', { hasText: /^Minimise$/ }).click(); assert.ok(await p.locator('.dkw[aria-label="Photos"]').isHidden());
+    await p.locator('.dk-rb').last().click({ button: 'right' }); await p.locator('#dkctx button', { hasText: /^Restore$/ }).click(); assert.ok(await p.locator('.dkw[aria-label="Photos"]').isVisible());
+    await p.locator('.dkw[aria-label="Photos"] .dkw-bar').click({ button: 'right' }); await p.locator('#dkctx button', { hasText: /^Close$/ }).click(); assert.equal(await p.locator('.dkw[aria-label="Photos"]').count(), 0);
+  });
+  await t('Assistant answers and can open an app', async () => {
+    await p.click('.dk-pin[data-w="ai"]'); await p.waitForSelector('#dkain');
+    const before = await p.locator('.dkw iframe[src^="/apps/notes/"]').count(); await p.fill('#dkain', 'open notes'); await p.press('#dkain', 'Enter'); await p.waitForFunction((n) => document.querySelectorAll('.dkw iframe[src^="/apps/notes/"]').length > n, before); assert.doesNotMatch(await p.locator('.dk-aim').innerText(), /ACT/);
   });
   await t('Desktop has Photos, Pulse, Cards, Vault, Insights, VPN and Browser as apps', async () => {
     for (const v of ['browser', 'os:photos', 'os:pulse', 'os:cards', 'os:vault', 'os:insights', 'os:vpn']) assert.equal(await p.locator('#dkicons [data-dk="launch"][data-w="' + v + '"]').count(), 1, v);

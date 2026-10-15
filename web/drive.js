@@ -5,12 +5,17 @@
 'use strict';
 var A = window.AOS; if (!A) return;
 var S = A.S, $ = A.$, esc = A.esc, api = A.api, toast = A.toast, LS = A.LS;
-var ROOT = '/Drive';
-var D = S.drive = { path: '/', items: [], loading: false, error: null, code: null, status: null, sec: 'my', sel: [], anchor: null, q: '', view: LS.get('dview', 'list'), sort: LS.get('dsort', { k: 'name', d: 1 }), det: LS.get('ddet', false), clip: null, flat: [], drag: null, loaded: false };
+var ROOT = '/Drive', GROOT = '/Google Drive';
+var D = S.drive = { path: '/', items: [], loading: false, error: null, code: null, status: null, sec: 'my', sel: [], anchor: null, q: '', view: LS.get('dview', 'list'), sort: LS.get('dsort', { k: 'name', d: 1 }), det: LS.get('ddet', false), clip: null, flat: [], drag: null, loaded: false, root: '/Drive' };
+
+try { if (/[?&]root=google/.test(location.search)) D.root = GROOT; } catch (e) {}
 
 /* ---------- paths and names ---------- */
-var rel = function (p) { return String(p).replace(/^\/Drive/, '') || '/'; };
-var abs = function (r) { return ROOT + (r === '/' ? '' : r); };
+var rel = function (p) { return String(p).replace(/^\/(Drive|Google Drive)(?=\/|$)/, '') || '/'; };
+var rootOf = function (p) { return /^\/Google Drive(\/|$)/.test(p) ? GROOT : ROOT; };
+var rootName = function (r) { return r === GROOT ? 'Google Drive' : 'My Drive'; };
+var absR = function (root, r) { return root + (r === '/' ? '' : r); };
+var abs = function (r) { return absR(D.root, r); };
 var up = function (r) { return r.replace(/\/[^/]*$/, '') || '/'; };
 var baseOf = function (p) { return String(p).split('/').pop(); };
 var join = function (dir, name) { return (dir === '/' ? '' : dir) + '/' + name; };
@@ -62,11 +67,14 @@ function setStar(paths, on) { var s = stars().filter(function (x) { return paths
 function noteRecent(p) { var r = LS.get('drecent', []).filter(function (x) { return x.p !== p; }); r.unshift({ p: p, t: Date.now() }); LS.set('drecent', r.slice(0, 40)); }
 
 /* ---------- loading ---------- */
-function load(p, quiet, keep) {
+function load(p, quiet, keep, root) {
+  if (root) D.root = root;
   if (p !== undefined) { D.path = p; D.q = ''; D.sec = 'my'; if (!keep) { D.sel = []; D.anchor = null; } }
   D.loading = !quiet; D.error = null; if (S.view === 'drive') paint();
-  return api('/api/drive/status').then(function (st) {
-    D.status = st;
+  var g0 = D.root === GROOT && D.sec === 'my';
+  return (g0 ? api('/api/gdrive/status') : api('/api/drive/status')).then(function (st) {
+    D.status = st; D.code = null;
+    if (g0 && !st.connected) { D.items = []; D.flat = []; D.loading = false; D.loaded = true; D.code = st.configured ? 'g_disconnected' : 'g_notconfigured'; return; }
     if (!st.connected) { D.items = []; D.flat = []; D.loading = false; D.error = st.configured ? 'Drive is configured but not reachable (' + (st.reason || 'no answer') + ').' : null; D.code = st.configured ? 'unreachable' : 'not_configured'; return; }
     D.code = null;
     if (D.sec === 'my') return fsApi('readdir', { path: abs(D.path) }).then(function (items) { D.items = items; D.loading = false; D.loaded = true; });
@@ -75,7 +83,7 @@ function load(p, quiet, keep) {
   }).catch(function (e) { D.items = []; D.flat = []; D.loading = false; D.error = e.message; D.code = e.code || 'error'; })
     .then(function () { D.sel = D.sel.filter(function (p) { return list().some(function (f) { return f.path === p; }); }); if (S.view === 'drive') paint(); });
 }
-function section(s) { D.sec = s; D.sel = []; D.anchor = null; D.q = ''; if (s === 'my') return load(D.path); return load(undefined); }
+function section(s, root) { D.sec = s; D.sel = []; D.anchor = null; D.q = ''; if (s === 'my') { if (root && root !== D.root) { D.root = root; D.path = '/'; } return load(D.path); } return load(undefined); }
 function list() {
   var src = D.sec === 'my' ? D.items : D.flat, q = D.q.trim().toLowerCase();
   var out = q ? src.filter(function (f) { return f.name.toLowerCase().indexOf(q) > -1; }) : src.slice();
@@ -97,7 +105,7 @@ function rowHtml(f) {
   var k = kindOf(f), s = D.sel.indexOf(f.path) > -1, loc = D.sec !== 'my';
   return '<div class="gd-it gd-row' + (s ? ' sel' : '') + '" role="row" tabindex="-1" draggable="true" data-p="' + esc(f.path) + '"' + (f.is_dir ? ' data-dir="' + esc(rel(f.path)) + '"' : '') + ' aria-selected="' + s + '">' +
     '<span class="gd-c1">' + fico(f, 22) + '</span><span class="gd-name"><b>' + esc(f.name) + '</b>' + (isStar(f.path) ? '<span class="gd-star" title="Starred">' + g('star', 14, true) + '</span>' : '') + '</span>' +
-    '<span class="gd-c3 gd-hide-s">' + (loc ? '<button class="gd-loc" data-d="loc" data-p="' + esc(rel(up(f.path))) + '">' + esc(rel(up(f.path)) === '/' ? 'My Drive' : baseOf(up(f.path))) + '</button>' : esc(k.l)) + '</span>' +
+    '<span class="gd-c3 gd-hide-s">' + (loc ? '<button class="gd-loc" data-d="loc" data-p="' + esc(rel(up(f.path))) + '">' + esc(rel(up(f.path)) === '/' ? rootName(rootOf(f.path)) : baseOf(up(f.path))) + '</button>' : esc(k.l)) + '</span>' +
     '<span class="gd-c4 gd-hide-s">' + when(f) + '</span><span class="gd-c5 gd-hide-s">' + (f.is_dir ? '-' : A.bytes(f.size) || '0 B') + '</span>' +
     '<span class="gd-c6"><button class="gd-ib" data-d="more" aria-label="More actions for ' + esc(f.name) + '">' + g('more', 18) + '</button></span></div>';
 }
@@ -108,6 +116,9 @@ function cardHtml(f) {
     '<div class="gd-cf">' + fico(f, 20) + '<b>' + esc(f.name) + '</b>' + (isStar(f.path) ? '<span class="gd-star">' + g('star', 13, true) + '</span>' : '') + '<button class="gd-ib" data-d="more" aria-label="More actions for ' + esc(f.name) + '">' + g('more', 18) + '</button></div></div>';
 }
 function bodyHtml() {
+  if (D.code === 'g_notconfigured') return '<div class="gd-empty">' + fico({ is_dir: true, name: '' }, 72) + '<h3>Connect Google Drive</h3><p>Add your Google client ID and secret in Settings, then come back to connect.</p><button class="btn primary" data-d="gset">Open Settings</button></div>';
+  if (D.code === 'g_disconnected') return '<div class="gd-empty">' + fico({ is_dir: true, name: '' }, 72) + '<h3>Connect Google Drive</h3><p>Sign in with Google to browse, upload, rename, move and delete your files here, with the same menus as My Drive.</p><a class="btn primary" href="/api/gdrive/auth">Connect Google Drive</a></div>';
+  if (D.error && D.root === GROOT && D.sec === 'my') return '<div class="gd-empty"><h3>Google Drive is not reachable</h3><p>' + esc(D.error) + '</p><button class="btn" data-d="retry">Retry</button></div>';
   if (D.loading && !D.loaded) return '<div class="gd-empty"><div class="gd-spin"></div><p>Loading your files...</p></div>';
   var l = list();
   if (!l.length) {
@@ -126,7 +137,7 @@ function bodyHtml() {
 }
 function crumbsHtml() {
   if (D.sec !== 'my') return '<div class="gd-crumbs"><span class="gd-cur">' + (D.sec === 'starred' ? 'Starred' : 'Recent') + '</span></div>';
-  var h = '<div class="gd-crumbs"><button class="gd-cr" data-d="go" data-p="/" data-dir="/">My Drive</button>', acc = '', parts = D.path.split('/').filter(Boolean);
+  var h = '<div class="gd-crumbs"><button class="gd-cr" data-d="go" data-p="/" data-dir="/">' + rootName(D.root) + '</button>', acc = '', parts = D.path.split('/').filter(Boolean);
   parts.forEach(function (x, i) { acc += '/' + x; h += g('chev', 16) + (i === parts.length - 1 ? '<span class="gd-cur">' + esc(x) + '</span>' : '<button class="gd-cr" data-d="go" data-p="' + esc(acc) + '" data-dir="' + esc(acc) + '">' + esc(x) + '</button>'); });
   return h + '</div>';
 }
@@ -142,11 +153,11 @@ function barHtml() {
   return crumbsHtml() + '<span class="gd-sp"></span>' + tgl;
 }
 function detHtml() {
-  var sel = selItems(), h = '<div class="gd-dh"><b>' + (sel.length === 1 ? esc(sel[0].name) : sel.length ? sel.length + ' items' : D.sec === 'my' ? esc(D.path === '/' ? 'My Drive' : baseOf(D.path)) : D.sec === 'starred' ? 'Starred' : 'Recent') + '</b><button class="gd-ib" data-d="det" aria-label="Close details">' + g('x', 18) + '</button></div>';
+  var sel = selItems(), h = '<div class="gd-dh"><b>' + (sel.length === 1 ? esc(sel[0].name) : sel.length ? sel.length + ' items' : D.sec === 'my' ? esc(D.path === '/' ? rootName(D.root) : baseOf(D.path)) : D.sec === 'starred' ? 'Starred' : 'Recent') + '</b><button class="gd-ib" data-d="det" aria-label="Close details">' + g('x', 18) + '</button></div>';
   if (sel.length === 1) {
     var f = sel[0], k = kindOf(f), ows = f.is_dir ? [] : openWith(f), canText = !f.is_dir && A.TEXTEXT.test(ext(f.name)) && f.size <= 1048576;
     h += '<div class="gd-dpic">' + (k.k === 'image' && ext(f.name) !== 'svg' && f.size < 8e6 ? '<img alt="" src="' + getUrl(f.path) + '">' : fico(f, 84)) + '</div><div class="gd-dl">' +
-      dl('Type', k.l) + (f.is_dir ? '' : dl('Size', A.bytes(f.size) || '0 B')) + dl('Location', rel(up(f.path)) === '/' ? 'My Drive' : rel(up(f.path))) + dl('Modified', whenLong(f)) + dl('Path', '<span class="mono">' + esc(f.path) + '</span>') + '</div><div class="gd-dact">' +
+      dl('Type', k.l) + (f.is_dir ? '' : dl('Size', A.bytes(f.size) || '0 B')) + dl('Location', rel(up(f.path)) === '/' ? rootName(rootOf(f.path)) : rel(up(f.path))) + dl('Modified', whenLong(f)) + dl('Path', '<span class="mono">' + esc(f.path) + '</span>') + '</div><div class="gd-dact">' +
       (f.is_dir ? '<button class="btn sm" data-d="a-open">Open folder</button>' : (canText ? '<button class="btn sm" data-d="a-edit">' + g('edit', 16) + 'Edit as text</button>' : '') + ows.map(function (a) { return '<button class="btn sm" data-d="a-app" data-s="' + a.slug + '"><img src="/_icons/' + a.slug + '.png" alt="" width="18" height="18">Open in ' + esc(a.name) + '</button>'; }).join('') + '<a class="btn sm" href="' + getUrl(f.path) + '" download="' + esc(f.name) + '">' + g('dl', 16) + 'Download</a>') + '</div>';
   } else if (sel.length) {
     var tot = sel.reduce(function (n, f) { return n + (f.is_dir ? 0 : f.size || 0); }, 0);
@@ -159,15 +170,15 @@ function detHtml() {
 }
 var dl = function (k, v) { return '<div class="gd-dr"><span>' + k + '</span><div>' + v + '</div></div>'; };
 function sideHtml() {
-  var n = function (id, label, icon) { return '<button class="gd-nav' + (D.sec === id ? ' on' : '') + '" data-d="sec" data-s="' + id + '"' + (id === 'my' ? ' data-dir="/"' : '') + '>' + g(icon, 20) + '<span>' + label + '</span></button>'; };
-  return '<button class="gd-new" data-d="newmenu">' + g('plus', 22) + '<span>New</span></button><div class="gd-navs">' + n('my', 'My Drive', 'drive') + n('recent', 'Recent', 'clock') + n('starred', 'Starred', 'star') + '</div>' +
-    '<div class="gd-conn"><span class="pill ok"><i class="dot"></i>Drive connected</span></div>';
+  var n = function (id, label, icon, root) { var on = D.sec === id && (id !== 'my' || D.root === root); return '<button class="gd-nav' + (on ? ' on' : '') + '" data-d="sec" data-s="' + id + '"' + (id === 'my' ? ' data-dir="/" data-r="' + esc(root) + '"' : '') + '>' + g(icon, 20) + '<span>' + label + '</span></button>'; };
+  return '<button class="gd-new" data-d="newmenu">' + g('plus', 22) + '<span>New</span></button><div class="gd-navs">' + n('my', 'My Drive', 'drive', ROOT) + n('my', 'Google Drive', 'cloud', GROOT) + n('recent', 'Recent', 'clock') + n('starred', 'Starred', 'star') + '</div>' +
+    '<div class="gd-conn">' + (D.root === GROOT ? (D.status && D.status.connected ? '<span class="pill ok"><i class="dot"></i>' + esc(D.status.email || 'Google') + '</span>' : '<span class="pill"><i class="dot"></i>Google not connected</span>') : '<span class="pill ok"><i class="dot"></i>Drive connected</span>') + '</div>';
 }
 function view() {
   var st = D.status;
-  if (D.code === 'not_configured' || (st && !st.configured)) return '<div class="wrap"><div class="pagehead"><div><h1>Drive</h1></div></div>' + A.connectBlock('Connect your Cloudreve', 'dsettings', 'In Cloudreve, open Settings, then WebDAV, and create an account. Enter its address, name and password in Settings here.') + '</div>';
-  if (D.error) return '<div class="wrap"><div class="pagehead"><div><h1>Drive</h1></div></div><div class="banner"><i class="dot bad"></i><span>' + esc(D.error) + '</span><button class="btn sm" data-d="retry">Retry</button></div></div>';
-  return '<div class="gd' + (D.det ? ' det' : '') + '" id="gd"><aside class="gd-side" id="gd-side">' + sideHtml() + '</aside><section class="gd-main"><div class="gd-top"><label class="gd-search">' + g('search_', 18) + '<input id="gd-q" type="search" placeholder="Search in ' + (D.sec === 'my' ? (D.path === '/' ? 'My Drive' : esc(baseOf(D.path))) : D.sec === 'starred' ? 'Starred' : 'Recent') + '" value="' + esc(D.q) + '" autocomplete="off" aria-label="Search files"></label></div>' +
+  if (D.root !== GROOT && D.sec === 'my' && (D.code === 'not_configured' || (st && !st.configured))) return '<div class="wrap"><div class="pagehead"><div><h1>Drive</h1></div></div>' + A.connectBlock('Connect your Cloudreve', 'dsettings', 'In Cloudreve, open Settings, then WebDAV, and create an account. Enter its address, name and password in Settings here.') + '</div>';
+  if (D.error && D.root !== GROOT) return '<div class="wrap"><div class="pagehead"><div><h1>Drive</h1></div></div><div class="banner"><i class="dot bad"></i><span>' + esc(D.error) + '</span><button class="btn sm" data-d="retry">Retry</button></div></div>';
+  return '<div class="gd' + (D.det ? ' det' : '') + '" id="gd"><aside class="gd-side" id="gd-side">' + sideHtml() + '</aside><section class="gd-main"><div class="gd-top"><label class="gd-search">' + g('search_', 18) + '<input id="gd-q" type="search" placeholder="Search in ' + (D.sec === 'my' ? (D.path === '/' ? rootName(D.root) : esc(baseOf(D.path))) : D.sec === 'starred' ? 'Starred' : 'Recent') + '" value="' + esc(D.q) + '" autocomplete="off" aria-label="Search files"></label></div>' +
     '<div class="gd-bar" id="gd-bar">' + barHtml() + '</div><div class="gd-body" id="gd-body" tabindex="0" aria-label="Files">' + bodyHtml() + '</div></section><aside class="gd-det" id="gd-det">' + detHtml() + '</aside><div class="gd-drop" id="gd-drop" hidden><div>' + g('ul', 40) + '<b>Drop to upload</b><span id="gd-dropt"></span></div></div></div>';
 }
 function paint() {
@@ -175,7 +186,7 @@ function paint() {
   if (!$('#gd') || D.error || D.code === 'not_configured' || (D.status && !D.status.configured)) { var y = $('#view').scrollTop; $('#view').innerHTML = view(); $('#view').scrollTop = y; return; }
   var set = function (id, h) { var e = $(id); if (e) e.innerHTML = h; };
   set('#gd-side', sideHtml()); set('#gd-bar', barHtml()); set('#gd-det', detHtml()); var b = $('#gd-body'), y2 = b ? b.scrollTop : 0; set('#gd-body', bodyHtml()); if (b) b.scrollTop = y2;
-  $('#gd').classList.toggle('det', D.det); var q = $('#gd-q'); if (q) q.placeholder = 'Search in ' + (D.sec === 'my' ? (D.path === '/' ? 'My Drive' : baseOf(D.path)) : D.sec === 'starred' ? 'Starred' : 'Recent');
+  $('#gd').classList.toggle('det', D.det); var q = $('#gd-q'); if (q) q.placeholder = 'Search in ' + (D.sec === 'my' ? (D.path === '/' ? rootName(D.root) : baseOf(D.path)) : D.sec === 'starred' ? 'Starred' : 'Recent');
 }
 function paintSel() { // selection changed: no need to redraw the list
   var on = {}; D.sel.forEach(function (p) { on[p] = 1; });
@@ -199,7 +210,7 @@ function openWith(f) { return (A.OPENWITH[ext(f.name)] || []).map(function (s) {
 var PREV = { image: 1, video: 1, audio: 1, pdf: 1 };
 function openItem(f) {
   if (!f) return;
-  if (f.is_dir) { D.sec = 'my'; return load(rel(f.path)); }
+  if (f.is_dir) { D.sec = 'my'; return load(rel(f.path), false, false, rootOf(f.path)); }
   noteRecent(f.path); var k = kindOf(f).k;
   if (PREV[k] && !(k === 'image' && ext(f.name) === 'svg' && false)) return preview(f);
   if (A.TEXTEXT.test(ext(f.name)) && f.size <= 1048576) return A.dedOpen(f.path);
@@ -264,12 +275,12 @@ function doDelete() {
   var ps = D._del || []; A.modal(); busy('Deleting...');
   ps.reduce(function (p, x) { return p.then(function () { return fsApi('delete', { path: x }); }); }, Promise.resolve()).then(function () { setStar(ps, false); D.sel = []; return done('Deleted ' + ps.length + (ps.length === 1 ? ' item' : ' items')); }, fail('Could not delete'));
 }
-function transfer(mode, paths, destRel) { // mode: move | copy
-  var dest = abs(destRel), taken = null;
+function transfer(mode, paths, destRel, root) { // mode: move | copy
+  root = root || D.root; var dest = absR(root, destRel), taken = null;
   return fsApi('readdir', { path: dest }).then(function (l) { taken = {}; l.forEach(function (x) { taken[x.name.toLowerCase()] = 1; }); }).then(function () {
     return paths.reduce(function (p, src) { return p.then(function () {
-      var name = baseOf(src), same = up(rel(src)) === destRel;
-      if (mode === 'move' && same) return null; if (mode === 'move' && (destRel + '/').indexOf(rel(src) + '/') === 0) throw new Error('A folder cannot go inside itself.');
+      var name = baseOf(src), same = up(rel(src)) === destRel && rootOf(src) === root;
+      if (mode === 'move' && same) return null; if (mode === 'move' && rootOf(src) === root && (destRel + '/').indexOf(rel(src) + '/') === 0) throw new Error('A folder cannot go inside itself.');
       var n = mode === 'copy' || taken[name.toLowerCase()] ? uniq(name, taken) : name; taken[n.toLowerCase()] = 1;
       return fsApi(mode, { from: src, to: dest + '/' + n });
     }); }, Promise.resolve());
@@ -282,20 +293,20 @@ function pasteHere(destRel) {
 /* the folder chooser for Move to / Make a copy in */
 var PK = null;
 function chooser(mode, items) {
-  PK = { mode: mode, paths: items.map(function (f) { return f.path; }), name: items.length === 1 ? items[0].name : items.length + ' items', path: D.sec === 'my' ? D.path : '/', dirs: [], loading: true };
+  PK = { mode: mode, paths: items.map(function (f) { return f.path; }), name: items.length === 1 ? items[0].name : items.length + ' items', path: D.sec === 'my' ? D.path : '/', root: D.sec === 'my' ? D.root : ROOT, dirs: [], loading: true };
   chooserLoad(PK.path);
 }
 function chooserLoad(p) {
   PK.path = p; PK.loading = true; chooserDraw();
-  fsApi('readdir', { path: abs(p) }).then(function (l) { PK.dirs = l.filter(function (x) { return x.is_dir; }).sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); }); PK.loading = false; chooserDraw(); }, function (e) { PK.dirs = []; PK.loading = false; PK.err = e.message; chooserDraw(); });
+  fsApi('readdir', { path: absR(PK.root, p) }).then(function (l) { PK.dirs = l.filter(function (x) { return x.is_dir; }).sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); }); PK.loading = false; chooserDraw(); }, function (e) { PK.dirs = []; PK.loading = false; PK.err = e.message; chooserDraw(); });
 }
 function chooserDraw() {
   if (!PK) return;
-  var acc = '', crumbs = '<button class="gd-cr" data-d="pk-go" data-p="/">My Drive</button>';
+  var acc = '', crumbs = '<button class="gd-cr" data-d="pk-root" data-r="' + esc(ROOT) + '"' + (PK.root === ROOT ? ' style="font-weight:600"' : '') + '>My Drive</button><button class="gd-cr" data-d="pk-root" data-r="' + esc(GROOT) + '"' + (PK.root === GROOT ? ' style="font-weight:600"' : '') + '>Google Drive</button>' + g('chev', 14) + '<button class="gd-cr" data-d="pk-go" data-p="/">' + rootName(PK.root) + '</button>';
   PK.path.split('/').filter(Boolean).forEach(function (x) { acc += '/' + x; crumbs += g('chev', 14) + '<button class="gd-cr" data-d="pk-go" data-p="' + esc(acc) + '">' + esc(x) + '</button>'; });
   var blocked = function (d) { return PK.mode === 'move' && PK.paths.some(function (p) { return p === d.path; }); };
   var rows = PK.loading ? '<div class="gd-pkn">Loading...</div>' : PK.err ? '<div class="gd-pkn">' + esc(PK.err) + '</div>' : PK.dirs.map(function (d) { return '<button class="gd-pkr" data-d="pk-go" data-p="' + esc(rel(d.path)) + '"' + (blocked(d) ? ' disabled' : '') + '>' + fico(d, 22) + '<span>' + esc(d.name) + '</span>' + g('chev', 16) + '</button>'; }).join('') || '<div class="gd-pkn">No folders here.</div>';
-  var same = PK.mode === 'move' && PK.paths.every(function (p) { return up(rel(p)) === PK.path; }), inside = PK.mode === 'move' && PK.paths.some(function (p) { return (PK.path + '/').indexOf(rel(p) + '/') === 0; });
+  var same = PK.mode === 'move' && PK.paths.every(function (p) { return rootOf(p) === PK.root && up(rel(p)) === PK.path; }), inside = PK.mode === 'move' && PK.paths.some(function (p) { return rootOf(p) === PK.root && (PK.path + '/').indexOf(rel(p) + '/') === 0; });
   A.modal('<div class="gd-dlg gd-pk"><h2>' + (PK.mode === 'move' ? 'Move' : 'Make a copy of') + ' "' + esc(PK.name) + '"</h2><div class="gd-crumbs gd-pkc">' + crumbs + '</div><div class="gd-pkl">' + rows + '</div><div class="gd-dbtn"><button class="btn" data-d="pk-new">' + g('newf', 16) + 'New folder</button><span class="gd-sp"></span><button class="btn" data-d="mx">Cancel</button><button class="btn primary" data-d="pk-ok"' + (same || inside || PK.loading ? ' disabled' : '') + '>' + (PK.mode === 'move' ? 'Move here' : 'Copy here') + '</button></div></div>');
 }
 function chooserNew() {
@@ -303,11 +314,11 @@ function chooserNew() {
 }
 function chooserMake() {
   var n = cleanName($('#gd-pkin').value); if (!n) return toast('Use a name without slashes.');
-  fsApi('mkdir', { path: abs(join(PK.path, n)), parents: false }).then(function () { chooserLoad(join(PK.path, n)); }, function (e) { toast('Could not create the folder: ' + e.message); });
+  fsApi('mkdir', { path: absR(PK.root, join(PK.path, n)), parents: false }).then(function () { chooserLoad(join(PK.path, n)); }, function (e) { toast('Could not create the folder: ' + e.message); });
 }
 function chooserOk() {
   var pk = PK; PK = null; A.modal(); busy(pk.mode === 'move' ? 'Moving...' : 'Copying...');
-  transfer(pk.mode, pk.paths, pk.path).then(function () { D.sel = []; return done(pk.mode === 'move' ? 'Moved to ' + (pk.path === '/' ? 'My Drive' : baseOf(pk.path)) : 'Copied to ' + (pk.path === '/' ? 'My Drive' : baseOf(pk.path))); }, fail(pk.mode === 'move' ? 'Could not move' : 'Could not copy'));
+  transfer(pk.mode, pk.paths, pk.path, pk.root).then(function () { D.sel = []; return done(pk.mode === 'move' ? 'Moved to ' + (pk.path === '/' ? rootName(pk.root) : baseOf(pk.path)) : 'Copied to ' + (pk.path === '/' ? rootName(pk.root) : baseOf(pk.path))); }, fail(pk.mode === 'move' ? 'Could not move' : 'Could not copy'));
 }
 
 /* ---------- uploading ---------- */
@@ -411,7 +422,7 @@ document.addEventListener('click', function (ev) {
   var d = ev.target.closest && ev.target.closest('[data-d]'); if (!d || (!inGd(ev) && !d.closest('.gd-dlg') && !d.closest('.gd-pv'))) return;
   var a = d.getAttribute('data-d'), p = d.getAttribute('data-p');
   switch (a) {
-    case 'go': return load(p); case 'loc': ev.stopPropagation(); D.sec = 'my'; return load(p); case 'sec': return section(d.getAttribute('data-s'));
+    case 'go': return load(p); case 'loc': ev.stopPropagation(); D.sec = 'my'; return load(p, false, false, rootOf(d.closest('[data-p]') ? d.closest('[data-p]').getAttribute('data-p') : abs(p))); case 'sec': return section(d.getAttribute('data-s'), d.getAttribute('data-r')); case 'gset': return A.go('settings');
     case 'sort': { var k = d.getAttribute('data-k'); D.sort = D.sort.k === k ? { k: k, d: -D.sort.d } : { k: k, d: 1 }; LS.set('dsort', D.sort); return paint(); }
     case 'view': D.view = d.getAttribute('data-v'); LS.set('dview', D.view); return paint();
     case 'det': D.det = !D.det; LS.set('ddet', D.det); return paint();
@@ -421,7 +432,7 @@ document.addEventListener('click', function (ev) {
     case 'a-dl': return download(selItems()); case 'a-move': return chooser('move', selItems()); case 'a-copyto': return chooser('copy', selItems()); case 'a-del': return deleteDlg(selItems());
     case 'a-open': return openItem(selItems()[0]); case 'a-edit': return A.dedOpen(selItems()[0].path); case 'a-app': return openIn(d.getAttribute('data-s'), selItems()[0]);
     case 'mx': return A.modal(); case 'ok-newf': return doNewFolder(); case 'ok-newt': return doNewText(); case 'ok-ren': return doRename(p); case 'ok-del': return doDelete();
-    case 'pk-go': PK && chooserLoad(p); return; case 'pk-ok': return chooserOk(); case 'pk-new': return chooserNew(); case 'pk-mk': return chooserMake();
+    case 'pk-go': PK && chooserLoad(p); return; case 'pk-root': if (PK) { PK.root = d.getAttribute('data-r'); chooserLoad('/'); } return; case 'pk-ok': return chooserOk(); case 'pk-new': return chooserNew(); case 'pk-mk': return chooserMake();
   }
 });
 document.addEventListener('mousedown', function (ev) { // pick the row; a plain click on a row selects it without redrawing, so double-click still works
@@ -475,7 +486,7 @@ document.addEventListener('keydown', function (ev) {
 });
 /* drag and drop: files in from your computer, and items onto folders */
 var dragDepth = 0;
-function dropText(target) { var t = $('#gd-dropt'); if (t) t.textContent = 'to ' + (target || (D.path === '/' ? 'My Drive' : baseOf(D.path))); }
+function dropText(target) { var t = $('#gd-dropt'); if (t) t.textContent = 'to ' + (target || (D.path === '/' ? rootName(D.root) : baseOf(D.path))); }
 function hasFiles(ev) { return ev.dataTransfer && Array.prototype.indexOf.call(ev.dataTransfer.types || [], 'Files') > -1; }
 document.addEventListener('dragstart', function (ev) {
   var it = ev.target.closest && ev.target.closest('.gd-it'); if (!it || !inGd(ev)) return; var p = it.getAttribute('data-p'); if (D.sel.indexOf(p) < 0) { D.sel = [p]; D.anchor = p; paintSel(); }

@@ -10,3 +10,4 @@ t('links to puter.com and its subdomains go to this site', () => { assert.ok(!/p
 t('code the apps need is kept', () => { const s = 'window.puter.kv.get("a"); https://js.puter.com/v2/'; assert.equal(rebrand(s), s); });
 t('shim provides authToken (PDF editor no longer spins)', () => { assert.match(fs.readFileSync(new URL('../suite/shim/puter.js', import.meta.url), 'utf8'), /authToken:\s*'anands-local'/); });
 console.log(pass + ' passed');
+t('Email app text no longer mentions a Puter account', () => { const r = rebrand('Your mail lives in your own Puter account. Messages delivered to your Puter mailbox appear here.'); assert.ok(!/puter/i.test(r) && !/Anands account/.test(r), r); });
