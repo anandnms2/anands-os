@@ -107,7 +107,7 @@
   }
 
   /* ---------- windows ---------- */
-  function area() { return { w: root.clientWidth, h: root.clientHeight - TASK }; }
+  function area() { var t = $('.dk-task'); return { w: root.clientWidth, h: root.clientHeight - ((t && t.offsetHeight) || TASK) }; }
   function mk(kind, title, o) {
     o = o || {}; var ar = area(), small = ar.w < 760, n = D.n++, w = { id: 'w' + (++D.id0), kind: kind, title: title, icon: o.icon || '', x: 230 + (n % 8) * 30, y: 40 + (n % 8) * 26, w: Math.min(o.w || 900, ar.w - 20), h: Math.min(o.h || 580, ar.h - 20), min: false, max: small, z: ++D.z, data: o.data || {} };
     w.x = Math.max(0, Math.min(w.x, ar.w - w.w)); w.y = Math.max(0, Math.min(w.y, ar.h - w.h));
@@ -376,7 +376,7 @@
   function show() {
     if (!S.user) return; D.open = true; root.hidden = false; document.body.classList.add('dk-on'); wallStyle(); icons(); task(); D.wins.forEach(place);
     if (location.hash !== '#desktop') { try { history.pushState({ v: 'desktop' }, '', '#desktop'); } catch (e) {} }
-    restoreSess();
+    fitView(); restoreSess();
   }
   function hide(back) { D.open = false; D.menu = false; menu(); root.hidden = true; document.body.classList.remove('dk-on'); if (location.hash === '#desktop') { try { history.replaceState(null, '', '#home'); } catch (e) {} } if (back) A.go('home'); }
 
@@ -469,7 +469,14 @@
   });
   var end = function () { if (drag) { drag = null; root.classList.remove('dk-drag'); } };
   root.addEventListener('pointerup', end); root.addEventListener('pointercancel', end);
-  window.addEventListener('resize', function () { if (D.open) D.wins.forEach(place); });
+  /* phones: follow the visible area so the taskbar stays on screen as the browser bar and keyboard come and go */
+  function fitView() {
+    var vv = window.visualViewport; if (!root) return;
+    if (vv && window.innerWidth < 900) { root.style.top = Math.round(vv.offsetTop) + 'px'; root.style.height = Math.round(vv.height) + 'px'; } else { root.style.top = ''; root.style.height = ''; }
+    if (D.open) D.wins.forEach(place);
+  }
+  window.addEventListener('resize', fitView); if (window.visualViewport) { window.visualViewport.addEventListener('resize', fitView); window.visualViewport.addEventListener('scroll', function () { if (window.innerWidth < 900) fitView(); }); }
+  window.addEventListener('orientationchange', function () { setTimeout(fitView, 250); });
   setInterval(function () { var c = $('#dkclock'); if (c && D.open) c.textContent = clock(); }, 20000);
   document.addEventListener('change', function (ev) { if (ev.target.id === 'brse') { LS.set('brsearch', ev.target.value); toast('Search engine: ' + ev.target.options[ev.target.selectedIndex].text); return; } if (ev.target.id === 'brhome') { var hv = ev.target.value.trim(); if (hv && !normUrl(hv)) return toast('Enter a web address'); LS.set('brhome', hv ? normUrl(hv) : ''); toast(hv ? 'New tab page saved' : 'New tab opens a blank page'); return; } if (ev.target.classList && ev.target.classList.contains('dk-cki')) { setIcons(toggle(deskIds(), ev.target.getAttribute('data-k'), ev.target.checked)); var cn = ev.target.closest('.dk-ch').querySelector('#dkcn'); if (cn) cn.textContent = deskIds().length + ' on desktop'; return; } if (ev.target.id === 'dkwf') { wallFile(ev.target.files[0]); ev.target.value = ''; } });
   window.addEventListener('popstate', function () { if (location.hash === '#desktop') { if (!D.open) show(); } else if (D.open) hide(false); });

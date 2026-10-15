@@ -187,7 +187,7 @@ try {
   await t('mobile: desktop windows open maximised', async () => {
     const m = await browser.newContext({ viewport: { width: 390, height: 780 }, colorScheme: 'dark' }); await m.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
     const q = await m.newPage(); await q.goto(B + '/'); await q.waitForSelector('#top .deskbtn'); await q.click('#top .deskbtn'); await q.waitForSelector('#desk:not([hidden])');  await q.click('.dk-ic[data-w="files"]', { timeout: 5000 }); await q.waitForSelector('.dkw');
-    const bb = await q.locator('.dkw').boundingBox(); assert.ok(bb.width >= 385); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await shot(q, 'desktop-mobile'); await m.close();
+    const bb = await q.locator('.dkw').boundingBox(); assert.ok(bb.width >= 385); const tk = await q.locator('.dk-task').boundingBox(); assert.ok(Math.abs(tk.y + tk.height - 780) <= 1, 'taskbar sits at the bottom of the screen'); assert.ok(Math.abs(bb.y + bb.height - tk.y) <= 1, 'window fills the space above the taskbar'); assert.ok(await q.evaluate(() => getComputedStyle(document.querySelector('.dkw-body')).overscrollBehaviorY === 'contain')); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await shot(q, 'desktop-mobile'); await m.close();
   });
   await t('no page errors', async () => assert.deepEqual(errs, []));
 } finally { await browser.close(); srv.kill(); dav.close(); google.close(); llm.close(); site.close(); }

@@ -886,3 +886,32 @@ button.avatar{cursor:pointer;padding:0;overflow:hidden;font-size:16px}button.ava
 .icores .core em{font-style:normal;color:var(--fg);font-size:11px;font-variant-numeric:tabular-nums}
 .icores .core u{text-decoration:none;display:flex;align-items:flex-end;width:100%;max-width:34px;height:64px;background:var(--line);border-radius:6px;overflow:hidden}
 .icores .core i{display:block;width:100%;background:var(--accent);border-radius:4px 4px 0 0}.icores .core i.warn{background:var(--warn)}.icores .core i.bad{background:var(--bad)}
+
+/* Desktop on phones and tablets: true visible height, safe areas, finger-sized controls, smooth contained scrolling */
+#desk{height:100vh;height:100dvh;inset:0 0 auto 0;overscroll-behavior:none;touch-action:manipulation}
+html:has(body.dk-on),body.dk-on{overflow:hidden;overscroll-behavior:none}
+@media (max-width:900px){body.dk-on{position:fixed;width:100%}}
+.dk-task{height:calc(52px + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));box-sizing:border-box}
+.dkw-body{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.dkw-frame{overscroll-behavior:contain}
+@media (pointer:coarse),(max-width:760px){
+  .dkw-bar{height:46px}.dkw-bar button{width:44px;height:38px;font-size:17px}
+  .dkw.max .dkw-bar{cursor:default}
+  .dk-task button{min-height:40px}
+  .dkw-t{font-size:15px}
+}
+@media (max-width:760px){
+  .dkw{border-radius:0}
+  .dkw-body>.dk-br,.dk-br{min-width:0}
+  .dk-barw .dk-bar2{gap:6px;padding:8px}.dk-bar2 [data-dk="bfwd"],.dk-bar2 [data-dk="bext"]{display:none}
+  .dk-bar2 .dk-url{min-width:0;flex:1 1 auto;font-size:16px}
+  .dk-bts{overflow-x:auto;scrollbar-width:none}.dk-bts::-webkit-scrollbar{display:none}
+  .dk-sw{padding:20px 16px}.dk-start2 h2{font-size:26px}
+  html.embed #view{padding:8px 14px 28px 14px}
+  html.embed #view:has(>.pxapp){padding:0}
+  html.embed .pxapp{min-height:0;height:100%}
+  html.embed #view:has(>.vapp){padding:0}
+  html.embed #view{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  input,select,textarea{font-size:16px}
+}
+.dk-sw{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:max(24px,env(safe-area-inset-bottom,0px))}
