@@ -3,7 +3,8 @@
 import { effective } from './config.js';
 import { httpError, readBody, json } from './util.js';
 
-const ROUTES = { 'POST identity/accounts/prelogin': 4096, 'POST identity/connect/token': 16384, 'GET api/sync': 0 };
+const ROUTES = { 'POST identity/accounts/prelogin': 4096, 'POST identity/connect/token': 16384, 'GET api/sync': 0, 'POST api/ciphers': 1 << 20, 'PUT api/ciphers/:id': 1 << 20, 'PUT api/ciphers/:id/delete': 4096 };
+const routeKey = (m, rest) => m + ' ' + rest.replace(/^(api\/ciphers\/)[0-9a-fA-F-]{8,64}/, '$1:id');
 const PASS_HEADERS = ['authorization', 'content-type', 'accept', 'auth-email', 'device-type'];
 const MAX_RESPONSE = 64 * 1024 * 1024;
 
@@ -22,7 +23,7 @@ export async function status() {
 export async function handleVault(req, res, url) {
   const rest = url.pathname.replace(/^\/api\/vault\//, '');
   if (rest === 'status') return json(res, 200, await status());
-  const key = req.method + ' ' + rest;
+  const key = routeKey(req.method, rest);
   if (!(key in ROUTES)) throw httpError(404, 'Not allowed', 'vault_route');
   const target = new URL(base() + '/' + rest);
   if (rest === 'api/sync') target.search = '?excludeDomains=true';

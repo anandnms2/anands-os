@@ -363,11 +363,11 @@ P.copy = 'M9 9h11v11H9z M5 15H4V4h11v1';
 P.key = 'M21 2l-2 2 M11.4 11.6a5.5 5.5 0 1 1-7.8 7.8 5.5 5.5 0 0 1 7.8-7.8z M11.4 11.6L15.5 7.5 M15.5 7.5l3 3L22 7l-3-3';
 P.open = 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6 M15 3h6v6 M10 14L21 3';
 var VLOCK_MS = 300000;
-S.vault = { items: null, skipped: null, sel: null, folder: 'All', q: '', show: false, err: '', busy: false, twofa: null, email: LS.get('vault.email', ''), lockAt: 0, status: null };
+S.vault = { folders: [], edit: null, items: null, skipped: null, sel: null, folder: 'All', q: '', show: false, err: '', busy: false, twofa: null, email: LS.get('vault.email', ''), lockAt: 0, status: null };
 function vWeak(p) { return !!p && (p.length < 10 || /^(password|qwerty|123456|summer|letmein)/i.test(p)); }
 function vReused(it) { return !!it.pw && S.vault.items.filter(function (x) { return x.pw === it.pw; }).length > 1; }
 function vFlags(it) { var f = []; if (it.type === 'login' && it.pw) { if (vWeak(it.pw)) f.push('weak'); if (vReused(it)) f.push('reused'); if (it.age > 365) f.push('old'); } return f; }
-function vLock(auto) { var V = S.vault; V.items = null; V.sel = null; V.show = false; V.q = ''; V.folder = 'All'; V.twofa = null; V.err = auto === true ? 'Locked after 5 minutes without activity.' : ''; if (S.view === 'vault') redraw(); if (auto !== true) toast('Vault locked. Nothing is kept in memory.'); }
+function vLock(auto) { var V = S.vault; try { window.AOSVault.lock(); } catch (e) {} V.edit = null; V.items = null; V.sel = null; V.show = false; V.q = ''; V.folder = 'All'; V.twofa = null; V.err = auto === true ? 'Locked after 5 minutes without activity.' : ''; if (S.view === 'vault') redraw(); if (auto !== true) toast('Vault locked. Nothing is kept in memory.'); }
 function vTouch() { if (S.vault.items) S.vault.lockAt = Date.now() + VLOCK_MS; }
 function vClip(text, label) {
   var done = function () { toast(label + ' copied. The clipboard is cleared in 30 seconds.'); clearTimeout(vClip.t); vClip.t = setTimeout(function () { try { navigator.clipboard.writeText('').catch(function () {}); } catch (e) {} }, 30000); };
@@ -389,7 +389,7 @@ function vListHtml() {
 function vField(label, val, k, extra) { return '<div class="vfield"><div><div class="eyebrow">' + label + '</div><div class="vval mono">' + val + '</div></div><div class="vbtns">' + (extra || '') + '<button class="btn sm" data-act="vcopy" data-k="' + k + '" aria-label="Copy ' + label.toLowerCase() + '">' + ic('copy') + 'Copy</button></div></div>'; }
 function vSel() { return S.vault.items.filter(function (x) { return x.id === S.vault.sel; })[0]; }
 function vDetail() {
-  var V = S.vault, it = vSel();
+  var V = S.vault, it = vSel(); if (V.edit) return vEditForm();
   if (!it) return '<div class="dpanel"><h3 style="font-size:18px;margin-bottom:6px">Pick an item</h3><p style="color:var(--muted);margin:0;font-size:14px">Everything here is decrypted in this tab. Copy puts a value on your clipboard for 30 seconds.</p></div>';
   var fl = vFlags(it), warn = fl.map(function (f) { return f === 'weak' ? 'This password is short or common.' : f === 'reused' ? 'The same password is used on ' + V.items.filter(function (x) { return x.pw === it.pw; }).length + ' items.' : 'Not changed for ' + Math.round(it.age / 30) + ' months.'; }).join(' ');
   var pwv = V.show ? esc(it.pw) : '&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;';
@@ -400,12 +400,36 @@ function vDetail() {
     (it.totp ? '<div class="vfield"><div><div class="eyebrow">One-time code</div><div class="vval mono" style="font-size:22px;letter-spacing:.08em" id="vtotp">------</div></div><div class="vbtns"><svg class="vring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="var(--line)" stroke-width="3"/><circle id="vringc" cx="18" cy="18" r="15" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="94.2" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg><button class="btn sm" data-act="vcopy" data-k="totp">' + ic('copy') + 'Copy</button></div></div>' : '') +
     (it.url ? '<div class="vfield"><div><div class="eyebrow">Website</div><div class="vval mono" style="word-break:break-all">' + esc(it.url.replace(/^https?:\/\//, '')) + '</div></div><div class="vbtns">' + (/^https?:\/\//i.test(it.url) ? '<a class="btn sm" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + ic('open') + 'Open</a>' : '') + '</div></div>' : '') +
     (it.notes ? '<div class="vfield" style="display:block"><div class="eyebrow">Notes</div><div style="margin-top:4px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere">' + esc(it.notes) + '</div></div>' : '') +
-    '<p class="note" style="margin:6px 0 0">Changed ' + (it.age < 60 ? it.age + ' days' : Math.round(it.age / 30) + ' months') + ' ago. Read only here. Edit in the Vault web app.</p></div>';
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn primary" data-act="vedit">' + ic('doc') + 'Edit</button><button class="btn" data-act="vdel">' + ic('trash') + 'Delete</button></div>' + (V.delAsk ? '<div class="vwarn" style="margin-top:10px">Move this item to the trash in your Vault? <button class="btn sm" data-act="vdelyes">Yes, delete</button> <button class="btn sm" data-act="vdelno">Keep</button></div>' : '') + '<p class="note" style="margin:10px 0 0">Changed ' + (it.age < 60 ? it.age + ' days' : Math.round(it.age / 30) + ' months') + ' ago. Edits are encrypted here and saved to your Vault.</p></div>';
 }
-function vFlow() {
-  return '<div class="card" style="margin-top:20px"><h2 style="font-size:20px;margin-bottom:4px">Where decryption happens</h2><p style="color:var(--muted);margin:0 0 16px;max-width:70ch">Vaultwarden only stores ciphertext. This server relays it and never holds your master password or the decrypted vault.</p>' +
-    '<div class="flow"><div><b>Your browser</b><small>master password, key, decrypt</small></div><i>&harr;</i><div><b>This server</b><small>relays ciphertext only</small></div><i>&harr;</i><div><b>Vaultwarden</b><small>' + esc(((S.settings && S.settings.vault && S.settings.vault.url) || 'pass.anands.xyz').replace(/^https?:\/\//, '')) + '</small></div></div>' +
-    '<dl class="dl" style="margin-top:18px"><dt>Unlock</dt><dd>Your email and master password are used in this tab to derive the key. They are never stored and never reach the server in a usable form.</dd><dt>Memory</dt><dd>Decrypted items live in page memory. Locking or reloading wipes them.</dd><dt>Auto-lock</dt><dd>After five minutes without activity, or with Lock now.</dd><dt>Assistant</dt><dd>The assistant has no access to the Vault, not even item names.</dd><dt>Editing</dt><dd>Read only here. Add or change items in the Vault web app.</dd></dl></div>';
+function vEditForm() {
+  var V = S.vault, e = V.edit, it = e.draft, isLogin = it.type !== 'note';
+  var fld = function (id, l, v, cls) { return '<div class="field"><label for="' + id + '">' + l + '</label><input class="input' + (cls || '') + '" id="' + id + '" value="' + esc(v || '') + '" autocomplete="off" spellcheck="false"></div>'; };
+  var folders = '<option value="">No folder</option>' + V.folders.map(function (f) { return '<option value="' + esc(f.id) + '"' + (it.folderId === f.id ? ' selected' : '') + '>' + esc(f.name) + '</option>'; }).join('');
+  return '<div class="dpanel"><h3 style="font-size:20px;margin-bottom:8px">' + (e.id ? 'Edit' : 'New') + (isLogin ? ' login' : ' note') + '</h3><form id="vef" autocomplete="off">' +
+    fld('ve_name', 'Name', it.name) +
+    (isLogin ? fld('ve_user', 'Username', it.user) + '<div class="field"><label for="ve_pw">Password</label><div style="display:flex;gap:8px"><input class="input mono" id="ve_pw" value="' + esc(it.pw || '') + '" autocomplete="off" spellcheck="false"><button class="btn" type="button" data-act="vgen">Generate</button></div></div>' + fld('ve_totp', 'Authenticator key (optional)', it.totp, ' mono') + fld('ve_url', 'Website', it.url) : '') +
+    '<div class="field"><label for="ve_notes">Notes</label><textarea class="input" id="ve_notes" rows="4">' + esc(it.notes || '') + '</textarea></div>' +
+    '<div class="field"><label for="ve_folder">Folder</label><select class="input" id="ve_folder">' + folders + '</select></div>' +
+    '<label style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><input type="checkbox" id="ve_fav"' + (it.fav ? ' checked' : '') + '> Favourite</label>' +
+    (e.err ? '<p role="alert" style="color:var(--bad);font-size:14px;margin:0 0 10px">' + esc(e.err) + '</p>' : '') +
+    '<div style="display:flex;gap:8px"><button class="btn primary" type="submit"' + (e.busy ? ' disabled' : '') + '>' + (e.busy ? 'Saving...' : 'Save') + '</button><button class="btn" type="button" data-act="vcancel">Cancel</button></div></form></div>';
+}
+function vEditRead() {
+  var e = S.vault.edit, d = e.draft, v = function (id) { var x = $('#' + id); return x ? x.value : ''; };
+  d.name = v('ve_name').trim(); d.notes = v('ve_notes'); d.folderId = v('ve_folder') || null; d.fav = !!($('#ve_fav') || {}).checked;
+  if (d.type !== 'note') { d.user = v('ve_user').trim(); d.pw = v('ve_pw'); d.totp = v('ve_totp').trim(); d.url = v('ve_url').trim(); }
+  return d;
+}
+function vEditSave() {
+  var V = S.vault, e = V.edit; if (!e || e.busy) return; var d = vEditRead();
+  if (!d.name) { e.err = 'Give the item a name.'; redraw(); return; }
+  var orig = e.id ? V.items.filter(function (x) { return x.id === e.id; })[0] : null; d.pwChanged = !orig || orig.pw !== d.pw;
+  e.busy = true; e.err = ''; redraw();
+  window.AOSVault.save(d).then(function (saved) {
+    var i = V.items.map(function (x) { return x.id; }).indexOf(saved.id); if (i > -1) V.items[i] = saved; else V.items.push(saved);
+    V.edit = null; V.sel = saved.id; V.show = false; toast('Saved to your Vault.'); redraw(); vTick();
+  }).catch(function (x) { e.busy = false; e.err = x.message; redraw(); });
 }
 function vaultV() {
   var V = S.vault, head = '<div class="pagehead"><div><h1>Vault</h1><p>Your Vaultwarden passwords inside the OS. Decrypted in your browser only.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">';
@@ -415,7 +439,7 @@ function vaultV() {
     return '<div class="wrap">' + head + '<span class="pill warn"><i class="dot warn"></i>Locked</span></div></div><div class="card vlockcard"><div class="vlockic">' + ic('lock') + '</div><h2 style="font-size:24px;margin:10px 0 4px">' + (two ? 'Two-step code' : 'Vault is locked') + '</h2><p style="color:var(--muted);margin:0 0 18px;font-size:14.5px">' + (two ? 'Enter the code from your authenticator app.' : 'Enter your master password. It is used in this tab only.') + '</p>' +
       '<form id="vf" autocomplete="off">' + (two ? '<div class="field"><label for="v2">Code</label><input class="input mono" id="v2" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>' : '<div class="field"><label for="vem">Email</label><input class="input" id="vem" type="email" autocomplete="username" value="' + esc(V.email) + '" placeholder="you@example.com"></div><div class="field"><label for="vpw">Master password</label><input class="input" id="vpw" type="password" autocomplete="off" placeholder="Master password"></div>') +
       (V.err ? '<p role="alert" style="color:var(--bad);font-size:14px;margin:-4px 0 12px">' + esc(V.err) + '</p>' : '') +
-      '<button class="btn primary" type="submit" style="width:100%;justify-content:center"' + (V.busy ? ' disabled' : '') + '>' + ic('key') + (V.busy ? 'Unlocking...' : 'Unlock') + '</button></form></div>' + vFlow() + '</div>';
+      '<button class="btn primary" type="submit" style="width:100%;justify-content:center"' + (V.busy ? ' disabled' : '') + '>' + ic('key') + (V.busy ? 'Unlocking...' : 'Unlock') + '</button></form></div>'+ '</div>';
   }
   var items = V.items, n = items.length, w = items.filter(function (x) { return x.type === 'login' && vWeak(x.pw); }).length, r = items.filter(function (x) { return x.type === 'login' && vReused(x); }).length, o = items.filter(function (x) { return x.type === 'login' && x.pw && x.age > 365; }).length;
   var rem = Math.max(0, Math.round((V.lockAt - Date.now()) / 1000));
@@ -424,9 +448,9 @@ function vaultV() {
   var chips = ['All', 'fav'].concat(fnames).map(function (f) { return '<button class="chip" data-act="vfold" data-f="' + esc(f) + '" aria-pressed="' + (V.folder === f) + '">' + (f === 'fav' ? 'Favourites' : esc(f)) + '</button>'; }).join('');
   return '<div class="wrap">' + head + '<span class="pill ok"><i class="dot"></i>Unlocked &middot; locks in <span id="vlockt" class="mono">' + Math.floor(rem / 60) + ':' + ('0' + rem % 60).slice(-2) + '</span></span><button class="btn" data-act="vlock">' + ic('lock') + 'Lock now</button></div></div>' +
     '<div class="kpis">' + kp('Items', n, 'All') + kp('Weak', w, 'weak', 'var(--bad)') + kp('Reused', r, 'reused', 'var(--warn)') + kp('Not changed in a year', o, 'old', 'var(--warn)') + '</div>' +
-    '<div class="toolbar"><div class="search">' + ic('search') + '<input class="input" id="vq" type="search" placeholder="Search name, username or site" value="' + esc(V.q) + '" aria-label="Search vault" data-in="vq"></div><div class="chips">' + chips + '</div></div>' +
+    '<div class="toolbar"><div class="search">' + ic('search') + '<input class="input" id="vq" type="search" placeholder="Search name, username or site" value="' + esc(V.q) + '" aria-label="Search vault" data-in="vq"></div><div class="chips">' + chips + '</div><button class="btn primary" data-act="vnew" data-t="login" style="margin-left:auto">' + ic('plus') + 'New login</button><button class="btn" data-act="vnew" data-t="note">' + ic('doc') + 'New note</button></div>' +
     '<div class="dgrid"><div class="card" style="padding:0;overflow:hidden"><div id="vlist">' + vListHtml() + '</div></div>' + vDetail() + '</div>' +
-    (V.skipped && (V.skipped.org || V.skipped.other) ? '<p class="note" style="margin-top:12px">Not shown here: ' + (V.skipped.org ? V.skipped.org + ' shared (organization) item' + (V.skipped.org === 1 ? '' : 's') : '') + (V.skipped.org && V.skipped.other ? ', ' : '') + (V.skipped.other ? V.skipped.other + ' card, identity or unreadable item' + (V.skipped.other === 1 ? '' : 's') : '') + '. Open them in the Vault web app.</p>' : '') + vFlow() + '</div>';
+    (V.skipped && (V.skipped.org || V.skipped.other) ? '<p class="note" style="margin-top:12px">Not shown here: ' + (V.skipped.org ? V.skipped.org + ' shared (organization) item' + (V.skipped.org === 1 ? '' : 's') : '') + (V.skipped.org && V.skipped.other ? ', ' : '') + (V.skipped.other ? V.skipped.other + ' card, identity or unreadable item' + (V.skipped.other === 1 ? '' : 's') : '') + '. Open them in the Vault web app.</p>' : '')+ '</div>';
 }
 function loadVault() { return api('/api/vault/status').then(function (s) { S.vault.status = s; }).catch(function () { S.vault.status = { configured: true, connected: false }; }).then(function () { if (S.view === 'vault') redraw(); }); }
 function vTick() {
@@ -444,7 +468,7 @@ function vSubmit() {
   if (!V.twofa) { V.email = emailEl ? emailEl.value.trim() : V.email; V.pending = pwEl ? pwEl.value : ''; if (!V.email || !V.pending) { V.err = 'Enter your email and master password.'; redraw(); return; } LS.set('vault.email', V.email); }
   var tf = V.twofa ? { code: (codeEl ? codeEl.value : '').replace(/\s/g, ''), provider: V.twofa.provider } : null; if (tf && !tf.code) return;
   V.busy = true; V.err = ''; redraw();
-  window.AOSVault.login(V.email, V.pending, tf).then(function (r) { V.items = r.items; V.skipped = r.skipped; V.pending = null; V.twofa = null; V.busy = false; V.sel = null; V.lockAt = Date.now() + VLOCK_MS; redraw(); vTick(); })
+  window.AOSVault.login(V.email, V.pending, tf).then(function (r) { V.items = r.items; V.folders = r.folders; V.edit = null; V.skipped = r.skipped; V.pending = null; V.twofa = null; V.busy = false; V.sel = null; V.lockAt = Date.now() + VLOCK_MS; redraw(); vTick(); })
     .catch(function (e) {
       V.busy = false;
       if (e.code === '2fa') { var p = e.providers.filter(function (x) { return x === 0 || x === 1; })[0]; if (p === undefined) { V.err = 'This account needs a two-step method that is not supported here (security key or similar). Use the Vault web app.'; V.pending = null; } else V.twofa = { provider: p }; }
@@ -530,11 +554,19 @@ document.addEventListener('click', function (ev) {
     case 'refresh': loadIns(true); break;
     case 'cat': S.appCat = d.c; redraw(); break;
     case 'vlock': vLock(); break;
-    case 'vsel': S.vault.sel = d.id; S.vault.show = false; redraw(); vTick(); if (innerWidth < 900) { var vp = $('.dpanel'); if (vp) vp.scrollIntoView({ block: 'start' }); } break;
+    case 'vsel': S.vault.edit = null; S.vault.delAsk = false; S.vault.sel = d.id; S.vault.show = false; redraw(); vTick(); if (innerWidth < 900) { var vp = $('.dpanel'); if (vp) vp.scrollIntoView({ block: 'start' }); } break;
     case 'vreveal': S.vault.show = !S.vault.show; redraw(); vTick(); break;
     case 'vfold': S.vault.folder = d.f; redraw(); vTick(); break;
     case 'vcopy': { var vi = vSel(); if (!vi) break; if (d.k === 'totp') window.AOSVault.totp(vi.totp).then(function (r) { if (r) vClip(r.code, 'Code'); }); else vClip(d.k === 'pw' ? vi.pw : vi.user, d.k === 'pw' ? 'Password' : 'Username'); break; }
     case 'vsettings': go('settings'); break;
+    case 'vnew': S.vault.edit = { id: null, draft: { id: null, type: d.t, name: '', user: '', pw: '', totp: '', url: '', notes: '', folderId: null, fav: false }, err: '', busy: false }; S.vault.sel = null; redraw(); if (innerWidth < 900) { var vp2 = $('.dpanel'); if (vp2) vp2.scrollIntoView({ block: 'start' }); } break;
+    case 'vedit': { var ei = vSel(); if (ei) { S.vault.edit = { id: ei.id, draft: JSON.parse(JSON.stringify(ei)), err: '', busy: false }; S.vault.delAsk = false; redraw(); } break; }
+    case 'vcancel': S.vault.edit = null; redraw(); break;
+    case 'vgen': { var gp = $('#ve_pw'); if (gp) gp.value = window.AOSVault.generate(20); break; }
+    case 'vdel': S.vault.delAsk = true; redraw(); break;
+    case 'vdelno': S.vault.delAsk = false; redraw(); break;
+    case 'vdelyes': { var di = vSel(); if (!di) break; window.AOSVault.remove(di.id).then(function () { S.vault.items = S.vault.items.filter(function (x) { return x.id !== di.id; }); S.vault.sel = null; S.vault.delAsk = false; toast('Moved to the trash in your Vault.'); redraw(); }).catch(function (x) { toast(x.message); }); break; }
+
     case 'dgo': loadDrive(d.p); break;
     case 'dsel': S.drive.sel = d.p; redraw(); break;
     case 'dopen': if (LAUNCHES.indexOf(d.s) < 0) toast('This app has no direct file hand-off. Use its Open dialog and choose ' + d.p + '.'); launch(d.s, LAUNCHES.indexOf(d.s) < 0 ? null : d.p); break;
@@ -570,6 +602,7 @@ document.addEventListener('keydown', function (ev) {
 document.addEventListener('submit', function (ev) {
   var id = ev.target.id;
   if (id === 'vf') { ev.preventDefault(); vSubmit(); }
+  else if (id === 'vef') { ev.preventDefault(); vEditSave(); }
   else if (id === 'cf') { ev.preventDefault(); var i = $('#ci'), v = i.value; i.value = ''; i.style.height = 'auto'; send(v); }
   else if (id === 'hf') { ev.preventDefault(); var q = $('#hq').value; $('#hq').value = ''; openChat(q.trim() ? q : undefined); }
   else if (id === 'pwf') { ev.preventDefault(); var e = $('#lerr'); e.textContent = ''; fetch('/auth/password', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-aos': '1' }, body: JSON.stringify({ password: $('#pw').value }) }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not sign in'); }); }).then(function () { boot(); }).catch(function (x) { e.textContent = x.message; }); }

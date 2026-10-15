@@ -84,27 +84,75 @@ function login(email, pw, twofa) {
     if (!token || !ukey) throw fail('The Vault did not return a key for this account.', 'upstream');
     return stretch(mk).then(function (sk) { return decryptBytes(ukey, sk); }).then(function (kb) {
       if (kb.length === 32) return stretch(kb); if (kb.length === 64) return toKey(kb); throw fail('Unexpected key size', 'upstream');
-    }).then(function (userKey) { mk = null; return relay('api/sync', { headers: { authorization: 'Bearer ' + token } }).then(function (s) { token = null; if (!s.ok) throw fail(s.body.error || 'Sync failed', 'upstream'); return openVault(s.body, userKey); }); });
+    }).then(function (userKey) { mk = null; return relay('api/sync', { headers: { authorization: 'Bearer ' + token } }).then(function (s) { var tk = token; token = null; if (!s.ok) throw fail(s.body.error || 'Sync failed', 'upstream'); return openVault(s.body, userKey, tk); }); });
   });
 }
-function openVault(sync, userKey) {
-  var folders = {}, skipped = { org: 0, other: 0 }, ciphers = sync.ciphers || sync.Ciphers || [];
-  var fl = sync.folders || sync.Folders || [];
-  return Promise.all(fl.map(function (f) { return decryptStr(pick(f, 'name'), userKey).then(function (n) { folders[pick(f, 'id')] = n; }).catch(function () {}); })).then(function () {
+var sess = null; /* { userKey, token, folders:{id:name}, raw:{id:cipher} } lives only in this page's memory */
+function encStr(str, k) {
+  if (str == null || str === '') return Promise.resolve(null);
+  var iv = crypto.getRandomValues(new Uint8Array(16)), data = typeof str === 'string' ? enc.encode(str) : str;
+  return subtle.importKey('raw', k.enc, 'AES-CBC', false, ['encrypt']).then(function (ck) { return subtle.encrypt({ name: 'AES-CBC', iv: iv }, ck, data); }).then(function (ct) {
+    ct = new Uint8Array(ct); return hmac(k.mac, cat(iv, ct)).then(function (mac) { return '2.' + b64e(iv) + '|' + b64e(ct) + '|' + b64e(mac); });
+  });
+}
+function cipherKey(c) { var ik = pick(c, 'key'); return ik ? decryptBytes(ik, sess.userKey).then(toKey) : Promise.resolve(sess.userKey); }
+function decryptCipher(c) {
+  return cipherKey(c).then(function (k) {
+    var type = +pick(c, 'type'), l = pick(c, 'login') || {}, uris = pick(l, 'uris') || [], d = function (v) { return v ? decryptStr(v, k).catch(function () { return ''; }) : Promise.resolve(''); };
+    return Promise.all([d(pick(c, 'name')), d(pick(c, 'notes')), d(pick(l, 'username')), d(pick(l, 'password')), d(pick(l, 'totp')), uris.length ? d(pick(uris[0], 'uri')) : Promise.resolve('')]).then(function (x) {
+      var rev = Date.parse(pick(c, 'revisionDate')) || Date.now(), fid = pick(c, 'folderId');
+      return { id: pick(c, 'id'), type: type === 1 ? 'login' : 'note', name: x[0] || '(no name)', notes: x[1], user: x[2], pw: x[3], totp: x[4], url: x[5], folderId: fid || null, folder: sess.folders[fid] || 'No folder', fav: !!pick(c, 'favorite'), age: Math.max(0, Math.round((Date.now() - rev) / 86400000)) };
+    });
+  });
+}
+function openVault(sync, userKey, token) {
+  var skipped = { org: 0, other: 0 }, ciphers = sync.ciphers || sync.Ciphers || [], fl = sync.folders || sync.Folders || [];
+  sess = { userKey: userKey, token: token, folders: {}, raw: {} };
+  return Promise.all(fl.map(function (f) { return decryptStr(pick(f, 'name'), userKey).then(function (n) { sess.folders[pick(f, 'id')] = n; }).catch(function () {}); })).then(function () {
     return Promise.all(ciphers.map(function (c) {
       if (pick(c, 'deletedDate')) return null;
       if (pick(c, 'organizationId')) { skipped.org++; return null; }
       var type = +pick(c, 'type'); if (type !== 1 && type !== 2) { skipped.other++; return null; }
-      var ik = pick(c, 'key'), keyP = ik ? decryptBytes(ik, userKey).then(toKey) : Promise.resolve(userKey);
-      return keyP.then(function (k) {
-        var l = pick(c, 'login') || {}, uris = pick(l, 'uris') || [], d = function (v) { return v ? decryptStr(v, k).catch(function () { return ''; }) : Promise.resolve(''); };
-        return Promise.all([d(pick(c, 'name')), d(pick(c, 'notes')), d(pick(l, 'username')), d(pick(l, 'password')), d(pick(l, 'totp')), uris.length ? d(pick(uris[0], 'uri')) : Promise.resolve('')]).then(function (x) {
-          var rev = Date.parse(pick(c, 'revisionDate')) || Date.now();
-          return { id: pick(c, 'id'), type: type === 1 ? 'login' : 'note', name: x[0] || '(no name)', notes: x[1], user: x[2], pw: x[3], totp: x[4], url: x[5], folder: folders[pick(c, 'folderId')] || 'No folder', fav: !!pick(c, 'favorite'), age: Math.max(0, Math.round((Date.now() - rev) / 86400000)) };
-        });
-      }).catch(function () { skipped.other++; return null; });
+      return decryptCipher(c).then(function (it) { sess.raw[it.id] = c; return it; }).catch(function () { skipped.other++; return null; });
     }));
-  }).then(function (items) { return { items: items.filter(Boolean), skipped: skipped }; });
+  }).then(function (items) { return { items: items.filter(Boolean), skipped: skipped, folders: Object.keys(sess.folders).map(function (id) { return { id: id, name: sess.folders[id] }; }) }; });
 }
-window.AOSVault = { login: login, totp: totp, _b64d: b64d, _b64e: b64e, _decrypt: decryptStr, _stretch: stretch, _masterKey: masterKey };
+function lock() { sess = null; }
+/* create (it.id empty) or update one item; it = {type,name,user,pw,totp,url,notes,folderId,fav} */
+function save(it) {
+  if (!sess) return Promise.reject(fail('Vault is locked', 'locked'));
+  var raw = it.id ? sess.raw[it.id] : null, ck = raw ? cipherKey(raw) : Promise.resolve(sess.userKey);
+  return ck.then(function (k) {
+    var isLogin = it.type !== 'note';
+    return Promise.all([encStr(it.name, k), encStr(it.notes, k), isLogin ? encStr(it.user, k) : null, isLogin ? encStr(it.pw, k) : null, isLogin ? encStr(it.totp, k) : null, isLogin && it.url ? encStr(it.url, k) : null]).then(function (x) {
+      var body = {};
+      if (raw) ['fields', 'passwordHistory', 'attachments', 'key', 'reprompt', 'card', 'identity'].forEach(function (f) { var v = pick(raw, f); if (v != null) body[f] = v; });
+      body.type = isLogin ? 1 : 2; body.folderId = it.folderId || null; body.organizationId = null; body.favorite = !!it.fav; body.name = x[0]; body.notes = x[1];
+      if (isLogin) { var old = raw ? (pick(raw, 'login') || {}) : {}; var oldUris = pick(old, 'uris') || [];
+        body.login = { username: x[2], password: x[3], totp: x[4], uris: x[5] ? [{ uri: x[5], match: oldUris[0] ? pick(oldUris[0], 'match') : null }] : [], passwordRevisionDate: (raw && it.pwChanged !== true) ? pick(old, 'passwordRevisionDate') || null : new Date().toISOString() }; }
+      else body.secureNote = { type: 0 };
+      if (raw) body.lastKnownRevisionDate = pick(raw, 'revisionDate');
+      var path = raw ? 'api/ciphers/' + it.id : 'api/ciphers';
+      return relay(path, { method: raw ? 'PUT' : 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + sess.token }, body: JSON.stringify(body) });
+    });
+  }).then(function (r) {
+    if (r.status === 401) throw fail('Your session with the Vault expired. Lock and unlock again.', 'expired');
+    if (!r.ok) throw fail((r.body && (r.body.message || r.body.error || (r.body.ErrorModel && r.body.ErrorModel.Message))) || 'The Vault refused the change.', 'upstream');
+    var c = r.body; return decryptCipher(c).then(function (dec) { sess.raw[dec.id] = c; return dec; });
+  });
+}
+function remove(id) {
+  if (!sess) return Promise.reject(fail('Vault is locked', 'locked'));
+  return relay('api/ciphers/' + id + '/delete', { method: 'PUT', headers: { authorization: 'Bearer ' + sess.token } }).then(function (r) {
+    if (r.status === 401) throw fail('Your session with the Vault expired. Lock and unlock again.', 'expired');
+    if (!r.ok) throw fail('The Vault refused the delete.', 'upstream'); delete sess.raw[id]; return true;
+  });
+}
+function generate(len, opts) {
+  opts = opts || {}; len = len || 20; var sets = ['abcdefghijkmnopqrstuvwxyz', 'ABCDEFGHJKLMNPQRSTUVWXYZ', '23456789'].concat(opts.symbols === false ? [] : ['!@#$%^&*-_+=?']), all = sets.join(''), out = [];
+  var rnd = function (n) { var a = new Uint32Array(1), lim = Math.floor(4294967296 / n) * n; do { crypto.getRandomValues(a); } while (a[0] >= lim); return a[0] % n; };
+  sets.forEach(function (st) { out.push(st[rnd(st.length)]); }); while (out.length < len) out.push(all[rnd(all.length)]);
+  for (var i = out.length - 1; i > 0; i--) { var j = rnd(i + 1), t = out[i]; out[i] = out[j]; out[j] = t; } return out.join('');
+}
+window.AOSVault = { login: login, save: save, remove: remove, lock: lock, generate: generate, totp: totp, _b64d: b64d, _b64e: b64e, _decrypt: decryptStr, _stretch: stretch, _masterKey: masterKey };
 })();

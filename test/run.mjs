@@ -1,5 +1,5 @@
 // End-to-end test against mock Immich, Coolify and OpenAI-compatible servers. No network, no dependencies.
-import { makeVault } from './bw.mjs';
+import { makeVault, decStr } from './bw.mjs';
 import http from 'node:http';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -70,11 +70,20 @@ for (const [em, o] of Object.entries(VAULTS)) o.v = makeVault(em, o.pw, o.iter, 
 { const vm = await import('node:vm'); const cx = vm.createContext({ WebAssembly, TextEncoder, TextDecoder, Uint8Array, Uint32Array, ArrayBuffer, DataView, Math, Error, Object, Array, Promise }); vm.runInContext(fs.readFileSync(path.join(root, 'web/vendor/argon2.js'), 'utf8'), cx); const argon2id = cx.hashwasm.argon2id; const salt = crypto.createHash('sha256').update('argon@example.com').digest();
   const mk = Buffer.from(await argon2id({ password: 'correct master', salt, parallelism: 2, iterations: 3, memorySize: 16 * 1024, hashLength: 32, outputType: 'binary' }));
   VAULTS['argon@example.com'] = { pw: 'correct master', iter: 3, kdf: { kdf: 1, kdfIterations: 3, kdfMemory: 16, kdfParallelism: 2 }, v: makeVault('argon@example.com', 'correct master', 3, VAULT_ITEMS, mk), twofa: false }; }
-const vaultSeen = [];
+const vaultSeen = []; const vaultWrites = [];
 const vault = await listen(async (req, res) => {
   const u = new URL(req.url, 'http://x'), b = (await body(req)) || '';
   vaultSeen.push({ m: req.method, p: u.pathname, q: u.search, auth: req.headers.authorization, b });
   if (u.pathname === '/alive') return send(res, 200, 'ok');
+  if (/^\/api\/ciphers/.test(u.pathname) && req.method !== 'GET') {
+    if (req.headers.authorization !== 'Bearer tok-me@example.com') return send(res, 401, {});
+    const idm = /^\/api\/ciphers\/([^/]+)(\/delete)?$/.exec(u.pathname); const w = { m: req.method, id: idm && idm[1], del: !!(idm && idm[2]), body: b ? JSON.parse(b) : null }; vaultWrites.push(w);
+    const cs = VAULTS['me@example.com'].v.sync.ciphers;
+    if (w.del) { const c = cs.find((x) => x.id === w.id); if (c) c.deletedDate = new Date().toISOString(); return send(res, 200, {}); }
+    const saved = { ...w.body, id: w.id || 'new-' + cs.length, revisionDate: new Date().toISOString(), object: 'cipher' };
+    const ix = cs.findIndex((x) => x.id === saved.id); if (ix > -1) cs[ix] = saved; else cs.push(saved);
+    return send(res, 200, saved);
+  }
   if (u.pathname === '/identity/accounts/prelogin') { const e = JSON.parse(b).email; return send(res, 200, VAULTS[e]?.kdf || { kdf: 0, kdfIterations: VAULTS[e]?.iter || 5000, kdfMemory: null, kdfParallelism: null }); }
   if (u.pathname === '/identity/connect/token') {
     const f = new URLSearchParams(b), o = VAULTS[f.get('username')];
@@ -276,6 +285,15 @@ try {
     const tok = await call('/api/vault/identity/connect/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'grant_type=password&username=me%40example.com&password=bad' }); assert.equal(tok.s, 400);
     const sy = await call('/api/vault/api/sync?evil=1', { headers: { authorization: 'Bearer tok-me@example.com' } }); assert.equal(sy.s, 200); assert.equal(vaultSeen.at(-1).q, '?excludeDomains=true');
     assert.equal((await call('/api/vault/api/sync')).s, 401);
+  });
+  await t('vault relay carries cipher create, update and delete, and nothing else under /api/ciphers', async () => {
+    const h = { authorization: 'Bearer tok-me@example.com', 'content-type': 'application/json' };
+    assert.equal((await call('/api/vault/api/ciphers', { method: 'POST', headers: h, json: { type: 1, name: '2.x|y|z' } })).s, 200);
+    assert.equal((await call('/api/vault/api/ciphers/0a1b2c3d-1111-2222-3333-444455556666', { method: 'PUT', headers: h, json: { type: 1 } })).s, 200);
+    assert.equal((await call('/api/vault/api/ciphers/0a1b2c3d-1111-2222-3333-444455556666/delete', { method: 'PUT', headers: h })).s, 200);
+    assert.equal((await call('/api/vault/api/ciphers/0a1b2c3d-1111-2222-3333-444455556666', { method: 'DELETE', headers: h })).s, 404);
+    assert.equal((await call('/api/vault/api/ciphers/0a1b2c3d-1111-2222-3333-444455556666/purge', { method: 'PUT', headers: h })).s, 404);
+    assert.equal((await call('/api/vault/api/ciphers/..%2Fadmin', { method: 'PUT', headers: h, json: {} })).s, 404);
   });
   await t('vault relay needs a session and the x-aos header; vault address never leaks a secret', async () => {
     const saved = cookie; cookie = ''; assert.equal((await call('/api/vault/status')).s, 401); cookie = saved;

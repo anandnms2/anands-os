@@ -16,10 +16,15 @@ export function makeVault(email, pw, iter, items, mkOverride) {
   const ciphers = items.map((it, i) => {
     let k = uk, key;
     if (it.itemKey) { const ib = crypto.randomBytes(64); k = { enc: ib.subarray(0, 32), mac: ib.subarray(32) }; key = encString(ib, uk); }
-    const o = { id: 'c' + i, type: it.type || 1, name: S(it.name, k), notes: it.notes ? S(it.notes, k) : null, favorite: !!it.fav, folderId: it.folder ? 'f-' + it.folder : null, revisionDate: new Date(Date.now() - (it.age || 10) * 86400000).toISOString(), deletedDate: it.deleted ? new Date().toISOString() : null, organizationId: it.org ? 'org1' : null, key };
+    const o = { id: '0000000' + i + '-1111-4222-8333-444444444444', type: it.type || 1, name: S(it.name, k), notes: it.notes ? S(it.notes, k) : null, favorite: !!it.fav, folderId: it.folder ? 'f-' + it.folder : null, revisionDate: new Date(Date.now() - (it.age || 10) * 86400000).toISOString(), deletedDate: it.deleted ? new Date().toISOString() : null, organizationId: it.org ? 'org1' : null, key };
     if (!it.type || it.type === 1) o.login = { username: S(it.user || '', k), password: S(it.pw || '', k), totp: it.totp ? S(it.totp, k) : null, uris: it.url ? [{ uri: S(it.url, k) }] : [] };
     return o;
   });
   const folders = [...new Set(items.filter((i) => i.folder).map((i) => i.folder))].map((f) => ({ id: 'f-' + f, name: S(f, uk) }));
-  return { hash, Key, sync: { ciphers, folders } };
+  return { hash, Key, uk, sync: { ciphers, folders } };
+}
+export function decStr(str, k) {
+  const [iv, ct, mac] = str.slice(2).split('|').map((x) => Buffer.from(x, 'base64'));
+  if (!hmac(k.mac, Buffer.concat([iv, ct])).equals(mac)) throw new Error('bad mac');
+  const d = crypto.createDecipheriv('aes-256-cbc', k.enc, iv); return Buffer.concat([d.update(ct), d.final()]).toString('utf8');
 }
