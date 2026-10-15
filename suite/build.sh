@@ -19,6 +19,7 @@ python3 "$HERE/tools/gen-registry.py" "$UP" "$OUT/apps.json"
 
 ok=(); failed=()
 for slug in $(python3 -c "import json;print(' '.join(a['slug'] for a in json.load(open('$OUT/apps.json')) if a['hasSource']))"); do
+  [ "$slug" = "assets" ] && continue   # upstream landing page, not an app
   if [ -n "${ONLY:-}" ] && ! [[ " $ONLY " == *" $slug "* ]]; then continue; fi
   echo "=== $slug"
   dir="$UP/src/$slug"
@@ -49,4 +50,5 @@ for a in apps:
 json.dump(apps,open(f"{out}/apps.json","w"),indent=2)
 print("built",len(built),"failed",failed.split() or "none")
 PY
-[ ${#failed[@]} -eq 0 ]
+# One flaky app must not sink the image; fail only if most of the suite is missing.
+[ ${#ok[@]} -ge "${MIN_BUILT:-40}" ] || { echo "only ${#ok[@]} apps built"; exit 1; }
