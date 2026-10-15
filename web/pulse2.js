@@ -42,26 +42,27 @@
 
   /* ---------- shell ---------- */
   function setView(v) { P.view = v; P.sel = null; P.selX = null; P.item = null; A.LS.set('pxview', v); P.reading = false; redraw(); loadView(); }
-  function head() {
+  var VIC = { today: 'pulse', inbox: 'mail', chats: 'chat', tasks: 'check', calendar: 'cal', waiting: 'hourglass', tracked: 'truck', lists: 'list', notes: 'doc', sources: 'apps' };
+  function side() {
     var m = P.boot && P.boot.settings && P.boot.settings.mode === 'work' ? 'work' : 'personal';
     var unread = items().filter(function (i) { return !i.read && i.cls !== 'noise' && !i.handled; }).length;
-    return '<div class="wrap pxwrap"><div class="pagehead"><div><h1>Pulse</h1></div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
-      (m ? '<div class="seg" role="group" aria-label="Life mode"><button data-px="mode" data-m="personal" aria-pressed="' + (m !== 'work') + '">Personal</button><button data-px="mode" data-m="work" aria-pressed="' + (m === 'work') + '">Work</button></div>' : '') +
-      '<button class="btn" data-px="refresh">Refresh</button></div></div>' +
-      '<div class="toolbar"><div class="seg pxtabs" role="tablist">' + VIEWS.filter(function (v) { return v[0] !== 'lists' || work(); }).map(function (v) { var lbl = v[0] === 'tracked' ? (work() ? 'Trucks' : 'Parcels') : v[1]; return '<button data-px="view" data-v="' + v[0] + '" aria-pressed="' + (P.view === v[0]) + '">' + lbl + (v[0] === 'inbox' && unread ? ' <b class="pxn">' + unread + '</b>' : '') + '</button>'; }).join('') + '</div></div>';
+    return '<aside class="pxside"><div class="pxbrand">' + ic('pulse') + '<h1>Pulse</h1></div>' +
+      (P.boot && P.boot.settings && P.boot.settings.mode ? '<div class="seg pxmode" role="group" aria-label="Life mode"><button data-px="mode" data-m="personal" aria-pressed="' + (m !== 'work') + '">Personal</button><button data-px="mode" data-m="work" aria-pressed="' + (m === 'work') + '">Work</button></div>' : '') +
+      '<nav class="pxnav" role="tablist">' + VIEWS.filter(function (v) { return v[0] !== 'lists' || work(); }).map(function (v) { var lbl = v[0] === 'tracked' ? (work() ? 'Trucks' : 'Parcels') : v[1]; return '<button data-px="view" data-v="' + v[0] + '" aria-pressed="' + (P.view === v[0]) + '" title="' + esc(lbl) + '">' + ic(VIC[v[0]] || 'apps') + '<span>' + lbl + '</span>' + (v[0] === 'inbox' && unread ? '<b class="pxn">' + unread + '</b>' : '') + '</button>'; }).join('') + '</nav>' +
+      '<button class="pxrefresh" data-px="refresh" title="Refresh">' + ic('refresh') + '<span>Refresh</span></button></aside>';
   }
   function notReady() {
     return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div></div><div class="banner"><i class="dot warn"></i><span>Add your Pulse address, email and password in Settings to see mail, WhatsApp, tasks and the calendar here.</span><button class="btn sm" data-act="nav" data-v="settings">Open Settings</button></div></div>';
   }
+  var SPLIT = { today: 1, inbox: 1, chats: 1, tasks: 1, waiting: 1, notes: 1 };
   function view() {
     if (!on()) return notReady();
     if (P.err && !P.boot) return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div></div><div class="banner"><i class="dot bad"></i><span>' + esc(P.err) + '</span><button class="btn sm" data-px="refresh">Try again</button></div></div>';
     if (!P.boot) return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div></div><p class="note">Loading Pulse...</p></div>';
-    var h = head() + (P.err ? '<div class="banner"><i class="dot bad"></i><span>' + esc(P.err) + '</span></div>' : '');
-    var v = P.view;
-    if (v === 'today') h += today0(); else if (v === 'inbox') h += inbox(); else if (v === 'chats') h += chats(); else if (v === 'tasks') h += tasks(); else if (v === 'calendar') h += calendar();
-    else if (v === 'waiting') h += waiting(); else if (v === 'tracked') h += tracked(); else if (v === 'lists') h += lists(); else if (v === 'notes') h += notes(); else if (v === 'sources') h += sources();
-    return h + '</div>';
+    var v = P.view, h = '';
+    if (v === 'today') h = today0(); else if (v === 'inbox') h = inbox(); else if (v === 'chats') h = chats(); else if (v === 'tasks') h = tasks(); else if (v === 'calendar') h = calendar();
+    else if (v === 'waiting') h = waiting(); else if (v === 'tracked') h = tracked(); else if (v === 'lists') h = lists(); else if (v === 'notes') h = notes(); else if (v === 'sources') h = sources();
+    return '<div class="pxapp">' + side() + '<section class="pxmain">' + (P.err ? '<div class="banner"><i class="dot bad"></i><span>' + esc(P.err) + '</span></div>' : '') + (SPLIT[v] ? h : '<div class="pxscroll">' + h + '</div>') + '</section></div>';
   }
 
   /* ---------- list on the left, the communication behind it on the right (Today, Tasks, Waiting, like Inbox) ---------- */

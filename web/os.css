@@ -783,3 +783,73 @@ html.embed #view{padding-bottom:0}
 @media (max-width:620px){.dk-mg{grid-template-columns:1fr}}
 
 .pxflat{padding:0 12px 12px}.pxflat>h2:first-child{margin-top:12px!important}.pxflat .toolbar{padding:10px 0 0!important}.prow.on{background:var(--accent-soft);border-radius:8px}.pxflat .prow[data-px=lnk]:hover{background:var(--surface2);border-radius:8px}
+
+/* ---- Pulse app shell: left nav, roomy list, big reading pane ---- */
+#view:has(>.pxapp){padding:6px 20px 20px 20px;overflow:hidden}
+.pxapp{display:grid;grid-template-columns:212px minmax(0,1fr);height:100%;min-height:480px;border:1px solid var(--line);border-radius:18px;background:var(--surface);overflow:hidden}
+.pxside{display:flex;flex-direction:column;gap:6px;padding:16px 12px;border-right:1px solid var(--line);min-height:0;overflow:auto}
+.pxbrand h1{font-size:22px;margin:0;font-weight:inherit;letter-spacing:0;line-height:1}
+.pxbrand{display:flex;align-items:center;gap:10px;padding:2px 8px 10px;font-family:var(--display);font-size:22px;color:var(--accent-text)}.pxbrand svg{width:24px;height:24px}
+.pxmode{display:grid;grid-template-columns:1fr 1fr;margin:0 4px 10px}.pxmode button{padding:7px 4px;font-size:13px}
+.pxnav{display:flex;flex-direction:column;gap:2px;flex:1}
+.pxnav button,.pxrefresh{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:0;border-radius:11px;background:none;color:var(--muted);font:inherit;font-size:15px;text-align:left;cursor:pointer}
+.pxnav button svg,.pxrefresh svg{width:20px;height:20px;flex:none}
+.pxnav button:hover,.pxrefresh:hover{background:var(--surface2);color:var(--fg)}
+.pxnav button[aria-pressed=true]{background:var(--accent-soft);color:var(--accent-text);font-weight:600}
+.pxnav .pxn{margin-left:auto}
+.pxmain{display:flex;flex-direction:column;min-width:0;min-height:0;padding:16px 18px;gap:14px;background:var(--bg)}
+.pxscroll{flex:1;min-height:0;overflow:auto;padding-right:4px}
+.pxmain .px{flex:1;height:auto;min-height:0;grid-template-columns:minmax(330px,420px) minmax(0,1fr)}
+.pxmain>.toolbar,.pxmain>form.toolbar{margin:0}
+.pxmain .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
+.pxmain .kpi{padding:12px 16px}.pxmain .kpi .stat{display:flex;align-items:baseline;gap:10px}.pxmain .kpi .stat .n{font-size:26px;line-height:1}.pxmain .kpi .stat .l{font-size:13.5px}
+.pxmain .pxfilters{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;scrollbar-width:thin}.pxmain .pxfilters .chips{display:flex;gap:6px;flex-wrap:nowrap;margin:0!important}.pxmain .pxfilters .chip{white-space:nowrap}
+.pxmain .pxrow{padding:14px 16px;gap:13px}.pxmain .pxav{width:42px;height:42px;font-size:16px}
+.pxmain .pxl1{font-size:15.5px}.pxmain .pxl2{font-size:15px}.pxmain .pxl3{font-size:14px}
+.pxmain .pxhd h2{font-size:25px;line-height:1.25}.pxmain .pxbody{padding:22px 28px}.pxmain .pxacts{padding:12px 20px}.pxmain .pxhd{padding:0}
+.pxmain .pxtext{font-size:15.5px;line-height:1.65}.pxmain .pxchat{padding:16px 22px}.pxmain .cb{font-size:15px}.pxmain .pxframe{height:calc(100% - 20px);min-height:360px}
+.pxmain .pxflat{padding:4px 16px 16px}.pxmain .pxflat .prow{padding:13px 4px}.pxmain .pxflat .prow b{font-size:15.5px}.pxmain .pxflat .prow .note{font-size:13.5px}
+.pxmain .pxflat h2{font-size:15px!important;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+html.embed #view:has(>.pxapp){padding:0}html.embed .pxapp{border:0;border-radius:0}
+@media (max-width:1100px){
+  .pxapp{grid-template-columns:64px minmax(0,1fr)}.pxnav button span,.pxrefresh span{display:none}.pxbrand h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.pxbrand{justify-content:center;padding:2px 0 8px}
+  .pxnav button,.pxrefresh{justify-content:center;padding:11px 0;position:relative}.pxnav .pxn{position:absolute;top:2px;right:6px;margin:0}
+  .pxmode{grid-template-columns:1fr;margin:0 0 8px}.pxmode button{font-size:11px;padding:5px 0}
+  .pxmain .px{grid-template-columns:minmax(280px,340px) minmax(0,1fr)}.pxmain .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:900px){
+  #view:has(>.pxapp){padding:4px 8px calc(86px + env(safe-area-inset-bottom,0px)) 8px;overflow:auto}
+  .pxapp{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);height:auto;min-height:calc(100vh - 170px)}
+  .pxside{flex-direction:row;align-items:center;padding:8px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden;gap:4px}
+  .pxbrand,.pxrefresh{display:none}.pxmode{flex:none;min-width:150px;margin:0 8px 0 0;grid-template-columns:1fr 1fr}.pxmode button{font-size:13px;padding:7px 8px}.pxnav{flex-direction:row;flex:none}.pxnav button{width:auto;padding:9px 12px}.pxnav button span{display:inline}
+  .pxmain{padding:10px}.pxmain .px{grid-template-columns:1fr;height:auto}
+  .pxmain .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+.pxread .empty{border:0!important;background:none!important;flex:1;display:grid;align-content:center;justify-items:center;text-align:center;padding:30px 20px}.pxmain>form.toolbar{display:flex;width:100%}
+
+/* ---- Vault: full-height two-pane app (list left, item right) ---- */
+#view:has(>.vapp){padding:6px 20px 20px 20px;overflow:hidden}
+.vapp{display:flex;flex-direction:column;gap:12px;height:100%;min-height:480px;max-width:1500px;margin:0 auto}
+.vapp>.pagehead{margin:0;align-items:center}.vapp>.pagehead h1{font-size:28px}
+.vstats{display:flex;gap:10px;flex-wrap:wrap}
+.vstat{display:flex;align-items:baseline;gap:9px;padding:8px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:inherit;cursor:pointer}
+.vstat b{font-size:20px;font-family:var(--display);font-weight:600}.vstat span{font-size:13.5px;color:var(--muted)}
+.vstat:hover{border-color:var(--muted)}.vstat.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.vapp .toolbar{margin:0;gap:10px}.vapp .toolbar .search{min-width:260px;flex:1 1 260px}
+.vsplit{display:grid;grid-template-columns:minmax(300px,440px) minmax(0,1fr);flex:1;min-height:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface)}
+.vlistc{overflow:auto;border-right:1px solid var(--line);min-height:0}
+.drow{display:grid;grid-template-columns:44px minmax(0,1fr) auto 24px;gap:12px;align-items:center;width:100%;text-align:left;padding:12px 16px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--fg);font:inherit;cursor:pointer}
+.drow:hover{background:var(--surface2)}.drow.sel{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.drow .dn b{display:block;font-weight:600;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow .dm{color:var(--muted);font-size:13px;white-space:nowrap}.drow .dd{color:var(--accent-text)}
+.vsplit .vtile{width:40px;height:40px;font-size:17px}
+.dpanel{display:flex;flex-direction:column;gap:8px;padding:24px 30px;overflow:auto;min-height:0;min-width:0;background:var(--surface)}
+.dpanel h3{font-size:22px}
+.vapp .vfield{padding:14px 0}.vapp .vval{font-size:16px}
+.dpanel .btn svg,.vapp .btn svg{width:17px;height:17px}
+html.embed #view:has(>.vapp){padding:0}html.embed .vapp{padding:10px 12px;max-width:none}
+@media (max-width:900px){
+  #view:has(>.vapp){padding:4px 10px calc(86px + env(safe-area-inset-bottom,0px)) 10px;overflow:auto}
+  .vapp{height:auto}.vsplit{grid-template-columns:1fr;flex:none}.vlistc{max-height:50vh;border-right:0;border-bottom:1px solid var(--line)}.dpanel{padding:18px}
+  .drow{grid-template-columns:44px minmax(0,1fr) auto}.drow .dd{display:none}
+}
