@@ -5,7 +5,7 @@ import { json, rawFetch, httpError } from './util.js';
 
 const conn = () => {
   const s = effective().pulse;
-  if (!s.url || !s.token) throw httpError(409, 'Pulse is not connected. Add its address and a read-only token in Settings.', 'not_configured');
+  if (!s.url || !s.token) throw httpError(409, 'Pulse is not connected: ' + (!s.url && !s.token ? 'the address and the token are both empty' : !s.url ? 'the address is empty' : 'the token is empty (paste the pulse_ token and save again)') + '. Add them in Settings.', 'not_configured');
   return { base: s.url.replace(/\/+$/, ''), token: s.token };
 };
 let cache = new Map();
