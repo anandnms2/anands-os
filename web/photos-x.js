@@ -121,8 +121,8 @@ function clearFilters() { P.filters = {}; A.modal(); S.pq = ''; S.sr = { q: '', 
 /* ---------- the photo viewer: extra buttons and a fuller details panel ---------- */
 P.lbExtra = function (p, el) {
   var bar2 = el.querySelector('.bar'), info = el.querySelector('[data-act="lbinfo"]'); if (!bar2 || !info) return;
-  var mk = function (a, t) { return '<button class="ib pxlb" data-px="' + a + '" data-id="' + p.id + '" title="' + t + '" aria-label="' + t + '" style="width:auto;padding:0 10px;font-size:13px">' + t + '</button>'; };
-  info.insertAdjacentHTML('beforebegin', mk('lbalbum', 'Album') + mk('lbshare', 'Share') + mk('lbarchive', 'Archive') + mk('lbtrash', 'Delete'));
+  var mk = function (a, t, i, c) { return '<button class="ib pxlb' + (c ? ' ' + c : '') + '" data-px="' + a + '" data-id="' + p.id + '" title="' + t + '" aria-label="' + t + '">' + A.ic(i) + '</button>'; };
+  info.insertAdjacentHTML('beforebegin', mk('lbalbum', 'Add to album', 'folder') + mk('lbshare', 'Share link', 'share') + mk('lbarchive', 'Archive', 'archive') + mk('lbtrash', 'Delete', 'trash', 'pxdel'));
   var aside = el.querySelector('aside'); if (!aside) return;
   var c = P.info[p.id]; if (c && c.d) return fillInfo(aside, p, c.d);
   if (!c) { P.info[p.id] = { loading: true }; api(u('asset/' + p.id + '/info')).then(function (d) { P.info[p.id] = { d: d }; if (S.lb === p.id) { var a2 = document.querySelector('#lb aside'); if (a2) fillInfo(a2, p, d); } }, function () { P.info[p.id] = { d: null }; }); }
