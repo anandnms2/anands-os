@@ -13,7 +13,8 @@ import { checkAddress } from './browse.js';
 const BINS = [env.CHROMIUM_PATH, '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'];
 const findBin = () => BINS.filter(Boolean).find((b) => { try { return fs.statSync(b).isFile(); } catch { return false; } }) || null;
 const IDLE_MS = 10 * 60 * 1000;
-const B = { proc: null, port: 0, ready: null, bcdp: null, tabs: new Map(), active: null, clients: new Set(), idle: null, poll: null, view: { w: 1280, h: 760 }, ua: '', last: '' };
+const QUAL = { sharp: { live: 88, still: 96, dmin: 1.5 }, balanced: { live: 72, still: 90, dmin: 1 }, fast: { live: 50, still: 78, dmin: 1 } };
+const B = { qual: 'sharp', proc: null, port: 0, ready: null, bcdp: null, tabs: new Map(), active: null, clients: new Set(), idle: null, poll: null, view: { w: 1280, h: 760 }, ua: '', last: '' };
 
 class Cdp {
   constructor(url) { this.id = 0; this.p = new Map(); this.h = new Map(); this.ws = new WebSocket(url); this.open = new Promise((ok, no) => { this.ws.onopen = ok; this.ws.onerror = () => no(new Error('cdp connect failed')); }); this.ws.onmessage = (e) => this.msg(e.data); this.ws.onclose = () => { for (const [, r] of this.p) r[1](new Error('closed')); this.p.clear(); this.closed = true; this.h.get('close')?.forEach((f) => f()); }; }
@@ -73,7 +74,7 @@ async function attach(t) {
   c.on('Page.screencastFrame', (p) => { c.send('Page.screencastFrameAck', { sessionId: p.sessionId }).catch(() => {}); if (B.active !== t.id) return; const m = p.metadata || {};
     /* once the page stops changing, send one near-lossless frame so text and images are crisp */
     const n = (t.fn = (t.fn || 0) + 1); clearTimeout(t.still);
-    t.still = setTimeout(async () => { try { if (t.fn !== n || B.active !== t.id || !B.clients.size) return; const r = await c.send('Page.captureScreenshot', { format: 'jpeg', quality: 96, fromSurface: true }); if (t.fn !== n || B.active !== t.id) return; for (const cl of B.clients) { if (cl.writableNeedDrain) continue; sse(cl, 'frame', { tab: t.id, w: Math.round(m.deviceWidth || B.view.w), h: Math.round(m.deviceHeight || B.view.h), d: r.data }); } } catch {} }, 280); for (const cl of B.clients) { if (cl.writableNeedDrain) continue; sse(cl, 'frame', { tab: t.id, w: Math.round(m.deviceWidth || B.view.w), h: Math.round(m.deviceHeight || B.view.h), d: p.data }); } });
+    t.still = setTimeout(async () => { try { if (t.fn !== n || B.active !== t.id || !B.clients.size) return; const r = await c.send('Page.captureScreenshot', { format: 'jpeg', quality: QUAL[B.qual].still, fromSurface: true }); if (t.fn !== n || B.active !== t.id) return; for (const cl of B.clients) { if (cl.writableNeedDrain) continue; sse(cl, 'frame', { tab: t.id, w: Math.round(m.deviceWidth || B.view.w), h: Math.round(m.deviceHeight || B.view.h), d: r.data }); } } catch {} }, 280); for (const cl of B.clients) { if (cl.writableNeedDrain) continue; sse(cl, 'frame', { tab: t.id, w: Math.round(m.deviceWidth || B.view.w), h: Math.round(m.deviceHeight || B.view.h), d: p.data }); } });
   c.on('Page.frameStartedLoading', () => { t.loading = true; B.last = ''; });
   c.on('Page.frameStoppedLoading', () => { t.loading = false; B.last = ''; });
   c.on('Page.javascriptDialogOpening', (p) => { c.send('Page.handleJavaScriptDialog', { accept: p.type !== 'confirm' && p.type !== 'prompt' }).catch(() => {}); });
@@ -82,7 +83,7 @@ async function attach(t) {
   return c;
 }
 async function sizeTab(t) { const c = await attach(t); await c.send('Emulation.setDeviceMetricsOverride', { width: B.view.w, height: B.view.h, deviceScaleFactor: B.view.d || 1, mobile: false }); }
-async function cast(t, on) { const c = await attach(t); if (!on) return c.send('Page.stopScreencast').catch(() => {}); await sizeTab(t); await c.send('Page.stopScreencast').catch(() => {}); await c.send('Page.startScreencast', { format: 'jpeg', quality: 88, maxWidth: Math.round(B.view.w * (B.view.d || 1)), maxHeight: Math.round(B.view.h * (B.view.d || 1)), everyNthFrame: 1 }); }
+async function cast(t, on) { const c = await attach(t); if (!on) return c.send('Page.stopScreencast').catch(() => {}); await sizeTab(t); await c.send('Page.stopScreencast').catch(() => {}); await c.send('Page.startScreencast', { format: 'jpeg', quality: QUAL[B.qual].live, maxWidth: Math.round(B.view.w * (B.view.d || 1)), maxHeight: Math.round(B.view.h * (B.view.d || 1)), everyNthFrame: 1 }); }
 async function activate(id) {
   const t = B.tabs.get(id); if (!t) throw httpError(404, 'No such tab', 'no_tab');
   if (B.active && B.active !== id) { const o = B.tabs.get(B.active); if (o?.cdp && !o.cdp.closed) cast(o, false).catch(() => {}); }
@@ -135,7 +136,9 @@ export async function handleRb(req, res, url) {
     return json(res, 200, { ok: true });
   }
   if (p === '/input') { const t = tab(), l = Array.isArray(b.ev) ? b.ev.slice(0, 50) : []; for (const ev of l) await input(t, ev).catch(() => {}); return json(res, 200, { ok: true }); }
-  if (p === '/size') { const w = Math.min(2560, Math.max(320, Math.round(+b.w || 0))), h = Math.min(1600, Math.max(240, Math.round(+b.h || 0))); const d = Math.min(2, Math.max(1.5, Math.round((+b.dpr || 1) * 4) / 4)); if (w === B.view.w && h === B.view.h && d === (B.view.d || 1)) return json(res, 200, { ok: true }); B.view = { w, h, d }; if (B.active && B.tabs.get(B.active)) await cast(B.tabs.get(B.active), true).catch(() => {}); return json(res, 200, { ok: true }); }
+  if (p === '/size') { const w = Math.min(2560, Math.max(320, Math.round(+b.w || 0))), h = Math.min(1600, Math.max(240, Math.round(+b.h || 0))); const d = Math.min(B.qual === 'fast' ? 1 : 2, Math.max(QUAL[B.qual].dmin, Math.round((+b.dpr || 1) * 4) / 4)); if (w === B.view.w && h === B.view.h && d === (B.view.d || 1)) return json(res, 200, { ok: true }); B.view = { w, h, d }; if (B.active && B.tabs.get(B.active)) await cast(B.tabs.get(B.active), true).catch(() => {}); return json(res, 200, { ok: true }); }
+  if (p === '/quality') { const q = String(b.q || ''); if (!QUAL[q]) throw httpError(400, 'Unknown quality', 'bad_quality'); B.qual = q; const d = Math.min(q === 'fast' ? 1 : 2, Math.max(QUAL[q].dmin, B.view.d || 1)); B.view = { ...B.view, d }; if (B.active && B.tabs.get(B.active)) await cast(B.tabs.get(B.active), true).catch(() => {}); return json(res, 200, { ok: true, quality: q }); }
+  if (p === '/clear') { const c = await attach(tab()); await c.send('Network.enable').catch(() => {}); await c.send('Network.clearBrowserCache').catch(() => {}); await c.send('Network.clearBrowserCookies').catch(() => {}); return json(res, 200, { ok: true }); }
   if (p === '/copy') { const t = tab(), c = await attach(t); const r = await c.send('Runtime.evaluate', { expression: 'String(getSelection())', returnByValue: true }); return json(res, 200, { text: String(r.result?.value || '').slice(0, 100000) }); }
   throw httpError(404, 'Unknown route');
 }

@@ -47,6 +47,7 @@ const browser = await chromium.launch({ args: ['--no-sandbox'] }); const errs = 
 const shot = async (p, n) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, n + '.png') }); } };
 try {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 860 }, colorScheme: 'dark' });
+  await ctx.addInitScript(() => { try { if (!sessionStorage.getItem('keepsess')) localStorage.removeItem('aos.desksess'); } catch (e) {} });
   await ctx.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
   const p = await ctx.newPage(); p.setDefaultTimeout(6000); p.on('pageerror', (e) => errs.push(e.message)); p.on('dialog', (d) => d.accept('Reports'));
   await p.goto(B + '/'); await p.waitForSelector('#rail .nav');
@@ -160,6 +161,24 @@ try {
   await t('Browser needs sign-in', async () => { const r = await fetch(B + '/api/browse?url=' + encodeURIComponent(SITE + '/')); assert.ok(r.status === 401 || r.status === 302 || r.status === 403); });
   await t('refresh keeps the desktop, Exit returns to the OS, Back works', async () => {
     await p.reload(); await p.waitForSelector('#desk:not([hidden])'); await p.click('.dk-exit'); await p.waitForSelector('#desk', { state: 'hidden' }); assert.ok(await p.locator('#rail').isVisible()); assert.equal(await p.locator('#view h1').first().innerText().then((x) => x.length > 0), true);
+  });
+  await t('session: windows come back after a reload, with position and size', async () => {
+    await p.evaluate(() => sessionStorage.setItem('keepsess', '1')); await p.click('.dk-exit').catch(() => {}); await p.goto(B + '/#desktop'); await p.waitForSelector('#desk:not([hidden])');
+    await p.evaluate(() => { document.querySelectorAll('[data-dk="closeall"]'); }); await p.evaluate(() => window.AOSDesk && 0);
+    await p.click('.dk-ic[data-w="files"]'); await p.waitForSelector('.dkw[aria-label="Files"]');
+    await p.evaluate(() => { const e = document.querySelector('.dkw[aria-label="Files"]'); e.style.left = '120px'; });
+    const before = await p.evaluate(() => [...document.querySelectorAll('.dkw')].map(e => e.getAttribute('aria-label')).sort());
+    await p.waitForTimeout(600); const stored = await p.evaluate(() => localStorage.getItem('aos.desksess')); assert.ok(stored && stored.includes('files'));
+    await p.reload(); await p.waitForSelector('#desk:not([hidden])'); await p.waitForSelector('.dkw[aria-label="Files"]');
+    const after = await p.evaluate(() => [...document.querySelectorAll('.dkw')].map(e => e.getAttribute('aria-label')).sort()); assert.deepEqual(after, before);
+    await p.locator('.dkw[aria-label="Files"] [data-dk="wclose"]').first().click(); await p.waitForTimeout(600); await p.reload(); await p.waitForSelector('#desk:not([hidden])'); await p.waitForTimeout(300);
+    assert.equal(await p.locator('.dkw[aria-label="Files"]').count(), 0); await p.evaluate(() => sessionStorage.removeItem('keepsess'));
+  });
+  await t('browser: settings gear opens search engine and home page', async () => {
+    await p.click('.dk-ic[data-w="browser"], .dk-ic[data-k="browser"]').catch(() => {}); const win = p.locator('.dkw[aria-label="Browser"]').first(); await win.waitFor();
+    await win.locator('[data-dk="bset"]').click(); await win.locator('.dk-bset #brse').waitFor(); assert.equal(await win.locator('.dk-bset [data-dk="rbq"]').count(), 0);
+    await win.locator('.dk-bset #brse').selectOption('bing'); assert.equal(await p.evaluate(() => localStorage.getItem('aos.brsearch')), '"bing"');
+    await win.locator('.dk-bset [data-dk="bsetx"]').click(); assert.equal(await win.locator('.dk-bset').count(), 0);
   });
   await t('mobile: desktop windows open maximised', async () => {
     const m = await browser.newContext({ viewport: { width: 390, height: 780 }, colorScheme: 'dark' }); await m.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });

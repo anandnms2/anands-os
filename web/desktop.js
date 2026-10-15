@@ -117,15 +117,40 @@
     w.el = el; w.body = el.querySelector('.dkw-body'); $('#dkwins').appendChild(el); D.wins.push(w); place(w); focus(w); task(); return w;
   }
   D.id0 = 0;
-  function place(w) { var el = w.el, ar = area(); el.hidden = w.min; el.style.zIndex = w.z; if (w.max) { el.style.left = 0; el.style.top = 0; el.style.width = ar.w + 'px'; el.style.height = ar.h + 'px'; } else { el.style.left = w.x + 'px'; el.style.top = w.y + 'px'; el.style.width = w.w + 'px'; el.style.height = w.h + 'px'; } el.classList.toggle('max', !!w.max); el.classList.toggle('bare', !!w.max && (w.kind === 'rbrowser' || w.kind === 'browser')); }
+  var sessT = 0;
+  function saveSess() {
+    clearTimeout(sessT); sessT = setTimeout(function () {
+      var l = D.wins.filter(function (w) { return w.sd; }).sort(function (a, b) { return a.z - b.z; }).map(function (w) {
+        var sd = Object.assign({}, w.sd); if (w.kind === 'browser' && w.b) sd.urls = w.b.tabs.map(function (t) { return t.url; }).filter(Boolean);
+        return { sd: sd, x: w.x, y: w.y, w: w.w, h: w.h, min: !!w.min, max: !!w.max, act: w.id === D.top };
+      });
+      LS.set('desksess', l);
+    }, 350);
+  }
+  function restoreSess() {
+    if (D.restored) return; D.restored = true; if (D.wins.length) return;
+    var l = LS.get('desksess', []); if (!Array.isArray(l) || !l.length) return;
+    var act = null;
+    l.slice(0, 12).forEach(function (r) {
+      var sd = r && r.sd, w = null; if (!sd) return;
+      try {
+        if (sd.t === 'app') w = openApp(sd.slug, sd.file); else if (sd.t === 'os') w = osWin(sd.view); else if (sd.t === 'files') w = filesWin(sd.src); else if (sd.t === 'viewer') w = viewer(sd.path, sd.remote);
+        else if (sd.t === 'ai') w = aiWin(); else if (sd.t === 'rb') w = rbWin(); else if (sd.t === 'br') { w = browserWin(sd.urls && sd.urls[0]); (sd.urls || []).slice(1).forEach(function (u) { newTab(w, u); }); }
+      } catch (e) { w = null; }
+      if (!w) return;
+      if (typeof r.x === 'number') { w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h; } w.max = !!r.max; w.min = !!r.min; place(w); if (r.act) act = w;
+    });
+    if (act && !act.min) focus(act); else task();
+  }
+  function place(w) { saveSess(); var el = w.el, ar = area(); el.hidden = w.min; el.style.zIndex = w.z; if (w.max) { el.style.left = 0; el.style.top = 0; el.style.width = ar.w + 'px'; el.style.height = ar.h + 'px'; } else { el.style.left = w.x + 'px'; el.style.top = w.y + 'px'; el.style.width = w.w + 'px'; el.style.height = w.h + 'px'; } el.classList.toggle('max', !!w.max); el.classList.toggle('bare', !!w.max && (w.kind === 'rbrowser' || w.kind === 'browser')); }
   function focus(w) { w.z = ++D.z; D.top = w.id; if (w.min) { w.min = false; } D.wins.forEach(function (x) { x.el.classList.toggle('act', x === w); place(x); }); task(); }
   function byId(id) { return D.wins.filter(function (w) { return w.id === id; })[0]; }
-  function closeWin(w) { if (w.onclose) { try { w.onclose(); } catch (e) {} } w.el.remove(); D.wins = D.wins.filter(function (x) { return x !== w; }); if (D.ai.win === w) D.ai.win = null; if (D.top === w.id) { var t = D.wins.filter(function (x) { return !x.min; }).sort(function (a, b) { return b.z - a.z; })[0]; D.top = t ? t.id : null; if (t) focus(t); } task(); }
+  function closeWin(w) { saveSess(); if (w.onclose) { try { w.onclose(); } catch (e) {} } w.el.remove(); D.wins = D.wins.filter(function (x) { return x !== w; }); if (D.ai.win === w) D.ai.win = null; if (D.top === w.id) { var t = D.wins.filter(function (x) { return !x.min; }).sort(function (a, b) { return b.z - a.z; })[0]; D.top = t ? t.id : null; if (t) focus(t); } task(); }
 
   function openApp(slug, file) {
     var a = appBy(slug); if (!a) return toast('That app is not available');
     var r = (LS.get('recent', []) || []).filter(function (x) { return x !== slug; }); r.unshift(slug); LS.set('recent', r.slice(0, 6));
-    var w = mk('app', a.name, { icon: '/_icons/' + a.slug + '.png', w: 980, h: 640 });
+    var w = mk('app', a.name, { icon: '/_icons/' + a.slug + '.png', w: 980, h: 640 }); w.sd = { t: 'app', slug: a.slug, file: file || '' };
     w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(a.name) + '" src="/apps/' + esc(a.slug) + '/' + (file ? '?open=' + enc(file) : '') + '" allow="clipboard-read; clipboard-write; fullscreen; microphone; camera; display-capture"></iframe>'; icons();
     return w;
   }
@@ -140,25 +165,27 @@
   function osWin(view) {
     var o = OSAPPS.filter(function (x) { return x[0] === view; })[0]; if (!o) return;
     var ex = D.wins.filter(function (x) { return x.kind === 'os' && x.view === view; })[0]; if (ex) { focus(ex); return ex; }
-    var w = mk('os', o[1], { w: 1040, h: 660 }); w.view = view;
+    var w = mk('os', o[1], { w: 1040, h: 660 }); w.view = view; w.sd = { t: 'os', view: view };
     w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(o[1]) + '" src="/?embed=1#' + esc(view) + '" allow="clipboard-read; clipboard-write; fullscreen"></iframe>'; return w;
   }
 
   /* ---------- browser ---------- */
-  var SEARCH = 'https://html.duckduckgo.com/html/?q=';
+  var ENGINES = [['ddg', 'DuckDuckGo', 'https://html.duckduckgo.com/html/?q='], ['google', 'Google', 'https://www.google.com/search?q='], ['bing', 'Bing', 'https://www.bing.com/search?q='], ['brave', 'Brave Search', 'https://search.brave.com/search?q='], ['startpage', 'Startpage', 'https://www.startpage.com/do/search?q=']];
+  function SEARCHURL() { var k = LS.get('brsearch', 'ddg'); return (ENGINES.filter(function (e) { return e[0] === k; })[0] || ENGINES[0])[2]; }
+  var QLAB = [['sharp', 'Sharp', 'Best text and images, uses the most data'], ['balanced', 'Balanced', 'Good quality, lighter'], ['fast', 'Fast', 'Smoothest on a slow connection']];
   var QUICK = [['Wikipedia', 'https://en.wikipedia.org/'], ['Hacker News', 'https://news.ycombinator.com/'], ['DuckDuckGo', 'https://html.duckduckgo.com/html/'], ['BBC News', 'https://www.bbc.com/news'], ['Example', 'https://example.com/']];
   function normUrl(t) {
     t = String(t || '').trim(); if (!t) return '';
     if (/^https?:\/\//i.test(t)) return t;
     if (!/\s/.test(t) && /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$/i.test(t)) return 'https://' + t;
     if (/^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?([/?#].*)?$/i.test(t)) return 'http://' + t;
-    return SEARCH + enc(t);
+    return SEARCHURL() + enc(t);
   }
   function btab(w) { var b = w.b; return b.tabs.filter(function (t) { return t.id === b.cur; })[0]; }
   function loadRb() { if (D.rbTried) return; D.rbTried = true; fetch('/api/rb/status', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (c) { D.rbn = !!(c && c.available); }).catch(function () {}); fetch('/api/settings', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (c) { var u = c && c.rbrowser && c.rbrowser.url; if (u && /^https?:/i.test(u)) { D.rb = u; D.wins.forEach(function (w) { if (w.kind === 'browser') { if (w.b.full === undefined) w.b.full = true; paintBrowser(w); } }); } }).catch(function () {}); }
   function browserWin(url) {
     loadRb();
-    var w = mk('browser', 'Browser', { w: 1000, h: 640 }); w.b = { tabs: [], cur: 0, n: 0, full: D.rb ? (url ? false : true) : undefined }; newTab(w, url); return w;
+    var w = mk('browser', 'Browser', { w: 1000, h: 640 }); w.sd = { t: 'br' }; w.b = { tabs: [], cur: 0, n: 0, full: D.rb ? (url ? false : true) : undefined }; newTab(w, url); return w;
   }
   function newTab(w, url) { var t = { id: ++w.b.n, url: '', title: 'New tab', hist: [], i: -1 }; w.b.tabs.push(t); w.b.cur = t.id; paintBrowser(w); if (url) nav(w, t, url); else { var q = w.body.querySelector('.dk-url'); if (q) q.focus(); } return t; }
   function nav(w, t, input, noPush) {
@@ -173,7 +200,7 @@
   function paintBrowser(w) {
     var b = w.b, t = btab(w);
     if (!w.body.querySelector('.dk-br')) w.body.innerHTML = '<div class="dk-br"><div class="dk-bts" role="tablist"></div><div class="dk-barw"></div><div class="dk-bv"><div class="dk-sw"></div></div></div>';
-    w.body.querySelector('.dk-bts').innerHTML = b.tabs.map(function (x) { return '<div class="dk-bt' + (x.id === b.cur ? ' on' : '') + '" data-dk="btab" data-id="' + w.id + '" data-t="' + x.id + '" role="tab" aria-selected="' + (x.id === b.cur) + '"><span>' + esc(x.title) + '</span>' + (b.tabs.length > 1 ? '<button data-dk="bclose" data-id="' + w.id + '" data-t="' + x.id + '" aria-label="Close tab">&#10005;</button>' : '') + '</div>'; }).join('') + '<button class="dk-bnew" data-dk="bnew" data-id="' + w.id + '" aria-label="New tab">+</button>' + (D.rb ? '<button class="btn sm dk-bfull' + (b.full ? ' on' : '') + '" data-dk="bfull" data-id="' + w.id + '" title="A complete remote browser: sign-ins, video, web apps">' + (b.full ? 'Simple tabs' : 'Full browser') + '</button>' : '');
+    w.body.querySelector('.dk-bts').innerHTML = b.tabs.map(function (x) { return '<div class="dk-bt' + (x.id === b.cur ? ' on' : '') + '" data-dk="btab" data-id="' + w.id + '" data-t="' + x.id + '" role="tab" aria-selected="' + (x.id === b.cur) + '"><span>' + esc(x.title) + '</span>' + (b.tabs.length > 1 ? '<button data-dk="bclose" data-id="' + w.id + '" data-t="' + x.id + '" aria-label="Close tab">&#10005;</button>' : '') + '</div>'; }).join('') + '<button class="dk-bnew" data-dk="bnew" data-id="' + w.id + '" aria-label="New tab">+</button><button class="dk-bnew" data-dk="bset" data-id="' + w.id + '" aria-label="Browser settings" title="Browser settings">' + ic('settings') + '</button>' + (D.rb ? '<button class="btn sm dk-bfull' + (b.full ? ' on' : '') + '" data-dk="bfull" data-id="' + w.id + '" title="A complete remote browser: sign-ins, video, web apps">' + (b.full ? 'Simple tabs' : 'Full browser') + '</button>' : '');
     var rf = w.body.querySelector('.dk-bv iframe.dk-rb');
     if (b.full && D.rb) { if (!rf) { rf = document.createElement('iframe'); rf.className = 'dkw-frame dk-rb'; rf.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock'); rf.setAttribute('allow', 'clipboard-read; clipboard-write; fullscreen; microphone; camera; autoplay'); rf.title = 'Full browser'; rf.src = D.rb; w.body.querySelector('.dk-bv').appendChild(rf); } rf.hidden = false; w.body.querySelector('.dk-barw').hidden = true; } else { if (rf) rf.hidden = true; w.body.querySelector('.dk-barw').hidden = false; }
     var keep = (document.activeElement && document.activeElement.classList.contains('dk-url') && w.body.contains(document.activeElement)) ? document.activeElement.value : null;
@@ -212,7 +239,7 @@
   function openBrowser(url) { if (D.rbn) return rbWin(url); if (!D.rbTried) { loadRb(); return void fetch('/api/rb/status', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (c) { D.rbn = !!(c && c.available); openBrowser(url); }).catch(function () { D.rbn = false; browserWin(url); }); } return browserWin(url); }
   function rbWin(url) {
     var ex = D.wins.filter(function (x) { return x.kind === 'rbrowser'; })[0]; if (ex) { focus(ex); if (url) rbPost(ex, '/open', { url: normUrl(url) }); return ex; }
-    var w = mk('rbrowser', 'Browser', { w: 1100, h: 700 }); w.r = { tabs: [], active: null, q: [], mv: null, wh: null, fw: 0, fh: 0, down: false };
+    var w = mk('rbrowser', 'Browser', { w: 1100, h: 700 }); w.sd = { t: 'rb' }; w.r = { tabs: [], active: null, q: [], mv: null, wh: null, fw: 0, fh: 0, down: false };
     w.body.innerHTML = '<div class="dk-br"><div class="dk-bts" role="tablist"></div><div class="dk-barw"></div><div class="dk-bv dk-rv"><canvas class="dk-rc" tabindex="0" aria-label="Web page"></canvas><div class="dk-rmsg" hidden></div></div></div>';
     rbBar(w); var cv = w.body.querySelector('.dk-rc'); rbWire(w, cv);
     var es = new EventSource('/api/rb/events'); w.r.es = es; w.onclose = function () { try { es.close(); } catch (e) {} clearInterval(w.r.tick); };
@@ -231,7 +258,7 @@
     var r = w.r, t = rbTab(w), st = w.body.querySelector('.dk-bts');
     st.innerHTML = r.tabs.map(function (x) { return '<div class="dk-bt' + (x.id === r.active ? ' on' : '') + '" data-dk="rbtab" data-id="' + w.id + '" data-t="' + esc(x.id) + '" role="tab" aria-selected="' + (x.id === r.active) + '"><span>' + esc((x.loading ? '... ' : '') + (x.title || x.url || 'New tab')) + '</span>' + (r.tabs.length > 1 ? '<button data-dk="rbclose" data-id="' + w.id + '" data-t="' + esc(x.id) + '" aria-label="Close tab">&#10005;</button>' : '') + '</div>'; }).join('') + '<button class="dk-bnew" data-dk="rbnew" data-id="' + w.id + '" aria-label="New tab">+</button><button class="btn sm dk-bfull" data-dk="rbsimple" data-id="' + w.id + '" title="Lighter browser that works inside this site">Simple browser</button>';
     var bar = w.body.querySelector('.dk-barw'), keep = (document.activeElement && document.activeElement.classList.contains('dk-url') && bar.contains(document.activeElement)) ? document.activeElement.value : null;
-    bar.innerHTML = '<form class="dk-bar2" data-dk-form="rburl" data-id="' + w.id + '"><button type="button" class="btn sm" data-dk="rbback" data-id="' + w.id + '" aria-label="Back">' + ic('back') + '</button><button type="button" class="btn sm" data-dk="rbfwd" data-id="' + w.id + '" aria-label="Forward">' + ic('r') + '</button><button type="button" class="btn sm" data-dk="rbreload" data-id="' + w.id + '" aria-label="Reload">&#8635;</button><input class="input dk-url" aria-label="Address or search" placeholder="Search or type a web address" value="' + esc(t ? t.url : '') + '" autocomplete="off" spellcheck="false"></form>';
+    bar.innerHTML = '<form class="dk-bar2" data-dk-form="rburl" data-id="' + w.id + '"><button type="button" class="btn sm" data-dk="rbback" data-id="' + w.id + '" aria-label="Back">' + ic('back') + '</button><button type="button" class="btn sm" data-dk="rbfwd" data-id="' + w.id + '" aria-label="Forward">' + ic('r') + '</button><button type="button" class="btn sm" data-dk="rbreload" data-id="' + w.id + '" aria-label="Reload">&#8635;</button><input class="input dk-url" aria-label="Address or search" placeholder="Search or type a web address" value="' + esc(t ? t.url : '') + '" autocomplete="off" spellcheck="false"><button type="button" class="btn sm" data-dk="rbset" data-id="' + w.id + '" aria-label="Browser settings" title="Browser settings">' + ic('settings') + '</button></form>';
     if (keep !== null) { var ui = bar.querySelector('.dk-url'); ui.value = keep; ui.focus(); }
   }
   function rbQ(w, e, flushNow) { w.r.q.push(e); if (flushNow) rbFlush(w); }
@@ -256,19 +283,36 @@
     cv.addEventListener('keyup', function (e) { var m = e.ctrlKey || e.metaKey; if (m && e.key.toLowerCase() === 'v') return; rbQ(w, { t: 'k', k: 'up', key: e.key, code: e.code, kc: e.keyCode, mod: mod(e) }, true); e.preventDefault(); });
     cv.addEventListener('paste', function (e) { var t = e.clipboardData && e.clipboardData.getData('text'); if (t) rbQ(w, { t: 'text', s: t }, true); e.preventDefault(); });
   }
+  function rbSettings(w, keep) {
+    var old = w.body.querySelector('.dk-bset'); if (old && !keep) return void old.remove(); if (old) old.remove();
+    var el = document.createElement('div'); el.className = 'dk-bset'; var q = LS.get('brqual', 'sharp'), se = LS.get('brsearch', 'ddg');
+    el.innerHTML = '<div class="dk-bsh"><b>Browser settings</b><button data-dk="' + (w.kind === 'browser' ? 'bsetx' : 'rbsetx') + '" data-id="' + w.id + '" aria-label="Close">&#10005;</button></div>' +
+      '<label>Search engine<select id="brse">' + ENGINES.map(function (e) { return '<option value="' + e[0] + '"' + (e[0] === se ? ' selected' : '') + '>' + e[1] + '</option>'; }).join('') + '</select></label>' +
+      '<label>New tab opens<input id="brhome" class="input" placeholder="Blank page, or a web address like https://example.com" value="' + esc(LS.get('brhome', '')) + '" autocomplete="off"></label>' +
+      (w.kind === 'browser' ? '' : '<div class="dk-bsq"><span>Picture quality</span>' + QLAB.map(function (x) { return '<button class="btn sm' + (x[0] === q ? ' primary' : '') + '" data-dk="rbq" data-id="' + w.id + '" data-q="' + x[0] + '" title="' + x[2] + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="dk-bsq"><span>Browsing data</span><button class="btn sm" data-dk="rbclear" data-id="' + w.id + '">Clear cookies and cache</button></div>') +
+      '<p class="note">Saved on this device.</p>';
+    w.body.querySelector('.dk-br').appendChild(el);
+  }
   function rbHand(a, b, w) {
     var id = b.getAttribute('data-t');
     if (a === 'rbtab') return void rbPost(w, '/activate', { tab: id });
     if (a === 'rbclose') return void rbPost(w, '/close', { tab: id });
-    if (a === 'rbnew') { return void rbPost(w, '/open', {}).then(function () { var u = w.body.querySelector('.dk-url'); if (u) u.focus(); }); }
+    if (a === 'rbnew') { var home = LS.get('brhome', ''); return void rbPost(w, '/open', home ? { url: normUrl(home) } : {}).then(function () { var u = w.body.querySelector('.dk-url'); if (u) u.focus(); }); }
     if (a === 'rbback') return void rbPost(w, '/go', { tab: w.r.active, dir: 'back' });
     if (a === 'rbfwd') return void rbPost(w, '/go', { tab: w.r.active, dir: 'forward' });
     if (a === 'rbreload') return void rbPost(w, '/go', { tab: w.r.active, dir: 'reload' });
     if (a === 'rbsimple') return void browserWin();
+    if (a === 'rbset') return void rbSettings(w);
+    if (a === 'rbsetx') { var bs = w.body.querySelector('.dk-bset'); if (bs) bs.remove(); return; }
+    if (a === 'rbclear') { return void rbPost(w, '/clear', {}).then(function () { toast('Cookies and cache cleared'); }); }
+    if (a === 'rbq') { var q = b.getAttribute('data-q'); LS.set('brqual', q); rbPost(w, '/quality', { q: q }); return void rbSettings(w, true); }
   }
   function bhand(a, b, w) {
     var t = btab(w);
+    if (a === 'bset') return void rbSettings(w);
     if (a === 'bfull') { w.b.full = !w.b.full; return void paintBrowser(w); }
+    if (a === 'bsetx') { var bs2 = w.body.querySelector('.dk-bset'); if (bs2) bs2.remove(); return; }
     if (a === 'bnew') { w.b.full = false; return void newTab(w); }
     if (a === 'btab') { w.b.cur = Number(b.getAttribute('data-t')); return void paintBrowser(w); }
     if (a === 'bclose') { var id = Number(b.getAttribute('data-t')); w.b.tabs = w.b.tabs.filter(function (x) { return x.id !== id; }); if (!w.b.tabs.length) return void closeWin(w); if (w.b.cur === id) w.b.cur = w.b.tabs[w.b.tabs.length - 1].id; return void paintBrowser(w); }
@@ -283,7 +327,7 @@
   /* ---------- viewer ---------- */
   function viewer(path, remote) {
     var e = ext(path), name = path.split('/').pop(), url = remote ? remote.url : '/_local/fs/get?path=' + enc(path);
-    var w = mk('viewer', name, { w: 860, h: 600 }); w.data = { path: path, remote: remote };
+    var w = mk('viewer', name, { w: 860, h: 600 }); w.data = { path: path, remote: remote }; w.sd = { t: 'viewer', path: path, remote: !!remote };
     if (/^(jpe?g|png|gif|webp|svg|bmp|avif)$/.test(e)) w.body.innerHTML = '<div class="dk-vw"><img src="' + esc(url) + '" alt="' + esc(name) + '"></div>';
     else if (e === 'pdf') w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(name) + '" src="' + esc(url) + '"></iframe>';
     else if (/^(mp4|webm|mov|m4v)$/.test(e)) w.body.innerHTML = '<div class="dk-vw"><video src="' + esc(url) + '" controls autoplay></video></div>';
@@ -299,12 +343,12 @@
   function filesWin(src) {
     var url = '/?embed=1' + (src === 'google' ? '&root=google' : '') + '#drive', ex = D.wins.filter(function (x) { return x.kind === 'files'; })[0];
     if (ex) { var fr = ex.body.querySelector('iframe'); if (fr && ex.src !== src) { fr.src = url; ex.src = src; } ex.title = src === 'google' ? 'Google Drive' : 'Files'; ex.el.querySelector('.dkw-t b').textContent = ex.title; focus(ex); return ex; }
-    var w = mk('files', src === 'google' ? 'Google Drive' : 'Files', { w: 1080, h: 680 }); w.src = src;
+    var w = mk('files', src === 'google' ? 'Google Drive' : 'Files', { w: 1080, h: 680 }); w.src = src; w.sd = { t: 'files', src: src || '' };
     w.body.innerHTML = '<iframe class="dkw-frame" title="Files" src="' + url + '" allow="clipboard-read; clipboard-write; fullscreen"></iframe>'; return w;
   }
 
   /* ---------- assistant ---------- */
-  function aiWin() { if (D.ai.win) { focus(D.ai.win); return D.ai.win; } var w = mk('ai', 'Assistant', { w: 460, h: 600 }); w.x = Math.max(0, area().w - w.w - 30); place(w); D.ai.win = w; paintAi(); return w; }
+  function aiWin() { if (D.ai.win) { focus(D.ai.win); return D.ai.win; } var w = mk('ai', 'Assistant', { w: 460, h: 600 }); w.sd = { t: 'ai' }; w.x = Math.max(0, area().w - w.w - 30); place(w); D.ai.win = w; paintAi(); return w; }
   function paintAi() {
     var w = D.ai.win; if (!w) return; var ai = D.ai, h = '<div class="dk-ai"><div class="dk-aim" id="dkaim">';
     if (!ai.msgs.length) h += '<div class="dk-aie"><b>Desktop assistant</b><p>Ask about your files, apps and everything connected to Anands OS. Select a text file in Files and choose Ask AI to talk about it. Ask me to open an app or a file.</p></div>';
@@ -332,6 +376,7 @@
   function show() {
     if (!S.user) return; D.open = true; root.hidden = false; document.body.classList.add('dk-on'); wallStyle(); icons(); task(); D.wins.forEach(place);
     if (location.hash !== '#desktop') { try { history.pushState({ v: 'desktop' }, '', '#desktop'); } catch (e) {} }
+    restoreSess();
   }
   function hide(back) { D.open = false; D.menu = false; menu(); root.hidden = true; document.body.classList.remove('dk-on'); if (location.hash === '#desktop') { try { history.replaceState(null, '', '#home'); } catch (e) {} } if (back) A.go('home'); }
 
@@ -426,7 +471,7 @@
   root.addEventListener('pointerup', end); root.addEventListener('pointercancel', end);
   window.addEventListener('resize', function () { if (D.open) D.wins.forEach(place); });
   setInterval(function () { var c = $('#dkclock'); if (c && D.open) c.textContent = clock(); }, 20000);
-  document.addEventListener('change', function (ev) { if (ev.target.classList && ev.target.classList.contains('dk-cki')) { setIcons(toggle(deskIds(), ev.target.getAttribute('data-k'), ev.target.checked)); var cn = ev.target.closest('.dk-ch').querySelector('#dkcn'); if (cn) cn.textContent = deskIds().length + ' on desktop'; return; } if (ev.target.id === 'dkwf') { wallFile(ev.target.files[0]); ev.target.value = ''; } });
+  document.addEventListener('change', function (ev) { if (ev.target.id === 'brse') { LS.set('brsearch', ev.target.value); toast('Search engine: ' + ev.target.options[ev.target.selectedIndex].text); return; } if (ev.target.id === 'brhome') { var hv = ev.target.value.trim(); if (hv && !normUrl(hv)) return toast('Enter a web address'); LS.set('brhome', hv ? normUrl(hv) : ''); toast(hv ? 'New tab page saved' : 'New tab opens a blank page'); return; } if (ev.target.classList && ev.target.classList.contains('dk-cki')) { setIcons(toggle(deskIds(), ev.target.getAttribute('data-k'), ev.target.checked)); var cn = ev.target.closest('.dk-ch').querySelector('#dkcn'); if (cn) cn.textContent = deskIds().length + ' on desktop'; return; } if (ev.target.id === 'dkwf') { wallFile(ev.target.files[0]); ev.target.value = ''; } });
   window.addEventListener('popstate', function () { if (location.hash === '#desktop') { if (!D.open) show(); } else if (D.open) hide(false); });
   (function wait(n) { if (S.user) { if (location.hash === '#desktop') show(); return; } if (n < 80) setTimeout(function () { wait(n + 1); }, 150); })(0);
 

@@ -98,6 +98,17 @@ try {
     const c2 = await browser.newContext({ viewport: { width: 1280, height: 860 } }); await c2.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
     const q = await c2.newPage(); await q.goto(B + '/#pulse'); await q.waitForSelector('[data-px="mode"]'); assert.equal(await q.locator('iframe').count(), 0); assert.equal(await q.locator('[data-pa="nativeon"], [data-pa="builtin"]').count(), 0); await c2.close();
   });
+  await t('Pulse: sidebar and list panes drag-resize and remember the width', async () => {
+    const c3 = await browser.newContext({ viewport: { width: 1440, height: 860 } }); await c3.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
+    const q = await c3.newPage(); await q.goto(B + '/#pulse'); await q.waitForSelector('.pxside'); await q.waitForSelector('.pxlist');
+    for (const [sel, key] of [['.pxside', 'side'], ['.pxlist', 'list']]) {
+      const b = await q.locator(sel).first().boundingBox(); const x = b.x + b.width - 3, y = b.y + 60;
+      await q.mouse.move(x, y); await q.mouse.down(); await q.mouse.move(x + 60, y, { steps: 4 }); await q.mouse.up();
+      const nb = await q.locator(sel).first().boundingBox(); assert.ok(nb.width > b.width + 40, key + ' widened ' + b.width + '->' + nb.width);
+    }
+    const w1 = (await q.locator('.pxlist').first().boundingBox()).width; await q.reload(); await q.waitForSelector('.pxlist'); assert.ok(Math.abs((await q.locator('.pxlist').first().boundingBox()).width - w1) < 3);
+    await c3.close();
+  });
   await t('no page errors', async () => assert.deepEqual(errs, []));
 } finally { await browser.close(); srv.kill(); imm.close(); cs.close(); ps.close(); bz.close(); wg.close(); }
 if (errs.length) console.log('PAGEERRORS', errs.slice(0, 5)); console.log(`\n${pass} passed, ${failed} failed`); if (failed) { console.log(log.slice(-1500)); process.exit(1); } process.exit(0);
