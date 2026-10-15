@@ -235,6 +235,12 @@ try {
     assert.equal((await call('/apps/notes/../../server/config.js')).s === 200, false);
   });
 
+  await t('mail: the .mail folders exist on first look so the inbox opens', async () => {
+    const a = await call('/_local/fs/stat', { method: 'POST', json: { path: '~/.mail' } }); assert.equal(a.s, 200); assert.equal(a.j.is_dir, true);
+    const o = await call('/_local/fs/stat', { method: 'POST', json: { path: '~/.mail/objects' } }); assert.equal(o.s, 200);
+    const l = await call('/_local/fs/readdir', { method: 'POST', json: { path: '~/.mail/sent' } }); assert.equal(l.s, 200); assert.deepEqual(l.j, []);
+    assert.equal((await call('/_local/fs/stat', { method: 'POST', json: { path: '/.mailx' } })).s, 404);
+  });
   await t('drive: status, root lists Drive, folder listing and stat', async () => {
     assert.equal((await call('/api/drive/status')).j.connected, true);
     const root = await call('/_local/fs/readdir', { method: 'POST', json: { path: '/' } }); assert.ok(root.j.some((x) => x.name === 'Drive' && x.is_dir));

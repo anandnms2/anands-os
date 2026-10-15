@@ -68,6 +68,10 @@ function resolve(p, user) {
   if (abs !== FS_ROOT && !abs.startsWith(FS_ROOT + path.sep)) throw httpError(400, 'Bad path', 'bad_path');
   return { abs, rel: '/' + parts.join('/') };
 }
+/* Mail keeps messages in <home>/.mail. Nothing delivers into it here, so create the folders on first look instead of showing a permission gate that can never pass. */
+async function ensureMailDirs({ abs, rel }) {
+  if (/^\/\.mail(\/(objects|sent|archive|trash|drafts))?$/.test(rel)) { try { await fsp.mkdir(abs, { recursive: true }); if (rel === '/.mail') for (const d of ['objects', 'sent', 'archive', 'trash']) await fsp.mkdir(path.join(abs, d), { recursive: true }); } catch {} }
+}
 const notFound = () => httpError(404, 'Not found', 'subject_does_not_exist');
 
 /* ---------- /Drive: the Cloudreve mount (WebDAV) ---------- */
@@ -184,6 +188,7 @@ export async function handleLocal(req, res, url) {
   if (p === '/fs/move' || p === '/fs/copy') { if (driveRel(b.from, user) !== null || driveRel(b.to, user) !== null) return driveMoveCopy(p, b, user, res); }
   else if (p.startsWith('/fs/') && driveRel(b.path, user) !== null) return driveFs(p, req, res, url, b, user);
   if (p === '/fs/read') { const { abs } = resolve(b.path, user); let st; try { st = await fsp.stat(abs); } catch { throw notFound(); } if (st.isDirectory()) throw httpError(400, 'Is a directory'); res.writeHead(200, { 'content-type': mime(abs), 'content-length': st.size, 'cache-control': 'no-store' }); return fs.createReadStream(abs).on('error', () => res.destroy()).pipe(res); }
+  if (p === '/fs/stat' || p === '/fs/readdir') await ensureMailDirs(resolve(b.path, user));
   if (p === '/fs/stat') { const { abs, rel } = resolve(b.path, user); return json(res, 200, await stat(abs, rel)); }
   if (p === '/fs/readdir') {
     const { abs, rel } = resolve(b.path, user); let names; try { names = await fsp.readdir(abs); } catch { throw notFound(); }

@@ -241,7 +241,7 @@
     print: function (t) { try { document.body.insertAdjacentHTML('beforeend', t); } catch (e) {} },
     exit: function () {}, getUser: function () { return auth.getUser(); },
     events: bagOf('events', { onLocal: function () {}, on: function () {} }, lenient),
-    perms: bagOf('perms', {}, unsupported), hosting: bagOf('hosting', {}, unsupported),
+    perms: bagOf('perms', { request: function () { return Promise.resolve(true); }, has: function () { return Promise.resolve(true); } }, unsupported), hosting: bagOf('hosting', {}, unsupported),
     workers: workers, email: email, peer: peer,
     apps: bagOf('apps', {}, unsupported), net: bagOf('net', {}, unsupported)
   };
