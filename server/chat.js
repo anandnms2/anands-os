@@ -4,7 +4,7 @@ import { effective, SUITE } from './config.js';
 import { json, readJson, fetchJson, httpError } from './util.js';
 import { photoContext } from './immich.js';
 import { insightsContext } from './coolify.js';
-import { filesContext } from './local.js';
+import { filesContext, driveContext } from './local.js';
 
 function llm() {
   const { base, key, model } = effective().llm;
@@ -45,6 +45,7 @@ export async function handleChat(req, res, url) {
   const jobs = [];
   if (want.photos !== false) jobs.push(photoContext().then((v) => { ctx.photos = v; used.push('photos'); }).catch((e) => { ctx.photos = { connected: false, note: e.message }; }));
   if (want.insights !== false) jobs.push(insightsContext().then((v) => { ctx.cloud = v; used.push('insights'); }));
+  if (want.files !== false) jobs.push(driveContext().then((v) => { ctx.drive = v; if (v.connected) used.push('drive'); }).catch(() => {}));
   if (want.files !== false) jobs.push(filesContext().then((v) => { ctx.files = v; used.push('files'); }).catch(() => {}));
   if (want.apps !== false) { ctx.suiteApps = appsList(); used.push('apps'); }
   await Promise.all(jobs);

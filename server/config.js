@@ -45,6 +45,7 @@ export function effective() {
   return {
     immich: { url: clean(s.immich?.url) || clean(env.IMMICH_URL), key: clean(s.immich?.key) || clean(env.IMMICH_API_KEY) },
     coolify: { url: clean(s.coolify?.url) || clean(env.COOLIFY_URL), token: clean(s.coolify?.token) || clean(env.COOLIFY_TOKEN) },
+    dav: { url: clean(s.dav?.url) || clean(env.DAV_URL), user: clean(s.dav?.user) || clean(env.DAV_USER), pass: clean(s.dav?.pass) || clean(env.DAV_PASSWORD) },
     llm: { base: clean(s.llm?.base) || clean(env.LLM_BASE_URL), key: clean(s.llm?.key) || clean(env.LLM_API_KEY), model: clean(s.llm?.model) || clean(env.LLM_MODEL) || 'gpt-4o-mini' }
   };
 }
@@ -53,6 +54,7 @@ export function publicSettings() {
   return {
     immich: { url: e.immich.url, keySet: !!e.immich.key },
     coolify: { url: e.coolify.url, tokenSet: !!e.coolify.token },
+    dav: { url: e.dav.url, user: e.dav.user, passSet: !!e.dav.pass },
     llm: { base: e.llm.base, keySet: !!e.llm.key, model: e.llm.model }
   };
 }
@@ -63,12 +65,13 @@ export function updateSettings(patch) {
     if (v === undefined) return;
     v = clean(v);
     if (secret && v === '') return;
-    if (!secret && v && field !== 'model' && !urlOk(v)) throw Object.assign(new Error(`${group} address must start with http:// or https://`), { status: 400 });
+    if (!secret && v && field !== 'model' && field !== 'user' && !urlOk(v)) throw Object.assign(new Error(`${group} address must start with http:// or https://`), { status: 400 });
     next[group] = next[group] || {}; next[group][field] = v;
   };
   const p = patch || {};
   set('immich', 'url', p.immich?.url); set('immich', 'key', p.immich?.key, true);
   set('coolify', 'url', p.coolify?.url); set('coolify', 'token', p.coolify?.token, true);
+  set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
   set('llm', 'base', p.llm?.base); set('llm', 'key', p.llm?.key, true); set('llm', 'model', p.llm?.model);
   stored = next;
   const tmp = sfile + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(stored, null, 2), { mode: 0o600 }); fs.renameSync(tmp, sfile);

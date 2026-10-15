@@ -51,6 +51,31 @@ const llm = await listen(async (req, res) => {
   if (req.headers.authorization !== 'Bearer llm-secret') return send(res, 401, { error: { message: 'bad key' } });
   send(res, 200, { model: b.model, choices: [{ message: { role: 'assistant', content: 'You have 3 resources. Safari album exists.' } }] });
 });
+
+/* in-memory WebDAV server mounted at /dav, like Cloudreve's */
+const tree = new Map([['/', { dir: true }], ['/Work', { dir: true }], ['/Work/Fleet KPIs.csv', { data: Buffer.from('truck,tat\nT412,4.2\n') }], ['/Notes.md', { data: Buffer.from('# Hello from Drive') }]]);
+const davLog = [];
+const rawBody = (req) => new Promise((r) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => r(Buffer.concat(c))); });
+const xmlEsc = (x) => x.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const entry = (p, e) => `<D:response><D:href>/dav${p === '/' ? '/' : p.split('/').map(encodeURIComponent).join('/') + (e.dir ? '/' : '')}</D:href><D:propstat><D:prop><D:resourcetype>${e.dir ? '<D:collection/>' : ''}</D:resourcetype>${e.dir ? '' : `<D:getcontentlength>${e.data.length}</D:getcontentlength>`}<D:getlastmodified>Tue, 14 Oct 2026 10:00:00 GMT</D:getlastmodified></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>`;
+const dav = await listen(async (req, res) => {
+  davLog.push(req.method + ' ' + req.url);
+  if (req.headers.authorization !== 'Basic ' + Buffer.from('anand@example.com:dav-secret').toString('base64')) return send(res, 401, 'no', 'text/plain');
+  const body = await rawBody(req);
+  const u = new URL(req.url, 'http://x'); const p = '/' + decodeURIComponent(u.pathname).replace(/^\/dav\/?/, '').replace(/\/+$/, ''); const key = p === '/' ? '/' : p.replace(/\/$/, '');
+  const e = tree.get(key);
+  if (req.method === 'PROPFIND') {
+    if (!e) return send(res, 404, '', 'text/plain');
+    const items = [[key, e]]; if (req.headers.depth !== '0' && e.dir) for (const [k, v] of tree) if (k !== '/' && k.slice(0, k.lastIndexOf('/')) === (key === '/' ? '' : key)) items.push([k, v]);
+    return send(res, 207, `<?xml version="1.0"?><D:multistatus xmlns:D="DAV:">${items.map(([k, v]) => entry(k, v)).join('')}</D:multistatus>`, 'application/xml');
+  }
+  if (req.method === 'GET') { if (!e || e.dir) return send(res, 404, '', 'text/plain'); const m = /bytes=(\d+)-(\d*)/.exec(req.headers.range || ''); if (m) { const part = e.data.subarray(Number(m[1]), m[2] ? Number(m[2]) + 1 : undefined); res.writeHead(206, { 'content-range': `bytes ${m[1]}-${Number(m[1]) + part.length - 1}/${e.data.length}`, 'content-length': part.length }); return res.end(part); } return send(res, 200, e.data, 'application/octet-stream'); }
+  if (req.method === 'PUT') { const par = key.slice(0, key.lastIndexOf('/')) || '/'; if (!tree.get(par)?.dir) return send(res, 409, '', 'text/plain'); tree.set(key, { data: body }); return send(res, e ? 204 : 201, '', 'text/plain'); }
+  if (req.method === 'MKCOL') { if (e) return send(res, 405, '', 'text/plain'); const par = key.slice(0, key.lastIndexOf('/')) || '/'; if (!tree.get(par)?.dir) return send(res, 409, '', 'text/plain'); tree.set(key, { dir: true }); return send(res, 201, '', 'text/plain'); }
+  if (req.method === 'DELETE') { if (!e) return send(res, 404, '', 'text/plain'); for (const k of [...tree.keys()]) if (k === key || k.startsWith(key + '/')) tree.delete(k); return send(res, 204, '', 'text/plain'); }
+  if (req.method === 'MOVE' || req.method === 'COPY') { if (!e) return send(res, 404, '', 'text/plain'); const dest = '/' + decodeURIComponent(new URL(req.headers.destination).pathname).replace(/^\/dav\/?/, '').replace(/\/+$/, ''); tree.set(dest, e); if (req.method === 'MOVE') tree.delete(key); return send(res, 201, '', 'text/plain'); }
+  send(res, 405, '', 'text/plain');
+});
 const url = (s) => `http://127.0.0.1:${s.address().port}`;
 
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-'));
@@ -58,7 +83,7 @@ const port = 20000 + Math.floor(Math.random() * 20000);
 const srv = spawn('node', ['server/index.js'], {
   cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
   env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: process.env.E2E_SUITE || path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'correct horse', SESSION_SECRET: 'x'.repeat(40),
-    IMMICH_URL: url(immich), IMMICH_API_KEY: 'imm-secret', COOLIFY_URL: url(coolify), COOLIFY_TOKEN: 'cool-secret', LLM_BASE_URL: url(llm) + '/v1', LLM_API_KEY: 'llm-secret', LLM_MODEL: 'test-model' }
+    IMMICH_URL: url(immich), IMMICH_API_KEY: 'imm-secret', COOLIFY_URL: url(coolify), COOLIFY_TOKEN: 'cool-secret', LLM_BASE_URL: url(llm) + '/v1', LLM_API_KEY: 'llm-secret', LLM_MODEL: 'test-model', DAV_URL: url(dav) + '/dav', DAV_USER: 'anand@example.com', DAV_PASSWORD: 'dav-secret' }
 });
 let log = ''; srv.stdout.on('data', (d) => (log += d)); srv.stderr.on('data', (d) => (log += d));
 const B = `http://127.0.0.1:${port}`;
@@ -166,12 +191,55 @@ try {
     assert.equal((await call('/apps.json')).j[0].slug, 'notes');
     assert.equal((await call('/apps/notes/../../server/config.js')).s === 200, false);
   });
+
+  await t('drive: status, root lists Drive, folder listing and stat', async () => {
+    assert.equal((await call('/api/drive/status')).j.connected, true);
+    const root = await call('/_local/fs/readdir', { method: 'POST', json: { path: '/' } }); assert.ok(root.j.some((x) => x.name === 'Drive' && x.is_dir));
+    const d = await call('/_local/fs/readdir', { method: 'POST', json: { path: '/Drive' } }); assert.deepEqual(d.j.map((x) => x.name).sort(), ['Notes.md', 'Work']); assert.equal(d.j.find((x) => x.name === 'Work').is_dir, true);
+    const w = await call('/_local/fs/readdir', { method: 'POST', json: { path: '/Drive/Work' } }); assert.equal(w.j[0].name, 'Fleet KPIs.csv'); assert.equal(w.j[0].path, '/Drive/Work/Fleet KPIs.csv'); assert.equal(w.j[0].size, 19);
+    const st = await call('/_local/fs/stat', { method: 'POST', json: { path: '/Drive/Notes.md' } }); assert.equal(st.j.is_dir, false); assert.equal((await call('/_local/fs/stat', { method: 'POST', json: { path: '/Drive/nope' } })).s, 404);
+  });
+  await t('drive: read (get, read, range) and write back', async () => {
+    const g = await call('/_local/fs/get?path=' + encodeURIComponent('/Drive/Notes.md')); assert.equal(g.t, '# Hello from Drive');
+    const rd = await call('/_local/fs/read', { method: 'POST', json: { path: '/Drive/Notes.md' } }); assert.equal(rd.t, '# Hello from Drive');
+    const rg = await call('/_local/fs/get?path=' + encodeURIComponent('/Drive/Notes.md'), { headers: { range: 'bytes=2-6' } }); assert.equal(rg.s, 206); assert.equal(rg.t, 'Hello');
+    const wr = await call('/_local/fs/write?path=' + encodeURIComponent('/Drive/Notes.md') + '&overwrite=1', { method: 'POST', body: '# Edited in an app' }); assert.equal(wr.s, 200, wr.t);
+    assert.equal(tree.get('/Notes.md').data.toString(), '# Edited in an app');
+    assert.equal((await call('/_local/fs/write?path=' + encodeURIComponent('/Drive/Notes.md') + '&overwrite=0', { method: 'POST', body: 'x' })).s, 409);
+    const nw = await call('/_local/fs/write?path=' + encodeURIComponent('/Drive/New/Deep/a.txt') + '&mkdirs=1', { method: 'POST', body: 'deep' }); assert.equal(nw.s, 200, nw.t); assert.equal(tree.get('/New/Deep/a.txt').data.toString(), 'deep');
+    assert.equal((await call('/_local/fs/write?path=' + encodeURIComponent('/Drive/Missing/a.txt'), { method: 'POST', body: 'x' })).s, 404);
+  });
+  await t('drive: mkdir, rename, move/copy across local and Drive, delete', async () => {
+    assert.equal((await call('/_local/fs/mkdir', { method: 'POST', json: { path: '/Drive/Folder' } })).s, 200); assert.equal((await call('/_local/fs/mkdir', { method: 'POST', json: { path: '/Drive/Folder' } })).s, 409);
+    const rn = await call('/_local/fs/rename', { method: 'POST', json: { path: '/Drive/Folder', name: 'Renamed' } }); assert.equal(rn.j.path, '/Drive/Renamed');
+    const cp = await call('/_local/fs/copy', { method: 'POST', json: { from: '/Drive/Notes.md', to: '/Drive/Renamed' } }); assert.equal(cp.j.path, '/Drive/Renamed/Notes.md');
+    await call('/_local/fs/write?path=' + encodeURIComponent('/loc.txt') + '&overwrite=1', { method: 'POST', body: 'local file' });
+    assert.equal((await call('/_local/fs/copy', { method: 'POST', json: { from: '/loc.txt', to: '/Drive/Renamed' } })).j.path, '/Drive/Renamed/loc.txt'); assert.equal(tree.get('/Renamed/loc.txt').data.toString(), 'local file');
+    const out = await call('/_local/fs/move', { method: 'POST', json: { from: '/Drive/Renamed/loc.txt', to: '/Documents/back.txt' } }); assert.equal(out.s, 200, out.t); assert.equal(tree.has('/Renamed/loc.txt'), false);
+    assert.equal((await call('/_local/fs/get?path=' + encodeURIComponent('/Documents/back.txt'))).t, 'local file');
+    assert.equal((await call('/_local/fs/delete', { method: 'POST', json: { path: '/Drive/Renamed' } })).s, 200); assert.equal(tree.has('/Renamed'), false);
+    assert.equal((await call('/_local/fs/delete', { method: 'POST', json: { path: '/Drive' } })).s, 400);
+  });
+  await t('drive: paths cannot escape and the password never leaks', async () => {
+    assert.equal((await call('/_local/fs/get?path=' + encodeURIComponent('/Drive/../../etc/passwd'))).s, 400);
+    assert.ok(!(await call('/api/settings')).t.includes('dav-secret')); assert.equal((await call('/api/settings')).j.dav.passSet, true);
+    assert.ok(!davLog.some((l) => l.includes('..')));
+  });
+  await t('drive: wrong password reports a clear error', async () => {
+    await call('/api/settings', { method: 'PUT', json: { dav: { pass: 'wrong' } } });
+    const x = await call('/api/drive/status'); assert.equal(x.j.connected, false); const y = await call('/_local/fs/readdir', { method: 'POST', json: { path: '/Drive' } }); assert.equal(y.s, 502); assert.equal(y.j.code, 'upstream_auth');
+    await call('/api/settings', { method: 'PUT', json: { dav: { pass: 'dav-secret' } } }); assert.equal((await call('/api/drive/status')).j.connected, true);
+  });
+  await t('assistant sees Drive files', async () => {
+    await call('/api/chat', { method: 'POST', json: { messages: [{ role: 'user', content: 'what is in my drive' }], ctx: { files: true } } });
+    const sys = JSON.stringify(seen.llm.at(-1).b.messages); assert.match(sys, /Fleet KPIs/); assert.ok(!sys.includes('dav-secret'));
+  });
   await t('logout clears the session', async () => {
     await call('/auth/logout', { method: 'POST' }); cookie = '';
     assert.equal((await call('/api/photos/status')).s, 401);
   });
 } finally {
-  srv.kill(); for (const s of [immich, coolify, llm]) s.close();
+  srv.kill(); for (const s of [immich, coolify, llm, dav]) s.close();
   if (process.exitCode) console.log('\nserver log:\n' + log);
   console.log(`\n${pass} passed`);
   process.exit(process.exitCode || 0);

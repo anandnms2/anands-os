@@ -9,6 +9,9 @@ import { DATA } from './config.js';
 import { sessionOf, userFromSession } from './session.js';
 import { json, readJson, httpError } from './util.js';
 import { llmChat } from './chat.js';
+import * as dav from './webdav.js';
+import { Readable } from 'node:stream';
+import { readBody } from './util.js';
 
 const KV_DIR = path.join(DATA, 'kv'), FS_ROOT = path.join(DATA, 'fs');
 fs.mkdirSync(KV_DIR, { recursive: true }); fs.mkdirSync(FS_ROOT, { recursive: true });
@@ -52,6 +55,69 @@ function resolve(p, user) {
   return { abs, rel: '/' + parts.join('/') };
 }
 const notFound = () => httpError(404, 'Not found', 'subject_does_not_exist');
+
+/* ---------- /Drive: the Cloudreve mount (WebDAV) ---------- */
+function driveRel(p, user) {
+  const parts = String(p ?? '/').replace(/\\/g, '/').replace(/^~/, '').split('/').filter((x) => x && x !== '.');
+  if (parts[0] && user && parts[0].toLowerCase() === String(user.username).toLowerCase()) parts.shift();
+  if (!parts[0] || parts[0].toLowerCase() !== 'drive') return null;
+  if (parts.some((x) => x === '..')) throw httpError(400, 'Bad path', 'bad_path');
+  return '/' + parts.slice(1).join('/');
+}
+const dpath = (rel) => '/Drive' + (rel === '/' ? '' : rel);
+function dObj(e) { const pp = dpath(e.path), id = crypto.createHash('sha1').update(pp).digest('hex').slice(0, 16); return { id, uid: id, name: e.path === '/' ? 'Drive' : e.name, path: pp, is_dir: e.dir, size: e.size, modified: e.modified, created: e.modified }; }
+function fileHeaders(name, size, extra = {}) {
+  const type = mime(name); const safe = /^(image\/(png|jpeg|gif|webp)|audio|video|application\/pdf|text\/plain|text\/csv|application\/json)/.test(type);
+  const h = { 'content-type': type, 'cache-control': 'private, no-cache', 'x-content-type-options': 'nosniff', ...(safe ? {} : { 'content-disposition': 'attachment' }), ...extra };
+  if (size != null) h['content-length'] = size; return h;
+}
+async function driveGet(req, res, rel) {
+  const r = await dav.read(rel, req.headers.range);
+  const extra = {}; for (const k of ['content-range', 'accept-ranges']) if (r.headers.get(k)) extra[k] = r.headers.get(k);
+  res.writeHead(r.status, fileHeaders(rel, r.headers.get('content-length'), extra));
+  if (req.method === 'HEAD' || !r.body) return res.end();
+  return Readable.fromWeb(r.body).on('error', () => res.destroy()).pipe(res);
+}
+async function readLocalBuf(abs) { try { return await fsp.readFile(abs); } catch { throw notFound(); } }
+async function driveFs(op, req, res, url, b, user) {
+  if (op === '/fs/get' || op === '/fs/read') { const rel = driveRel(op === '/fs/get' ? url.searchParams.get('path') : b.path, user); const st = await dav.stat(rel); if (st.dir) throw httpError(400, 'Is a directory'); return driveGet(req, res, rel); }
+  if (op === '/fs/stat') return json(res, 200, dObj(await dav.stat(driveRel(b.path, user))));
+  if (op === '/fs/readdir') return json(res, 200, (await dav.list(driveRel(b.path, user))).map(dObj));
+  if (op === '/fs/mkdir') { const rel = driveRel(b.path, user); await dav.mkdir(rel, !!b.parents); return json(res, 200, dObj(await dav.stat(rel))); }
+  if (op === '/fs/delete') { const rel = driveRel(b.path, user); if (rel === '/') throw httpError(400, 'Cannot delete the root'); await dav.remove(rel); return json(res, 200, { ok: true }); }
+  if (op === '/fs/rename') { const rel = driveRel(b.path, user); if (!b.name || /[\\/]/.test(b.name)) throw httpError(400, 'Bad name'); const to = path.posix.join(path.posix.dirname(rel), b.name); await dav.moveCopy('MOVE', rel, to); return json(res, 200, dObj(await dav.stat(to))); }
+  throw httpError(404, 'Unknown route');
+}
+async function driveWrite(req, res, url, user) {
+  const rel = driveRel(url.searchParams.get('path'), user); if (rel === '/') throw httpError(400, 'Bad path');
+  if (url.searchParams.get('overwrite') === '0') { let exists = true; try { await dav.stat(rel); } catch (e) { if (e.status === 404) exists = false; else throw e; } if (exists) throw httpError(409, 'Item already exists', 'item_with_same_name_exists'); }
+  if (url.searchParams.get('mkdirs') === '1') await dav.mkdir(path.posix.dirname(rel), true);
+  const buf = await readBody(req, 200 * 1024 * 1024);
+  await dav.write(rel, buf, req.headers['content-type']);
+  return json(res, 200, dObj(await dav.stat(rel)));
+}
+/* move/copy where either side is Drive */
+async function driveMoveCopy(op, b, user, res) {
+  const fa = driveRel(b.from, user), fz = driveRel(b.to, user);
+  if (fa !== null && fz !== null) {
+    let dest = fz; try { if ((await dav.stat(fz)).dir) dest = path.posix.join(fz, path.posix.basename(fa)); } catch (e) { if (e.status !== 404) throw e; }
+    await dav.moveCopy(op === '/fs/move' ? 'MOVE' : 'COPY', fa, dest); return json(res, 200, dObj(await dav.stat(dest)));
+  }
+  if (fa !== null) { // Drive -> local
+    const st = await dav.stat(fa); if (st.dir) throw httpError(400, 'Folders cannot be copied out of Drive yet');
+    const z = resolve(b.to, user); let dest = z; try { if ((await fsp.stat(z.abs)).isDirectory()) dest = resolve(path.posix.join(z.rel, path.posix.basename(fa)), user); } catch {}
+    await fsp.mkdir(path.dirname(dest.abs), { recursive: true });
+    const r = await dav.read(fa); await fsp.writeFile(dest.abs, Buffer.from(await r.arrayBuffer()));
+    if (op === '/fs/move') await dav.remove(fa);
+    return json(res, 200, await stat(dest.abs, dest.rel));
+  }
+  const a = resolve(b.from, user); const st = await fsp.stat(a.abs).catch(() => { throw notFound(); }); // local -> Drive
+  if (st.isDirectory()) throw httpError(400, 'Folders cannot be copied into Drive yet');
+  let dest = fz; try { if ((await dav.stat(fz)).dir) dest = path.posix.join(fz, path.basename(a.rel)); } catch (e) { if (e.status !== 404) throw e; }
+  await dav.write(dest, await readLocalBuf(a.abs));
+  if (op === '/fs/move') await fsp.rm(a.abs);
+  return json(res, 200, dObj(await dav.stat(dest)));
+}
 function statObj(abs, rel, st) {
   return { id: crypto.createHash('sha1').update(rel).digest('hex').slice(0, 16), uid: crypto.createHash('sha1').update(rel).digest('hex').slice(0, 16), name: path.basename(rel) || '/', path: rel, is_dir: st.isDirectory(), size: st.isDirectory() ? 0 : st.size, modified: Math.floor(st.mtimeMs / 1000), created: Math.floor((st.birthtimeMs || st.mtimeMs) / 1000) };
 }
@@ -69,12 +135,13 @@ export async function handleLocal(req, res, url) {
   const user = userFromSession(s);
   const p = url.pathname.replace(/^\/_local/, '');
   if (p === '/auth/user' && req.method === 'GET') return json(res, 200, user);
-  if (p === '/fs/get' && req.method === 'GET') { const { abs } = resolve(url.searchParams.get('path'), user); let st; try { st = await fsp.stat(abs); } catch { throw notFound(); } if (st.isDirectory()) throw httpError(400, 'Is a directory'); return sendFile(res, abs, st); }
+  if (p === '/fs/get' && req.method === 'GET') { if (driveRel(url.searchParams.get('path'), user) !== null) return driveFs(p, req, res, url, {}, user); const { abs } = resolve(url.searchParams.get('path'), user); let st; try { st = await fsp.stat(abs); } catch { throw notFound(); } if (st.isDirectory()) throw httpError(400, 'Is a directory'); return sendFile(res, abs, st); }
   if (req.method !== 'POST') throw httpError(405, 'Method not allowed');
   const app = slug(req.headers['x-app']);
   if (p === '/kv') { const b = await readJson(req, 9 * 1024 * 1024); return json(res, 200, { result: kvOp(app, b) }); }
   if (p === '/ai/chat') { const b = await readJson(req, 2 * 1024 * 1024); return json(res, 200, await llmChat(b.messages, { model: b.model, temperature: b.temperature })); }
   if (p === '/fs/write') {
+    if (driveRel(url.searchParams.get('path'), user) !== null) return driveWrite(req, res, url, user);
     const { abs, rel } = resolve(url.searchParams.get('path'), user);
     if (rel === '/') throw httpError(400, 'Bad path');
     if (url.searchParams.get('overwrite') === '0' && fs.existsSync(abs)) throw httpError(409, 'Item already exists', 'item_with_same_name_exists');
@@ -86,11 +153,14 @@ export async function handleLocal(req, res, url) {
     return json(res, 200, await stat(abs, rel));
   }
   const b = await readJson(req, 64 * 1024);
+  if (p === '/fs/move' || p === '/fs/copy') { if (driveRel(b.from, user) !== null || driveRel(b.to, user) !== null) return driveMoveCopy(p, b, user, res); }
+  else if (p.startsWith('/fs/') && driveRel(b.path, user) !== null) return driveFs(p, req, res, url, b, user);
   if (p === '/fs/read') { const { abs } = resolve(b.path, user); let st; try { st = await fsp.stat(abs); } catch { throw notFound(); } if (st.isDirectory()) throw httpError(400, 'Is a directory'); res.writeHead(200, { 'content-type': mime(abs), 'content-length': st.size, 'cache-control': 'no-store' }); return fs.createReadStream(abs).on('error', () => res.destroy()).pipe(res); }
   if (p === '/fs/stat') { const { abs, rel } = resolve(b.path, user); return json(res, 200, await stat(abs, rel)); }
   if (p === '/fs/readdir') {
     const { abs, rel } = resolve(b.path, user); let names; try { names = await fsp.readdir(abs); } catch { throw notFound(); }
     const out = []; for (const nm of names) { if (nm.endsWith('.part')) continue; try { out.push(statObj(path.join(abs, nm), (rel === '/' ? '' : rel) + '/' + nm, await fsp.stat(path.join(abs, nm)))); } catch {} }
+    if (rel === '/' && dav.configured()) out.push({ id: 'drive', uid: 'drive', name: 'Drive', path: '/Drive', is_dir: true, size: 0, modified: 0, created: 0 });
     return json(res, 200, out);
   }
   if (p === '/fs/mkdir') { const { abs, rel } = resolve(b.path, user); await fsp.mkdir(abs, { recursive: !!b.parents }).catch((e) => { if (e.code === 'EEXIST') throw httpError(409, 'Already exists', 'item_with_same_name_exists'); throw notFound(); }); return json(res, 200, await stat(abs, rel)); }
@@ -124,4 +194,22 @@ export async function filesContext() {
   await walk(FS_ROOT, '', 0);
   if (!out.files.length) out.note = 'No files saved by the apps yet.';
   return out;
+}
+
+/* Cloudreve files for the assistant: two levels, names plus small text previews */
+export async function driveContext() {
+  if (!dav.configured()) return { connected: false };
+  const files = []; let budget = 30000;
+  async function walk(rel, depth) {
+    let items; try { items = await dav.list(rel); } catch (e) { if (depth === 0) throw e; return; }
+    for (const e of items.sort((a, b) => a.path.localeCompare(b.path))) {
+      if (files.length >= 200) return;
+      if (e.dir) { if (depth < 2) await walk(e.path, depth + 1); continue; }
+      const f = { path: '/Drive' + e.path, bytes: e.size, modified: e.modified ? new Date(e.modified * 1000).toISOString().slice(0, 10) : null };
+      if (/\.(txt|md|csv|json)$/i.test(e.name) && e.size <= 20000 && budget > 0) { try { const r = await dav.read(e.path); f.preview = (await r.text()).slice(0, 1500); budget -= f.preview.length; } catch {} }
+      files.push(f);
+    }
+  }
+  try { await walk('/', 0); } catch (e) { return { connected: false, reason: e.code || e.message }; }
+  return { connected: true, files };
 }

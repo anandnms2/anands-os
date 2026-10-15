@@ -8,6 +8,7 @@ import { json, readJson, httpError } from './util.js';
 import { handlePhotos, status as immichStatus } from './immich.js';
 import { handleInsights, insights, clearInsightsCache } from './coolify.js';
 import { handleChat } from './chat.js';
+import { ping as davPing } from './webdav.js';
 import { handleLocal } from './local.js';
 import { serveStatic } from './static.js';
 
@@ -24,9 +25,11 @@ async function api(req, res, url) {
   if (p === '/api/settings/test' && req.method === 'POST') {
     const { target } = await readJson(req, 1024);
     if (target === 'immich') return json(res, 200, await immichStatus());
+    if (target === 'dav') return json(res, 200, await davPing());
     if (target === 'coolify') { try { const d = await insights(true); return json(res, 200, { configured: true, connected: true, resources: d.resources.length }); } catch (e) { return json(res, 200, { configured: e.code !== 'not_configured', connected: false, reason: e.message }); } }
     throw httpError(400, 'Unknown target');
   }
+  if (p === '/api/drive/status') return json(res, 200, await davPing());
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
   if (p === '/api/insights') return handleInsights(req, res, url);
   if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url);

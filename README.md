@@ -17,6 +17,14 @@ A personal OS in one container: a branded shell around the open-source Puter app
 
 The first build takes several minutes (it compiles every app). A GitHub Action also publishes `ghcr.io/<owner>/anands-os` if you prefer pulling an image.
 
+## Drive (Cloudreve over WebDAV)
+
+In Cloudreve open Settings > WebDAV, create an account and copy its address (ends in `/dav`), account name and password. Enter them in the OS under Settings > Drive, or set `DAV_URL`, `DAV_USER`, `DAV_PASSWORD`. Your files then appear as a `/Drive` folder: the Drive screen, the Open/Save dialogs of the apps and the assistant all use it. The password is write-only and never sent back to the browser.
+
+Open with: Spreadsheet (csv/xlsx), Documents (.docx only), PDF, Presentation, Video/Audio Studio, Vector Studio, CAD, Circuits and Parametric receive the file at launch. Notes and Photo Studio have no launch hand-off; use their own Open dialog. Text files open in a built-in editor.
+
+Limits: tested against a mock WebDAV server only; uploads up to 200 MB are buffered; folders cannot be copied between local storage and Drive.
+
 ## Security model
 
 - Secrets are write-only: the API returns only "is set" flags, and a blank field keeps the stored value.
