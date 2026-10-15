@@ -85,7 +85,7 @@ export function updateSettings(patch) {
     if (v === undefined) return;
     v = clean(v);
     if (secret && v === '') return;
-    if (!secret && v && !['model', 'user', 'host', 'fromName'].includes(field) && !urlOk(v)) throw Object.assign(new Error(`${group} address must start with http:// or https://`), { status: 400 });
+    if (!secret && v && !['model', 'user', 'host', 'fromName', 'clientId'].includes(field) && !urlOk(v)) throw Object.assign(new Error(`${group} address must start with http:// or https://`), { status: 400 });
     next[group] = next[group] || {}; next[group][field] = v;
   };
   const p = patch || {};
