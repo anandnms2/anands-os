@@ -131,6 +131,19 @@ try {
       assert.equal((await call('/api/rsvp/' + tok(), { anon: true })).s, 404);
       const e = await call('/rsvp/' + rsvp + '/accept', { anon: true }); assert.ok([200, 302, 303].includes(e.s), String(e.s));
     });
+    await t('booking with a meeting link: the link points at this server\'s /meet page', async () => {
+      const hrs = [{ start: 540, end: 1020 }];
+      const sy = await adm('/booking/sync', { pages: [{ id: 'video', title: 'Video call', durationMin: 30, tz: 'UTC', hours: { 0: [], 1: hrs, 2: hrs, 3: hrs, 4: hrs, 5: hrs, 6: [] }, minNoticeMin: 0, maxAdvanceDays: 60, meet: true, enabled: true }], busy: [], organizerName: 'Anand', organizerEmail: 'anand@example.com', hour12: false });
+      assert.equal(sy.s, 200, sy.t);
+      const day = new Date(Date.now() + 3 * 864e5); while ([0, 6].includes(day.getUTCDay())) day.setUTCDate(day.getUTCDate() + 1);
+      const sl = await call('/api/book/video/slots?from=' + day.toISOString().slice(0, 10), { anon: true }); assert.equal(sl.s, 200, sl.t);
+      const n0 = smtp.msgs.length;
+      const bk = await call('/api/book/video', { anon: true, method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ start: sl.j.slots[3], name: 'Lee', email: 'lee@example.com', tz: 'UTC' }) });
+      assert.equal(bk.s, 200, bk.t);
+      const url = JSON.stringify(bk.j).match(/https?:[^"\\]*\/meet\/#\/m\/[a-z-]+/)?.[0]; assert.ok(url && url.startsWith(B + '/meet/#/m/'), 'meeting link in the booking: ' + bk.t.slice(0, 300));
+      assert.ok(!bk.t.includes('meetings.puter.com'));
+      await new Promise((r) => setTimeout(r, 400)); assert.ok(smtp.msgs.slice(n0).some((m) => m.rcpts.includes('lee@example.com') && flat(parseMail(m.raw)).some((x) => (x.body || '').includes('/meet/#/m/'))), 'the confirmation email carries it');
+    });
     await t('booking: slots, a booking, a confirmation email, and no double booking', async () => {
       const hrs = [{ start: 540, end: 1020 }];
       const sy = await adm('/booking/sync', { pages: [{ id: 'intro', title: 'Intro call', durationMin: 30, tz: 'UTC', hours: { 0: [], 1: hrs, 2: hrs, 3: hrs, 4: hrs, 5: hrs, 6: [] }, minNoticeMin: 0, maxAdvanceDays: 60, meet: false, enabled: true }], busy: [], organizerName: 'Anand', organizerEmail: 'anand@example.com', hour12: false });

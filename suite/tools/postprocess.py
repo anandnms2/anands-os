@@ -19,6 +19,14 @@ WORDING = [
     (b"The email service needs an update before it can send your reply.", b"Your reply could not be sent. Check Email (SMTP) in Anands OS Settings."),
     (b"The email service needs an update before it can send this event.", b"The invitation could not be prepared. Check Email (SMTP) in Anands OS Settings."),
     (b"Sign in to Puter again", b"Sign in to Anands OS again"),
+    # Meeting links: Calendar events and the Meetings app use this server's /meet page (guests need no account), not meetings.puter.com.
+    (b"var fa=`https://meetings.puter.com/`", b"var fa=location.origin+`/meet/`"),
+    (rb"/^https:\/\/meetings\.puter\.com\/#\/m\/", rb"/^https?:\/\/[^\/]+\/meet\/#\/m\/"),
+]
+# Only in the Meetings app: the room directory and the share link live on this server.
+MEETINGS = [
+    (b'"https://puter-meetings-rooms.puter.work"', b"location.origin"),
+    (b"location.origin+location.pathname", b'location.origin+"/meet/"'),
 ]
 
 for dp, _, files in os.walk(root):
@@ -52,6 +60,9 @@ for dp, _, files in os.walk(root):
             nb = nb.replace(b'serviceWorker.register("/sw.js"', b'serviceWorker.register("./sw.js"')
             for a, b2 in WORDING:
                 nb = nb.replace(a, b2)
+            if os.sep + "meetings" + os.sep in p:
+                for a, b2 in MEETINGS:
+                    nb = nb.replace(a, b2)
             if nb != b:
                 if SDK.encode() in nb and SDK_RE.search(b): js_n += 1
                 if b'serviceWorker.register("./sw.js"' in nb and b'serviceWorker.register("/sw.js"' in b: sw += 1

@@ -49,8 +49,16 @@ class KV {
 /* ---------- compile a worker into a sandbox ---------- */
 const loaded = new Map(); // name -> { mtime, routes, ctx, kv }
 function sourcePath(rec) { return path.join(path.dirname(DIR), 'fs', ...rec.path.split('/').filter(Boolean)); }
+/* Meeting links the worker mints or checks point at this server's /meet page instead of meetings.puter.com. */
+const W_RE_OLD = '/^https:\\/\\/meetings\\.puter\\.com\\/#\\/m\\/', W_RE_NEW = '/^https?:\\/\\/[^\\/]+\\/meet\\/#\\/m\\/';
+const W_URL_OLD = '`https://meetings.puter.com/#/m/${code}`', W_URL_NEW = '`${new URL(PAGE_URL).origin}/meet/#/m/${code}`';
+function meetLinks(src) {
+  if (!src.includes('meetings.puter.com')) return src;
+  if (!src.includes(W_RE_OLD) || !src.includes(W_URL_OLD)) console.error('[workers] the meeting-link code in this worker looks different from what was expected; links may still point at meetings.puter.com');
+  return src.split(W_RE_OLD).join(W_RE_NEW).split(W_URL_OLD).join(W_URL_NEW);
+}
 function compile(name, rec) {
-  const abs = sourcePath(rec); const st = fs.statSync(abs); const src = fs.readFileSync(abs, 'utf8');
+  const abs = sourcePath(rec); const st = fs.statSync(abs); const src = meetLinks(fs.readFileSync(abs, 'utf8'));
   if (src.length > 1.5 * 1024 * 1024) throw httpError(413, 'Worker script is too large');
   const routes = [];
   const add = (method) => (p, h) => { if (typeof p !== 'string' || typeof h !== 'function') throw new Error('router: bad route'); const names = []; const re = new RegExp('^' + p.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/:([A-Za-z_]\w*)/g, (_m, n) => { names.push(n); return '([^/]+)'; }) + '/?$'); routes.push({ method, re, names, h }); return router; };
@@ -136,7 +144,8 @@ export async function handleWorkerRequest(req, res, url) {
 const PAGES = { '/rsvp.html': 'rsvp.html', '/book.html': 'book.html' };
 const GUEST_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const WORKER_RE = '/^https:\\/\\/[a-z0-9][a-z0-9-]*\\.puter\\.work$/.test(worker)';
-const PATCHES = { 'book.html': [["route ? 'https://cal-' + route[1] + '.puter.work' : (params.get('w') || '')", "route ? location.origin : (params.get('w') || '')"], [WORKER_RE, '(worker === location.origin)']], 'rsvp.html': [[WORKER_RE, '(worker === location.origin)']] };
+const MEET_OLD = '^https:\\/\\/meetings\\.puter\\.com\\/#\\/m\\/', MEET_NEW = '^https?:\\/\\/[^\\/]+\\/meet\\/#\\/m\\/';
+const PATCHES = { 'book.html': [[MEET_OLD, MEET_NEW], ["route ? 'https://cal-' + route[1] + '.puter.work' : (params.get('w') || '')", "route ? location.origin : (params.get('w') || '')"], [WORKER_RE, '(worker === location.origin)']], 'rsvp.html': [[MEET_OLD, MEET_NEW], [WORKER_RE, '(worker === location.origin)']] };
 const cache = new Map();
 export function guestPage(p) {
   const file = PAGES[p]; if (!file) return null;

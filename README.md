@@ -64,6 +64,19 @@ The Calendar app normally uses a Puter-hosted service for guest links and emails
 
 Safeguards: the guest-facing script runs in a sandbox with no network or file access; public routes are rate limited; there is a daily email cap (default 200); the SMTP password is write-only; links never use the visitor's Host header.
 
-Limits: tested against a mock SMTP server only. Booking pages created with "add a meeting link" still point at meetings.puter.com; turn that off per page until the Meetings app is supported. The Meetings app itself needs Puter's peer service and is not supported yet.
+Limits: tested against a mock SMTP server only. Meeting links on booking pages and events now point at this server's `/meet` page (see Meetings).
 
 `node test/calendar.mjs` runs the mock-SMTP tests; set `WORKER_SRC` and `E2E_SUITE` to include the real worker and guest pages.
+
+## Meetings (video calls on your own server)
+
+The Meetings app needs Puter's peer service and room directory. Both now run here:
+
+- **Signalling**: a small relay on this server hands the connection set-up messages between browsers. Audio, video and chat then flow directly between the browsers, never through this server.
+- **Meeting links**: `https://<your address>/meet/#/m/abc-defg-hij`. Guests open it with no account. Only the Meetings app's files are served at `/meet/`; everything else still needs sign-in. Calendar events and booking pages use the same links.
+- **Other apps that use live sharing** (chess, checkers, backgammon, whiteboard, spreadsheet, team chat) use the same peer service, so they can connect too. Only Meetings has been tested end to end.
+- **Relay for strict firewalls (optional)**: most connections work directly. For guests behind strict office or mobile networks, run a TURN server and enter its address and shared secret in Settings > Meetings relay (or `TURN_URLS`, `TURN_SECRET`). Example coturn on Coolify (image `coturn/coturn`): `--use-auth-secret --static-auth-secret=<secret> --realm=turn.anands.xyz --listening-port=3478 --min-port=49160 --max-port=49200 --fingerprint --no-multicast-peers --no-cli`, with UDP 3478 and 49160-49200 open. Relay credentials are handed only to you and to guests of a meeting you host.
+
+Limits: calls are a mesh (everyone connects to everyone), so quality drops beyond about 4 to 6 people. Tested with real Chromium browsers on a fake camera, three people, on one machine: not across real networks, and not with the TURN relay. If the server restarts mid-meeting, the host's connection re-registers on its own but guests who are not yet connected need to reload the link.
+
+`node test/meet.mjs` runs these tests (needs Playwright; set `E2E_SUITE` to include the real Meetings app).

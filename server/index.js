@@ -13,6 +13,7 @@ import { handleVault, status as vaultStatus } from './vault.js';
 import { handleLocal } from './local.js';
 import { isWorkerPath, handleWorkerRequest, isGuestPage, serveGuestPage } from './workers.js';
 import { noteOrigin, publicOrigin } from './origin.js';
+import { handlePeer, handleRooms, isPeerPath, isRoomPath } from './meet.js';
 import * as mail from './mail.js';
 import { serveStatic } from './static.js';
 
@@ -58,7 +59,13 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/auth/')) { if (await handleAuth(req, res, url) !== false) return; throw httpError(404, 'Not found'); }
     if (p === '/api/session') return json(res, 200, sessionInfo(req));
     if (p === '/_suite/puter.js') { return serveStatic(req, res, path.dirname(SHIM), path.basename(SHIM), {}); }
+    if (p === '/_suite/peer.js') { return serveStatic(req, res, path.dirname(SHIM), 'peer.js', {}); }
     if ((req.method === 'GET' || req.method === 'HEAD') && isGuestPage(p)) return serveGuestPage(req, res, p);
+    /* Meetings for guests: the link /meet/#/m/<code> opens the Meetings app without signing in. Only that app's files are served here. */
+    if (p === '/meet') { res.writeHead(302, { location: '/meet/' + url.search }); return res.end(); }
+    if (p.startsWith('/meet/') && (req.method === 'GET' || req.method === 'HEAD')) { res.setHeader('referrer-policy', 'same-origin'); return serveStatic(req, res, SUITE, 'apps/meetings/' + p.slice(6), { 'content-security-policy': APP_CSP }); }
+    if (isPeerPath(p)) return await handlePeer(req, res, url);
+    if (isRoomPath(p)) return await handleRooms(req, res, url);
     if (isWorkerPath(p) && ['GET', 'HEAD', 'POST', 'PUT'].includes(req.method)) return await handleWorkerRequest(req, res, url);
     if (sessionOf(req)) noteOrigin(req);
     const protectedPath = p.startsWith('/api/') || p.startsWith('/_local/') || p.startsWith('/apps/');

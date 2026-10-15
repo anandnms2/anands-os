@@ -4,7 +4,9 @@
  * Nothing here ever contacts puter.com. Unsupported features fail with a clear error. */
 (function (g) {
   'use strict';
-  var APP = (location.pathname.match(/^\/apps\/([^\/]+)/) || [])[1] || 'os';
+  /* /meet/ is the guest copy of the Meetings app: no account, no stored files. */
+  var GUEST = location.pathname.indexOf('/meet/') === 0 || location.pathname === '/meet';
+  var APP = GUEST ? 'meetings' : ((location.pathname.match(/^\/apps\/([^\/]+)/) || [])[1] || 'os');
   function mk(code, msg) { var e = new Error(msg || code); e.code = code; return e; }
   function post(path, body, extra) {
     var h = { 'x-aos': '1', 'x-app': APP };
@@ -24,8 +26,8 @@
 
   var userP = null;
   var auth = bagOf('auth', {
-    isSignedIn: function () { return true; },
-    getUser: function () { return userP || (userP = fetch('/_local/auth/user', { credentials: 'same-origin' }).then(function (r) { if (!r.ok) throw mk('auth_required', 'Not signed in'); return r.json(); })); },
+    isSignedIn: function () { return !GUEST; },
+    getUser: function () { if (GUEST) return Promise.reject(mk('auth_required', 'Not signed in')); return userP || (userP = fetch('/_local/auth/user', { credentials: 'same-origin' }).then(function (r) { if (!r.ok) throw mk('auth_required', 'Not signed in'); return r.json(); })); },
     whoami: function () { return auth.getUser(); },
     signIn: function () { return auth.getUser(); },
     signOut: function () { location.href = '/auth/logout'; return Promise.resolve(); },
@@ -34,7 +36,19 @@
   }, unsupported);
 
   function norm(v) { return v; }
-  var kv = {
+  var LS = 'aosk:';
+  function lsGet(k) { try { var v = localStorage.getItem(LS + k); return v === null ? null : JSON.parse(v); } catch (e) { return null; } }
+  var kvLocal = {
+    get: function (k) { return Promise.resolve(lsGet(k)); },
+    set: function (k, v) { try { localStorage.setItem(LS + k, JSON.stringify(v)); } catch (e) {} return Promise.resolve(true); },
+    add: function (k, v) { var o = lsGet(k); var a = Array.isArray(o) ? o : []; a.push(v); return kvLocal.set(k, a).then(function () { return a; }); },
+    del: function (k) { try { localStorage.removeItem(LS + k); } catch (e) {} return Promise.resolve(true); },
+    incr: function (k, by) { var n = (Number(lsGet(k)) || 0) + (by == null ? 1 : by); return kvLocal.set(k, n).then(function () { return n; }); },
+    decr: function (k, by) { return kvLocal.incr(k, -(by == null ? 1 : by)); },
+    list: function (pat, vals) { var out = []; try { var re = new RegExp('^' + String(typeof pat === 'string' ? pat : '*').replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$'); for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k.indexOf(LS) === 0 && re.test(k.slice(LS.length))) out.push(vals === true || pat === true ? { key: k.slice(LS.length), value: lsGet(k.slice(LS.length)) } : k.slice(LS.length)); } } catch (e) {} return Promise.resolve(out); },
+    flush: function () { return Promise.resolve(true); }
+  };
+  var kv = GUEST ? kvLocal : {
     get: function (key) { return post('/kv', { op: 'get', key: key }).then(function (r) { return r.json(); }).then(function (j) { return j.result == null ? null : j.result; }); },
     set: function (key, value) { return post('/kv', { op: 'set', key: key, value: value }).then(function () { return true; }); },
     add: function (key, value) { return post('/kv', { op: 'add', key: key, value: value }).then(function (r) { return r.json(); }).then(function (j) { return j.result; }); },
@@ -205,6 +219,18 @@
   /* Email goes out through the SMTP server you set in Settings. */
   var email = bagOf('email', { send: function (m) { return post('/mail/send', m || {}).then(function (r) { return r.json(); }); } }, unsupported);
 
+  /* Peer-to-peer: loaded on first use. Meetings, multiplayer games and shared whiteboards use it. */
+  var peerP = null;
+  function loadPeer() {
+    return peerP || (peerP = new Promise(function (res, rej) {
+      if (g.__aosPeer) return res(g.__aosPeer);
+      var sc = document.createElement('script'); sc.src = '/_suite/peer.js'; sc.onload = function () { res(g.__aosPeer); };
+      sc.onerror = function () { peerP = null; rej(mk('not_available', 'Could not load the peer service')); }; document.head.appendChild(sc);
+    }));
+  }
+  var peer = {};
+  ['serve', 'connect', 'ensureTurnRelays', 'createGuestGrant'].forEach(function (n) { peer[n] = function () { var a = arguments; return loadPeer().then(function (p) { return p[n].apply(p, a); }); }; });
+
   var P = {
     env: 'web', appID: 'anands-' + APP, version: 'v2-local', local: true,
     auth: auth, kv: kv, fs: fs, ui: ui, ai: ai,
@@ -213,7 +239,7 @@
     exit: function () {}, getUser: function () { return auth.getUser(); },
     events: bagOf('events', { onLocal: function () {}, on: function () {} }, lenient),
     perms: bagOf('perms', {}, unsupported), hosting: bagOf('hosting', {}, unsupported),
-    workers: workers, email: email, peer: bagOf('peer', {}, unsupported),
+    workers: workers, email: email, peer: peer,
     apps: bagOf('apps', {}, unsupported), net: bagOf('net', {}, unsupported)
   };
   g.puter = new Proxy(P, { get: function (t, k) { if (k in t) return t[k]; if (typeof k !== 'string' || k === 'then') return undefined; return bagOf(k, {}, unsupported); } });

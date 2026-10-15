@@ -49,6 +49,7 @@ export function effective() {
     vault: { url: clean(s.vault?.url) || clean(env.VAULT_URL) },
     mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
     public: { url: clean(s.public?.url) || PUBLIC_URL },
+    turn: { urls: clean(s.turn?.urls) || clean(env.TURN_URLS), secret: clean(s.turn?.secret) || clean(env.TURN_SECRET), stun: clean(s.turn?.stun) || clean(env.STUN_URLS) },
     llm: { base: clean(s.llm?.base) || clean(env.LLM_BASE_URL), key: clean(s.llm?.key) || clean(env.LLM_API_KEY), model: clean(s.llm?.model) || clean(env.LLM_MODEL) || 'gpt-4o-mini' }
   };
 }
@@ -61,6 +62,7 @@ export function publicSettings() {
     vault: { url: e.vault.url },
     mail: { host: e.mail.host, port: e.mail.port, security: e.mail.security, user: e.mail.user, passSet: !!e.mail.pass, from: e.mail.from, fromName: e.mail.fromName, dailyCap: e.mail.dailyCap },
     public: { url: e.public.url },
+    turn: { urls: e.turn.urls, secretSet: !!e.turn.secret, stun: e.turn.stun },
     llm: { base: e.llm.base, keySet: !!e.llm.key, model: e.llm.model }
   };
 }
@@ -87,6 +89,11 @@ export function updateSettings(patch) {
     set('mail', 'user', m.user); set('mail', 'pass', m.pass, true); set('mail', 'fromName', m.fromName === undefined ? undefined : String(m.fromName).replace(/[\r\n<>"]/g, ''));
     if (m.from !== undefined) { const f = clean(m.from); if (f && !/^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/.test(f)) throw Object.assign(new Error('The From address must look like name@example.com'), { status: 400 }); next.mail = next.mail || {}; next.mail.from = f; }
     if (m.dailyCap !== undefined && m.dailyCap !== '') { const n = Number(m.dailyCap); if (!Number.isInteger(n) || n < 1 || n > 2000) throw Object.assign(new Error('Daily email limit must be between 1 and 2000'), { status: 400 }); next.mail = next.mail || {}; next.mail.dailyCap = n; }
+  }
+  if (p.turn) {
+    const clean_ = (v) => String(v).split(',').map((x) => x.trim()).filter(Boolean);
+    for (const f of ['urls', 'stun']) if (p.turn[f] !== undefined) { const l = clean_(p.turn[f]); if (l.some((x) => !/^(stun|turn|turns):[^\s,]+$/i.test(x))) throw Object.assign(new Error('Relay addresses look like turn:host:3478 or stun:host:3478, separated by commas'), { status: 400 }); next.turn = next.turn || {}; next.turn[f] = l.join(','); }
+    set('turn', 'secret', p.turn.secret, true);
   }
   set('public', 'url', p.public?.url === undefined ? undefined : String(p.public.url).replace(/\/+$/, ''));
   set('llm', 'base', p.llm?.base); set('llm', 'key', p.llm?.key, true); set('llm', 'model', p.llm?.model);
