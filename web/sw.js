@@ -1,6 +1,6 @@
 /* App-shell cache only. API, app and photo traffic always goes to the network. */
-const V = 'aos-shell-6';
-const SHELL = ['/', '/os.css', '/os.js', '/drive.js', '/integrations.js', '/cards.js', '/servers.js', '/pulse.js', '/vault-crypto.js', '/logo-white.png', '/logo-orange.png', '/manifest.webmanifest', '/icon-192.png'];
+const V = 'aos-shell-8';
+const SHELL = ['/', '/os.css', '/os.js', '/drive.js', '/integrations.js', '/cards.js', '/servers.js', '/pulse.js', '/desktop.js', '/vault-crypto.js', '/logo-white.png', '/logo-orange.png', '/manifest.webmanifest', '/icon-192.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== V).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

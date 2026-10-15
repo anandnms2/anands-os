@@ -12,6 +12,7 @@ import { handleVpn, test as vpnTest } from './vpn.js';
 import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
 import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
+import { handleGdrive, googleCallback, gConnected, gConfigured } from './gdrive.js';
 import { ping as davPing } from './webdav.js';
 import { handleVault, status as vaultStatus } from './vault.js';
 import { handleLocal } from './local.js';
@@ -38,6 +39,7 @@ async function api(req, res, url) {
     if (target === 'dav') return json(res, 200, await davPing());
     if (target === 'vault') return json(res, 200, await vaultStatus());
     if (target === 'mail') return json(res, 200, await mail.verify());
+    if (target === 'google') return json(res, 200, { configured: gConfigured(), connected: gConnected(), reason: gConfigured() ? (gConnected() ? '' : 'Not connected yet. Use Connect Google Drive.') : 'Add the client ID and secret.' });
     if (target === 'pulse') return json(res, 200, await pulseTest());
     if (target === 'status') return json(res, 200, await statusTest());
     if (target === 'vpn') return json(res, 200, await vpnTest());
@@ -55,6 +57,7 @@ async function api(req, res, url) {
   if (p === '/api/drive/status') return json(res, 200, await davPing());
   if (p.startsWith('/api/vault/')) return handleVault(req, res, url);
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
+  if (p === '/api/gdrive' || p.startsWith('/api/gdrive/')) return handleGdrive(req, res, url);
   if (p === '/api/pulse' || p.startsWith('/api/pulse/')) return handlePulse(req, res, url);
   if (p === '/api/status' || p.startsWith('/api/status/')) return handleStatus(req, res, url);
   if (p === '/api/vpn' || p.startsWith('/api/vpn/')) return handleVpn(req, res, url);
@@ -69,6 +72,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://x'); const p = url.pathname;
     if (p === '/healthz') return json(res, 200, { ok: true });
+    if (p === '/auth/google/callback') { if (!sessionOf(req)) throw httpError(401, 'Sign in to Anands OS first, then connect Google Drive from Settings.'); return await googleCallback(req, res, url); }
     if (p.startsWith('/auth/')) { if (await handleAuth(req, res, url) !== false) return; throw httpError(404, 'Not found'); }
     if (p === '/api/session') return json(res, 200, sessionInfo(req));
     if (p === '/_suite/puter.js') { return serveStatic(req, res, path.dirname(SHIM), path.basename(SHIM), {}); }

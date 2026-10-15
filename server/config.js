@@ -48,6 +48,7 @@ export function effective() {
     status: { url: clean(s.status?.url) || clean(env.STATUS_URL), user: clean(s.status?.user) || clean(env.STATUS_USER), pass: clean(s.status?.pass) || clean(env.STATUS_PASSWORD) },
     vpn: { url: clean(s.vpn?.url) || clean(env.VPN_URL), user: clean(s.vpn?.user) || clean(env.VPN_USER), pass: clean(s.vpn?.pass) || clean(env.VPN_PASSWORD) },
     cards: { url: clean(s.cards?.url) || clean(env.CARDS_URL), user: clean(s.cards?.user) || clean(env.CARDS_USER), pass: clean(s.cards?.pass) || clean(env.CARDS_PASSWORD) },
+    google: { clientId: clean(s.google?.clientId) || clean(env.GOOGLE_CLIENT_ID), clientSecret: clean(s.google?.clientSecret) || clean(env.GOOGLE_CLIENT_SECRET) },
     pulse: { url: clean(s.pulse?.url) || clean(env.PULSE_URL), token: clean(s.pulse?.token) || clean(env.PULSE_TOKEN) },
     dav: { url: clean(s.dav?.url) || clean(env.DAV_URL), user: clean(s.dav?.user) || clean(env.DAV_USER), pass: clean(s.dav?.pass) || clean(env.DAV_PASSWORD) },
     vault: { url: clean(s.vault?.url) || clean(env.VAULT_URL) },
@@ -66,6 +67,7 @@ export function publicSettings() {
     vpn: { url: e.vpn.url, user: e.vpn.user, passSet: !!e.vpn.pass },
     cards: { url: e.cards.url, user: e.cards.user, passSet: !!e.cards.pass },
     pulse: { url: e.pulse.url, tokenSet: !!e.pulse.token },
+    google: { clientId: e.google.clientId, secretSet: !!e.google.clientSecret },
     dav: { url: e.dav.url, user: e.dav.user, passSet: !!e.dav.pass },
     vault: { url: e.vault.url },
     mail: { host: e.mail.host, port: e.mail.port, security: e.mail.security, user: e.mail.user, passSet: !!e.mail.pass, from: e.mail.from, fromName: e.mail.fromName, dailyCap: e.mail.dailyCap },
@@ -88,6 +90,7 @@ export function updateSettings(patch) {
   set('immich', 'url', p.immich?.url); set('immich', 'key', p.immich?.key, true);
   set('coolify', 'url', p.coolify?.url); set('coolify', 'token', p.coolify?.token, true);
   for (const g of ['status', 'vpn', 'cards']) { set(g, 'url', p[g]?.url); set(g, 'user', p[g]?.user); set(g, 'pass', p[g]?.pass, true); }
+  set('google', 'clientId', p.google?.clientId); set('google', 'clientSecret', p.google?.clientSecret, true);
   set('pulse', 'url', p.pulse?.url); set('pulse', 'token', p.pulse?.token, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
   set('vault', 'url', p.vault?.url);

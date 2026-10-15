@@ -17,6 +17,7 @@ function llm() {
   return { b, key, model };
 }
 const clip = (s, n) => String(s ?? '').slice(0, n);
+const DESKTOP_RULES = '\n\nYou are running inside the user\'s Anands Desktop (windows, files, apps). If the user asks you to open an app, add a final line exactly like: ACTION: open <slug> (slugs are in suiteApps). To open their Drive file, add: ACTION: openfile <path> (a path from the files list, starting with /Drive). Use an ACTION line only when they clearly ask to open something. If an attachedFile is present, answer from it.';
 export async function llmChat(messages, opts = {}) {
   const c = llm();
   const msgs = (Array.isArray(messages) ? messages : []).filter((m) => m && ['system', 'user', 'assistant'].includes(m.role)).slice(-24).map((m) => ({ role: m.role, content: typeof m.content === 'string' ? clip(m.content, 60000) : clip(JSON.stringify(m.content), 20000) }));
@@ -56,8 +57,14 @@ export async function handleChat(req, res, url) {
   if (want.files !== false) jobs.push(driveContext().then((v) => { ctx.drive = v; if (v.connected) used.push('drive'); }).catch(() => {}));
   if (want.files !== false) jobs.push(filesContext().then((v) => { ctx.files = v; used.push('files'); }).catch(() => {}));
   if (want.apps !== false) { ctx.suiteApps = appsList(); used.push('apps'); }
+  const dk = b.desktop && typeof b.desktop === 'object' ? b.desktop : null;
+  if (dk) {
+    ctx.desktop = { openWindows: (Array.isArray(dk.windows) ? dk.windows : []).slice(0, 20).map((x) => clip(String(x), 80)), currentFolder: clip(String(dk.folder || ''), 200) };
+    if (dk.file && typeof dk.file.text === 'string') ctx.desktop.attachedFile = { name: clip(String(dk.file.name || ''), 150), content: clip(dk.file.text, 24000) };
+    used.push('desktop');
+  }
   await Promise.all(jobs);
   const text = clip(JSON.stringify(ctx), 90000);
-  const r = await llmChat([{ role: 'system', content: SYSTEM + '\n\nCONTEXT (JSON):\n' + text }, ...hist]);
+  const r = await llmChat([{ role: 'system', content: SYSTEM + (dk ? DESKTOP_RULES : '') + '\n\nCONTEXT (JSON):\n' + text }, ...hist]);
   return json(res, 200, { text: r.text, model: r.model, used });
 }

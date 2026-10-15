@@ -1,0 +1,97 @@
+// The Desktop: windows, Start menu, Files (Cloudreve via WebDAV and a mock Google Drive), viewers, assistant. SHOTS=<dir> saves screenshots.
+import { spawn } from 'node:child_process'; import http from 'node:http'; import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
+import assert from 'node:assert/strict'; import { createRequire } from 'node:module'; import { fileURLToPath } from 'node:url';
+import { start as startDav, tree } from './dav-mock.mjs'; import { PNG } from './png.mjs';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+let chromium = null; for (const base of [root + '/', '/opt/npm-tools/node_modules/']) { try { chromium = createRequire(base)('playwright').chromium; break; } catch {} }
+if (!chromium) { console.log('skip  Playwright not installed'); process.exit(0); }
+const SHOTS = process.env.SHOTS || '';
+const suite = process.env.E2E_SUITE || (fs.existsSync('/home/claude/anands-suite/dist/apps.json') ? '/home/claude/anands-suite/dist' : path.join(root, 'test/fixtures/suite'));
+tree.set('/Notes.md', { data: Buffer.from('# Notes\nTruck T412 is late'), m: Date.UTC(2026, 9, 14) }); tree.set('/Photos', { dir: true, m: Date.UTC(2026, 9, 1) }); tree.set('/Photos/Sunset.png', { data: PNG, m: Date.UTC(2026, 9, 2) }); tree.set('/Budget.xlsx', { data: Buffer.alloc(400, 66), m: Date.UTC(2026, 9, 3) });
+const dav = await startDav();
+/* mock Google: token endpoint + Drive API */
+const gcalls = []; const google = http.createServer(async (req, res) => {
+  const u = new URL(req.url, 'http://x'); const chunks = []; for await (const c of req) chunks.push(c); const body = Buffer.concat(chunks).toString(); gcalls.push(req.method + ' ' + u.pathname + u.search);
+  const send = (c, o) => { res.writeHead(c, { 'content-type': 'application/json' }); res.end(JSON.stringify(o)); };
+  if (u.pathname === '/token') { const p = new URLSearchParams(body); return send(200, { access_token: 'ya29.test', refresh_token: p.get('grant_type') === 'authorization_code' ? 'r-token' : undefined, expires_in: 3600, id_token: 'x.' + Buffer.from(JSON.stringify({ email: 'anand@gmail.com' })).toString('base64url') + '.y' }); }
+  if (req.headers.authorization !== 'Bearer ya29.test') return send(401, { error: { message: 'no' } });
+  if (u.pathname === '/drive/v3/files') { const q = u.searchParams.get('q') || ''; if (q.includes("'root' in parents")) return send(200, { files: [{ id: 'F1', name: 'Clients', mimeType: 'application/vnd.google-apps.folder', modifiedTime: '2026-10-10T10:00:00Z' }, { id: 'D1', name: 'Quarter plan', mimeType: 'application/vnd.google-apps.document', modifiedTime: '2026-10-11T10:00:00Z' }, { id: 'T1', name: 'notes.txt', mimeType: 'text/plain', size: '12', modifiedTime: '2026-10-12T10:00:00Z' }] }); return send(200, { files: [{ id: 'T2', name: 'inner.txt', mimeType: 'text/plain', size: '5' }] }); }
+  if (u.pathname === '/drive/v3/files/T1' && u.searchParams.get('alt') === 'media') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('google text'); }
+  if (u.pathname === '/drive/v3/files/T1') return send(200, { id: 'T1', name: 'notes.txt', mimeType: 'text/plain', size: '12' });
+  if (u.pathname === '/drive/v3/files/D1/export') { res.writeHead(200, { 'content-type': 'application/octet-stream' }); return res.end('DOCXBYTES'); }
+  if (u.pathname === '/drive/v3/files/D1') return send(200, { id: 'D1', name: 'Quarter plan', mimeType: 'application/vnd.google-apps.document' });
+  send(404, { error: { message: 'nope' } });
+});
+await new Promise((r) => google.listen(0, '127.0.0.1', r)); const gb = 'http://127.0.0.1:' + google.address().port;
+/* mock LLM */
+const seen = []; const llm = http.createServer(async (req, res) => { const chunks = []; for await (const c of req) chunks.push(c); const b = JSON.parse(Buffer.concat(chunks).toString() || '{}'); seen.push(b); const last = b.messages[b.messages.length - 1].content; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ model: 'm', choices: [{ message: { role: 'assistant', content: /open notes/i.test(last) ? 'Opening Notes.\nACTION: open notes' : 'The file says the truck is late.' } }] })); });
+await new Promise((r) => llm.listen(0, '127.0.0.1', r));
+const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-dk-')); const port = 20000 + Math.floor(Math.random() * 20000);
+const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', SESSION_SECRET: 'x'.repeat(40), DAV_URL: `http://127.0.0.1:${dav.address().port}/dav`, DAV_USER: 'anand@example.com', DAV_PASSWORD: 'dav-secret', GOOGLE_CLIENT_ID: 'cid', GOOGLE_CLIENT_SECRET: 'sec', GDRIVE_API_BASE: gb, GOOGLE_OAUTH_TOKEN: gb + '/token', GOOGLE_OAUTH_AUTH: gb + '/auth', LLM_BASE_URL: 'http://127.0.0.1:' + llm.address().port + '/v1', LLM_API_KEY: 'k', LLM_MODEL: 'm' } });
+let log = ''; srv.stdout.on('data', (d) => (log += d)); srv.stderr.on('data', (d) => (log += d));
+const B = `http://127.0.0.1:${port}`;
+for (let i = 0; i < 50; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
+let pass = 0, failed = 0; const t = async (n, f) => { try { await f(); pass++; console.log('ok   ' + n); } catch (e) { failed++; console.log('FAIL ' + n + '\n     ' + (e.stack || e).toString().split('\n').slice(0, 4).join('\n     ')); } };
+const browser = await chromium.launch({ args: ['--no-sandbox'] }); const errs = [];
+const shot = async (p, n) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, n + '.png') }); } };
+try {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 860 }, colorScheme: 'dark' });
+  await ctx.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
+  const p = await ctx.newPage(); p.setDefaultTimeout(6000); p.on('pageerror', (e) => errs.push(e.message)); p.on('dialog', (d) => d.accept('Reports'));
+  await p.goto(B + '/'); await p.waitForSelector('#rail .nav');
+
+  await t('Desktop button sits next to the logo and opens the desktop; the OS is unchanged', async () => {
+    assert.equal(await p.locator('#top .deskbtn').count(), 1); assert.equal(await p.locator('#rail .nav').count() >= 8, true);
+    await p.click('#top .deskbtn'); await p.waitForSelector('#desk:not([hidden])'); assert.match(p.url(), /#desktop$/); assert.ok(await p.locator('.dk-task').isVisible()); assert.match(await p.locator('#dkclock').innerText(), /^\d\d\/\d\d\/\d{4} \d\d:\d\d$/); await shot(p, 'desktop-home');
+  });
+  await t('Start menu lists apps by category and opens an app in a window', async () => {
+    await p.click('.dk-start'); await p.waitForSelector('#dkmenu:not([hidden])'); assert.ok(await p.locator('.dk-mc').count() >= 2); await shot(p, 'desktop-start');
+    await p.fill('#dkq', 'notes'); await p.click('#dkmenu [data-dk="app"][data-s="notes"]'); await p.waitForSelector('.dkw iframe[src^="/apps/notes/"]'); assert.ok(await p.locator('#dkmenu').isHidden()); assert.equal(await p.locator('.dk-rb').count(), 1);
+  });
+  await t('windows drag, resize, maximise, minimise and restore from the taskbar', async () => {
+    const w = p.locator('.dkw').first(); const before = await w.boundingBox(); const bar = await p.locator('.dkw-bar').first().boundingBox();
+    await p.mouse.move(bar.x + 200, bar.y + 15); await p.mouse.down(); await p.mouse.move(bar.x + 320, bar.y + 95, { steps: 4 }); await p.mouse.up(); const moved = await w.boundingBox(); assert.ok(moved.x > before.x + 80 && moved.y > before.y + 50);
+    const rz = await p.locator('.dkw .rz-br').first().boundingBox(); await p.mouse.move(rz.x + 5, rz.y + 5); await p.mouse.down(); await p.mouse.move(rz.x - 120, rz.y - 90, { steps: 4 }); await p.mouse.up(); const small = await w.boundingBox(); assert.ok(small.width < moved.width - 80);
+    await p.click('[data-dk="wmax"]'); const mx = await w.boundingBox(); assert.ok(mx.width >= 1430); await p.click('[data-dk="wmax"]');
+    await p.click('[data-dk="wmin"]'); assert.ok(await w.isHidden()); await p.click('.dk-rb'); assert.ok(await w.isVisible());
+  });
+  await t('Files shows Cloudreve Drive, opens folders, text and image viewers', async () => {
+    await p.click('.dk-pin[data-w="files"]'); await p.waitForSelector('.dk-t tbody tr'); let tx = await p.locator('.dkw.act').innerText(); assert.match(tx, /Notes\.md/); assert.match(tx, /Photos/); await shot(p, 'desktop-files');
+    await p.dblclick('tr:has-text("Photos")'); await p.waitForFunction(() => /Sunset\.png/.test(document.querySelector('.dkw.act').innerText)); await p.dblclick('tr:has-text("Sunset.png")'); await p.waitForSelector('.dk-vw img', { state: 'attached' }); await p.click('.dkw.act [data-dk="wclose"]');
+    await p.click('.dkw-t:has-text("Files") >> xpath=ancestor::div[contains(@class,"dkw")]'); await p.click('[data-dk="fcrumb"] >> nth=0'); await p.waitForFunction(() => /Notes\.md/.test(document.querySelector('.dkw.act').innerText));
+    await p.dblclick('tr:has-text("Notes.md")'); await p.waitForFunction(() => document.querySelector('.dk-ta') && /Truck T412/.test(document.querySelector('.dk-ta').value)); await shot(p, 'desktop-editor');
+    await p.fill('.dk-ta', '# Notes\nTruck T412 arrived'); await p.click('[data-dk="vsave"]'); await p.waitForFunction(() => /Saved to Drive/.test(document.body.innerText)); assert.match(tree.get('/Notes.md').data.toString(), /arrived/);
+  });
+  await t('Files: new folder, rename, delete, upload on Cloudreve', async () => {
+    const fw = p.locator('.dkw:has(.dk-fm)').first(); await fw.locator('.dkw-bar').click(); await p.click('.dkw:has(.dk-fm) [data-dk="fnew"]'); await p.fill('.dk-dlgi', 'Reports'); await p.keyboard.press('Enter'); await p.waitForFunction(() => /Reports/.test(document.querySelector('.dkw.act').innerText)); assert.ok(tree.has('/Reports'));
+    await p.click('.dkw.act tr:has-text("Reports")'); await p.click('.dkw.act [data-dk="fren"]'); await p.fill('.dk-dlgi', 'Reports2'); await p.keyboard.press('Enter'); await p.waitForFunction(() => /Reports2/.test(document.querySelector('.dkw.act').innerText)); assert.ok(tree.has('/Reports2'));
+    await p.setInputFiles('.dkw.act input[type=file]', { name: 'up.txt', mimeType: 'text/plain', buffer: Buffer.from('uploaded') }); await p.waitForFunction(() => /up\.txt/.test(document.querySelector('.dkw.act').innerText)); assert.ok(tree.has('/up.txt'));
+    await p.click('.dkw.act tr:has-text("up.txt")'); await p.click('.dkw.act [data-dk="fdel"]'); await p.click('.dk-dlg button.primary'); await p.waitForFunction(() => !/up\.txt/.test(document.querySelector('.dkw.act').innerText)); assert.equal(tree.has('/up.txt'), false);
+  });
+  await t('Google Drive: connect, browse, preview, import into Cloudreve', async () => {
+    const r0 = await ctx.request.get(B + '/api/gdrive/status'); assert.equal((await r0.json()).connected, false);
+    const auth = await ctx.request.get(B + '/api/gdrive/auth', { maxRedirects: 0 }); assert.equal(auth.status(), 302); const loc = new URL(auth.headers().location); assert.equal(loc.searchParams.get('client_id'), 'cid'); assert.match(loc.searchParams.get('scope'), /drive\.readonly/);
+    const cb = await ctx.request.get(B + '/auth/google/callback?code=abc&state=' + encodeURIComponent(loc.searchParams.get('state')), { maxRedirects: 0 }); assert.equal(cb.status(), 302); assert.equal((await (await ctx.request.get(B + '/api/gdrive/status')).json()).email, 'anand@gmail.com');
+    assert.equal((await ctx.request.get(B + '/auth/google/callback?code=abc&state=bad', { maxRedirects: 0 })).status(), 400);
+    await p.click('.dk-pin[data-w="files"]'); await p.waitForSelector('.dkw.act .dk-side'); await p.click('.dkw.act [data-dk="fsrc"][data-s="google"]'); await p.waitForFunction(() => /Quarter plan/.test(document.querySelector('.dkw.act').innerText)); await shot(p, 'desktop-google');
+    await p.dblclick('tr:has-text("Clients")'); await p.waitForFunction(() => /inner\.txt/.test(document.querySelector('.dkw.act').innerText)); await p.click('.dkw.act [data-dk="fup"]'); await p.waitForFunction(() => /Quarter plan/.test(document.querySelector('.dkw.act').innerText));
+    await p.click('.dkw.act tr:has-text("Quarter plan")'); await p.click('.dkw.act [data-dk="fimp"]'); await p.waitForFunction(() => /Saved to Drive: Google Drive/.test(document.body.innerText)); assert.equal(tree.get('/Google Drive/Quarter plan.docx').data.toString(), 'DOCXBYTES');
+    await p.dblclick('tr:has-text("notes.txt")'); await p.waitForFunction(() => document.querySelector('.dkw.act .dk-ta') && document.querySelector('.dkw.act .dk-ta').value === 'google text');
+    assert.equal((await ctx.request.get(B + '/api/gdrive/file?id=bad%20id')).status(), 400);
+  });
+  await t('Assistant answers about a selected file and can open an app', async () => {
+    await p.click('.dkw.act [data-dk="vai"]'); await p.waitForSelector('.dk-att'); await p.fill('#dkain', 'What does it say?'); await p.press('#dkain', 'Enter'); await p.waitForFunction(() => /truck is late/.test(document.querySelector('.dk-aim').innerText)); await shot(p, 'desktop-ai');
+    const last = seen[seen.length - 1]; assert.match(last.messages[0].content, /google text/); assert.match(last.messages[0].content, /Anands Desktop/);
+    const before = await p.locator('.dkw iframe[src^="/apps/notes/"]').count(); await p.fill('#dkain', 'open notes'); await p.press('#dkain', 'Enter'); await p.waitForFunction((n) => document.querySelectorAll('.dkw iframe[src^="/apps/notes/"]').length > n, before); assert.doesNotMatch(await p.locator('.dk-aim').innerText(), /ACTION/);
+  });
+  await t('refresh keeps the desktop, Exit returns to the OS, Back works', async () => {
+    await p.reload(); await p.waitForSelector('#desk:not([hidden])'); await p.click('.dk-exit'); await p.waitForSelector('#desk', { state: 'hidden' }); assert.ok(await p.locator('#rail').isVisible()); assert.equal(await p.locator('#view h1').first().innerText().then((x) => x.length > 0), true);
+  });
+  await t('mobile: desktop windows open maximised', async () => {
+    const m = await browser.newContext({ viewport: { width: 390, height: 780 }, colorScheme: 'dark' }); await m.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
+    const q = await m.newPage(); await q.goto(B + '/'); await q.waitForSelector('#top .deskbtn'); await q.click('#top .deskbtn'); await q.waitForSelector('#desk:not([hidden])');  await q.click('.dk-ic[data-w="files"]', { timeout: 5000 }); await q.waitForSelector('.dkw');
+    const bb = await q.locator('.dkw').boundingBox(); assert.ok(bb.width >= 385); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await shot(q, 'desktop-mobile'); await m.close();
+  });
+  await t('no page errors', async () => assert.deepEqual(errs, []));
+} finally { await browser.close(); srv.kill(); dav.close(); google.close(); llm.close(); }
+console.log(`\n${pass} passed, ${failed} failed`); if (failed) console.log(log.slice(-1500)); process.exit(failed ? 1 : 0);

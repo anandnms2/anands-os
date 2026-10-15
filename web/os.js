@@ -338,6 +338,7 @@ function saveGroup(k, after) {
   if (k === 'coolify') body.coolify = { url: v('s_cu'), token: v('s_ct') };
   if (k === 'vault') body.vault = { url: v('s_vu') };
   if (k === 'status' || k === 'vpn' || k === 'cards') body[k] = { url: v('s_' + k + 'u'), user: v('s_' + k + 'n'), pass: v('s_' + k + 'p') };
+  if (k === 'google') body.google = { clientId: v('s_gid'), clientSecret: v('s_gsec') };
   if (k === 'pulse') body.pulse = { url: v('s_pulseu'), token: v('s_pulset') };
   if (k === 'dav') body.dav = { url: v('s_du'), user: v('s_dn'), pass: v('s_dp') };
   if (k === 'llm') body.llm = { base: v('s_lb'), key: v('s_lk'), model: v('s_lm') };
