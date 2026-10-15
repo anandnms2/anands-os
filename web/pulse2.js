@@ -41,7 +41,7 @@
   setInterval(function () { if (S.view === 'pulse' && !document.hidden && on() && P.boot) load(true); }, 60000);
 
   /* ---------- shell ---------- */
-  function setView(v) { P.view = v; A.LS.set('pxview', v); P.reading = false; redraw(); loadView(); }
+  function setView(v) { P.view = v; P.sel = null; P.selX = null; P.item = null; A.LS.set('pxview', v); P.reading = false; redraw(); loadView(); }
   function head() {
     var m = P.boot && P.boot.settings && P.boot.settings.mode === 'work' ? 'work' : 'personal';
     var unread = items().filter(function (i) { return !i.read && i.cls !== 'noise' && !i.handled; }).length;
@@ -64,6 +64,27 @@
     return h + '</div>';
   }
 
+  /* ---------- list on the left, the communication behind it on the right (Today, Tasks, Waiting, like Inbox) ---------- */
+  function refOf(v) { if (!v) return ''; if (typeof v === 'object') return refOf(v.id || v.ref); v = String(v); return /^[ew]\d{1,12}$/.test(v) ? v : ''; }
+  function linkRef(x) {
+    var r = ''; ['src', 'ref', 'item', 'itemId', 'source', 'msg', 'from_item'].some(function (k) { r = refOf(x[k]); return !!r; });
+    if (r && (find(r) || true)) return r;
+    var who = String(x.who || '').toLowerCase(), t = String(x.title || '').toLowerCase().slice(0, 24), hit = null;
+    items().some(function (i) { var hay = String((i.subj || '') + ' ' + (i.sum || '') + ' ' + (i.snip || '')).toLowerCase(); if ((t && t.length > 6 && hay.indexOf(t) >= 0) || (who && who.length > 2 && String(i.from || '').toLowerCase().indexOf(who) >= 0 && x.kind !== 'task')) { hit = i; return true; } return false; });
+    return hit ? hit.id : '';
+  }
+  function split(left, above) { return (above || '') + '<div class="px' + (P.reading ? ' reading' : '') + '"><div class="pxlist"><div id="pxl" class="pxrows pxflat">' + left + '</div></div><div class="pxread" id="pxr">' + readHtml() + '</div></div>'; }
+  function detailHtml() {
+    var x = P.selX; if (!x) return ''; var isT = x.k === 'task', o = x.o;
+    return '<div class="pxacts">' + backBtn() + '<b class="pxct">' + esc(o.title || '') + '</b></div><div class="pxhd" style="padding:16px"><div class="note">' + esc(isT ? 'Task' : 'Waiting on someone') + (o.due ? ' · due ' + esc(o.due) : '') + (o.who || o.where ? ' · ' + esc(o.who || o.where) : '') + (o.pri ? ' · ' + esc(o.pri) : '') + '</div><p class="note" style="margin-top:14px">No message is linked to this ' + (isT ? 'task' : 'item') + ', so there is nothing to show here. Tasks made from an email or WhatsApp message open that message.</p></div>';
+  }
+  function waitsArr() { var w = Array.isArray(P.waits) ? P.waits : (P.waits && Array.isArray(P.waits.waits) ? P.waits.waits : null); return w && w.length ? w : ((P.boot && P.boot.waitsList) || []); }
+  function pick(kind, id) {
+    var list = kind === 'task' ? (P.boot.tasks || []) : waitsArr(), o = list.filter(function (x) { return String(x.id) === String(id); })[0]; if (!o) return;
+    var ref = linkRef(o); P.selX = { k: kind, id: id, o: o }; P.reading = true;
+    if (ref && (find(ref))) return void open(ref); P.sel = null; pl(); pr();
+  }
+
   /* ---------- today ---------- */
   function rowItem(i) { return '<button class="prow" data-px="open" data-id="' + esc(i.id) + '"><div style="min-width:0;flex:1"><b style="overflow-wrap:anywhere">' + esc(i.sum || i.subj || String(i.text || i.snip || '').slice(0, 100)) + '</b><div class="note">' + esc(i.from || '') + ' · ' + esc(chName(i.ch)) + ' · ' + esc(tfmt(i.ts)) + '</div></div>' + (i.cls === 'urgent' ? '<span class="pill bad">Urgent</span>' : '') + '</button>'; }
   function sec(h, body, n) { return '<h2 style="font-size:19px;margin:22px 0 10px">' + h + (n ? ' <span class="note" style="font-size:14px">' + n + '</span>' : '') + '</h2>' + body; }
@@ -75,11 +96,14 @@
     var evs = (b.events || []).filter(function (e) { return e.d === td; }), wl = b.waitsList || [];
     var kp = '<div class="kpis"><div class="card kpi"><div class="stat"><span class="n">' + unread + '</span><span class="l">unread</span></div></div><div class="card kpi"><div class="stat"><span class="n" style="color:' + (urgent.length ? 'var(--bad)' : 'inherit') + '">' + urgent.length + '</span><span class="l">urgent</span></div></div><div class="card kpi"><div class="stat"><span class="n">' + over.length + '</span><span class="l">overdue tasks</span></div></div><div class="card kpi"><div class="stat"><span class="n">' + evs.length + '</span><span class="l">events today</span></div></div></div>';
     var card = function (inner) { return '<div class="card" style="padding:4px 16px">' + inner + '</div>'; };
-    var tr = function (t) { return '<div class="prow"><div style="flex:1;min-width:0"><b>' + esc(t.title) + '</b><div class="note">' + esc(t.due) + (t.src ? ' · from a message' : '') + '</div></div>' + (t.pri === 'urgent' || t.pri === 'high' ? '<span class="pill bad">' + esc(t.pri) + '</span>' : '') + '</div>'; };
-    return kp + sec('Needs you', urgent.length || reply.length ? card(urgent.slice(0, 8).concat(reply.slice(0, 6)).map(rowItem).join('')) : '<p class="note">Nothing is waiting for you.</p>', urgent.length + reply.length) +
+    var tr = function (t) { return '<div class="prow' + (P.selX && P.selX.id === t.id ? ' on' : '') + '" data-px="lnk" data-k="task" data-id="' + esc(t.id) + '" style="cursor:pointer"><div style="flex:1;min-width:0"><b>' + esc(t.title) + '</b><div class="note">' + esc(t.due) + (t.src ? ' · from a message' : '') + '</div></div>' + (t.pri === 'urgent' || t.pri === 'high' ? '<span class="pill bad">' + esc(t.pri) + '</span>' : '') + '</div>'; };
+    return split(todayLeft(urgent, reply, over, tdy, evs, wl, card, tr), kp);
+  }
+  function todayLeft(urgent, reply, over, tdy, evs, wl, card, tr) {
+    return sec('Needs you', urgent.length || reply.length ? card(urgent.slice(0, 8).concat(reply.slice(0, 6)).map(rowItem).join('')) : '<p class="note">Nothing is waiting for you.</p>', urgent.length + reply.length) +
       sec('Tasks', over.length + tdy.length ? card(over.concat(tdy).slice(0, 10).map(tr).join('')) : '<p class="note">No tasks due today.</p>') +
       sec('Today', evs.length ? card(evs.map(function (e) { return '<div class="prow"><div style="flex:1"><b>' + esc(e.title) + '</b><div class="note">' + (e.allDay ? 'All day' : hh(e.s) + ' - ' + hh(e.e)) + (e.loc ? ' · ' + esc(e.loc) : '') + '</div></div></div>'; }).join('')) : '<p class="note">No events today.</p>') +
-      (wl.length ? sec('Waiting on others', card(wl.slice(0, 6).map(function (w) { return '<div class="prow"><div style="flex:1"><b>' + esc(w.title) + '</b><div class="note">' + esc(w.who || w.where || '') + '</div></div>' + (w.overdue ? '<span class="pill warn">Overdue</span>' : '') + '</div>'; }).join('')), wl.length) : '') +
+      (wl.length ? sec('Waiting on others', card(wl.slice(0, 6).map(function (w) { return '<div class="prow' + (P.selX && P.selX.id === w.id ? ' on' : '') + '" data-px="lnk" data-k="wait" data-id="' + esc(w.id) + '" style="cursor:pointer"><div style="flex:1"><b>' + esc(w.title) + '</b><div class="note">' + esc(w.who || w.where || '') + '</div></div>' + (w.overdue ? '<span class="pill warn">Overdue</span>' : '') + '</div>'; }).join('')), wl.length) : '') +
       '';
   }
   function hh(h) { var x = Math.floor(h), m = Math.round((h - x) * 60); return ('0' + x).slice(-2) + ':' + ('0' + m).slice(-2); }
@@ -114,11 +138,12 @@
     return '<form data-px="search" class="toolbar" style="margin-bottom:12px"><div class="search" style="flex:1">' + ic('search') + '<input class="input" id="pxq" type="search" placeholder="Search mail and WhatsApp (from:, is:unread, after:7d, a plate or reference)" value="' + esc(P.q) + '" aria-label="Search Pulse"></div><button class="btn" type="submit">Search</button>' + (P.sres ? '<button class="btn" type="button" data-px="clearq">Clear</button>' : '') + '</form>' +
       '<div class="px' + (P.reading ? ' reading' : '') + '"><div class="pxlist"><div class="pxfilters">' + chips() + '</div><div id="pxl" class="pxrows">' + listHtml() + '</div></div><div class="pxread" id="pxr">' + readHtml() + '</div></div>';
   }
-  function pl() { var e = $('#pxl'); if (e) e.innerHTML = listHtml(); }
+  function pl() { var e = $('#pxl'); if (!e) return; if (P.view === 'inbox') e.innerHTML = listHtml(); else redraw(); }
   function pr() { var e = $('#pxr'); if (!e) return redraw(); e.innerHTML = P.view === 'chats' ? chatPane() : readHtml(); var w = $('.px'); if (w) w.classList.toggle('reading', P.reading); var c = $('#pxchat'); if (c && !(P.chat && P.chat.keep)) c.scrollTop = c.scrollHeight; if (P.chat) P.chat.keep = false; }
   function backBtn() { return '<button class="btn sm pxback" data-px="back">' + ic('back') + ' Back</button>'; }
   function chatPane() { if (!P.chat) return '<div class="empty" style="padding:60px 20px"><h2>Select a chat</h2></div>'; var by = items().filter(function (i) { return i.chat && i.g === P.chat.g; })[0] || {}; return chatHtml({ g: P.chat.g, ch: by.ch || '' }, backBtn()); }
   function readHtml() {
+    if (P.selX && !P.sel) return detailHtml();
     var i = P.sel && (find(P.sel) || (P.sres && P.sres.items.filter(function (x) { return x.id === P.sel; })[0]));
     if (!i) return '<div class="empty" style="padding:60px 20px"><h2>Select a message</h2><p>Mail opens here like Gmail. WhatsApp opens as the chat.</p></div>';
     var back = '<button class="btn sm pxback" data-px="back">' + ic('back') + ' Back</button>';
@@ -204,11 +229,11 @@
   function tasks() {
     var all = (P.boot.tasks || []), open = all.filter(function (t) { return t.status !== 'done'; }), done = all.filter(function (t) { return t.status === 'done'; });
     var grp0 = [['overdue', 'Overdue'], ['today', 'Today'], ['soon', 'Later']];
-    var row = function (t) { return '<div class="prow"><input type="checkbox" data-px="tdone" data-id="' + esc(t.id) + '"' + (t.status === 'done' ? ' checked' : '') + ' aria-label="Done"><div style="flex:1;min-width:0;margin-left:10px"><b style="' + (t.status === 'done' ? 'text-decoration:line-through;color:var(--muted)' : '') + ';overflow-wrap:anywhere">' + esc(t.title) + '</b><div class="note">' + esc(t.due) + ' · ' + esc(t.dom) + (t.src ? ' · from a message' : '') + '</div></div>' + (t.pri === 'urgent' || t.pri === 'high' ? '<span class="pill bad">' + esc(t.pri) + '</span>' : '') + '<button class="btn sm" data-px="tdel" data-id="' + esc(t.id) + '" aria-label="Delete task">Delete</button></div>'; };
+    var row = function (t) { return '<div class="prow' + (P.selX && P.selX.id === t.id ? ' on' : '') + '" data-px="lnk" data-k="task" data-id="' + esc(t.id) + '" style="cursor:pointer"><input type="checkbox" data-px="tdone" data-id="' + esc(t.id) + '"' + (t.status === 'done' ? ' checked' : '') + ' aria-label="Done"><div style="flex:1;min-width:0;margin-left:10px"><b style="' + (t.status === 'done' ? 'text-decoration:line-through;color:var(--muted)' : '') + ';overflow-wrap:anywhere">' + esc(t.title) + '</b><div class="note">' + esc(t.due) + ' · ' + esc(t.dom) + (t.src ? ' · from a message' : '') + '</div></div>' + (t.pri === 'urgent' || t.pri === 'high' ? '<span class="pill bad">' + esc(t.pri) + '</span>' : '') + '<button class="btn sm" data-px="tdel" data-id="' + esc(t.id) + '" aria-label="Delete task">Delete</button></div>'; };
     var form = P.adding ? '<form data-px="addtask" class="card" style="display:grid;gap:10px;margin-bottom:16px"><div class="field"><label for="nt">Task</label><input class="input" id="nt" autocomplete="off" placeholder="What needs doing?"></div><div class="icform"><div class="field"><label for="nd">Due date</label><input class="input" id="nd" type="date"></div><div class="field"><label for="np">Priority</label><select class="input" id="np"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option><option value="low">Low</option></select></div><div class="field"><label for="ndm">Area</label><select class="input" id="ndm"><option' + (work() ? '' : ' selected') + '>Personal</option><option' + (work() ? ' selected' : '') + '>Work</option></select></div></div><div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn" type="button" data-px="canceltask">Cancel</button><button class="btn primary" type="submit">Add task</button></div></form>' : '';
-    return '<div class="toolbar"><button class="btn primary" data-px="newtask">New task</button><label class="note" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-px="showdone"' + (P.tdone ? ' checked' : '') + '> Show completed</label></div>' + form +
+    return split('<div class="toolbar" style="padding:10px 12px 0"><button class="btn primary" data-px="newtask">New task</button><label class="note" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-px="showdone"' + (P.tdone ? ' checked' : '') + '> Show completed</label></div>' + form +
       grp0.map(function (g) { var l = open.filter(function (t) { return t.key === g[0]; }); return l.length ? sec(g[1], '<div class="card" style="padding:4px 16px">' + l.map(row).join('') + '</div>', l.length) : ''; }).join('') + (!open.length ? '<div class="empty"><h2>No open tasks</h2></div>' : '') +
-      (P.tdone && done.length ? sec('Completed', '<div class="card" style="padding:4px 16px">' + done.map(row).join('') + '</div>', done.length) : '');
+      (P.tdone && done.length ? sec('Completed', '<div class="card" style="padding:4px 16px">' + done.map(row).join('') + '</div>', done.length) : ''));
   }
 
   /* ---------- calendar ---------- */
@@ -225,8 +250,8 @@
 
   /* ---------- waiting, tracked, lists, notes, sources ---------- */
   function waiting() {
-    var w = P.waits || (P.boot.waitsList || []); if (P.waits && P.waits.error) return '<div class="banner"><i class="dot bad"></i><span>' + esc(P.waits.error) + '</span></div>'; w = Array.isArray(w) ? w.filter(function (x) { return x.status !== 'done' && x.status !== 'dismissed'; }) : [];
-    return w.length ? '<div class="card" style="padding:4px 16px">' + w.map(function (x) { return '<div class="prow"><div style="flex:1;min-width:0"><b style="overflow-wrap:anywhere">' + esc(x.title) + '</b><div class="note">' + esc(x.who || x.where || '') + (x.askedAt ? ' · asked ' + esc(tfmt(new Date(x.askedAt).toISOString().replace('T', ' ').slice(0, 16))) : '') + '</div></div>' + (x.overdue ? '<span class="pill warn">Overdue</span>' : '') + (x.kind === 'delegated' ? '<span class="pill">Delegated</span>' : '') + '</div>'; }).join('') + '</div>' : '<div class="empty"><h2>Nobody owes you anything</h2></div>';
+    var w = waitsArr(); if (P.waits && P.waits.error) return '<div class="banner"><i class="dot bad"></i><span>' + esc(P.waits.error) + '</span></div>'; w = Array.isArray(w) ? w.filter(function (x) { return x.status !== 'done' && x.status !== 'dismissed'; }) : [];
+    return split(w.length ? '<div class="card" style="padding:4px 16px;margin:10px 12px">' + w.map(function (x) { return '<div class="prow' + (P.selX && String(P.selX.id) === String(x.id) ? ' on' : '') + '" data-px="lnk" data-k="wait" data-id="' + esc(x.id) + '" style="cursor:pointer"><div style="flex:1;min-width:0"><b style="overflow-wrap:anywhere">' + esc(x.title) + '</b><div class="note">' + esc(x.who || x.where || '') + (x.askedAt ? ' · asked ' + esc(tfmt(new Date(x.askedAt).toISOString().replace('T', ' ').slice(0, 16))) : '') + '</div></div>' + (x.overdue ? '<span class="pill warn">Overdue</span>' : '') + (x.kind === 'delegated' ? '<span class="pill">Delegated</span>' : '') + '</div>'; }).join('') + '</div>' : '<div class="empty"><h2>Nobody owes you anything</h2></div>');
   }
   function tracked() {
     if (P.entSel) { var d = P.entD; return '<div class="winbar"><button class="btn sm" data-px="entback">' + ic('back') + ' All</button><b>' + esc((d && d.name) || P.entSel) + '</b></div>' + (d ? (d.error ? '<div class="banner"><i class="dot bad"></i><span>' + esc(d.error) + '</span></div>' : '<div class="card" style="padding:4px 16px">' + ((d.timeline || []).map(function (e) { return '<div class="prow"><div style="flex:1;min-width:0"><b>' + esc(e.who || e.from || '') + '</b> <span class="note">' + esc(e.where || '') + ' · ' + esc(tfmt(e.ts)) + '</span><div style="overflow-wrap:anywhere">' + esc(e.text || e.snip || e.sum || '') + '</div></div></div>'; }).join('') || '<p class="note">Nothing yet.</p>') + '</div>') : '<p class="note">Loading...</p>'); }
@@ -254,7 +279,8 @@
     if (a === 'mode') return void mode(el.getAttribute('data-m'));
     if (a === 'filter') { P.filter = el.getAttribute('data-f'); P.sres = null; P.q = ''; return void redraw(); }
     if (a === 'chan') { P.ch = P.ch === el.getAttribute('data-c') ? '' : el.getAttribute('data-c'); return void redraw(); }
-    if (a === 'open') return void open(id);
+    if (a === 'lnk') return void pick(el.getAttribute('data-k'), id);
+    if (a === 'open') { P.selX = null; return void open(id); }
     if (a === 'back') { P.reading = false; var w = $('.px'); if (w) w.classList.remove('reading'); return; }
     if (a === 'clearq') { P.q = ''; P.sres = null; return void redraw(); }
     if (a === 'older') { var last = items()[items().length - 1]; if (!last || P.olderBusy) return; P.olderBusy = true; pl(); return void s('/items?limit=100&before=' + last.at).then(function (d) { P.boot.items = P.boot.items.concat(d.items || []); P.more = !!d.more; }).catch(function (e) { toast(e.message); }).then(function () { P.olderBusy = false; pl(); }); }

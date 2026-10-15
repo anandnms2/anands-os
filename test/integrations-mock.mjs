@@ -142,7 +142,7 @@ export async function startPulse() {
 }
 
 /* ---- Pulse session API ---- */
-export const psState = { logins: 0, calls: [], mode: 'personal', tasks: [{ id: 't1', title: 'Approve fuel advance', status: 'open', key: 'today', due: 'Today', dom: 'work', pri: 'high' }], read: [] };
+export const psState = { logins: 0, calls: [], mode: 'personal', tasks: [{ id: 't1', title: 'Approve fuel advance', status: 'open', key: 'today', due: 'Today', dom: 'work', pri: 'high', src: 'e12' }], read: [] };
 export async function startPulseSession() {
   const items = () => [
     { id: 'e12', ch: 'EO', from: 'Kilimo Logistics', subj: 'Invoice 5521 overdue', snip: 'Please settle', text: 'Please settle', ts: '2026-10-15 08:10', read: psState.read.includes('e12'), cls: 'urgent', reply: true, att: [{ name: 'inv.pdf' }] },

@@ -781,3 +781,5 @@ html.embed #view{padding-bottom:0}
 .dk-cr em{font-size:11.5px;color:var(--muted);font-style:normal;white-space:nowrap}
 .dk-cr .btn.on{background:var(--accent-soft);border-color:var(--accent)}
 @media (max-width:620px){.dk-mg{grid-template-columns:1fr}}
+
+.pxflat{padding:0 12px 12px}.pxflat>h2:first-child{margin-top:12px!important}.pxflat .toolbar{padding:10px 0 0!important}.prow.on{background:var(--accent-soft);border-radius:8px}.pxflat .prow[data-px=lnk]:hover{background:var(--surface2);border-radius:8px}

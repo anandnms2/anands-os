@@ -68,6 +68,14 @@ try {
   await t('Pulse: WhatsApp thread shows bubbles', async () => {
     await p.click('[data-px="view"][data-v="chats"]'); await p.waitForSelector('[data-px="chat"]'); await p.click('[data-px="chat"][data-g="g7"]'); await p.waitForSelector('.cb'); const txt = await p.locator('#view').innerText(); assert.match(txt, /Truck stuck at border/); assert.match(txt, /On it/); await shot(p, 'pulse-whatsapp');
   });
+  await t('Pulse: Today, Tasks and Waiting show the linked communication on the right, like Inbox', async () => {
+    await nav('pulse'); await p.waitForSelector('[data-px="view"][data-v="tasks"]');
+    await p.click('[data-px="view"][data-v="tasks"]'); await p.waitForSelector('.px .pxflat [data-px="lnk"][data-k="task"]'); assert.ok(await p.locator('#pxr').isVisible());
+    await p.click('.pxflat [data-px="lnk"][data-k="task"] >> nth=0'); await p.waitForSelector('#pxr iframe.pxframe'); assert.match(await p.locator('#pxr iframe.pxframe').getAttribute('src'), /mailhtml/);
+    await p.click('[data-px="view"][data-v="waiting"]'); await p.waitForSelector('.px .pxflat [data-k="wait"]'); await p.click('.pxflat [data-k="wait"] >> nth=0'); await p.waitForSelector('#pxr .pxacts'); await shot(p, 'pulse-waiting-split');
+    await p.click('[data-px="view"][data-v="today"]'); await p.waitForSelector('.px .pxflat [data-k="task"]'); await p.click('.pxflat [data-k="task"] >> nth=0'); await p.waitForSelector('#pxr iframe.pxframe');
+    await p.click('[data-px="view"][data-v="inbox"]');
+  });
   await t('Pulse: tasks add, complete, delete', async () => {
     await p.click('[data-px="view"][data-v="tasks"]'); await p.waitForFunction(() => /Approve fuel advance/.test(document.querySelector('#view').innerText)); await p.click('[data-px="newtask"]'); await p.fill('#nt', 'Call Joseph'); await p.press('#nt', 'Enter');
     await p.waitForFunction(() => /Call Joseph/.test(document.querySelector('#view').innerText)); assert.equal(psState.lastTask.title, 'Call Joseph'); await p.locator('[data-px="tdone"]').first().check(); await p.waitForTimeout(250); assert.ok(psState.lastTaskPatch);
