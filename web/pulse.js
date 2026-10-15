@@ -50,17 +50,24 @@
     if (tab === 'lists') return get('lists', '/lists', function (d) { I.d.lists = d; });
     if (tab === 'health') return get('health', '/health', function (d) { I.d.health = d; });
   }
-  function onGo(v) { if (v !== 'pulse') return; if (window.AOSPulse2 && window.AOSPulse2.on()) return window.AOSPulse2.onGo(v); if (I.tab !== 'search' && !I.d[I.tab] && !I.busy[I.tab]) load(I.tab); }
+  function onGo(v) { if (v !== 'pulse' || native()) return; if (window.AOSPulse2 && window.AOSPulse2.on()) return window.AOSPulse2.onGo(v); if (I.tab !== 'search' && !I.d[I.tab] && !I.busy[I.tab]) load(I.tab); }
 
   function head(sub) {
     var u = url();
-    return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div><div style="display:flex;gap:10px">' + '<button class="btn" data-pa="refresh">Refresh</button>' + (u ? '<a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Open Pulse ' + ic('ext') + '</a>' : '') + '</div></div>' +
+    return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div><div style="display:flex;gap:10px">' + '<button class="btn" data-pa="refresh">Refresh</button>' + (u ? '<button class="btn" data-pa="nativeon">Pulse app view</button>' : '') + (u ? '<a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Open Pulse ' + ic('ext') + '</a>' : '') + '</div></div>' +
       '<div class="toolbar"><div class="seg" role="tablist">' + TABS.map(function (t) { return '<button data-pa="tab" data-t="' + t[0] + '" aria-pressed="' + (I.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>';
   }
   function fail(key) { var e = I.err[key]; return e ? '<div class="banner"><i class="dot bad"></i><span>' + esc(e) + '</span><button class="btn sm" data-pa="refresh">Try again</button></div>' : ''; }
   function notConnected() { return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div></div><div class="banner"><i class="dot warn"></i><span>Add your Pulse address and a read-only token in Settings. Create the token in Pulse: Settings, Automation, Access for your AI tools.</span></div></div>'; }
 
+  function native() { return !!url() && A.LS.get('pulsenative', true) !== false; }
+  function frameView() {
+    var u = url().replace(/\/+$/, '');
+    return '<div class="wrap appwin" style="display:flex;flex-direction:column;height:100%;max-width:none;padding:0"><div class="winbar" style="padding:8px 14px"><b>Anands Pulse</b><span class="note" style="flex:1">Sign in once inside; it stays signed in.</span><button class="btn sm" data-pa="builtin">Use the built-in view</button><a class="btn sm" href="' + esc(u) + '" target="_blank" rel="noopener">Open in a tab</a></div>' +
+      '<iframe class="appframe" title="Anands Pulse" src="' + esc(u) + '/" allow="clipboard-read; clipboard-write; fullscreen; notifications" style="flex:1;border:0;width:100%"></iframe></div>';
+  }
   function view() {
+    if (native()) return frameView();
     if (window.AOSPulse2 && window.AOSPulse2.on()) return window.AOSPulse2.view();
     if (Object.keys(I.err).some(function (k) { return I.err[k] === 'not_configured'; })) return notConnected();
     var h = head(), t = I.tab, d = I.d;
@@ -115,6 +122,8 @@
     var el = ev.target.closest && ev.target.closest('[data-pa]'); if (!el || el.tagName === 'FORM' || el.tagName === 'INPUT') return;
     var a = el.getAttribute('data-pa'), id = el.getAttribute('data-id');
     if (a === 'tab') { I.tab = el.getAttribute('data-t'); I.chat = null; I.tr = null; A.redraw(); return void (!I.d[I.tab] && load(I.tab)); }
+    if (a === 'builtin') { A.LS.set('pulsenative', false); A.redraw(); return void onGo('pulse'); }
+    if (a === 'nativeon') { A.LS.set('pulsenative', true); return void A.redraw(); }
     if (a === 'refresh') return void (I.chat ? openChat(I.chat) : load(I.tab, true));
     if (a === 'tstatus') { I.tstatus = el.getAttribute('data-s'); return void load('tasks'); }
     if (a === 'chat') return void openChat(id);

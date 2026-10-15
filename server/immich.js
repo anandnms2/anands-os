@@ -1,5 +1,10 @@
 import { Readable } from 'node:stream';
-import { effective } from './config.js';
+import { spawn } from 'node:child_process';
+import fsp from 'node:fs/promises';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { effective, DATA } from './config.js';
 import { json, readJson, readBody, fetchJson, httpError, UUID } from './util.js';
 
 function conn() {
@@ -9,6 +14,35 @@ function conn() {
 }
 const api = (path, init = {}, t) => { const c = conn(); return fetchJson(c.url + '/api' + path, { ...init, headers: { 'x-api-key': c.key, accept: 'application/json', ...(init.headers || {}) } }, t); };
 const post = (path, body) => api(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
+
+/* Pictures and videos the browser cannot show as they are (HEIC, HEVC .mov) are converted here when Immich has no usable preview. */
+const CACHE = path.join(DATA, 'cache', 'media');
+const run = (cmd, args, ms = 60000) => new Promise((ok, no) => { let err = ''; const c = spawn(cmd, args, { stdio: ['ignore', 'ignore', 'pipe'] }); const t = setTimeout(() => { c.kill('SIGKILL'); no(new Error('timed out')); }, ms); c.stderr.on('data', (d) => (err = (err + d).slice(-400))); c.on('error', (e) => { clearTimeout(t); no(e); }); c.on('close', (code) => { clearTimeout(t); code === 0 ? ok() : no(new Error(err || 'exit ' + code)); }); });
+const hdrArg = (c) => 'x-api-key: ' + c.key + '\r\n';
+async function convertedImage(c, id, kind, isVideo) {
+  await fsp.mkdir(CACHE, { recursive: true }); const out = path.join(CACHE, `${id}-${kind}.jpg`), w = kind === 'thumb' ? 360 : 1600;
+  try { await fsp.access(out); return out; } catch {}
+  const tmp = out + '.' + crypto.randomBytes(3).toString('hex') + '.jpg', src = path.join(CACHE, `${id}.src`);
+  try {
+    if (isVideo) await run('ffmpeg', ['-v', 'error', '-y', '-headers', hdrArg(c), '-ss', '1', '-i', `${c.url}/api/assets/${id}/original`, '-frames:v', '1', '-vf', `scale='min(${w},iw)':-2`, tmp]);
+    else {
+      const r = await fetch(`${c.url}/api/assets/${id}/original`, { headers: { 'x-api-key': c.key } }); if (!r.ok) throw httpError(404, 'No such picture');
+      const len = Number(r.headers.get('content-length') || 0); if (len > 80 * 1024 * 1024) throw httpError(413, 'Too large to convert');
+      await fsp.writeFile(src, Buffer.from(await r.arrayBuffer()));
+      try { await run('heif-convert', ['-q', '85', src, tmp]); } catch { await run('ffmpeg', ['-v', 'error', '-y', '-i', src, '-frames:v', '1', '-vf', `scale='min(${w},iw)':-2`, tmp]); }
+      if (w < 1600) { const small = tmp + '.s.jpg'; try { await run('ffmpeg', ['-v', 'error', '-y', '-i', tmp, '-vf', `scale='min(${w},iw)':-2`, small]); await fsp.rename(small, tmp); } catch {} }
+    }
+    await fsp.rename(tmp, out); return out;
+  } catch (e) { throw httpError(e.status || 502, e.status ? e.message : 'This picture could not be converted', 'convert_failed'); }
+  finally { fsp.rm(src, { force: true }).catch(() => {}); fsp.rm(tmp, { force: true }).catch(() => {}); }
+}
+function transcode(c, id, req, res) {
+  const f = spawn('ffmpeg', ['-v', 'error', '-headers', hdrArg(c), '-i', `${c.url}/api/assets/${id}/original`, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '27', '-pix_fmt', 'yuv420p', '-vf', "scale='min(1280,iw)':-2", '-c:a', 'aac', '-b:a', '128k', '-movflags', 'frag_keyframe+empty_moov+default_base_moof', '-f', 'mp4', 'pipe:1'], { stdio: ['ignore', 'pipe', 'ignore'] });
+  let started = false; f.on('error', () => { if (!res.headersSent) { res.writeHead(502, { 'content-type': 'application/json' }); res.end('{"error":"Video conversion is not available on this server"}'); } });
+  f.stdout.once('data', () => { started = true; }); res.writeHead(200, { 'content-type': 'video/mp4', 'cache-control': 'no-store' }); f.stdout.pipe(res);
+  const kill = () => { try { f.kill('SIGKILL'); } catch {} }; res.on('close', kill); req.on('aborted', kill);
+}
 
 export function mapAsset(a) {
   const e = a.exifInfo || {};
@@ -61,13 +95,20 @@ export async function handlePhotos(req, res, url) {
   if ((m = p.match(/^\/asset\/([^/]+)\/(thumb|preview|original|video)$/))) {
     if (!UUID.test(m[1])) throw httpError(400, 'Bad asset id');
     const c = conn();
-    const target = m[2] === 'original' ? `/assets/${m[1]}/original` : m[2] === 'video' ? `/assets/${m[1]}/video/playback` : `/assets/${m[1]}/thumbnail?size=${m[2] === 'preview' ? 'preview' : 'thumbnail'}`;
-    const headers = { 'x-api-key': c.key }; if (req.headers.range) headers.range = req.headers.range;
-    let r;
-    try { r = await fetch(c.url + '/api' + target, { headers }); } catch (e) { throw httpError(502, 'Could not reach Immich', 'upstream_unreachable'); }
+    const kind = m[2], headers = { 'x-api-key': c.key }; if (req.headers.range) headers.range = req.headers.range;
+    if (kind === 'video' && url.searchParams.get('tx') === '1') return transcode(c, m[1], req, res);
+    const get = async (t) => { try { return await fetch(c.url + '/api' + t, { headers }); } catch { throw httpError(502, 'Could not reach Immich', 'upstream_unreachable'); } };
+    const tries = kind === 'original' ? ['/assets/' + m[1] + '/original'] : kind === 'video' ? ['/assets/' + m[1] + '/video/playback', '/assets/' + m[1] + '/original'] : kind === 'preview' ? ['preview', 'fullsize', 'thumbnail'].map((z) => `/assets/${m[1]}/thumbnail?size=${z}`) : ['thumbnail', 'preview', 'fullsize'].map((z) => `/assets/${m[1]}/thumbnail?size=${z}`);
+    let r = null;
+    for (const t of tries) { const x = await get(t); const ct = x.headers.get('content-type') || ''; if (x.ok && (kind === 'original' || kind === 'video' || /^image\//.test(ct)) && x.status !== 204) { r = x; break; } if (x.status === 416) { r = x; break; } try { await x.arrayBuffer(); } catch {} }
+    if (!r && (kind === 'thumb' || kind === 'preview')) {
+      let isVideo = false; try { isVideo = (await api('/assets/' + m[1])).type === 'VIDEO'; } catch {}
+      const f = await convertedImage(c, m[1], kind, isVideo); const st = await fsp.stat(f);
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'content-length': st.size, 'cache-control': 'private, max-age=86400' }); return fs.createReadStream(f).on('error', () => res.destroy()).pipe(res);
+    }
+    if (!r) throw httpError(404, 'Not available', 'no_media');
     const out = { 'content-type': r.headers.get('content-type') || 'application/octet-stream', 'cache-control': r.ok ? 'private, max-age=86400' : 'no-store' };
     for (const h of ['content-length', 'content-range', 'accept-ranges']) if (r.headers.get(h)) out[h] = r.headers.get(h);
-    if (m[2] === 'video' && !r.ok && r.status !== 416) { try { r = await fetch(c.url + '/api/assets/' + m[1] + '/original', { headers }); } catch {} out['content-type'] = r.headers.get('content-type') || out['content-type']; for (const h of ['content-length', 'content-range', 'accept-ranges']) if (r.headers.get(h)) out[h] = r.headers.get(h); }
     res.writeHead(r.status, out);
     if (!r.body) return res.end();
     return Readable.fromWeb(r.body).on('error', () => res.destroy()).pipe(res);

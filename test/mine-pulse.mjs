@@ -23,6 +23,7 @@ const browser = await chromium.launch({ args: ['--no-sandbox'] }); const errs = 
 const shot = async (p, n) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, n + '.png') }); } };
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, colorScheme: 'dark' });
+  await ctx.addInitScript(() => { try { localStorage.setItem('aos.pulsenative', 'false'); } catch {} });
   await ctx.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
   const p = await ctx.newPage(); p.setDefaultTimeout(6000); p.on('pageerror', (e) => errs.push(e.message + ' ' + String(e.stack).split('\n').slice(1, 3).join('|')));
   await p.goto(B + '/'); await p.waitForSelector('#rail .nav');
@@ -58,7 +59,7 @@ try {
     await p.waitForSelector('#modal img'); const m = await p.locator('#modal').innerText(); for (const w of ['WhatsApp', 'Email', 'SMS', '.vcf', 'Copy']) assert.ok(m.includes(w), w); await shot(p, 'card-share'); await p.keyboard.press('Escape');
   });
   await t('Pulse: personal / work switch', async () => {
-    await nav('pulse'); await p.waitForSelector('[data-px="mode"]'); await p.click('[data-px="mode"][data-m="work"]'); await p.waitForFunction(() => document.querySelector('[data-px="mode"][data-m="work"]').getAttribute('aria-pressed') === 'true'); assert.equal(psState.mode, 'work'); await shot(p, 'pulse-today');
+    await nav('pulse'); await p.waitForSelector('[data-px="mode"]'); await p.click('[data-px="mode"][data-m="work"]'); await p.waitForFunction(() => document.querySelector('[data-px="mode"][data-m="work"]')?.getAttribute('aria-pressed') === 'true'); assert.equal(psState.mode, 'work'); await shot(p, 'pulse-today');
   });
   await t('Pulse: Gmail-style inbox opens an email with attachments and actions', async () => {
     await p.click('[data-px="view"][data-v="inbox"]'); await p.waitForSelector('.pxrow'); await p.click('.pxrow[data-id="e12"]'); await p.waitForFunction(() => /Hello, invoice is overdue|Invoice chase/.test(document.querySelector('#view').innerText)); assert.match(await p.locator('#view').innerText(), /inv\.pdf/);
@@ -81,9 +82,14 @@ try {
     await ctx.request.put(B + '/api/settings', { data: { pulse: { url: addr(ps), user: 'anand@pulse.io', pass: 'pupw' } }, headers: { 'x-aos': '1' } });
   });
   await t('mobile: Home and Pulse fit the screen', async () => {
-    const m = await browser.newContext({ viewport: { width: 390, height: 800 }, colorScheme: 'dark' }); await m.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
+    const m = await browser.newContext({ viewport: { width: 390, height: 800 }, colorScheme: 'dark' }); await m.addInitScript(() => { try { localStorage.setItem('aos.pulsenative', 'false'); } catch {} }); await m.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
     const q = await m.newPage(); await q.goto(B + '/'); await q.waitForSelector('.live'); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'home'); await shot(q, 'home-mobile');
     await q.goto(B + '/#pulse'); await q.waitForSelector('[data-px="mode"]'); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'pulse'); await shot(q, 'pulse-mobile');
+  });
+  await t('Pulse opens as the real Pulse app in a frame by default, and the built-in view is one click away', async () => {
+    const c2 = await browser.newContext({ viewport: { width: 1280, height: 860 } }); await c2.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
+    const q = await c2.newPage(); await q.goto(B + '/#pulse'); await q.waitForSelector('iframe[title="Anands Pulse"]'); assert.equal(await q.locator('iframe[title="Anands Pulse"]').getAttribute('src'), addr(ps) + '/');
+    await q.click('[data-pa="builtin"]'); await q.waitForSelector('[data-px="mode"]'); assert.equal(await q.locator('iframe[title="Anands Pulse"]').count(), 0); await c2.close();
   });
   await t('no page errors', async () => assert.deepEqual(errs, []));
 } finally { await browser.close(); srv.kill(); imm.close(); cs.close(); ps.close(); bz.close(); wg.close(); }

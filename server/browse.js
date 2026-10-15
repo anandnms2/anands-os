@@ -24,6 +24,7 @@ function privateIp(ip) {
   if (net.isIPv4(ip)) { const [a, b] = ip.split('.').map(Number); return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224; }
   const x = ip.toLowerCase(); if (x === '::1' || x === '::') return true; if (x.startsWith('::ffff:')) { const r = x.slice(7); if (r.includes('.')) return privateIp(r); const h = r.split(':').map((v) => parseInt(v, 16)); if (h.length === 2 && h.every((v) => v >= 0)) return privateIp(`${h[0] >> 8}.${h[0] & 255}.${h[1] >> 8}.${h[1] & 255}`); return true; } if (x.startsWith('64:ff9b:')) return true; return /^f[cd]/.test(x) || /^fe[89ab]/.test(x);
 }
+export async function checkAddress(u) { return check(u); }
 async function check(u) {
   if (!/^https?:$/.test(u.protocol)) throw httpError(400, 'Only http and https addresses can be opened', 'bad_url');
   if (allowPrivate()) return;

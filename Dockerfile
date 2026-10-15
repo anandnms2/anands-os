@@ -11,6 +11,7 @@ RUN bash suite/build.sh /build/upstream /build/dist
 # Stage 2: runtime, no dependencies, non-root.
 FROM node:22-alpine
 ENV NODE_ENV=production PORT=8080 DATA_DIR=/data SUITE_DIR=/srv/suite
+RUN apk add --no-cache ffmpeg libheif-tools chromium font-noto font-noto-emoji ttf-freefont
 WORKDIR /srv/app
 COPY package.json ./
 COPY server ./server

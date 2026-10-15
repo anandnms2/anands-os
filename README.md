@@ -81,6 +81,6 @@ Limits: calls are a mesh (everyone connects to everyone), so quality drops beyon
 
 `node test/meet.mjs` runs these tests (needs Playwright; set `E2E_SUITE` to include the real Meetings app).
 
-## Full browser (remote Chromium)
+## Browser (real Chromium inside the OS)
 
-The Desktop Browser window opens pages through this server, which covers simple sites. For a complete Chrome (sign-ins, video calls, web apps, extensions) run `browser/docker-compose.yml` as its own Coolify service, open TCP and UDP 52000, and paste its address in Settings, Full browser. The Desktop then shows a Full browser button that embeds it.
+The Desktop Browser window runs a real Chromium on the server and streams it to you over the normal HTTPS port: tabs, sign-ins that persist (profile in `/data/rbrowser`), forms, scrolling, copy and paste. It uses about 300 to 600 MB of RAM while open and stops itself after 10 minutes with no browser window open. There is no sound, camera or microphone; for those, run `browser/docker-compose.yml` (Neko) as a separate service and set its address in Settings. If Chromium is missing (a custom image), the Browser falls back to the simpler page proxy.

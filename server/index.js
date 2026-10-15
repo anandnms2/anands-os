@@ -13,6 +13,7 @@ import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
 import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
 import { handleBrowse } from './browse.js';
+import { handleRb } from './rbrowser.js';
 import { handleMailboxes, syncAll } from './mailbox.js';
 import { handleGdrive, googleCallback, gConnected, gConfigured } from './gdrive.js';
 import { ping as davPing } from './webdav.js';
@@ -28,7 +29,8 @@ const CONNECT_EXTRA = (env.CONNECT_SRC_EXTRA || '').trim();
 const BASE_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'permissions-policy': 'camera=(self), microphone=(self), display-capture=(self), geolocation=()' };
 const UI_CSP_PARTS = ["default-src 'self'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self' blob:", "connect-src 'self'"];
 const rbOrigin = () => { try { const u = effective().rbrowser.url; return u ? new URL(u).origin : ''; } catch { return ''; } };
-const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self' " + rbOrigin(), "manifest-src 'self'", "worker-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'self'"].join('; ');
+const pulseOrigin = () => { try { const u = effective().pulse.url; return u ? new URL(u).origin : ''; } catch { return ''; } };
+const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self' " + rbOrigin() + ' ' + pulseOrigin(), "manifest-src 'self'", "worker-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'self'"].join('; ');
 /* Apps can only talk to this server. puter.com is not reachable from them: nothing else is in connect-src. */
 const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
 
@@ -61,6 +63,7 @@ async function api(req, res, url) {
   if (p.startsWith('/api/vault/')) return handleVault(req, res, url);
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
   if (p === '/api/mailboxes' || p.startsWith('/api/mailboxes/')) return handleMailboxes(req, res, url);
+  if (p === '/api/rb' || p.startsWith('/api/rb/')) return handleRb(req, res, url);
   if (p === '/api/browse' && (req.method === 'GET' || req.method === 'POST')) return handleBrowse(req, res, url);
   if (p === '/api/gdrive' || p.startsWith('/api/gdrive/')) return handleGdrive(req, res, url);
   if (p === '/api/pulse' || p.startsWith('/api/pulse/')) return handlePulse(req, res, url);
@@ -116,6 +119,7 @@ const server = http.createServer(async (req, res) => {
       try { const L = JSON.parse(fs.readFileSync(path.join(SUITE, 'apps.json'), 'utf8')); const N = { email: 'Anands Email', meetings: 'Anands Meeting' }; for (const a of L) if (N[a.slug]) a.name = N[a.slug];
         const body = JSON.stringify(L); res.writeHead(200, { 'content-type': 'application/json', 'content-security-policy': uiCsp(), 'cache-control': 'no-cache' }); return res.end(body); } catch {}
     }
+    if (/^\/_icons\/[a-z0-9-]+\.png$/.test(p) && fs.existsSync(path.join(WEB, 'icons', p.slice(8)))) return serveStatic(req, res, path.join(WEB, 'icons'), p.slice(8), { 'content-security-policy': uiCsp() });
     if (p === '/apps.json' || p.startsWith('/_icons/')) return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': uiCsp() });
     return serveStatic(req, res, WEB, p === '/' ? 'index.html' : p.slice(1), { 'content-security-policy': uiCsp() });
   } catch (e) {

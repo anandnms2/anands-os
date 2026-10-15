@@ -18,6 +18,7 @@ const browser = await chromium.launch({ args: ['--no-sandbox'] }); const errs = 
 const shot = async (p, n) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, n + '.png') }); } };
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, colorScheme: 'dark' });
+  await ctx.addInitScript(() => { try { localStorage.setItem('aos.pulsenative', 'false'); } catch {} });
   await ctx.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
   const p = await ctx.newPage(); p.setDefaultTimeout(5000); p.on('pageerror', (e) => errs.push(e.message));
   await p.goto(B + '/'); await p.waitForSelector('#rail .nav');
