@@ -23,13 +23,15 @@
   }
 
   var userP = null;
-  var auth = {
-    isSignedIn: function () { return Promise.resolve(true); },
+  var auth = bagOf('auth', {
+    isSignedIn: function () { return true; },
     getUser: function () { return userP || (userP = fetch('/_local/auth/user', { credentials: 'same-origin' }).then(function (r) { if (!r.ok) throw mk('auth_required', 'Not signed in'); return r.json(); })); },
+    whoami: function () { return auth.getUser(); },
     signIn: function () { return auth.getUser(); },
     signOut: function () { location.href = '/auth/logout'; return Promise.resolve(); },
-    getProfilePicture: function () { return Promise.resolve(null); }
-  };
+    getProfilePicture: function () { return Promise.resolve(null); },
+    getMonthlyUsage: function () { return Promise.resolve({ allowanceInfo: { monthUsageAllowance: 0, remaining: 0 }, usage: {} }); }
+  }, unsupported);
 
   function norm(v) { return v; }
   var kv = {

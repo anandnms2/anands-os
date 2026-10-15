@@ -31,6 +31,17 @@ function persist(app) {
 const glob = (p) => new RegExp('^' + String(p).replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
 function kvOp(app, b) {
   const s = store(app); const key = typeof b.key === 'string' ? b.key : '';
+  if (Array.isArray(b.key)) { /* Puter batch forms: get([k]), del([k]), set([{key,value}]) */
+    if (b.key.length > 5000) throw httpError(400, 'Too many keys', 'bad_key');
+    if (b.op === 'get') return b.key.map((k) => (typeof k === 'string' && Object.hasOwn(s, k) ? s[k] : null));
+    if (b.op === 'del') { for (const k of b.key) if (typeof k === 'string') delete s[k]; persist(app); return true; }
+    if (b.op === 'set') {
+      for (const e of b.key) if (!e || typeof e.key !== 'string' || !e.key || e.key.length > 1024) throw httpError(400, 'Bad key', 'bad_key');
+      if (JSON.stringify(b.key).length > 16 * 1024 * 1024) throw httpError(413, 'Value too large');
+      for (const e of b.key) s[e.key] = e.value ?? null; persist(app); return true;
+    }
+    throw httpError(400, 'Bad key', 'bad_key');
+  }
   if (b.op !== 'list' && b.op !== 'flush' && (!key || key.length > 1024)) throw httpError(400, 'Bad key', 'bad_key');
   switch (b.op) {
     case 'get': return Object.hasOwn(s, key) ? s[key] : null;

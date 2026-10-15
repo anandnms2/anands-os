@@ -57,7 +57,17 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/_local/')) return await handleLocal(req, res, url);
     if (p.startsWith('/apps/')) {
       if (/^\/apps\/[^/]+$/.test(p)) { res.writeHead(302, { location: p + '/' }); return res.end(); }
+      res.setHeader('referrer-policy', 'same-origin');
       return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': APP_CSP });
+    }
+    /* Apps are built for the site root: they ask for /icons/x.png, /app.wasm and so on. Resolve those inside the app that asked. */
+    if ((req.method === 'GET' || req.method === 'HEAD') && p !== '/' && req.headers.referer) {
+      let slug = null; try { const m = new URL(req.headers.referer).pathname.match(/^\/apps\/([^/]+)\//); if (m && /^[a-z0-9-]+$/.test(m[1])) slug = m[1]; } catch {}
+      if (slug && sessionOf(req)) {
+        const root = path.join(SUITE, 'apps', slug); let hit = false;
+        try { const abs = path.join(root, path.normalize('/' + decodeURIComponent(p))); hit = abs.startsWith(root + path.sep) && fs.statSync(abs).isFile(); } catch {}
+        if (hit) return serveStatic(req, res, root, p.slice(1), { 'content-security-policy': APP_CSP });
+      }
     }
     if (p === '/apps.json' || p.startsWith('/_icons/')) return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': UI_CSP });
     return serveStatic(req, res, WEB, p === '/' ? 'index.html' : p.slice(1), { 'content-security-policy': UI_CSP });
