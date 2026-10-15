@@ -1,3 +1,4 @@
+import { profileOf } from './profile.js';
 import crypto from 'node:crypto';
 import { OIDC, PASSWORD, PUBLIC_URL, OWNER } from './config.js';
 import { sign, verify, SESSION_COOKIE, sessionOf } from './session.js';
@@ -63,5 +64,6 @@ export async function handleAuth(req, res, url) {
 }
 export function sessionInfo(req) {
   const s = sessionOf(req);
-  return { user: s ? { name: s.n || s.u, email: s.e || null } : null, ...loginInfo() };
+  const pf = s ? profileOf() : null;
+  return { user: s ? { name: (pf.name || s.n || s.u), email: (pf.email || s.e || null), avatar: pf.avatar, title: pf.title } : null, ...loginInfo() };
 }

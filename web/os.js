@@ -15,6 +15,7 @@ var P = {
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M21 21l-4.3-4.3', l: 'M15 18l-6-6 6-6', r: 'M9 18l6-6-6-6', back: 'M19 12H5M11 6l-6 6 6 6',
   info: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 16v-4 M12 8h.01', ext: 'M7 17L17 7M8 7h9v9', cloud: 'M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z',
   folder: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z', lock: 'M5 11h14v10H5z M8 11V7a4 4 0 0 1 8 0v4', card: 'M2 5h20v14H2z M2 10h20',
+  image: 'M3 5h18v14H3z M3 16l5-5 4 4 3-3 6 6 M9 9.5a1 1 0 1 0 0-.01', camera: 'M3 8h4l2-3h6l2 3h4v12H3z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
   shield: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', pulse: 'M22 12h-4l-3 9L9 3l-3 9H2', monitor: 'M2 3h20v14H2z M8 21h8 M12 17v4', play: 'M6 4l14 8-14 8z', out: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9'
 };
 P.apps = 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z'; P.desk = 'M3 4h18v12H3z M8 20h8 M12 16v4'; P.globe = 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M2 12h20 M12 2a15 15 0 0 1 0 20 M12 2a15 15 0 0 0 0 20'; P.check = 'M20 6L9 17l-5-5'; P.calendar = 'M3 5h18v16H3z M3 10h18 M8 3v4 M16 3v4';
@@ -118,7 +119,7 @@ function render() {
   var app = $('#app'), tabs = $('#tabs'), fab = $('#fab');
   if (!S.user) { app.hidden = true; tabs.hidden = true; fab.hidden = true; $('#chat').hidden = true; $('#login').hidden = false; $('#login').innerHTML = loginV(); return; }
   $('#login').hidden = true; app.hidden = false; tabs.hidden = false; fab.hidden = S.chatOpen;
-  $('#avatar').textContent = (S.user.name || 'A').charAt(0).toUpperCase();
+  if (window.AOSProfile) AOSProfile.paint(); else $('#avatar').textContent = (S.user.name || 'A').charAt(0).toUpperCase();
   var v = $('#view');
   if (S.view === 'home') v.innerHTML = homeV();
   else if (S.view === 'photos') { v.innerHTML = photosShell(); photosGrid(); }

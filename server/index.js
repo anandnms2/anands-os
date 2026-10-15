@@ -13,6 +13,7 @@ import { handleVpn, test as vpnTest } from './vpn.js';
 import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
 import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
+import { handleProfile } from './profile.js';
 import { handleBrowse } from './browse.js';
 import { handleRb } from './rbrowser.js';
 import { handleMailboxes, syncAll } from './mailbox.js';
@@ -74,6 +75,7 @@ async function api(req, res, url) {
   if (p === '/api/vpn' || p.startsWith('/api/vpn/')) return handleVpn(req, res, url);
   if (p === '/api/cards' || p === '/api/my-cards' || p.startsWith('/api/my-cards/') || p.startsWith('/api/cards/') || p.startsWith('/api/cs/')) return handleCards(req, res, url);
   if (p === '/api/insights') return handleInsights(req, res, url);
+  if (p === '/api/profile' || p === '/api/profile/avatar') return handleProfile(req, res, url, sessionOf(req));
   if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url);
   throw httpError(404, 'Unknown API route');
 }

@@ -318,10 +318,10 @@
 
   /* drag the edge of the Pulse sidebar or the list pane to resize; saved on this device */
   (function () {
-    var EDGE = 7, drag = null;
+    var EDGE = 12, drag = null;
     function saved() { try { return JSON.parse(localStorage.getItem('aos.pxw') || '{}') || {}; } catch (e) { return {}; } }
     function apply() { var s = saved(), r = document.documentElement.style; if (s.side) r.setProperty('--pxs', s.side + 'px'); if (s.list) r.setProperty('--pxl', s.list + 'px'); }
-    function pick(e) { var t = e.target.closest && e.target.closest('.pxside, .pxlist'); if (!t || window.innerWidth <= 900) return null; var b = t.getBoundingClientRect(); return (e.clientX >= b.right - EDGE && e.clientX <= b.right + 2) ? t : null; }
+    function pick(e) { var t = e.target.closest && e.target.closest('.pxside, .pxlist'); if (!t || window.innerWidth <= 900) return null; var b = t.getBoundingClientRect(); return (e.clientX >= b.right - EDGE && e.clientX <= b.right + 5) ? t : null; }
     document.addEventListener('mousemove', function (e) { if (drag) return; var t = pick(e); document.querySelectorAll('.pxgrab').forEach(function (x) { if (x !== t) x.classList.remove('pxgrab'); }); if (t) t.classList.add('pxgrab'); });
     document.addEventListener('pointerdown', function (e) {
       var t = pick(e); if (!t) return; var b = t.getBoundingClientRect(); drag = { k: t.classList.contains('pxside') ? 'side' : 'list', x: e.clientX, w: b.width, max: (t.parentElement.getBoundingClientRect().width || 1000) - 320 };
