@@ -80,3 +80,7 @@ The Meetings app needs Puter's peer service and room directory. Both now run her
 Limits: calls are a mesh (everyone connects to everyone), so quality drops beyond about 4 to 6 people. Tested with real Chromium browsers on a fake camera, three people, on one machine: not across real networks, and not with the TURN relay. If the server restarts mid-meeting, the host's connection re-registers on its own but guests who are not yet connected need to reload the link.
 
 `node test/meet.mjs` runs these tests (needs Playwright; set `E2E_SUITE` to include the real Meetings app).
+
+## Full browser (remote Chromium)
+
+The Desktop Browser window opens pages through this server, which covers simple sites. For a complete Chrome (sign-ins, video calls, web apps, extensions) run `browser/docker-compose.yml` as its own Coolify service, open TCP and UDP 52000, and paste its address in Settings, Full browser. The Desktop then shows a Full browser button that embeds it.
