@@ -46,6 +46,16 @@ function mount() {
   if (document.getElementById('aem-btn')) return; var b = document.createElement('button'); b.id = 'aem-btn'; b.className = 'aem-b'; b.type = 'button'; b.setAttribute('aria-label', 'Add email account');
   b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add email account'; b.addEventListener('click', open); document.body.appendChild(b);
 }
-if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
+/* also offer it in the app's own Settings (gear) menu */
+function menuHook() {
+  var mo = new MutationObserver(function () {
+    var n = Array.prototype.filter.call(document.querySelectorAll('[role=menu] *, .menu *'), function (e) { return !e.children.length && /^Notify me on this device$/.test((e.textContent || '').trim()); })[0];
+    if (!n) return; var row = n.closest('[role=menuitem], [role=menuitemcheckbox], button') || n.parentElement; if (!row || !row.parentElement || row.parentElement.querySelector('[data-aem]')) return;
+    var c = row.cloneNode(true); c.setAttribute('data-aem', '1'); c.removeAttribute('aria-checked'); var t = c.querySelectorAll('*'); for (var i = 0; i < t.length; i++) if (!t[i].children.length && /Notify me/.test(t[i].textContent)) t[i].textContent = 'Email accounts...';
+    c.addEventListener('click', function (ev) { ev.preventDefault(); ev.stopPropagation(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); setTimeout(open, 50); }, true);
+    row.parentElement.appendChild(c);
+  }); mo.observe(document.body, { childList: true, subtree: true });
+}
+if (document.body) { mount(); menuHook(); } else document.addEventListener('DOMContentLoaded', function () { mount(); menuHook(); });
 setTimeout(mount, 1500);
 })();

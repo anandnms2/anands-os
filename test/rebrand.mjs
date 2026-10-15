@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { rebrand } from '../server/rebrand.js';
 let pass = 0; const t = (n, f) => { try { f(); pass++; console.log('ok   ' + n); } catch (e) { console.log('FAIL ' + n + '\n     ' + e.message); process.exitCode = 1; } };
 t('visible names become Anands', () => {
-  for (const [a, b] of [['Built with Puter', 'Built with Anands'], ['Powered by Puter.com', 'Powered by Anands'], ['PUTER', 'ANANDS'], ['Puter Mail', 'Anands Email'], ['Puter Meetings', 'Anands Meeting'], ['Compose mail from your @puter.email address, to any address on Puter or off.', 'Compose mail from your email address, to any address.']]) assert.equal(rebrand(a), b);
+  for (const [a, b] of [['Built with Puter', 'Built with Anands'], ['Powered by Puter.com', 'Powered by Anands'], ['PUTER', 'ANANDS'], ['Puter Mail', 'Anands Email'], ['Puter Email', 'Anands Email'], ['Puter Meetings', 'Anands Meeting'], ['Compose mail from your @puter.email address, to any address on Puter or off.', 'Compose mail from your email address, to any address.']]) assert.equal(rebrand(a), b);
 });
 t('links to puter.com and its subdomains go to this site', () => { assert.ok(!/puter/i.test(rebrand('<a href="https://puter.com/x">a</a> https://docs.puter.com/y cal.puter.com'))); });
 t('code the apps need is kept', () => { const s = 'window.puter.kv.get("a"); https://js.puter.com/v2/'; assert.equal(rebrand(s), s); });

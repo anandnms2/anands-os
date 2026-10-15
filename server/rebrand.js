@@ -15,7 +15,7 @@ export function rebrand(s) {
     .replace(/Messages delivered to your Puter mailbox/g, 'Messages delivered to your mailbox')
     .replace(/An email client for your Puter account/gi, 'An email client for your own mail')
     .replace(/A fast, private email client for your Puter account/g, 'A fast, private email client for your own mail')
-    .replace(/\bPuter Mail\b/g, 'Anands Email')
+    .replace(/\bPuter (?:Mail|Email)\b/g, 'Anands Email')
     .replace(/\bPuter Meetings\b/g, 'Anands Meeting')
     .replace(/\bPUTER\b(?!_)/g, 'ANANDS')
     .replace(/\b(?!js\.|api\.)(?:[a-z0-9-]+\.)+puter\.com\b(?!\/v2)/gi, 'anands.xyz')
