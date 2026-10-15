@@ -180,6 +180,10 @@ try {
     await win.locator('.dk-bset #brse').selectOption('bing'); assert.equal(await p.evaluate(() => localStorage.getItem('aos.brsearch')), '"bing"');
     await win.locator('.dk-bset [data-dk="bsetx"]').click(); assert.equal(await win.locator('.dk-bset').count(), 0);
   });
+  await t('launcher and Suite list Email and Meeting by plain names', async () => {
+    const L = await (await ctx.request.get(B + '/apps.json')).json(); const nm = (x) => (L.find((a) => a.slug === x) || {}).name;
+    if (nm('email') !== undefined) assert.equal(nm('email'), 'Email'); if (nm('meetings') !== undefined) assert.equal(nm('meetings'), 'Meeting');
+  });
   await t('mobile: desktop windows open maximised', async () => {
     const m = await browser.newContext({ viewport: { width: 390, height: 780 }, colorScheme: 'dark' }); await m.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
     const q = await m.newPage(); await q.goto(B + '/'); await q.waitForSelector('#top .deskbtn'); await q.click('#top .deskbtn'); await q.waitForSelector('#desk:not([hidden])');  await q.click('.dk-ic[data-w="files"]', { timeout: 5000 }); await q.waitForSelector('.dkw');

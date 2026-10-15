@@ -125,7 +125,7 @@ const server = http.createServer(async (req, res) => {
       try { for (const slug of fs.readdirSync(path.join(SUITE, 'apps'))) { const root = path.join(SUITE, 'apps', slug); if (fs.existsSync(path.join(root, p.slice(1)))) return serveStatic(req, res, root, p.slice(1), { 'content-security-policy': APP_CSP }, { rebrand: true }); } } catch {}
     }
     if (p === '/apps.json') {
-      try { const L = JSON.parse(fs.readFileSync(path.join(SUITE, 'apps.json'), 'utf8')); const N = { email: 'Anands Email', meetings: 'Anands Meeting' }; for (const a of L) if (N[a.slug]) a.name = N[a.slug];
+      try { const L = JSON.parse(fs.readFileSync(path.join(SUITE, 'apps.json'), 'utf8')); const N = { email: 'Email', meetings: 'Meeting' }; for (const a of L) if (N[a.slug]) a.name = N[a.slug];
         const body = JSON.stringify(L); res.writeHead(200, { 'content-type': 'application/json', 'content-security-policy': uiCsp(), 'cache-control': 'no-cache' }); return res.end(body); } catch {}
     }
     if (/^\/_icons\/[a-z0-9-]+\.png$/.test(p) && fs.existsSync(path.join(WEB, 'icons', p.slice(8)))) return serveStatic(req, res, path.join(WEB, 'icons'), p.slice(8), { 'content-security-policy': uiCsp() });
