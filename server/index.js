@@ -7,6 +7,9 @@ import { handleAuth, sessionInfo } from './auth.js';
 import { json, readJson, httpError } from './util.js';
 import { handlePhotos, status as immichStatus } from './immich.js';
 import { handleInsights, insights, clearInsightsCache } from './coolify.js';
+import { handleStatus, test as statusTest, clearStatusCache } from './status.js';
+import { handleVpn, test as vpnTest } from './vpn.js';
+import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
 import { handleChat } from './chat.js';
 import { ping as davPing } from './webdav.js';
 import { handleVault, status as vaultStatus } from './vault.js';
@@ -26,13 +29,16 @@ const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-e
 async function api(req, res, url) {
   const p = url.pathname;
   if (p === '/api/settings' && req.method === 'GET') return json(res, 200, publicSettings());
-  if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); return json(res, 200, publicSettings()); }
+  if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); clearStatusCache(); clearCardsCache(); return json(res, 200, publicSettings()); }
   if (p === '/api/settings/test' && req.method === 'POST') {
     const { target } = await readJson(req, 1024);
     if (target === 'immich') return json(res, 200, await immichStatus());
     if (target === 'dav') return json(res, 200, await davPing());
     if (target === 'vault') return json(res, 200, await vaultStatus());
     if (target === 'mail') return json(res, 200, await mail.verify());
+    if (target === 'status') return json(res, 200, await statusTest());
+    if (target === 'vpn') return json(res, 200, await vpnTest());
+    if (target === 'cards') return json(res, 200, await cardsTest());
     if (target === 'coolify') { try { const d = await insights(true); return json(res, 200, { configured: true, connected: true, resources: d.resources.length }); } catch (e) { return json(res, 200, { configured: e.code !== 'not_configured', connected: false, reason: e.message }); } }
     throw httpError(400, 'Unknown target');
   }
@@ -46,6 +52,9 @@ async function api(req, res, url) {
   if (p === '/api/drive/status') return json(res, 200, await davPing());
   if (p.startsWith('/api/vault/')) return handleVault(req, res, url);
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
+  if (p === '/api/status' || p === '/api/status/system') return handleStatus(req, res, url);
+  if (p === '/api/vpn' || p.startsWith('/api/vpn/')) return handleVpn(req, res, url);
+  if (p === '/api/cards' || p.startsWith('/api/cards/')) return handleCards(req, res, url);
   if (p === '/api/insights') return handleInsights(req, res, url);
   if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url);
   throw httpError(404, 'Unknown API route');

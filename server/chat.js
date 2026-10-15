@@ -4,6 +4,8 @@ import { effective, SUITE } from './config.js';
 import { json, readJson, fetchJson, httpError } from './util.js';
 import { photoContext } from './immich.js';
 import { insightsContext } from './coolify.js';
+import { statusContext } from './status.js';
+import { vpnContext } from './vpn.js';
 import { filesContext, driveContext } from './local.js';
 
 function llm() {
@@ -29,7 +31,7 @@ function appsList() {
   return appsCache;
 }
 
-const SYSTEM = `You are Anands Assistant, built into Anand's personal OS (Anands OS). You answer questions about what is connected to it: his photos (Immich), his server (Coolify: apps, services, databases, deployments), the 48 Suite apps, and files the apps saved.
+const SYSTEM = `You are Anands Assistant, built into Anand's personal OS (Anands OS). You answer questions about what is connected to it: his photos (Immich), his server (Coolify: apps, services, databases, deployments), his servers' health (Beszel), his VPN devices (wg-easy), the 48 Suite apps, and files the apps saved.
 Rules: answer only from CONTEXT. If something is not in CONTEXT, or a source is marked not connected, say so plainly and say what would connect it. Never invent photos, files, resources or numbers. Be brief and direct; short "- " lists are fine. Dates are ISO; use "d Mon" style when writing.`;
 
 export async function handleChat(req, res, url) {
@@ -45,6 +47,8 @@ export async function handleChat(req, res, url) {
   const jobs = [];
   if (want.photos !== false) jobs.push(photoContext().then((v) => { ctx.photos = v; used.push('photos'); }).catch((e) => { ctx.photos = { connected: false, note: e.message }; }));
   if (want.insights !== false) jobs.push(insightsContext().then((v) => { ctx.cloud = v; used.push('insights'); }));
+  if (want.insights !== false) jobs.push(statusContext().then((v) => { if (v) { ctx.servers = v; used.push('servers'); } }));
+  if (want.insights !== false) jobs.push(vpnContext().then((v) => { if (v) { ctx.vpn = v; used.push('vpn'); } }));
   if (want.files !== false) jobs.push(driveContext().then((v) => { ctx.drive = v; if (v.connected) used.push('drive'); }).catch(() => {}));
   if (want.files !== false) jobs.push(filesContext().then((v) => { ctx.files = v; used.push('files'); }).catch(() => {}));
   if (want.apps !== false) { ctx.suiteApps = appsList(); used.push('apps'); }

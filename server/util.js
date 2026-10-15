@@ -47,3 +47,15 @@ export async function fetchJson(url, init = {}, timeoutMs = 15000) {
   } finally { clearTimeout(t); }
 }
 export const UUID = /^[0-9a-fA-F-]{8,64}$/;
+/* One upstream request that keeps the status code and headers (fetchJson throws on any non-2xx). Never throws for HTTP errors, only for network failure. */
+export async function rawFetch(url, init = {}, timeoutMs = 15000) {
+  try {
+    const r = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs), redirect: 'manual' });
+    const buf = Buffer.from(await r.arrayBuffer()); const text = buf.toString('utf8'); let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+    return { status: r.status, ok: r.ok, data, text, buf, headers: r.headers };
+  } catch (e) {
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') throw httpError(504, 'The server did not answer in time', 'upstream_timeout');
+    throw httpError(502, 'Could not reach the server: ' + (e.cause?.code || e.message), 'upstream_unreachable');
+  }
+}
