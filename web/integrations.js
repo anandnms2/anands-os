@@ -95,7 +95,8 @@
   function link(href, text) { return '<a href="' + esc(href) + '" style="color:var(--accent-text)">' + esc(text) + '</a>'; }
   function cardsView() {
     var C = I.cards, d = C.data;
-    var head = '<div class="wrap"><div class="pagehead"><div><h1>Cards</h1><p>Business cards you scanned with Card Scan. Open one to edit it, mark it contacted or delete it.</p></div>' + (d ? '<div class="note">' + (d.stats ? d.stats.total + ' cards · ' + d.stats.companies + ' companies · ' + d.stats.addedThisWeek + ' this week' : d.total + ' cards') + '</div>' : '') + '</div>';
+    var head = '<div class="wrap"><div class="pagehead"><div><h1>Cards</h1><p>Business cards you scanned with Card Scan. Open one to edit it, mark it contacted or delete it.</p></div>' + (window.AOSCards ? window.AOSCards.head() : '') + (d && !window.AOSCards ? '<div class="note">' + (d.stats ? d.stats.total + ' cards · ' + d.stats.companies + ' companies · ' + d.stats.addedThisWeek + ' this week' : d.total + ' cards') + '</div>' : '') + '</div>' + (window.AOSCards ? window.AOSCards.tabs() : '');
+    if (window.AOSCards && window.AOSCards.tab() !== 'cards') return head + window.AOSCards.tabView() + '</div>';
     if (!d) {
       if (C.loading) return head + '<p class="note">Loading your cards...</p></div>';
       if (C.code === 'not_configured') return head + connectCard('Card Scan is not connected yet', 'Add your Card Scan address, email and password in Settings.') + '</div>';
@@ -104,10 +105,10 @@
     var chips = '<button class="chip" data-ia="cgrp" data-g="" aria-pressed="' + !C.group + '">All</button>' + (d.groups || []).map(function (g) { return '<button class="chip" data-ia="cgrp" data-g="' + esc(g.id) + '" aria-pressed="' + (C.group === g.id) + '">' + esc(g.name) + '</button>'; }).join('');
     var tiles = C.cards.map(function (c) {
       var title = c.name || c.company || 'Unnamed';
-      return '<button class="card icard" data-ia="copen" data-id="' + esc(c.id) + '"><div class="icard-img">' + (c.image_thumb ? '<img src="' + esc(c.image_thumb) + '" alt="" loading="lazy">' : '<span>' + esc(title.charAt(0).toUpperCase()) + '</span>') + '</div><div class="icard-t"><b>' + esc(title) + '</b>' + (c.name && c.company ? '<span>' + esc(c.company) + '</span>' : '') + (c.designation ? '<span class="note">' + esc(c.designation) + '</span>' : '') + '<span class="note mono">' + esc(c.phone || c.email || '') + '</span>' + (c.group_name ? '<em class="tag" style="font-style:normal;align-self:flex-start">' + esc(c.group_name) + '</em>' : '') + '</div></button>';
+      var sel = window.AOSCards && C.selecting; return '<div class="icardw' + (sel && C.sel[c.id] ? ' sel' : '') + '">' + (sel ? '<input type="checkbox" class="icsel" data-ca="selone" data-id="' + esc(c.id) + '"' + (C.sel[c.id] ? ' checked' : '') + ' aria-label="Select ' + esc(title) + '">' : '') + '<button class="card icard" data-ia="' + (sel ? 'csel' : 'copen') + '" data-id="' + esc(c.id) + '"><div class="icard-img">' + (c.image_thumb ? '<img src="' + esc(c.image_thumb) + '" alt="" loading="lazy">' : '<span>' + esc(title.charAt(0).toUpperCase()) + '</span>') + '</div><div class="icard-t"><b>' + esc(title) + '</b>' + (c.name && c.company ? '<span>' + esc(c.company) + '</span>' : '') + (c.designation ? '<span class="note">' + esc(c.designation) + '</span>' : '') + '<span class="note mono">' + esc(c.phone || c.email || '') + '</span>' + (c.group_name ? '<em class="tag" style="font-style:normal;align-self:flex-start">' + esc(c.group_name) + '</em>' : '') + '</div></button></div>';
     }).join('');
     return head + '<div class="toolbar"><div class="search">' + ic('search') + '<input class="input" id="cq" type="search" placeholder="Search name, company, phone, email" value="' + esc(C.q) + '" data-ii="cq" aria-label="Search cards"></div><div class="chips">' + chips + '</div></div>' +
-      (C.error ? fail(C, 'cards') : '') +
+      (C.error ? fail(C, 'cards') : '') + (window.AOSCards ? window.AOSCards.bulkBar() : '') +
       (C.cards.length ? '<div class="icards">' + tiles + '</div>' : '<div class="empty"><h2>' + (C.q || C.group ? 'No cards match' : 'No cards yet') + '</h2><p>' + (C.q || C.group ? 'Try another search or group.' : 'Scan cards in Card Scan and they appear here.') + '</p></div>') +
       (C.cards.length < d.total ? '<div style="text-align:center;margin:18px 0"><button class="btn" data-ia="cmore">' + (C.loading ? 'Loading...' : 'Show more (' + (d.total - C.cards.length) + ' left)') + '</button></div>' : '') + '</div>';
   }
@@ -132,7 +133,7 @@
       rows.push('<span>Added</span><b>' + (c.created_at ? A.fmt(new Date(c.created_at), { day: 'numeric', month: 'short', year: 'numeric' }) : '') + (c.added_by_name ? ' by ' + esc(c.added_by_name) : '') + '</b>');
       rows.push('<span>Last contacted</span><b>' + (c.last_contacted_at ? ago(c.last_contacted_at) : 'Not yet') + '</b>');
       body = '<div class="ikv">' + rows.join('') + '</div>' + (c.notes ? '<h3 class="ih">Notes</h3><p style="white-space:pre-wrap;margin:0 0 6px">' + esc(c.notes) + '</p>' : '') + '<div id="cm" class="note" role="status"></div>' +
-        (C.open.confirm ? '' : '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px"><button class="btn danger" data-ia="cdelask">Delete</button><button class="btn" data-ia="ccont">Mark contacted</button><button class="btn primary" data-ia="cedit">Edit</button></div>');
+        (C.open.confirm ? '' : '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px">' + (window.AOSCards ? '<button class="btn" data-ca="notes">Notes</button><button class="btn" data-ca="remind">Remind me</button><button class="btn" data-ca="share">Share</button>' : '') + '<button class="btn danger" data-ia="cdelask">Delete</button><button class="btn" data-ia="ccont">Mark contacted</button><button class="btn primary" data-ia="cedit">Edit</button></div>');
     }
     modal('<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:12px"><div><h2 style="font-size:22px">' + esc(c.name || c.company || 'Card') + '</h2>' + (c.name && c.company ? '<div class="note">' + esc((c.designation ? c.designation + ', ' : '') + c.company) + '</div>' : '') + '</div><button class="btn sm" data-act="mx2">Close</button></div>' + imgBox + body);
     var box = $('#modal .card'); if (box) box.style.width = 'min(680px,100%)';
@@ -141,6 +142,7 @@
     var C = I.cards, t = C.cards.filter(function (x) { return x.id === id; })[0] || { id: id }; cardModal(t, 'view');
     api('/api/cards/' + id).then(function (d) { if (C.open && C.open.card.id === id && !$('#modal').hidden) cardModal(Object.assign({}, t, d.card), C.open.mode, C.open.side); }).catch(function (e) { var m = $('#cm'); if (m) { m.style.color = 'var(--bad)'; m.textContent = e.message; } });
   }
+  function C0() { return I.cards; }
   function patchList(card) { var C = I.cards; C.cards = C.cards.map(function (x) { return x.id === card.id ? Object.assign({}, x, card) : x; }); }
   function cardAct(a, el) {
     var C = I.cards, o = C.open, m = function (t, bad) { var n = $('#cm'); if (n) { n.style.color = bad ? 'var(--bad)' : 'var(--muted)'; n.textContent = t; } };
@@ -161,7 +163,7 @@
   document.addEventListener('click', function (ev) {
     var el = ev.target.closest && ev.target.closest('[data-ia]'); if (!el) return; var a = el.getAttribute('data-ia'), id = el.getAttribute('data-id');
     if (a === 'stref') return void load('st', '/api/status?refresh=1');
-    if (a === 'srv') return void srvModal(id);
+    if (a === 'srv') return void (window.AOSSrv ? window.AOSSrv.open(id) : srvModal(id));
     if (a === 'vpref') return void load('vpn', '/api/vpn');
     if (a === 'vpnew') return void vNew();
     if (a === 'vqr') return void vQr(id); if (a === 'vren') return void vRen(id); if (a === 'vdel') return void vDel(id);
@@ -172,6 +174,7 @@
     if (a === 'cgrp') { I.cards.group = el.getAttribute('data-g') || ''; return void loadCards(); }
     if (a === 'cmore') return void loadCards(true);
     if (a === 'copen') return void openCard(id);
+    if (a === 'csel') { C0().sel[id] = !C0().sel[id]; return void A.redraw(); }
     if (/^c(flip|edit|view|cont|save|delask|delyes)$/.test(a) && I.cards.open) return void cardAct(a, el);
   });
   document.addEventListener('input', function (ev) { var t = ev.target; if (t.getAttribute && t.getAttribute('data-ii') === 'cq') { I.cards.q = t.value; clearTimeout(qt); qt = setTimeout(function () { loadCards(); }, 280); } });
@@ -181,6 +184,7 @@
     if (v === 'insights') { if (!I.st.data && !I.st.loading) load('st', '/api/status'); else if (Date.now() - ((I.st.data && Date.parse(I.st.data.takenAt)) || 0) > 20000 && !I.st.loading) load('st', '/api/status'); }
     if (v === 'vpn' && !I.vpn.loading) load('vpn', '/api/vpn');
     if (v === 'cards' && !I.cards.loading) loadCards();
+    if (v === 'cards' && window.AOSCards) window.AOSCards.onGo(v);
   }
   function settingsCards(field) {
     var c = S.settings || {}; var g = function (k) { return c[k] || {}; };
@@ -190,6 +194,7 @@
     };
     return card('status', 'Status (Beszel, in Insights)', 'Shows CPU, memory, disk, containers and alerts for each server. Create a read-only user in Beszel for this.', 'https://status.anands.xyz', 'Email', 'viewer@example.com', 'Beszel user password') +
       card('vpn', 'VPN (wg-easy)', 'Lists devices and lets you add, switch off and delete them. Use a wg-easy user without two-factor sign-in.', 'https://vpn.anands.xyz', 'Username', 'admin', 'wg-easy password') +
+      '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Pulse (Anands Control Center)</h2><p class="note" style="margin:0 0 14px">Shows your Pulse data here and lets the assistant read it. In Pulse open Settings, Automation, Access for your AI tools, and create a read-only token.</p>' + field('s_pulseu', 'Address', g('pulse').url, 'https://control.anands.xyz') + field('s_pulset', 'Access token' + (g('pulse').tokenSet ? ' (saved, leave blank to keep)' : ''), '', g('pulse').tokenSet ? '••••••••' : 'pulse_…', 'password') + '<div id="r_pulse" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="pulse">Save and test</button></div>' +
       card('cards', 'Cards (Card Scan)', 'Browse, edit and delete scanned business cards. Sign in with the email and password you use in Card Scan.', 'https://cards.anands.xyz', 'Email', 'you@example.com', 'Card Scan password');
   }
   function reset(k) { if (k === 'status') I.st = { data: null, loading: false, error: null, code: null }; if (k === 'vpn') I.vpn = { data: null, loading: false, error: null, code: null }; if (k === 'cards') { var q = I.cards; I.cards = { data: null, loading: false, error: null, code: null, q: q.q, group: '', cards: [], offset: 0, open: null }; } }
@@ -197,5 +202,5 @@
   /* quiet refresh of the servers while Insights stays open */
   timer = setInterval(function () { if (S.view === 'insights' && !document.hidden && I.st.data && !I.st.loading && $('#modal').hidden) load('st', '/api/status', null, true); }, 30000);
 
-  window.AOSInt = { servers: servers, vpnView: vpnView, cardsView: cardsView, onGo: onGo, settingsCards: settingsCards, after: after, state: I };
+  window.AOSInt = { servers: servers, vpnView: vpnView, cardsView: cardsView, onGo: onGo, settingsCards: settingsCards, after: after, state: I, loadCards: function () { return loadCards(); }, reopen: function (id) { openCard(id); }, FIELDS: FIELDS };
 })();

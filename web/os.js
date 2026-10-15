@@ -44,7 +44,7 @@ var S = {
   tab: 'timeline', pq: '', album: null, albums: null, imm: null,
   tl: { items: [], next: 1, loading: false, error: null, loaded: false }, fav: { items: [], next: 1, loading: false, error: null, loaded: false }, sr: { q: '', items: [], mode: '', loading: false },
   ins: { data: null, error: null, code: null, loading: false }, rf: 'all', rq: '', appCat: 'All', aq: '', openApp: null, lb: null, info: true,
-  chatOpen: false, chatSet: false, msgs: [], busy: false, ctx: { photos: true, insights: true, apps: true, files: true }, model: ''
+  chatOpen: false, chatSet: false, msgs: [], busy: false, ctx: { photos: true, insights: true, apps: true, files: true, cards: true, pulse: true }, model: ''
 };
 
 /* ---------- data loading ---------- */
@@ -69,7 +69,7 @@ function boot() {
 }
 
 /* ---------- shell ---------- */
-var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['vpn', 'VPN', 'vpn'], ['cards', 'Cards', 'cards'], ['apps', 'Suite', 'apps']];
+var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['servers', 'Servers', 'monitor'], ['pulse', 'Pulse', 'pulse'], ['vpn', 'VPN', 'vpn'], ['cards', 'Cards', 'cards'], ['apps', 'Suite', 'apps']];
 function cur(v) { if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; return S.view === v || (v === 'apps' && S.view === 'app'); }
 function buildNav() {
   var h = '<button class="logo" data-act="nav" data-v="home" aria-label="Home"><img src="/logo-white.png" alt=""></button><div class="rsep"></div>';
@@ -80,7 +80,7 @@ function buildNav() {
   var t = ''; NAV.concat([['pal', 'Search', 'search']]).forEach(function (n) { t += '<button ' + (n[0] === 'pal' ? 'data-act="pal"' : 'data-act="nav" data-v="' + n[0] + '"') + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
   $('#tabs').innerHTML = t;
 }
-function go(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); }
+function go(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); }
 function redraw() { var y = $('#view').scrollTop; render(); $('#view').scrollTop = y; }
 function render() {
   var app = $('#app'), tabs = $('#tabs'), fab = $('#fab');
@@ -94,6 +94,8 @@ function render() {
   else if (S.view === 'vault') v.innerHTML = vaultV();
   else if (S.view === 'dedit') v.innerHTML = dedV();
   else if (S.view === 'insights') v.innerHTML = insightsV();
+  else if (S.view === 'servers') v.innerHTML = window.AOSSrv ? window.AOSSrv.view() : '';
+  else if (S.view === 'pulse') v.innerHTML = window.AOSPulse ? window.AOSPulse.view() : '';
   else if (S.view === 'vpn') v.innerHTML = window.AOSInt ? window.AOSInt.vpnView() : '';
   else if (S.view === 'cards') v.innerHTML = window.AOSInt ? window.AOSInt.cardsView() : '';
   else if (S.view === 'apps') v.innerHTML = appsV();
@@ -321,6 +323,7 @@ function saveGroup(k, after) {
   if (k === 'coolify') body.coolify = { url: v('s_cu'), token: v('s_ct') };
   if (k === 'vault') body.vault = { url: v('s_vu') };
   if (k === 'status' || k === 'vpn' || k === 'cards') body[k] = { url: v('s_' + k + 'u'), user: v('s_' + k + 'n'), pass: v('s_' + k + 'p') };
+  if (k === 'pulse') body.pulse = { url: v('s_pulseu'), token: v('s_pulset') };
   if (k === 'dav') body.dav = { url: v('s_du'), user: v('s_dn'), pass: v('s_dp') };
   if (k === 'llm') body.llm = { base: v('s_lb'), key: v('s_lk'), model: v('s_lm') };
   if (k === 'mail') { body.mail = { host: v('s_mh'), port: v('s_mp'), security: v('s_ms'), user: v('s_mu'), pass: v('s_mw'), from: v('s_mf'), fromName: v('s_mn'), dailyCap: v('s_mc') }; body.public = { url: v('s_pu') }; }
@@ -330,6 +333,7 @@ function saveGroup(k, after) {
     if (k === 'llm') return api('/api/chat/test', { method: 'POST', json: {} }).then(function (r) { note('r_llm', r.ok ? 'Connected. Model replied (' + (r.model || '?') + ').' : 'Saved, but the test failed: ' + r.message, r.ok ? 'ok' : 'bad'); });
     return api('/api/settings/test', { method: 'POST', json: { target: k } }).then(function (r) {
       if (k === 'immich') { S.imm = r; S.tl = { items: [], next: 1, loading: false, error: null, loaded: false }; S.albums = null; if (r.connected) loadPage(S.tl, '/api/photos/timeline'); }
+      if (k === 'pulse' && window.AOSPulse) { var pst = window.AOSPulse.state; pst.d = {}; pst.err = {}; }
       if (k === 'dav') { S.drive.status = r; S.drive.items = []; }
       if (k === 'vault') { S.vault.status = r; }
       if (window.AOSInt && (k === 'status' || k === 'vpn' || k === 'cards')) window.AOSInt.after(k, r);
@@ -491,7 +495,7 @@ function drawChat() {
     el.innerHTML = head + '<div class="cset"><h3 style="font-size:18px;margin-bottom:4px">Connect your FreeLLMAPI</h3><p class="note">Any OpenAI-compatible address works. The key is stored on the server and never comes back to the browser.</p><div class="field"><label for="c1">API address</label><input class="input" id="s_lb" value="' + esc(c.base || '') + '" placeholder="https://llm.anands.xyz/v1"></div><div class="field"><label for="c2">API key' + (c.keySet ? ' (saved, leave blank to keep)' : '') + '</label><input class="input" id="s_lk" type="password" autocomplete="off" placeholder="' + (c.keySet ? '••••••••' : 'sk-...') + '"></div><div class="field"><label for="c3">Model</label><input class="input" id="s_lm" value="' + esc(c.model || '') + '"></div><div id="r_llm" class="note" role="status"></div><div style="display:flex;gap:10px"><button class="btn primary" data-act="save" data-k="llm">Save and test</button><button class="btn" data-act="chatdone">Back to chat</button></div></div>';
     return;
   }
-  var ctx = '<div class="ctx"><span style="color:var(--muted);font-size:12.5px;align-self:center">Knows:</span>' + [['photos', 'Photos'], ['insights', 'Cloud Insights'], ['apps', 'Suite'], ['files', 'Files']].map(function (x) { return '<button class="chip" data-act="ctx" data-k="' + x[0] + '" aria-pressed="' + S.ctx[x[0]] + '">' + x[1] + '</button>'; }).join('') + '</div>';
+  var ctx = '<div class="ctx"><span style="color:var(--muted);font-size:12.5px;align-self:center">Knows:</span>' + [['photos', 'Photos'], ['insights', 'Cloud Insights'], ['cards', 'Cards'], ['pulse', 'Pulse'], ['apps', 'Suite'], ['files', 'Files']].map(function (x) { return '<button class="chip" data-act="ctx" data-k="' + x[0] + '" aria-pressed="' + S.ctx[x[0]] + '">' + x[1] + '</button>'; }).join('') + '</div>';
   var m = '';
   if (!S.msgs.length) m = '<div class="msg a">Ask me about your photos, your server, your apps or files saved by the apps. I only know what is connected, and I will say when something is not.</div><div class="sugg">' + ['Which resources have no health check?', 'What deployed most recently, and how long did it take?', 'What photos did I add this month?', 'Which apps replace Excel or Word?', 'Summarise my server in three lines'].map(function (q) { return '<button data-act="ask" data-q="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') + '</div>';
   else m = S.msgs.map(function (x, i) { return '<div class="msg ' + (x.r === 'u' ? 'u' : 'a') + '" id="m' + i + '">' + (x.r === 'u' ? esc(x.t) : x.t === '...' ? '<span class="typing"><i></i><i></i><i></i></span>' : x.err ? '<span style="color:var(--bad)">' + esc(x.t) + '</span>' + (x.code === 'not_configured' ? '<br><button class="link" data-act="chatset">Connect FreeLLMAPI</button>' : '') : md(x.t) + (x.used && x.used.length ? '<span class="via">Used: ' + esc(x.used.join(', ')) + '</span>' : '')) + '</div>'; }).join('');

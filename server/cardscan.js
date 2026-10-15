@@ -119,4 +119,31 @@ export async function handleCards(req, res, url) {
   throw httpError(405, 'Method not allowed');
 }
 export async function test() { sess = null; try { const d = await cs('/api/cards/stats'); return { configured: true, connected: true, resources: d?.total ?? 0, unit: 'cards' }; } catch (e) { return { configured: e.code !== 'not_configured', connected: false, reason: e.message }; } }
-export const clearCardsCache = () => { sess = null; };
+export const clearCardsCache = () => { sess = null; allCards = null; };
+
+/* For the assistant: every card as text (from Card Scan's CSV export, so no photos), cached for two minutes. */
+function parseCsv(t) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < t.length; i++) { const c = t[i];
+    if (q) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true; else if (c === ',') { row.push(f); f = ''; } else if (c === '\n') { row.push(f); rows.push(row); row = []; f = ''; } else if (c !== '\r') f += c; }
+  if (f || row.length) { row.push(f); rows.push(row); } return rows;
+}
+let allCards = null;
+async function loadAll() {
+  if (allCards && Date.now() - allCards.t < 120000) return allCards.d;
+  const r = await csRaw('/api/cards/export'); if (!r.ok) throw httpError(502, 'Card Scan could not export', 'upstream_' + r.status);
+  const rows = parseCsv(r.buf.toString('utf8').replace(/^\uFEFF/, '')); const head = rows.shift() || [];
+  const d = rows.filter((x) => x.length > 2).map((x) => { const o = {}; head.forEach((h, i) => { if (x[i]) o[h] = x[i]; }); return o; });
+  allCards = { t: Date.now(), d }; return d;
+}
+export async function cardsContext(question) {
+  try {
+    const all = await loadAll(); const total = all.length;
+    const keep = (c) => ({ name: c.Name, title: c.Title || c.Designation, company: c.Company, phone: [c.Phone, c['Phone 2'], c['Phone 3']].filter(Boolean).join(' / ') || undefined, email: [c.Email, c['Email 2'], c['Email 3']].filter(Boolean).join(' / ') || undefined, whatsapp: c.WhatsApp, website: c.Website, address: c.Address, notes: c.Notes, group: c.Group, added: (c['Date Added'] || '').slice(0, 10) });
+    if (total <= 350) return { total, cards: all.map(keep) };
+    const words = String(question || '').toLowerCase().split(/[^a-z0-9+@.]+/).filter((w) => w.length > 2 && !['the', 'and', 'who', 'what', 'where', 'with', 'for', 'card', 'cards', 'contact', 'contacts', 'have', 'does', 'from', 'about', 'tell', 'find', 'show', 'number', 'email', 'phone'].includes(w));
+    const hits = words.length ? all.filter((c) => { const b = JSON.stringify(c).toLowerCase(); return words.some((w) => b.includes(w)); }) : [];
+    return { total, note: 'Too many cards to list. Showing the ones matching the question' + (hits.length > 60 ? ' (first 60)' : '') + '.', matches: hits.slice(0, 60).map(keep) };
+  } catch (e) { return e.code === 'not_configured' ? null : { connected: false, note: e.message }; }
+}
