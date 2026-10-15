@@ -174,11 +174,24 @@ try {
     await p.locator('.dkw[aria-label="Files"] [data-dk="wclose"]').first().click(); await p.waitForTimeout(600); await p.reload(); await p.waitForSelector('#desk:not([hidden])'); await p.waitForTimeout(300);
     assert.equal(await p.locator('.dkw[aria-label="Files"]').count(), 0); await p.evaluate(() => sessionStorage.removeItem('keepsess'));
   });
-  await t('browser: settings gear opens search engine and home page', async () => {
+  await t('browser: full settings (search, home, bookmarks, history, privacy, reset)', async () => {
     await p.click('.dk-ic[data-w="browser"], .dk-ic[data-k="browser"]').catch(() => {}); const win = p.locator('.dkw[aria-label="Browser"]').first(); await win.waitFor();
-    await win.locator('[data-dk="bset"]').click(); await win.locator('.dk-bset #brse').waitFor(); assert.equal(await win.locator('.dk-bset [data-dk="rbq"]').count(), 0);
-    await win.locator('.dk-bset #brse').selectOption('bing'); assert.equal(await p.evaluate(() => localStorage.getItem('aos.brsearch')), '"bing"');
-    await win.locator('.dk-bset [data-dk="bsetx"]').click(); assert.equal(await win.locator('.dk-bset').count(), 0);
+    await win.locator('[data-dk="bset"]').click(); await win.locator('.bsx').waitFor();
+    for (const n of ['General', 'Search', 'Appearance', 'Bookmarks', 'History', 'Privacy and data', 'Advanced']) assert.ok(await win.locator('.bsnav button', { hasText: n }).count() >= 1, n);
+    await shot(p, 'browser-settings-general'); await win.locator('.bsnav button', { hasText: 'Search' }).click(); await win.locator('#bsse').selectOption('bing'); assert.equal(await p.evaluate(() => localStorage.getItem('aos.brsearch')), '"bing"');
+    await win.locator('#bsse').selectOption('custom'); await win.locator('#bscust').fill('https://search.example/?q=%s'); await win.locator('#bscust').press('Tab'); assert.equal(await p.evaluate(() => localStorage.getItem('aos.brsearchcustom')), '"https://search.example/?q=%s"');
+    await win.locator('.bsnav button', { hasText: 'General' }).click(); await win.locator('#bshome').fill('https://example.com/'); await win.locator('#bshome').press('Tab'); assert.equal(await p.evaluate(() => localStorage.getItem('aos.brhome')), '"https://example.com/"');
+    await win.locator('.bsnav button', { hasText: 'Appearance' }).click(); assert.ok(await win.locator('.bsmain', { hasText: 'Available in the Full browser' }).count() >= 1);
+    await win.locator('[data-bs="close"]').click(); assert.equal(await win.locator('.bsx').count(), 0);
+    /* bookmark a page, see it in the bar and in settings, then clear */
+    await win.locator('.dk-start2 [data-dk="bgo"]').first().click(); await p.waitForTimeout(600); await win.locator('.dk-star').click(); await win.locator('.dk-bm').first().waitFor();
+    assert.ok(await win.locator('.dk-star.on').count() === 1);
+    await win.locator('[data-dk="bset"]').click(); await win.locator('.bsnav button', { hasText: 'Bookmarks' }).click(); assert.equal(await win.locator('.bsl2 li').count(), 1);
+    await win.locator('.bsnav button', { hasText: 'History' }).click(); assert.ok(await win.locator('.bsl2 li').count() >= 1); await shot(p, 'browser-settings-history');
+    await win.locator('.bsnav button', { hasText: 'Privacy and data' }).click(); await win.locator('[data-bs="clearall"]').click(); await p.waitForTimeout(300);
+    assert.equal(await p.evaluate(() => localStorage.getItem('aos.brbm')), '[]'); assert.equal(await win.locator('.dk-bm').count(), 0);
+    await win.locator('.bsnav button', { hasText: 'Advanced' }).click(); await win.locator('[data-bs="reset"]').click(); assert.equal(await p.evaluate(() => localStorage.getItem('aos.brsearch')), '"ddg"');
+    await win.locator('[data-bs="close"]').click();
   });
   await t('launcher and Suite list Email and Meeting by plain names', async () => {
     const L = await (await ctx.request.get(B + '/apps.json')).json(); const nm = (x) => (L.find((a) => a.slug === x) || {}).name;

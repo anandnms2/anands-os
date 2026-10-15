@@ -14,7 +14,7 @@ const BINS = [env.CHROMIUM_PATH, '/usr/bin/chromium', '/usr/bin/chromium-browser
 const findBin = () => BINS.filter(Boolean).find((b) => { try { return fs.statSync(b).isFile(); } catch { return false; } }) || null;
 const IDLE_MS = 10 * 60 * 1000;
 const QUAL = { sharp: { live: 88, still: 96, dmin: 1.5 }, balanced: { live: 72, still: 90, dmin: 1 }, fast: { live: 50, still: 78, dmin: 1 } };
-const B = { qual: 'sharp', proc: null, port: 0, ready: null, bcdp: null, tabs: new Map(), active: null, clients: new Set(), idle: null, poll: null, view: { w: 1280, h: 760 }, ua: '', last: '' };
+const B = { qual: 'sharp', proc: null, port: 0, ready: null, bcdp: null, tabs: new Map(), active: null, clients: new Set(), idle: null, poll: null, view: { w: 1280, h: 760 }, ua: '', last: '', pref: { dark: 'auto', zoom: 100, lang: 'en-US', mobile: false } };
 
 class Cdp {
   constructor(url) { this.id = 0; this.p = new Map(); this.h = new Map(); this.ws = new WebSocket(url); this.open = new Promise((ok, no) => { this.ws.onopen = ok; this.ws.onerror = () => no(new Error('cdp connect failed')); }); this.ws.onmessage = (e) => this.msg(e.data); this.ws.onclose = () => { for (const [, r] of this.p) r[1](new Error('closed')); this.p.clear(); this.closed = true; this.h.get('close')?.forEach((f) => f()); }; }
@@ -68,6 +68,17 @@ async function refreshTabs() {
   for (const id of [...B.tabs.keys()]) if (!seen.has(id)) { const t = B.tabs.get(id); try { t.cdp?.close(); } catch {} B.tabs.delete(id); if (B.active === id) { B.active = null; const n = B.tabs.keys().next().value; if (n) activate(n).catch(() => {}); } }
   const sig = JSON.stringify([tabList(), B.active]); if (sig !== B.last) { B.last = sig; bcast('tabs', { tabs: tabList(), active: B.active }); }
 }
+const MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36';
+async function applyPrefs(t, c) {
+  const P = B.pref, ua = P.mobile ? MOBILE_UA : B.ua;
+  const lang = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(P.lang) ? P.lang : 'en-US';
+  if (ua || lang !== 'en-US') await c.send('Emulation.setUserAgentOverride', { userAgent: ua || (await c.send('Browser.getVersion').then((v) => (v.userAgent || '').replace('HeadlessChrome', 'Chrome')).catch(() => '')), acceptLanguage: lang + ',' + lang.split('-')[0] }).catch(() => {});
+  await c.send('Emulation.setEmulatedMedia', { features: P.dark === 'auto' ? [] : [{ name: 'prefers-color-scheme', value: P.dark }] }).catch(() => {});
+  const z = Math.min(300, Math.max(25, Math.round(P.zoom || 100))), src = 'try{document.documentElement.style.zoom=' + (z === 100 ? "''" : "'" + z + "%'") + '}catch(e){}';
+  if (t.zid) await c.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: t.zid }).catch(() => {});
+  const r = await c.send('Page.addScriptToEvaluateOnNewDocument', { source: src }).catch(() => null); t.zid = r?.identifier || null;
+  await c.send('Runtime.evaluate', { expression: src }).catch(() => {});
+}
 async function attach(t) {
   if (t.cdp && !t.cdp.closed) return t.cdp;
   const c = new Cdp(t.ws); await c.open; t.cdp = c;
@@ -79,10 +90,10 @@ async function attach(t) {
   c.on('Page.frameStoppedLoading', () => { t.loading = false; B.last = ''; });
   c.on('Page.javascriptDialogOpening', (p) => { c.send('Page.handleJavaScriptDialog', { accept: p.type !== 'confirm' && p.type !== 'prompt' }).catch(() => {}); });
   await c.send('Page.enable'); await c.send('Runtime.enable').catch(() => {});
-  if (B.ua) await c.send('Emulation.setUserAgentOverride', { userAgent: B.ua, acceptLanguage: 'en-US,en' }).catch(() => {});
+  await applyPrefs(t, c);
   return c;
 }
-async function sizeTab(t) { const c = await attach(t); await c.send('Emulation.setDeviceMetricsOverride', { width: B.view.w, height: B.view.h, deviceScaleFactor: B.view.d || 1, mobile: false }); }
+async function sizeTab(t) { const c = await attach(t); await c.send('Emulation.setDeviceMetricsOverride', { width: B.view.w, height: B.view.h, deviceScaleFactor: B.view.d || 1, mobile: !!B.pref.mobile }); }
 async function cast(t, on) { const c = await attach(t); if (!on) return c.send('Page.stopScreencast').catch(() => {}); await sizeTab(t); await c.send('Page.stopScreencast').catch(() => {}); await c.send('Page.startScreencast', { format: 'jpeg', quality: QUAL[B.qual].live, maxWidth: Math.round(B.view.w * (B.view.d || 1)), maxHeight: Math.round(B.view.h * (B.view.d || 1)), everyNthFrame: 1 }); }
 async function activate(id) {
   const t = B.tabs.get(id); if (!t) throw httpError(404, 'No such tab', 'no_tab');
@@ -112,7 +123,7 @@ const normUrl = (u) => { u = String(u || '').trim(); if (!u) return null; if (u 
 
 export async function handleRb(req, res, url) {
   const p = url.pathname.replace(/^\/api\/rb/, '') || '/';
-  if (p === '/status') return json(res, 200, { available: available(), running: !!B.ready });
+  if (p === '/status') return json(res, 200, { available: available(), running: !!B.ready, prefs: B.pref });
   if (!available()) throw httpError(501, 'Chromium is not installed on this server', 'no_chromium');
   if (p === '/events' && req.method === 'GET') {
     await start(); ensurePoll();
@@ -138,7 +149,17 @@ export async function handleRb(req, res, url) {
   if (p === '/input') { const t = tab(), l = Array.isArray(b.ev) ? b.ev.slice(0, 50) : []; for (const ev of l) await input(t, ev).catch(() => {}); return json(res, 200, { ok: true }); }
   if (p === '/size') { const w = Math.min(2560, Math.max(320, Math.round(+b.w || 0))), h = Math.min(1600, Math.max(240, Math.round(+b.h || 0))); const d = Math.min(B.qual === 'fast' ? 1 : 2, Math.max(QUAL[B.qual].dmin, Math.round((+b.dpr || 1) * 4) / 4)); if (w === B.view.w && h === B.view.h && d === (B.view.d || 1)) return json(res, 200, { ok: true }); B.view = { w, h, d }; if (B.active && B.tabs.get(B.active)) await cast(B.tabs.get(B.active), true).catch(() => {}); return json(res, 200, { ok: true }); }
   if (p === '/quality') { const q = String(b.q || ''); if (!QUAL[q]) throw httpError(400, 'Unknown quality', 'bad_quality'); B.qual = q; const d = Math.min(q === 'fast' ? 1 : 2, Math.max(QUAL[q].dmin, B.view.d || 1)); B.view = { ...B.view, d }; if (B.active && B.tabs.get(B.active)) await cast(B.tabs.get(B.active), true).catch(() => {}); return json(res, 200, { ok: true, quality: q }); }
-  if (p === '/clear') { const c = await attach(tab()); await c.send('Network.enable').catch(() => {}); await c.send('Network.clearBrowserCache').catch(() => {}); await c.send('Network.clearBrowserCookies').catch(() => {}); return json(res, 200, { ok: true }); }
+  if (p === '/prefs') {
+    const P = B.pref;
+    if (b.dark !== undefined) P.dark = ['auto', 'light', 'dark'].includes(b.dark) ? b.dark : 'auto';
+    if (b.zoom !== undefined) P.zoom = Math.min(300, Math.max(25, Math.round(+b.zoom || 100)));
+    if (b.lang !== undefined) P.lang = String(b.lang).slice(0, 12);
+    if (b.mobile !== undefined) P.mobile = !!b.mobile;
+    for (const t of B.tabs.values()) if (t.cdp && !t.cdp.closed) await applyPrefs(t, t.cdp).catch(() => {});
+    if (b.mobile !== undefined && B.active && B.tabs.get(B.active)) await cast(B.tabs.get(B.active), true).catch(() => {});
+    return json(res, 200, { ok: true, prefs: P });
+  }
+  if (p === '/clear') { const c = await attach(tab()); await c.send('Network.enable').catch(() => {}); if (b.cache !== false) await c.send('Network.clearBrowserCache').catch(() => {}); if (b.cookies !== false) await c.send('Network.clearBrowserCookies').catch(() => {}); return json(res, 200, { ok: true }); }
   if (p === '/copy') { const t = tab(), c = await attach(t); const r = await c.send('Runtime.evaluate', { expression: 'String(getSelection())', returnByValue: true }); return json(res, 200, { text: String(r.result?.value || '').slice(0, 100000) }); }
   throw httpError(404, 'Unknown route');
 }

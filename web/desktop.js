@@ -171,6 +171,8 @@
 
   /* ---------- browser ---------- */
   var ENGINES = [['ddg', 'DuckDuckGo', 'https://html.duckduckgo.com/html/?q='], ['google', 'Google', 'https://www.google.com/search?q='], ['bing', 'Bing', 'https://www.bing.com/search?q='], ['brave', 'Brave Search', 'https://search.brave.com/search?q='], ['startpage', 'Startpage', 'https://www.startpage.com/do/search?q=']];
+  function newHome() { var h = LS.get('brhome', ''); return LS.get('brstart', h ? 'home' : 'new') === 'home' ? h : ''; }
+  function searchFor(t) { var k = LS.get('brsearch', 'ddg'), c = String(LS.get('brsearchcustom', '') || ''); if (k === 'custom' && /^https?:\/\//i.test(c)) return c.indexOf('%s') >= 0 ? c.replace('%s', enc(t)) : c + enc(t); return SEARCHURL() + enc(t); }
   function SEARCHURL() { var k = LS.get('brsearch', 'ddg'); return (ENGINES.filter(function (e) { return e[0] === k; })[0] || ENGINES[0])[2]; }
   var QLAB = [['sharp', 'Sharp', 'Best text and images, uses the most data'], ['balanced', 'Balanced', 'Good quality, lighter'], ['fast', 'Fast', 'Smoothest on a slow connection']];
   var QUICK = [['Wikipedia', 'https://en.wikipedia.org/'], ['Hacker News', 'https://news.ycombinator.com/'], ['DuckDuckGo', 'https://html.duckduckgo.com/html/'], ['BBC News', 'https://www.bbc.com/news'], ['Example', 'https://example.com/']];
@@ -179,7 +181,7 @@
     if (/^https?:\/\//i.test(t)) return t;
     if (!/\s/.test(t) && /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$/i.test(t)) return 'https://' + t;
     if (/^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?([/?#].*)?$/i.test(t)) return 'http://' + t;
-    return SEARCHURL() + enc(t);
+    return searchFor(t);
   }
   function btab(w) { var b = w.b; return b.tabs.filter(function (t) { return t.id === b.cur; })[0]; }
   function loadRb() { if (D.rbTried) return; D.rbTried = true; fetch('/api/rb/status', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (c) { D.rbn = !!(c && c.available); }).catch(function () {}); fetch('/api/settings', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (c) { var u = c && c.rbrowser && c.rbrowser.url; if (u && /^https?:/i.test(u)) { D.rb = u; D.wins.forEach(function (w) { if (w.kind === 'browser') { if (w.b.full === undefined) w.b.full = true; paintBrowser(w); } }); } }).catch(function () {}); }
@@ -191,7 +193,7 @@
   function nav(w, t, input, noPush) {
     var u = normUrl(input); if (!u) return; t.url = u; t.want = u; t.force = true; t.title = u.replace(/^https?:\/\//, '').slice(0, 40);
     if (!noPush) { t.hist = t.hist.slice(0, t.i + 1); t.hist.push(u); t.i = t.hist.length - 1; }
-    paintBrowser(w);
+    paintBrowser(w); if (window.AOSBS) AOSBS.visit(u, t.title);
   }
   function bstart(w) {
     return '<div class="dk-start2"><h2>Browser</h2><form data-dk-form="url" data-id="' + w.id + '" class="dk-sf"><input class="input dk-url" placeholder="Search the web or type an address" autocomplete="off" aria-label="Search"><button class="btn primary">Go</button></form><div class="dk-q">' + QUICK.map(function (q) { return '<button class="btn" data-dk="bgo" data-id="' + w.id + '" data-u="' + esc(q[1]) + '">' + esc(q[0]) + '</button>'; }).join('') + '</div>' +
@@ -205,9 +207,9 @@
     if (b.full && D.rb) { if (!rf) { rf = document.createElement('iframe'); rf.className = 'dkw-frame dk-rb'; rf.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock'); rf.setAttribute('allow', 'clipboard-read; clipboard-write; fullscreen; microphone; camera; autoplay'); rf.title = 'Full browser'; rf.src = D.rb; w.body.querySelector('.dk-bv').appendChild(rf); } rf.hidden = false; w.body.querySelector('.dk-barw').hidden = true; } else { if (rf) rf.hidden = true; w.body.querySelector('.dk-barw').hidden = false; }
     var keep = (document.activeElement && document.activeElement.classList.contains('dk-url') && w.body.contains(document.activeElement)) ? document.activeElement.value : null;
     w.body.querySelector('.dk-barw').innerHTML = '<form class="dk-bar2" data-dk-form="url" data-id="' + w.id + '"><button type="button" class="btn sm" data-dk="bback" data-id="' + w.id + '"' + (t.i > 0 ? '' : ' disabled') + ' aria-label="Back">' + ic('back') + '</button><button type="button" class="btn sm" data-dk="bfwd" data-id="' + w.id + '"' + (t.i < t.hist.length - 1 ? '' : ' disabled') + ' aria-label="Forward">' + ic('r') + '</button><button type="button" class="btn sm" data-dk="breload" data-id="' + w.id + '" aria-label="Reload"' + (t.url ? '' : ' disabled') + '>&#8635;</button><button type="button" class="btn sm" data-dk="bhome" data-id="' + w.id + '" aria-label="Start page">' + ic('home') + '</button>' +
-      '<input class="input dk-url" aria-label="Address or search" placeholder="Search or type a web address" value="' + esc(t.url) + '" autocomplete="off" spellcheck="false"><button type="button" class="btn sm" data-dk="bext" data-id="' + w.id + '"' + (t.url ? '' : ' disabled') + ' title="Open this page in a real browser tab" aria-label="Open in a real tab">' + ic('ext') + '</button></form>';
+      '<input class="input dk-url" aria-label="Address or search" placeholder="Search or type a web address" value="' + esc(t.url) + '" autocomplete="off" spellcheck="false"><button type="button" class="btn sm dk-star" data-dk="bmstar" data-id="' + w.id + '" aria-label="Bookmark this page" title="Bookmark this page"' + (t.url ? '' : ' disabled') + '>' + ic('star') + '</button><button type="button" class="btn sm" data-dk="bext" data-id="' + w.id + '"' + (t.url ? '' : ' disabled') + ' title="Open this page in a real browser tab" aria-label="Open in a real tab">' + ic('ext') + '</button></form>';
     if (keep !== null) { var ui = w.body.querySelector('.dk-bar2 .dk-url'); ui.value = keep; ui.focus(); }
-    var bv = w.body.querySelector('.dk-bv'), sw = bv.querySelector('.dk-sw'); sw.hidden = !!t.url || !!b.full; if (!t.url) sw.innerHTML = bstart(w);
+    var bv = w.body.querySelector('.dk-bv'), sw = bv.querySelector('.dk-sw'); sw.hidden = !!t.url || !!b.full; if (!t.url) sw.innerHTML = bstart(w); if (window.AOSBS) AOSBS.bar(w);
     var have = {}; bv.querySelectorAll('iframe.dk-bf').forEach(function (f) { have[f.getAttribute('data-tab')] = f; });
     Object.keys(have).forEach(function (k) { if (!b.tabs.some(function (x) { return String(x.id) === k; })) have[k].remove(); });
     b.tabs.forEach(function (x) {
@@ -241,9 +243,9 @@
     var ex = D.wins.filter(function (x) { return x.kind === 'rbrowser'; })[0]; if (ex) { focus(ex); if (url) rbPost(ex, '/open', { url: normUrl(url) }); return ex; }
     var w = mk('rbrowser', 'Browser', { w: 1100, h: 700 }); w.sd = { t: 'rb' }; w.r = { tabs: [], active: null, q: [], mv: null, wh: null, fw: 0, fh: 0, down: false };
     w.body.innerHTML = '<div class="dk-br"><div class="dk-bts" role="tablist"></div><div class="dk-barw"></div><div class="dk-bv dk-rv"><canvas class="dk-rc" tabindex="0" aria-label="Web page"></canvas><div class="dk-rmsg" hidden></div></div></div>';
-    rbBar(w); var cv = w.body.querySelector('.dk-rc'); rbWire(w, cv);
+    rbBar(w); var cv = w.body.querySelector('.dk-rc'); rbWire(w, cv); if (window.AOSBS) AOSBS.sync(w);
     var es = new EventSource('/api/rb/events'); w.r.es = es; w.onclose = function () { try { es.close(); } catch (e) {} clearInterval(w.r.tick); };
-    es.addEventListener('tabs', function (e) { var d = JSON.parse(e.data); w.r.tabs = d.tabs; w.r.active = d.active; rbBar(w); var t = rbTab(w); w.title = (t && t.title ? t.title + ' - ' : '') + 'Browser'; task(); });
+    es.addEventListener('tabs', function (e) { var d = JSON.parse(e.data); w.r.tabs = d.tabs; w.r.active = d.active; rbBar(w); var t = rbTab(w); if (window.AOSBS && t && t.url && !t.loading && t.url !== w.r.lastv) { w.r.lastv = t.url; AOSBS.visit(t.url, t.title); } w.title = (t && t.title ? t.title + ' - ' : '') + 'Browser'; task(); });
     es.addEventListener('frame', function (e) { var d = JSON.parse(e.data); if (d.tab !== w.r.active) return; var im = new Image(); im.onload = function () { if (cv.width !== im.width || cv.height !== im.height) { cv.width = im.width; cv.height = im.height; } cv.getContext('2d').drawImage(im, 0, 0); w.r.fw = d.w; w.r.fh = d.h; var m = w.body.querySelector('.dk-rmsg'); if (m) m.hidden = true; }; im.src = 'data:image/jpeg;base64,' + d.d; });
     es.addEventListener('down', function () { var m = w.body.querySelector('.dk-rmsg'); if (m) { m.hidden = false; m.textContent = 'The browser stopped. It restarts when you open a page.'; } });
     es.onerror = function () { var m = w.body.querySelector('.dk-rmsg'); if (m && es.readyState === 2) { m.hidden = false; m.textContent = 'The browser is not available right now. Use Simple browser from the top bar.'; } };
@@ -258,8 +260,9 @@
     var r = w.r, t = rbTab(w), st = w.body.querySelector('.dk-bts');
     st.innerHTML = r.tabs.map(function (x) { return '<div class="dk-bt' + (x.id === r.active ? ' on' : '') + '" data-dk="rbtab" data-id="' + w.id + '" data-t="' + esc(x.id) + '" role="tab" aria-selected="' + (x.id === r.active) + '"><span>' + esc((x.loading ? '... ' : '') + (x.title || x.url || 'New tab')) + '</span>' + (r.tabs.length > 1 ? '<button data-dk="rbclose" data-id="' + w.id + '" data-t="' + esc(x.id) + '" aria-label="Close tab">&#10005;</button>' : '') + '</div>'; }).join('') + '<button class="dk-bnew" data-dk="rbnew" data-id="' + w.id + '" aria-label="New tab">+</button><button class="btn sm dk-bfull" data-dk="rbsimple" data-id="' + w.id + '" title="Lighter browser that works inside this site">Simple browser</button>';
     var bar = w.body.querySelector('.dk-barw'), keep = (document.activeElement && document.activeElement.classList.contains('dk-url') && bar.contains(document.activeElement)) ? document.activeElement.value : null;
-    bar.innerHTML = '<form class="dk-bar2" data-dk-form="rburl" data-id="' + w.id + '"><button type="button" class="btn sm" data-dk="rbback" data-id="' + w.id + '" aria-label="Back">' + ic('back') + '</button><button type="button" class="btn sm" data-dk="rbfwd" data-id="' + w.id + '" aria-label="Forward">' + ic('r') + '</button><button type="button" class="btn sm" data-dk="rbreload" data-id="' + w.id + '" aria-label="Reload">&#8635;</button><input class="input dk-url" aria-label="Address or search" placeholder="Search or type a web address" value="' + esc(t ? t.url : '') + '" autocomplete="off" spellcheck="false"><button type="button" class="btn sm" data-dk="rbset" data-id="' + w.id + '" aria-label="Browser settings" title="Browser settings">' + ic('settings') + '</button></form>';
+    bar.innerHTML = '<form class="dk-bar2" data-dk-form="rburl" data-id="' + w.id + '"><button type="button" class="btn sm" data-dk="rbback" data-id="' + w.id + '" aria-label="Back">' + ic('back') + '</button><button type="button" class="btn sm" data-dk="rbfwd" data-id="' + w.id + '" aria-label="Forward">' + ic('r') + '</button><button type="button" class="btn sm" data-dk="rbreload" data-id="' + w.id + '" aria-label="Reload">&#8635;</button><input class="input dk-url" aria-label="Address or search" placeholder="Search or type a web address" value="' + esc(t ? t.url : '') + '" autocomplete="off" spellcheck="false"><button type="button" class="btn sm dk-star" data-dk="bmstar" data-id="' + w.id + '" aria-label="Bookmark this page" title="Bookmark this page">' + ic('star') + '</button><button type="button" class="btn sm" data-dk="rbset" data-id="' + w.id + '" aria-label="Browser settings" title="Browser settings">' + ic('settings') + '</button></form>';
     if (keep !== null) { var ui = bar.querySelector('.dk-url'); ui.value = keep; ui.focus(); }
+    if (window.AOSBS) AOSBS.bar(w);
   }
   function rbQ(w, e, flushNow) { w.r.q.push(e); if (flushNow) rbFlush(w); }
   function rbFlush(w) {
@@ -284,6 +287,7 @@
     cv.addEventListener('paste', function (e) { var t = e.clipboardData && e.clipboardData.getData('text'); if (t) rbQ(w, { t: 'text', s: t }, true); e.preventDefault(); });
   }
   function rbSettings(w, keep) {
+    if (window.AOSBS) return AOSBS.toggle(w);
     var old = w.body.querySelector('.dk-bset'); if (old && !keep) return void old.remove(); if (old) old.remove();
     var el = document.createElement('div'); el.className = 'dk-bset'; var q = LS.get('brqual', 'sharp'), se = LS.get('brsearch', 'ddg');
     el.innerHTML = '<div class="dk-bsh"><b>Browser settings</b><button data-dk="' + (w.kind === 'browser' ? 'bsetx' : 'rbsetx') + '" data-id="' + w.id + '" aria-label="Close">&#10005;</button></div>' +
@@ -298,12 +302,14 @@
     var id = b.getAttribute('data-t');
     if (a === 'rbtab') return void rbPost(w, '/activate', { tab: id });
     if (a === 'rbclose') return void rbPost(w, '/close', { tab: id });
-    if (a === 'rbnew') { var home = LS.get('brhome', ''); return void rbPost(w, '/open', home ? { url: normUrl(home) } : {}).then(function () { var u = w.body.querySelector('.dk-url'); if (u) u.focus(); }); }
+    if (a === 'rbnew') { var home = newHome(); return void rbPost(w, '/open', home ? { url: normUrl(home) } : {}).then(function () { var u = w.body.querySelector('.dk-url'); if (u) u.focus(); }); }
     if (a === 'rbback') return void rbPost(w, '/go', { tab: w.r.active, dir: 'back' });
     if (a === 'rbfwd') return void rbPost(w, '/go', { tab: w.r.active, dir: 'forward' });
     if (a === 'rbreload') return void rbPost(w, '/go', { tab: w.r.active, dir: 'reload' });
     if (a === 'rbsimple') return void browserWin();
     if (a === 'rbset') return void rbSettings(w);
+    if (a === 'bmstar') return void (window.AOSBS && AOSBS.star(w));
+    if (a === 'bmgo') return void (window.AOSBS && AOSBS.go(w, b.getAttribute('data-u')));
     if (a === 'rbsetx') { var bs = w.body.querySelector('.dk-bset'); if (bs) bs.remove(); return; }
     if (a === 'rbclear') { return void rbPost(w, '/clear', {}).then(function () { toast('Cookies and cache cleared'); }); }
     if (a === 'rbq') { var q = b.getAttribute('data-q'); LS.set('brqual', q); rbPost(w, '/quality', { q: q }); return void rbSettings(w, true); }
@@ -311,9 +317,11 @@
   function bhand(a, b, w) {
     var t = btab(w);
     if (a === 'bset') return void rbSettings(w);
+    if (a === 'bmstar') return void (window.AOSBS && AOSBS.star(w));
+    if (a === 'bmgo') return void (window.AOSBS && AOSBS.go(w, b.getAttribute('data-u')));
     if (a === 'bfull') { w.b.full = !w.b.full; return void paintBrowser(w); }
     if (a === 'bsetx') { var bs2 = w.body.querySelector('.dk-bset'); if (bs2) bs2.remove(); return; }
-    if (a === 'bnew') { w.b.full = false; return void newTab(w); }
+    if (a === 'bnew') { w.b.full = false; return void newTab(w, newHome()); }
     if (a === 'btab') { w.b.cur = Number(b.getAttribute('data-t')); return void paintBrowser(w); }
     if (a === 'bclose') { var id = Number(b.getAttribute('data-t')); w.b.tabs = w.b.tabs.filter(function (x) { return x.id !== id; }); if (!w.b.tabs.length) return void closeWin(w); if (w.b.cur === id) w.b.cur = w.b.tabs[w.b.tabs.length - 1].id; return void paintBrowser(w); }
     if (a === 'bback' && t.i > 0) { t.i--; return void nav(w, t, t.hist[t.i], true); }
@@ -405,6 +413,7 @@
     if (a === 'app') return void openApp(b.getAttribute('data-s'));
     if (a === 'settings') { hide(); return void A.go('settings'); }
     if (a === 'tb') { if (!w) return; if (!w.min && D.top === w.id) { w.min = true; place(w); task(); } else focus(w); return; }
+    if (w && (a === 'bmstar' || a === 'bmgo') && window.AOSBS) return void (a === 'bmstar' ? AOSBS.star(w) : AOSBS.go(w, b.getAttribute('data-u')));
     if (w && w.kind === 'rbrowser' && /^rb/.test(a)) return void rbHand(a, b, w);
     if (w && w.kind === 'browser' && /^b/.test(a) && a !== 'bar') return void bhand(a, b, w);
     if (a === 'wmin' && w) { w.min = true; place(w); task(); return; }
@@ -482,5 +491,6 @@
   window.addEventListener('popstate', function () { if (location.hash === '#desktop') { if (!D.open) show(); } else if (D.open) hide(false); });
   (function wait(n) { if (S.user) { if (location.hash === '#desktop') show(); return; } if (n < 80) setTimeout(function () { wait(n + 1); }, 150); })(0);
 
+  window.AOSBR = { ENGINES: ENGINES, QLAB: QLAB, rbPost: rbPost, rbTab: rbTab, btab: btab, nav: nav, normUrl: normUrl, newTab: newTab };
   window.AOSDesk = { show: show, hide: hide, state: D, openApp: openApp };
 })();

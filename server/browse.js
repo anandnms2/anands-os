@@ -77,3 +77,5 @@ export async function handleBrowse(req, res, url) {
   if (out.disposition) h['content-disposition'] = out.disposition;
   res.writeHead(out.code, h); res.end(out.body);
 }
+
+export function clearCookies(req) { const s = sessionOf(req); if (s) JARS.delete(String(s.u)); }

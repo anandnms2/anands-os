@@ -14,7 +14,7 @@ import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
 import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
 import { handleProfile } from './profile.js';
-import { handleBrowse } from './browse.js';
+import { handleBrowse, clearCookies as browseClear } from './browse.js';
 import { handleRb } from './rbrowser.js';
 import { handleMailboxes, syncAll } from './mailbox.js';
 import { handleGdrive, googleCallback, gConnected, gConfigured } from './gdrive.js';
@@ -68,6 +68,7 @@ async function api(req, res, url) {
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
   if (p === '/api/mailboxes' || p.startsWith('/api/mailboxes/')) return handleMailboxes(req, res, url);
   if (p === '/api/rb' || p.startsWith('/api/rb/')) return handleRb(req, res, url);
+  if (p === '/api/browse/clear' && req.method === 'POST') { browseClear(req); return json(res, 200, { ok: true }); }
   if (p === '/api/browse' && (req.method === 'GET' || req.method === 'POST')) return handleBrowse(req, res, url);
   if (p === '/api/gdrive' || p.startsWith('/api/gdrive/')) return handleGdrive(req, res, url);
   if (p === '/api/pulse' || p.startsWith('/api/pulse/')) return handlePulse(req, res, url);

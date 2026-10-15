@@ -24,6 +24,14 @@ try {
   });
   await t('clicking the canvas clicks the page', async () => { const b = await p.locator('.dk-rc').boundingBox(); await p.mouse.click(b.x + 100, b.y + 90); await p.waitForTimeout(800); assert.equal(clicked, 1); });
   await t('a second tab opens and can be closed', async () => { await p.click('[data-dk="rbnew"]'); await p.waitForFunction(() => document.querySelectorAll('.dk-bt').length === 2); await p.click('.dk-bt.on [data-dk="rbclose"]'); await p.waitForFunction(() => document.querySelectorAll('.dk-bt').length === 1); });
+  await t('full settings: page colours and zoom reach the streamed browser, cookies can be cleared', async () => {
+    await p.click('[data-dk="rbset"]'); await p.waitForSelector('.bsx'); await p.click('.bsnav button:has-text("Appearance")');
+    await p.click('.bsg button[data-v="dark"]'); await p.click('[data-bs="zoom"][data-d="10"]'); await p.waitForTimeout(600);
+    const pr = await p.evaluate(async () => (await (await fetch('/api/rb/status', { credentials: 'same-origin' })).json()).prefs); assert.equal(pr.dark, 'dark'); assert.equal(pr.zoom, 110);
+    await p.click('.bsnav button:has-text("Privacy")'); await p.click('[data-bs="clearck"]'); await p.waitForTimeout(500); await p.click('[data-bs="close"]');
+    await p.click('[data-dk="rbset"]'); await p.click('.bsnav button:has-text("Advanced")'); await p.click('[data-bs="reset"]'); await p.waitForTimeout(500);
+    assert.equal((await p.evaluate(async () => (await (await fetch('/api/rb/status', { credentials: 'same-origin' })).json()).prefs)).zoom, 100); await p.click('[data-bs="close"]');
+  });
   await t('maximised, the window title bar goes and the browser fills the screen; controls stay reachable', async () => {
     await p.click('.dkw-bar [data-dk="wmax"]'); await p.waitForTimeout(500); assert.equal(await p.locator('.dkw .dkw-bar').isVisible(), false); assert.equal(await p.locator('.dkw .dk-wc').isVisible(), true);
     const w = await p.locator('.dkw').boundingBox(); assert.ok(w.width >= (await p.evaluate(() => innerWidth)) - 2, JSON.stringify(w)); await p.click('.dk-wc [data-dk="wmax"]'); await p.waitForTimeout(300); assert.equal(await p.locator('.dkw .dkw-bar').isVisible(), true);
