@@ -20,7 +20,18 @@ var P = {
 P.apps = 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z';
 var ic = function (n, extra) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"' + (extra || '') + '><path d="' + P[n] + '"/></svg>'; };
 function toast(t) { var el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(function () { el.hidden = true; }, 4200); }
-function fmt(d, o) { try { return new Intl.DateTimeFormat('en-GB', o).format(d); } catch (e) { return String(d); } }
+var TZ = 'Africa/Dar_es_Salaam';
+/* Every date in the OS: dd/mm/yyyy and 24-hour time in Dar es Salaam. A month-only heading keeps its name. */
+function fmt(d, o) {
+  try {
+    o = o || {}; var get = function (opt) { var m = {}; new Intl.DateTimeFormat('en-GB', Object.assign({ timeZone: TZ, hourCycle: 'h23' }, opt)).formatToParts(d).forEach(function (p) { m[p.type] = p.value; }); return m; };
+    if (!o.day && !o.hour) return new Intl.DateTimeFormat('en-GB', Object.assign({ timeZone: TZ }, o)).format(d);
+    var out = [];
+    if (o.day) { var a = get({ day: '2-digit', month: '2-digit', year: 'numeric' }); out.push(a.day + '/' + a.month + '/' + a.year); }
+    if (o.hour) { var b = get({ hour: '2-digit', minute: '2-digit' }); out.push(b.hour + ':' + b.minute); }
+    return out.join(' ');
+  } catch (e) { return String(d); }
+}
 function bytes(n) { if (!n) return ''; var u = ['B', 'KB', 'MB', 'GB'], i = 0; while (n >= 1024 && i < 3) { n /= 1024; i++; } return n.toFixed(i ? 1 : 0) + ' ' + u[i]; }
 
 /* ---------- api ---------- */
@@ -63,7 +74,7 @@ function loadSettings() { return api('/api/settings').then(function (s) { S.sett
 function boot() {
   Promise.all([api('/api/session'), fetch('/apps.json').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })]).then(function (x) {
     S.login = x[0]; S.user = x[0].user; S.apps = x[1];
-    if (S.user) { return Promise.all([loadSettings()]).then(function () { buildNav(); render(); loadImm(); loadIns(false); }); }
+    if (S.user) { return Promise.all([loadSettings()]).then(function () { buildNav(); var r0 = routeNow(); if (r0 && r0 !== 'home') { popping = true; try { go0(r0); } finally { popping = false; } } else render(); loadImm(); loadIns(false); }); }
     render();
   }).catch(function () { $('#view').innerHTML = '<div class="center"><div class="empty"><h2>Cannot reach the server</h2><p>Reload the page in a moment.</p></div></div>'; });
 }
@@ -80,7 +91,15 @@ function buildNav() {
   var t = ''; NAV.concat([['pal', 'Search', 'search']]).forEach(function (n) { t += '<button ' + (n[0] === 'pal' ? 'data-act="pal"' : 'data-act="nav" data-v="' + n[0] + '"') + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
   $('#tabs').innerHTML = t;
 }
-function go(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); }
+/* The address bar follows the page (#photos, #vault ...), so Refresh stays on the page and Back goes to the previous one. */
+var ROUTES = ['home', 'photos', 'drive', 'vault', 'insights', 'servers', 'pulse', 'vpn', 'cards', 'apps', 'settings'], popping = false;
+function routeNow() { var h = location.hash.replace(/^#/, ''); return ROUTES.indexOf(h) >= 0 ? h : ''; }
+function go(v, x) {
+  if (!popping && ROUTES.indexOf(v) >= 0 && routeNow() !== v) { try { history.pushState({ v: v }, '', '#' + v); } catch (e) {} }
+  return go0(v, x);
+}
+window.addEventListener('popstate', function () { if (!S.user) return; var r = routeNow() || 'home'; popping = true; try { go0(r); } finally { popping = false; } });
+function go0(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); }
 function redraw() { var y = $('#view').scrollTop; render(); $('#view').scrollTop = y; }
 function render() {
   var app = $('#app'), tabs = $('#tabs'), fab = $('#fab');
@@ -105,7 +124,7 @@ function render() {
 
 /* ---------- login ---------- */
 function loginV() {
-  var l = S.login || {}, h = '<div class="center"><div class="login card"><div class="logo"><img src="/logo-white.png" alt=""></div><h1>Anands OS</h1><p>Sign in to your personal OS.</p>';
+  var l = S.login || {}, h = '<div class="center"><div class="login card"><div class="logo"><img src="/logo-white.png" alt=""></div><h1>Anands OS</h1>';
   if (l.method === 'oidc') h += '<a class="btn primary" style="justify-content:center;width:100%" href="/auth/login">Sign in with Anands SSO</a>';
   if (l.method === 'password' || l.passwordToo) h += (l.method === 'oidc' ? '<div class="rsep" style="width:100%;margin:18px 0"></div>' : '') + '<form id="pwf" style="text-align:left"><div class="field"><label for="pw">Password</label><input class="input" id="pw" type="password" autocomplete="current-password" required></div><button class="btn primary" style="justify-content:center;width:100%" type="submit">Sign in</button></form>';
   return h + '<p class="err" id="lerr" role="alert"></p></div></div>';
@@ -127,7 +146,7 @@ function svcTile(s) {
 }
 var ICONROW = ['spreadsheet', 'documents', 'presentation', 'whiteboard', 'pdf', 'email', 'calendar', 'notes', 'photo-studio', 'video-studio', 'chess'];
 function homeV() {
-  var hr = new Date().getHours(), g = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
+  var hr = Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(new Date())), g = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
   var d = S.ins.data, count = function (t) { return d ? d.resources.filter(function (r) { return r.t === t; }).length : '–'; };
   var cats = {}; S.apps.forEach(function (a) { cats[a.category] = (cats[a.category] || 0) + 1; });
   var cc = Object.keys(cats).map(function (c) { return '<span class="chip" style="cursor:default">' + esc(c) + ' <b style="color:var(--accent-text)">' + cats[c] + '</b></span>'; }).join('');
@@ -140,7 +159,7 @@ function homeV() {
   if (S.tl.items.length) recent += '<button class="rr" data-act="nav" data-v="photos"><img src="/api/photos/asset/' + S.tl.items[0].id + '/thumb" alt=""><span>Photos</span><small>latest ' + esc(fmt(new Date(S.tl.items[0].takenAt), { day: 'numeric', month: 'short' })) + '</small></button>';
   else recent += '<button class="rr" data-act="nav" data-v="photos"><span style="width:34px;height:34px;border-radius:9px;background:var(--surface2);display:grid;place-items:center;color:var(--accent-text)">' + ic('photos') + '</span><span>Photos</span><small>' + (S.imm && S.imm.connected ? 'connected' : 'not connected') + '</small></button>';
   (LS.get('recent', ['notes', 'tasks']) || []).slice(0, 3).forEach(function (s) { var a = S.apps.filter(function (x) { return x.slug === s; })[0]; if (a) recent += '<button class="rr" data-act="app" data-s="' + s + '"><img src="/_icons/' + s + '.png" alt=""><span>' + esc(a.name) + '</span><small>Suite</small></button>'; });
-  return '<div class="wrap"><section class="hello" style="padding:26px 0 22px"><h1>' + g + ', ' + esc((S.user.name || 'Anand').split(' ')[0]) + '</h1><p style="margin:6px 0 0;color:var(--muted);font-size:16px">' + fmt(new Date(), { weekday: 'long', day: 'numeric', month: 'long' }) + '. Everything of yours, in one place.</p></section>' +
+  return '<div class="wrap"><section class="hello" style="padding:26px 0 22px"><h1>' + g + ', ' + esc((S.user.name || 'Anand').split(' ')[0]) + '</h1></section>' +
     '<section class="hgrid"><div class="ask"><div class="eyebrow">' + ic('chat') + 'Anands AI</div><form class="askbox" id="hf"><input id="hq" placeholder="Ask anything, or tell it what to do across your apps" aria-label="Ask the assistant" autocomplete="off"><button type="submit" aria-label="Ask">' + ic('send') + '</button></form><div class="chips" style="margin-top:16px">' + prompts.map(function (q) { return '<button class="chip" data-act="ask" data-q="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') + '</div></div>' +
     '<div class="srv">' + srv + '<div class="row"><span>Puter backend</span><span style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted)">this container<i class="dot"></i></span></div><button class="link" style="margin-top:auto;text-align:left" data-act="nav" data-v="insights">Open Cloud Insights &rarr;</button></div></section>' +
     '<div class="sech"><h2>My services</h2><span style="color:var(--muted);font-size:14px">Your self-hosted apps</span></div><div class="svcs">' + SVC.map(svcTile).join('') + '</div>' +
@@ -152,7 +171,7 @@ function homeV() {
 /* ---------- photos ---------- */
 function connectBlock(what, act, why) { return '<div class="empty"><h2>' + what + '</h2><p>' + why + '</p><button class="btn primary" data-act="' + act + '">Connect</button></div>'; }
 function photosShell() {
-  var im = S.imm, h = '<div class="wrap"><div class="pagehead"><div><h1>Photos</h1><p>Your Immich library inside the OS. The server talks to Immich with your API key, so the key never reaches the browser.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap">' + (im && im.connected ? '<button class="btn" data-act="upload">' + ic('upload') + 'Upload</button>' : '') + '<button class="btn' + (im && im.connected ? '' : ' primary') + '" data-act="immich">' + (im && im.configured ? 'Immich settings' : 'Connect Immich') + '</button><input type="file" id="fileIn" accept="image/*,video/*" multiple hidden></div></div>';
+  var im = S.imm, h = '<div class="wrap"><div class="pagehead"><div><h1>Photos</h1></div><div style="display:flex;gap:10px;flex-wrap:wrap">' + (im && im.connected ? '<button class="btn" data-act="photoref">Refresh</button><button class="btn" data-act="upload">' + ic('upload') + 'Upload</button>' : '') + '<button class="btn' + (im && im.connected ? '' : ' primary') + '" data-act="immich">' + (im && im.configured ? 'Immich settings' : 'Connect Immich') + '</button><input type="file" id="fileIn" accept="image/*,video/*" multiple hidden></div></div>';
   if (!im) return h + '<p style="color:var(--muted)">Checking Immich...</p></div>';
   if (!im.configured) return h + connectBlock('Photos are not connected yet', 'immich', 'Add your Immich address and an API key (Immich: Account settings, API keys). Photos then show up here like they do in Nextcloud.') + '</div>';
   if (!im.connected) return h + '<div class="banner"><i class="dot bad"></i><span>Immich is configured but not reachable (' + esc(im.reason || 'no answer') + '). Check the address and key.</span><button class="btn sm" data-act="immich">Settings</button></div></div>';
@@ -218,15 +237,10 @@ function runSearch(q) {
 /* ---------- insights ---------- */
 function mmss(s) { return s == null ? 'n/a' : Math.floor(s / 60) + 'm ' + ('0' + (s % 60)).slice(-2) + 's'; }
 function pill(s) { return s === 'ok' ? '<span class="pill ok"><i class="dot"></i>Healthy</span>' : s === 'nohc' ? '<span class="pill warn"><i class="dot warn"></i>No health check</span>' : '<span class="pill bad"><i class="dot bad"></i>Not healthy</span>'; }
-function insightsV() {
-  var h = insightsV0(), sv = window.AOSInt ? window.AOSInt.servers() : '';
-  if (!sv) return h;
-  var i = h.indexOf('<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px');
-  return i > 0 ? h.slice(0, i) + sv + h.slice(i) : h.replace(/<\/div>$/, sv + '</div>');
-}
+function insightsV() { return insightsV0(); }
 function insTabs(a) { return '<div class="toolbar"><div class="seg" role="tablist">' + [['insights', 'Cloud'], ['servers', 'Servers']].map(function (t) { return '<button data-act="nav" data-v="' + t[0] + '" aria-pressed="' + (a === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>'; }
 function insightsV0() {
-  var head = '<div class="wrap"><div class="pagehead"><div><h1>Anand Cloud Insights</h1><p>What is running on your Coolify server, what is healthy, and what changed lately.</p></div><div style="display:flex;gap:10px"><button class="btn" data-act="coolify">Coolify settings</button><button class="btn" data-act="refresh">' + (S.ins.loading ? 'Refreshing...' : 'Refresh') + '</button></div></div>' + insTabs('insights');
+  var head = '<div class="wrap"><div class="pagehead"><div><h1>Insights</h1></div><div style="display:flex;gap:10px"><button class="btn" data-act="coolify">Coolify settings</button><button class="btn" data-act="refresh">' + (S.ins.loading ? 'Refreshing...' : 'Refresh') + '</button></div></div>' + insTabs('insights');
   var d = S.ins.data;
   if (!d) {
     if (S.ins.loading) return head + '<p style="color:var(--muted)">Loading from Coolify...</p></div>';
@@ -269,7 +283,7 @@ function appsV() {
   cats.sort(function (x, y) { var i = ORDER.indexOf(x), j = ORDER.indexOf(y); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || (x < y ? -1 : 1); });
   var tile = function (a) { return '<button class="app' + (a.hasSource ? '' : ' soon') + '" ' + (a.hasSource ? 'data-act="app" data-s="' + a.slug + '"' : 'disabled') + '><img src="/_icons/' + a.slug + '.png" alt=""><span style="min-width:0"><b>' + esc(a.name) + '</b><small>' + esc(a.alternativeTo) + '</small></span>' + (a.hasSource ? '' : '<em class="tag" style="font-style:normal">Soon</em>') + '</button>'; };
   var sections = cats.map(function (c) { var l = list.filter(function (a) { return a.category === c; }); return '<section class="appcat" aria-label="' + esc(c) + '"><h2>' + esc(c) + ' <span>' + l.length + '</span></h2><div class="apps">' + l.map(tile).join('') + '</div></section>'; }).join('');
-  return '<div class="wrap"><div class="pagehead"><div><h1>Suite</h1><p>Open-source apps built from source and served by this container. They sign in through your SSO and save to your own storage.</p></div></div>' +
+  return '<div class="wrap"><div class="pagehead"><div><h1>Suite</h1></div></div>' +
     '<div class="toolbar"><div class="search">' + ic('search') + '<input class="input" id="aq" type="search" placeholder="Search apps, or what they replace" value="' + esc(S.aq) + '" data-in="aq" aria-label="Search apps"></div></div><div id="appgrid">' + (sections || '<div class="card" style="color:var(--muted)">No app matches.</div>') + '</div></div>';
 }
 function launch(slug, file) { var a = S.apps.filter(function (x) { return x.slug === slug; })[0]; if (!a || !a.hasSource) return; S.openApp = slug; S.openFile = file || null; var r = (LS.get('recent', []) || []).filter(function (x) { return x !== slug; }); r.unshift(slug); LS.set('recent', r.slice(0, 6)); go('app'); }
@@ -282,7 +296,7 @@ function appWinV() {
 function settingsV() {
   var c = S.settings || { immich: {}, coolify: {}, llm: {} }; c.dav = c.dav || {}; c.mail = c.mail || {};
   var field = function (id, label, val, ph, type) { return '<div class="field"><label for="' + id + '">' + label + '</label><input class="input" id="' + id + '" type="' + (type || 'text') + '" value="' + esc(val || '') + '" placeholder="' + esc(ph || '') + '" autocomplete="off"></div>'; };
-  return '<div class="wrap"><div class="pagehead"><div><h1>Settings</h1><p>Connections the OS uses. Keys are stored on the server in your data volume and are never sent back to the browser.</p></div><a class="btn" href="/auth/logout">' + ic('out') + 'Sign out</a></div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">' +
+  return '<div class="wrap"><div class="pagehead"><div><h1>Settings</h1></div><a class="btn" href="/auth/logout">' + ic('out') + 'Sign out</a></div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Immich (Photos)</h2>' + field('s_iu', 'Server address', c.immich.url, 'https://photos.anands.xyz') + field('s_ik', 'API key' + (c.immich.keySet ? ' (saved, leave blank to keep)' : ''), '', c.immich.keySet ? '••••••••' : 'Immich: Account settings, API keys', 'password') + '<div id="r_immich" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="immich">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Coolify (Cloud Insights)</h2>' + field('s_cu', 'Coolify address', c.coolify.url, 'https://coolify.anands.xyz') + field('s_ct', 'API token, read only' + (c.coolify.tokenSet ? ' (saved, leave blank to keep)' : ''), '', c.coolify.tokenSet ? '••••••••' : 'Coolify: Keys and tokens', 'password') + '<div id="r_coolify" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="coolify">Save and test</button></div>' +
     '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Vault (Vaultwarden)</h2><p class="note" style="margin:0 0 14px">Only the address is saved. Your email and master password are typed on the Vault screen and are never stored.</p>' + field('s_vu', 'Vault address', (c.vault || {}).url, 'https://pass.anands.xyz') + '<div id="r_vault" class="note" role="status"></div><button class="btn primary" data-act="save" data-k="vault">Save and test</button></div>' +
@@ -424,7 +438,7 @@ function vEditSave() {
   }).catch(function (x) { e.busy = false; e.err = x.message; redraw(); });
 }
 function vaultV() {
-  var V = S.vault, head = '<div class="pagehead"><div><h1>Vault</h1><p>Your Vaultwarden passwords inside the OS. Decrypted in your browser only.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">';
+  var V = S.vault, head = '<div class="pagehead"><div><h1>Vault</h1></div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">';
   if (V.status && !V.status.configured) return '<div class="wrap">' + head + '</div></div>' + connectBlock('Connect your Vault', 'vsettings', 'Enter the address of your Vaultwarden (for example https://pass.anands.xyz) in Settings. Your master password is never saved.') + '</div>';
   if (!V.items) {
     var two = V.twofa;
@@ -532,6 +546,7 @@ document.addEventListener('click', function (ev) {
     case 'lbp': lbMove(-1); break; case 'lbn': lbMove(1); break;
     case 'lbfav': toggleFav(S.lb); break;
     case 'lbinfo': S.info = !S.info; drawLb(); break;
+    case 'photoref': { var fresh = function () { return { items: [], next: 1, loading: false, error: null, loaded: false }; }; S.tl = fresh(); S.fav = fresh(); S.albums = null; if (S.sr) S.sr = fresh(); if (S.album && S.album.items) S.album = null; redraw(); loadImm(); loadAlbums(); toast('Refreshing your photos'); break; }
     case 'upload': { var f = $('#fileIn'); if (f) f.click(); break; }
     case 'immich': connectModal('immich'); break;
     case 'coolify': connectModal('coolify'); break;

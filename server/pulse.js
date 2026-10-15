@@ -13,6 +13,8 @@ async function get(path, ttl = 15000) {
   const c = conn(); const key = c.base + path; const hit = cache.get(key);
   if (hit && Date.now() - hit.t < ttl) return hit.d;
   const r = await rawFetch(c.base + '/api/v1' + path, { headers: { authorization: 'Bearer ' + c.token, accept: 'application/json' } }, 20000);
+  if (r.status >= 300 && r.status < 400) throw httpError(502, 'Pulse redirected to ' + (r.headers.get('location') || 'another address') + '. Use that address in Settings (usually https:// and no path).', 'upstream_redirect');
+  if (r.status === 403 || (r.ok && r.data == null)) throw httpError(502, r.status === 403 ? 'Pulse (or a proxy in front of it) refused the request with 403. If Pulse sits behind a login page or firewall, /api/v1 must be allowed through.' : 'That address did not answer like the Pulse API (got a web page). Check the address and that Pulse has the Access for your AI tools feature deployed.', 'upstream_403');
   if (r.status === 401) throw httpError(502, 'Pulse rejected the token. Create a new one in Pulse: Settings, Automation, Access for your AI tools.', 'upstream_auth');
   if (r.status === 429) throw httpError(429, 'Pulse says too many requests. Try again in a moment.', 'rate_limited');
   if (!r.ok) throw httpError(r.status === 404 ? 404 : 502, r.data?.error || 'Pulse answered ' + r.status, 'upstream_' + r.status);
@@ -36,7 +38,7 @@ export async function handlePulse(req, res, url) {
   m = p.match(/^\/chats\/([A-Za-z0-9_-]{1,40})\/messages$/); if (m) return json(res, 200, await get('/chats/' + m[1] + '/messages?limit=' + num(sp.get('limit'), 60, 100), 5000));
   throw httpError(404, 'Unknown Pulse route');
 }
-export async function test() { cache.clear(); try { const t = await get('/today', 0); return { configured: true, connected: true, resources: t.unread_items ?? 0, unit: 'unread items' }; } catch (e) { return { configured: e.code !== 'not_configured', connected: false, reason: e.message }; } }
+export async function test() { cache.clear(); try { await get('/me', 0); let n = null; try { n = (await get('/today', 0)).unread_items; } catch {} return { configured: true, connected: true, resources: n ?? undefined, unit: 'unread items' }; } catch (e) { return { configured: e.code !== 'not_configured', connected: false, reason: e.message }; } }
 export async function pulseContext() {
   try { const [today, tasks, waiting, chats] = await Promise.all([get('/today'), get('/tasks?status=open&limit=25'), get('/waiting?limit=20'), get('/chats?limit=15')]); return { today, openTasks: tasks.tasks, waitingOnOthers: waiting.waiting, unreadChats: chats.chats }; } catch (e) { return e.code === 'not_configured' ? null : { connected: false, note: e.message }; }
 }

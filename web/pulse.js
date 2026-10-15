@@ -8,13 +8,14 @@
   var I = { tab: 'today', d: {}, busy: {}, err: {}, chat: null, msgs: null, tr: null, trd: null, q: '', sq: '', res: null, tstatus: 'open', all: false };
 
   function ago(iso) { if (!iso) return ''; var s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000); if (isNaN(s)) return ''; if (s < 60) return 'just now'; if (s < 3600) return Math.round(s / 60) + ' min ago'; if (s < 86400) return Math.round(s / 3600) + ' h ago'; return Math.round(s / 86400) + ' d ago'; }
+  function dstr(v) { v = String(v); return /^\d{4}-\d\d-\d\d/.test(v) ? A.fmt(new Date(v.length === 10 ? v + 'T12:00:00Z' : v), v.length === 10 ? { day: 'numeric' } : { day: 'numeric', hour: 'numeric' }) : v; }
   function url() { return ((S.settings || {}).pulse || {}).url || ''; }
   function pick(o, ks) { for (var i = 0; i < ks.length; i++) if (o[ks[i]] != null && o[ks[i]] !== '') return o[ks[i]]; return ''; }
   function title(o) { return typeof o === 'string' ? o : String(pick(o, ['title', 'what', 'name', 'subject', 'text', 'summary', 'where', 'label', 'id'])); }
   function metaOf(o) {
     if (typeof o !== 'object') return '';
     var parts = [], f = pick(o, ['from', 'who', 'owner', 'chat', 'source']); if (f) parts.push(esc(f));
-    var d = pick(o, ['due', 'due_date', 'at', 'when', 'date']); if (d) parts.push(esc(/^\d{4}-\d\d-\d\dT/.test(d) ? ago(d) : d));
+    var d = pick(o, ['due', 'due_date', 'at', 'when', 'date']); if (d) parts.push(esc(/^\d{4}-\d\d-\d\dT/.test(d) ? ago(d) : dstr(d)));
     if (o.asked_hours_ago != null) parts.push('asked ' + (o.asked_hours_ago >= 24 ? Math.round(o.asked_hours_ago / 24) + ' d' : o.asked_hours_ago + ' h') + ' ago');
     if (o.mentions != null) parts.push(o.mentions + ' mentions'); if (o.kind) parts.push(esc(o.kind));
     return parts.join(' · ');
@@ -53,11 +54,11 @@
 
   function head(sub) {
     var u = url();
-    return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1><p>' + (sub || 'Your mail, chats, tasks and what you are waiting on, from Anands Pulse. Read-only here. Ask the assistant about any of it.') + '</p></div><div style="display:flex;gap:10px">' + '<button class="btn" data-pa="refresh">Refresh</button>' + (u ? '<a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Open Pulse ' + ic('ext') + '</a>' : '') + '</div></div>' +
+    return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div><div style="display:flex;gap:10px">' + '<button class="btn" data-pa="refresh">Refresh</button>' + (u ? '<a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Open Pulse ' + ic('ext') + '</a>' : '') + '</div></div>' +
       '<div class="toolbar"><div class="seg" role="tablist">' + TABS.map(function (t) { return '<button data-pa="tab" data-t="' + t[0] + '" aria-pressed="' + (I.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>';
   }
   function fail(key) { var e = I.err[key]; return e ? '<div class="banner"><i class="dot bad"></i><span>' + esc(e) + '</span><button class="btn sm" data-pa="refresh">Try again</button></div>' : ''; }
-  function notConnected() { return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1><p>Anands Pulse is not connected yet.</p></div></div><div class="banner"><i class="dot warn"></i><span>Add your Pulse address and a read-only token in Settings. Create the token in Pulse: Settings, Automation, Access for your AI tools.</span><button class="btn primary" data-act="nav" data-v="settings">Open Settings</button></div></div>'; }
+  function notConnected() { return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1></div></div><div class="banner"><i class="dot warn"></i><span>Add your Pulse address and a read-only token in Settings. Create the token in Pulse: Settings, Automation, Access for your AI tools.</span><button class="btn primary" data-act="nav" data-v="settings">Open Settings</button></div></div>'; }
 
   function view() {
     if (Object.keys(I.err).some(function (k) { return I.err[k] === 'not_configured'; })) return notConnected();
@@ -71,7 +72,7 @@
         (x.meetings ? '<div class="card kpi"><div class="stat"><span class="n">' + x.meetings.length + '</span><span class="l">meetings</span></div></div>' : '') + '</div>';
       var secs = '', known = { date: 1, unread_items: 1 };
       Object.keys(x).forEach(function (k) { if (known[k] || !Array.isArray(x[k])) return; secs += section(esc(k.replace(/_/g, ' ').replace(/^./, function (c) { return c.toUpperCase(); })), x[k], '', 'Nothing here.'); });
-      return h + kp + (x.date ? '<p class="note">' + esc(x.date) + '</p>' : '') + secs + '</div>';
+      return h + kp + (x.date ? '<p class="note">' + esc(dstr(x.date)) + '</p>' : '') + secs + '</div>';
     }
     if (t === 'chats') {
       var chats = arrOf(d.chats, ['chats']);

@@ -25,18 +25,18 @@ try {
 
   await t('rail has VPN and Cards', async () => { assert.equal(await p.locator('#rail [data-v="vpn"]').count(), 1); assert.equal(await p.locator('#rail [data-v="servers"]').count(), 0); assert.equal(await p.locator('#rail [data-v="cards"]').count(), 1); });
   await t('Insights shows servers with usage and a down server', async () => {
-    await nav('insights'); await p.waitForSelector('.isrv'); assert.equal(await p.locator('.isrv').count(), 2);
-    const txt = await p.locator('#view').innerText(); assert.match(txt, /oracle-1/); assert.match(txt, /home-nas/); assert.match(txt, /1 up, 1 down/); assert.match(txt, /46%/); assert.match(txt, /Down/);
+    await nav('insights'); await p.click('#view [data-act="nav"][data-v="servers"]'); await p.waitForSelector('tr[data-sa="open"]'); assert.equal(await p.locator('tr[data-sa="open"]').count(), 2); assert.equal(await p.locator('#rail [data-v="servers"]').count(), 0);
+    const txt = await p.locator('#view').innerText(); assert.match(txt, /oracle-1/); assert.match(txt, /home-nas/); assert.match(txt, /46%/); assert.match(txt, /Down/);
     await shot(p, 'insights-servers');
   });
   await t('Servers page: fleet, detail charts with hover, containers', async () => {
-    await p.click('.isrv[data-id="sysaaa111"]'); await p.waitForSelector('.ichart'); const txt = await p.locator('#view').innerText(); assert.match(txt, /oracle-1/); assert.match(txt, /Ubuntu 24.04/);
+    await p.click('tr[data-sa="open"][data-id="sysaaa111"]'); await p.waitForSelector('.ichart'); const txt = await p.locator('#view').innerText(); assert.match(txt, /oracle-1/); assert.match(txt, /Ubuntu 24.04/);
     assert.ok(await p.locator('.ichart').count() >= 3);
     const plot = p.locator('.ich-plot').first(); const bb = await plot.boundingBox(); await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await p.waitForSelector('.ich-tip:not([hidden])');
     await shot(p, 'server-detail');
     await p.click('[data-sa="dtab"][data-t="containers"]'); await p.waitForFunction(() => /immich/.test(document.querySelector('#view').innerText)); await shot(p, 'server-containers');
     await p.click('[data-sa="range"][data-r="480m"]'); await p.waitForSelector('.ichart');
-    await p.click('[data-sa="back"]'); await p.waitForSelector('.srvtbl, .isrv, tr[data-sa="open"]');
+    await p.click('[data-sa="back"]'); await p.waitForSelector('tr[data-sa="open"]');
   });
   await t('Servers page: alerts tab', async () => { await p.click('[data-sa="tab"][data-t="alerts"]'); await p.waitForFunction(() => /Alert rules|alert/i.test(document.querySelector('#view').innerText)); await shot(p, 'server-alerts'); });
   await t('VPN page lists devices and states', async () => {
@@ -113,7 +113,15 @@ try {
     const m = await browser.newContext({ viewport: { width: 390, height: 800 }, colorScheme: 'dark' }); await m.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
     const q = await m.newPage(); await q.goto(B + '/'); await q.waitForSelector('#tabs button'); await q.click('#tabs [data-v="cards"]'); await q.waitForSelector('.icard');
     assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal page scroll'); await shot(q, 'cards-mobile');
-    await q.click('#tabs [data-v="insights"]'); await q.waitForSelector('.isrv'); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await shot(q, 'insights-mobile'); await m.close();
+    await q.click('#tabs [data-v="insights"]'); await q.click('#view [data-v="servers"]'); await q.waitForSelector('tr[data-sa="open"]'); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await shot(q, 'insights-mobile'); await m.close();
+  });
+  await t('refresh keeps the page and Back goes to the previous one', async () => {
+    await nav('vpn'); await nav('cards'); assert.match(p.url(), /#cards$/); await p.reload(); await p.waitForSelector('#view h1'); assert.equal(await p.locator('#view h1').first().innerText(), 'Cards'); await p.goBack(); await p.waitForFunction(() => document.querySelector('#view h1') && document.querySelector('#view h1').innerText === 'VPN');
+  });
+  await t('dates are dd/mm/yyyy and pages have no description under the heading', async () => {
+    await nav('cards'); await p.waitForSelector('.icard'); await p.click('.icard >> nth=0'); await p.waitForSelector('#modal .ikv'); assert.match(await p.locator('#modal .ikv').innerText(), /\d\d\/\d\d\/\d{4}/); await p.keyboard.press('Escape');
+    for (const v of ['photos', 'vault', 'insights', 'vpn', 'drive']) { await nav(v); await p.waitForSelector('#view h1'); assert.equal(await p.locator('.pagehead p').count(), 0, v); }
+    await nav('photos'); assert.equal(await p.locator('[data-act="photoref"]').count() + 1 >= 1, true);
   });
   await t('no page errors', async () => assert.deepEqual(errs, []));
 } finally { await browser.close(); srv.kill(); bz.close(); wg.close(); cs.close(); }

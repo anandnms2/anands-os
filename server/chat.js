@@ -45,7 +45,7 @@ export async function handleChat(req, res, url) {
   const b = await readJson(req, 256 * 1024);
   const hist = (Array.isArray(b.messages) ? b.messages : []).filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-12).map((m) => ({ role: m.role, content: clip(m.content, 6000) }));
   if (!hist.length || hist[hist.length - 1].role !== 'user') throw httpError(400, 'Send a question');
-  const want = b.ctx || {}; const ctx = { now: new Date().toISOString() }; const used = [];
+  const want = b.ctx || {}; const ctx = { now: new Date().toISOString(), timezone: 'Africa/Dar_es_Salaam', dateFormat: 'dd/mm/yyyy, 24-hour time. Always write dates this way.' }; const used = [];
   const jobs = [];
   if (want.photos !== false) jobs.push(photoContext().then((v) => { ctx.photos = v; used.push('photos'); }).catch((e) => { ctx.photos = { connected: false, note: e.message }; }));
   if (want.insights !== false) jobs.push(insightsContext().then((v) => { ctx.cloud = v; used.push('insights'); }));

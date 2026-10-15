@@ -59,7 +59,7 @@
   /* ---------- VPN ---------- */
   function vpnView() {
     var st = I.vpn, d = st.data;
-    var head = '<div class="wrap"><div class="pagehead"><div><h1>VPN</h1><p>Devices allowed onto your WireGuard network. Add a phone or laptop, scan its QR code, and switch devices off when you lose them.</p></div><div style="display:flex;gap:10px"><button class="btn" data-ia="vpref">' + (st.loading ? 'Refreshing...' : 'Refresh') + '</button><button class="btn primary" data-ia="vpnew"' + (d ? '' : ' disabled') + '>Add device</button></div></div>';
+    var head = '<div class="wrap"><div class="pagehead"><div><h1>VPN</h1></div><div style="display:flex;gap:10px"><button class="btn" data-ia="vpref">' + (st.loading ? 'Refreshing...' : 'Refresh') + '</button><button class="btn primary" data-ia="vpnew"' + (d ? '' : ' disabled') + '>Add device</button></div></div>';
     if (!d) {
       if (st.loading) return head + '<p class="note">Loading from your VPN...</p></div>';
       if (st.code === 'not_configured') return head + connectCard('VPN is not connected yet', 'Add your wg-easy address and a user in Settings. Use a user without two-factor sign-in; the API cannot use those.') + '</div>';
@@ -95,7 +95,7 @@
   function link(href, text) { return '<a href="' + esc(href) + '" style="color:var(--accent-text)">' + esc(text) + '</a>'; }
   function cardsView() {
     var C = I.cards, d = C.data;
-    var head = '<div class="wrap"><div class="pagehead"><div><h1>Cards</h1><p>Business cards you scanned with Card Scan. Open one to edit it, mark it contacted or delete it.</p></div>' + (window.AOSCards ? window.AOSCards.head() : '') + (d && !window.AOSCards ? '<div class="note">' + (d.stats ? d.stats.total + ' cards · ' + d.stats.companies + ' companies · ' + d.stats.addedThisWeek + ' this week' : d.total + ' cards') + '</div>' : '') + '</div>' + (window.AOSCards ? window.AOSCards.tabs() : '');
+    var head = '<div class="wrap"><div class="pagehead"><div><h1>Cards</h1></div>' + (window.AOSCards ? window.AOSCards.head() : '') + (d && !window.AOSCards ? '<div class="note">' + (d.stats ? d.stats.total + ' cards · ' + d.stats.companies + ' companies · ' + d.stats.addedThisWeek + ' this week' : d.total + ' cards') + '</div>' : '') + '</div>' + (window.AOSCards ? window.AOSCards.tabs() : '');
     if (window.AOSCards && window.AOSCards.tab() !== 'cards') return head + window.AOSCards.tabView() + '</div>';
     if (!d) {
       if (C.loading) return head + '<p class="note">Loading your cards...</p></div>';
