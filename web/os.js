@@ -94,7 +94,7 @@ function boot() {
 var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['pulse', 'Pulse', 'pulse'], ['vpn', 'VPN', 'vpn'], ['cards', 'Cards', 'cards'], ['apps', 'Suite', 'apps']];
 function cur(v) { if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; if (v === 'insights' && S.view === 'servers') return true; return S.view === v || (v === 'apps' && S.view === 'app'); }
 function buildNav() {
-  var h = '<button class="logo" data-act="nav" data-v="home" aria-label="Home"><img src="/logo-white.png" alt=""></button><button class="dkopen" data-act="desk" title="Desktop" aria-label="Open Desktop">' + ic('desk') + '</button><div class="rsep"></div>';
+  var h = '<button class="logo" data-act="nav" data-v="home" aria-label="Home"><img src="/logo-white.png" alt=""></button><div class="rsep"></div>';
   NAV.forEach(function (n) { h += '<button class="nav" data-act="nav" data-v="' + n[0] + '" title="' + n[1] + '"' + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
   h += '<button class="nav" data-act="chat" title="Ask the assistant">' + ic('chat') + 'Ask AI</button>';
   h += '<button class="nav bot" data-act="nav" data-v="settings" title="Settings"' + (S.view === 'settings' ? ' aria-current="page"' : '') + '>' + ic('settings') + 'Settings</button>';
