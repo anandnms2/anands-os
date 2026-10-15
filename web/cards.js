@@ -26,7 +26,7 @@
   }
   function tabs() {
     var unread = T.notes ? T.notes.unreadCount : 0, rc = T.rem ? (T.rem.reminders || []).length : 0;
-    return '<div class="toolbar"><div class="seg" role="tablist">' + [['cards', 'Cards'], ['reminders', 'Reminders' + (rc ? ' (' + rc + ')' : '')], ['alerts', 'Alerts' + (unread ? ' (' + unread + ')' : '')], ['app', 'Full app']].map(function (t) { return '<button data-ca="tab" data-t="' + t[0] + '" aria-pressed="' + (T.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>';
+    return '<div class="toolbar"><div class="seg" role="tablist">' + [['cards', 'Cards'], ['reminders', 'Reminders' + (rc ? ' (' + rc + ')' : '')], ['alerts', 'Alerts' + (unread ? ' (' + unread + ')' : '')]].map(function (t) { return '<button data-ca="tab" data-t="' + t[0] + '" aria-pressed="' + (T.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>';
   }
   function bulkBar() {
     var ids = selIds(); if (!C.selecting) return '';
@@ -34,7 +34,6 @@
       '<button class="btn sm" data-ca="bmove"' + (ids.length ? '' : ' disabled') + '>Move to group</button><button class="btn sm" data-ca="bmerge"' + (ids.length === 2 ? '' : ' disabled title="Pick exactly two cards"') + '>Merge two</button><button class="btn sm" data-ca="bexport"' + (ids.length ? '' : ' disabled') + '>Export</button><button class="btn sm danger" data-ca="bdel"' + (ids.length ? '' : ' disabled') + '>Delete</button></div>';
   }
   function tabView() {
-    if (T.tab === 'app') { var u = url(); return u ? '<div class="card" style="padding:0;overflow:hidden"><iframe src="' + esc(u) + '" title="Card Scan" style="width:100%;height:calc(100vh - 290px);min-height:480px;border:0;display:block;background:var(--bg)" allow="camera; clipboard-write"></iframe></div><p class="note" style="margin-top:10px">If this stays blank, your Card Scan server refuses to be shown inside other sites. Open it in its own tab instead: <a style="color:var(--accent-text)" href="' + esc(u) + '" target="_blank" rel="noopener">Open Card Scan</a>.</p>' : '<p class="note">Add the Card Scan address in Settings.</p>'; }
     if (T.tab === 'reminders') {
       if (T.remErr) return '<div class="banner"><i class="dot bad"></i><span>' + esc(T.remErr) + '</span></div>'; if (!T.rem) return '<p class="note">Loading reminders...</p>';
       var l = T.rem.reminders || []; if (!l.length) return '<div class="empty"><h2>No open reminders</h2><p>Open a card and choose Remind me to follow up.</p></div>';

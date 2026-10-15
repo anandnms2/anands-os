@@ -69,8 +69,8 @@ function boot() {
 }
 
 /* ---------- shell ---------- */
-var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['servers', 'Servers', 'monitor'], ['pulse', 'Pulse', 'pulse'], ['vpn', 'VPN', 'vpn'], ['cards', 'Cards', 'cards'], ['apps', 'Suite', 'apps']];
-function cur(v) { if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; return S.view === v || (v === 'apps' && S.view === 'app'); }
+var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['pulse', 'Pulse', 'pulse'], ['vpn', 'VPN', 'vpn'], ['cards', 'Cards', 'cards'], ['apps', 'Suite', 'apps']];
+function cur(v) { if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; if (v === 'insights' && S.view === 'servers') return true; return S.view === v || (v === 'apps' && S.view === 'app'); }
 function buildNav() {
   var h = '<button class="logo" data-act="nav" data-v="home" aria-label="Home"><img src="/logo-white.png" alt=""></button><div class="rsep"></div>';
   NAV.forEach(function (n) { h += '<button class="nav" data-act="nav" data-v="' + n[0] + '" title="' + n[1] + '"' + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
@@ -224,8 +224,9 @@ function insightsV() {
   var i = h.indexOf('<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px');
   return i > 0 ? h.slice(0, i) + sv + h.slice(i) : h.replace(/<\/div>$/, sv + '</div>');
 }
+function insTabs(a) { return '<div class="toolbar"><div class="seg" role="tablist">' + [['insights', 'Cloud'], ['servers', 'Servers']].map(function (t) { return '<button data-act="nav" data-v="' + t[0] + '" aria-pressed="' + (a === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>'; }
 function insightsV0() {
-  var head = '<div class="wrap"><div class="pagehead"><div><h1>Anand Cloud Insights</h1><p>What is running on your Coolify server, what is healthy, and what changed lately.</p></div><div style="display:flex;gap:10px"><button class="btn" data-act="coolify">Coolify settings</button><button class="btn" data-act="refresh">' + (S.ins.loading ? 'Refreshing...' : 'Refresh') + '</button></div></div>';
+  var head = '<div class="wrap"><div class="pagehead"><div><h1>Anand Cloud Insights</h1><p>What is running on your Coolify server, what is healthy, and what changed lately.</p></div><div style="display:flex;gap:10px"><button class="btn" data-act="coolify">Coolify settings</button><button class="btn" data-act="refresh">' + (S.ins.loading ? 'Refreshing...' : 'Refresh') + '</button></div></div>' + insTabs('insights');
   var d = S.ins.data;
   if (!d) {
     if (S.ins.loading) return head + '<p style="color:var(--muted)">Loading from Coolify...</p></div>';
@@ -600,6 +601,6 @@ document.addEventListener('change', function (ev) { if (ev.target.id === 'fileIn
 $('#fab').innerHTML = ic('chat', ' style="width:26px;height:26px"');
 $('#fab').addEventListener('click', function () { openChat(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function () {});
-window.AOS = { S: S, $: $, esc: esc, api: api, toast: toast, LS: LS, fmt: fmt, bytes: bytes, modal: modal, OPENWITH: OPENWITH, LAUNCHES: LAUNCHES, TEXTEXT: TEXTEXT, dedOpen: dedOpen, launch: launch, connectBlock: connectBlock, ic: ic, go: go, redraw: redraw };
+window.AOS = { insTabs: insTabs, S: S, $: $, esc: esc, api: api, toast: toast, LS: LS, fmt: fmt, bytes: bytes, modal: modal, OPENWITH: OPENWITH, LAUNCHES: LAUNCHES, TEXTEXT: TEXTEXT, dedOpen: dedOpen, launch: launch, connectBlock: connectBlock, ic: ic, go: go, redraw: redraw };
 boot();
 })();

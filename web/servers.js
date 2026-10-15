@@ -84,7 +84,7 @@
   function fleet() {
     var d = sysData(), st = window.AOSInt.state.st;
     var tabs = [['systems', 'Systems'], ['alerts', 'Alerts'], ['probes', 'Network probes']].map(function (t) { return '<button class="chip" data-sa="tab" data-t="' + t[0] + '" aria-pressed="' + (I.tab === t[0]) + '">' + t[1] + (t[0] === 'alerts' && d && d.alertsFiring ? ' <b style="color:var(--bad)">' + d.alertsFiring + '</b>' : '') + '</button>'; }).join('');
-    var head = '<div class="wrap"><div class="pagehead"><div><h1>Servers</h1><p>CPU, memory, disk, network, containers, services, disks and alerts for every server in Status (Beszel).</p></div><div style="display:flex;gap:10px"><button class="btn" data-sa="refresh">' + (I.busy.sys ? 'Refreshing...' : 'Refresh') + '</button></div></div><div class="chips" style="margin-bottom:16px">' + tabs + '</div>';
+    var head = '<div class="wrap"><div class="pagehead"><div><h1>Insights</h1><p>CPU, memory, disk, network, containers, services, disks and alerts for every server in Status (Beszel).</p></div><div style="display:flex;gap:10px"><button class="btn" data-sa="refresh">' + (I.busy.sys ? 'Refreshing...' : 'Refresh') + '</button></div></div>' + A.insTabs('servers') + '<div class="chips" style="margin-bottom:16px">' + tabs + '</div>';
     if (!d) {
       if (st.loading || I.busy.sys) return head + '<p class="note">Loading from Status...</p></div>';
       if (st.code === 'not_configured' || I.err.sys === 'not_configured') return head + '<div class="card"><h2 style="font-size:20px;margin-bottom:6px">Status is not connected yet</h2><p class="note" style="margin:0 0 14px">Add your Status (Beszel) address and a user in Settings.</p><button class="btn primary" data-act="nav" data-v="settings">Open Settings</button></div></div>';

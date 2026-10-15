@@ -4,7 +4,7 @@
   'use strict';
   var A = window.AOS; if (!A) return;
   var S = A.S, $ = A.$, esc = A.esc, api = A.api, ic = A.ic;
-  var TABS = [['today', 'Today'], ['chats', 'Chats'], ['tasks', 'Tasks'], ['waiting', 'Waiting'], ['tracked', 'Tracked'], ['lists', 'Lists'], ['search', 'Search'], ['health', 'Health'], ['app', 'Full app']];
+  var TABS = [['today', 'Today'], ['chats', 'Chats'], ['tasks', 'Tasks'], ['waiting', 'Waiting'], ['tracked', 'Tracked'], ['lists', 'Lists'], ['search', 'Search'], ['health', 'Health']];
   var I = { tab: 'today', d: {}, busy: {}, err: {}, chat: null, msgs: null, tr: null, trd: null, q: '', sq: '', res: null, tstatus: 'open', all: false };
 
   function ago(iso) { if (!iso) return ''; var s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000); if (isNaN(s)) return ''; if (s < 60) return 'just now'; if (s < 3600) return Math.round(s / 60) + ' min ago'; if (s < 86400) return Math.round(s / 3600) + ' h ago'; return Math.round(s / 86400) + ' d ago'; }
@@ -49,11 +49,11 @@
     if (tab === 'lists') return get('lists', '/lists', function (d) { I.d.lists = d; });
     if (tab === 'health') return get('health', '/health', function (d) { I.d.health = d; });
   }
-  function onGo(v) { if (v !== 'pulse') return; if (I.tab !== 'search' && I.tab !== 'app' && !I.d[I.tab] && !I.busy[I.tab]) load(I.tab); }
+  function onGo(v) { if (v !== 'pulse') return; if (I.tab !== 'search' && !I.d[I.tab] && !I.busy[I.tab]) load(I.tab); }
 
   function head(sub) {
     var u = url();
-    return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1><p>' + (sub || 'Your mail, chats, tasks and what you are waiting on, from Anands Pulse. Read-only here. Ask the assistant about any of it.') + '</p></div><div style="display:flex;gap:10px">' + (I.tab !== 'app' ? '<button class="btn" data-pa="refresh">Refresh</button>' : '') + (u ? '<a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Open Pulse ' + ic('ext') + '</a>' : '') + '</div></div>' +
+    return '<div class="wrap"><div class="pagehead"><div><h1>Pulse</h1><p>' + (sub || 'Your mail, chats, tasks and what you are waiting on, from Anands Pulse. Read-only here. Ask the assistant about any of it.') + '</p></div><div style="display:flex;gap:10px">' + '<button class="btn" data-pa="refresh">Refresh</button>' + (u ? '<a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Open Pulse ' + ic('ext') + '</a>' : '') + '</div></div>' +
       '<div class="toolbar"><div class="seg" role="tablist">' + TABS.map(function (t) { return '<button data-pa="tab" data-t="' + t[0] + '" aria-pressed="' + (I.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>';
   }
   function fail(key) { var e = I.err[key]; return e ? '<div class="banner"><i class="dot bad"></i><span>' + esc(e) + '</span><button class="btn sm" data-pa="refresh">Try again</button></div>' : ''; }
@@ -62,10 +62,6 @@
   function view() {
     if (Object.keys(I.err).some(function (k) { return I.err[k] === 'not_configured'; })) return notConnected();
     var h = head(), t = I.tab, d = I.d;
-    if (t === 'app') {
-      var u = url(); if (!u) return notConnected();
-      return h + '<div class="card" style="padding:0;overflow:hidden"><iframe src="' + esc(u) + '" title="Anands Pulse" style="width:100%;height:calc(100vh - 290px);min-height:480px;border:0;display:block;background:var(--bg)" allow="clipboard-write"></iframe></div><p class="note" style="margin-top:10px">If this stays blank your Pulse server refuses to be shown inside other sites. Use Open Pulse above, or allow this address in Pulse (FRAME_ANCESTORS).</p></div>';
-    }
     h += fail(t);
     if (t === 'today') {
       var x = d.today; if (!x) return h + '<p class="note">Loading today...</p></div>';

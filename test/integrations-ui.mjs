@@ -23,7 +23,7 @@ try {
   await p.goto(B + '/'); await p.waitForSelector('#rail .nav');
   const nav = (v) => p.click(`#rail [data-v="${v}"]`);
 
-  await t('rail has VPN and Cards', async () => { assert.equal(await p.locator('#rail [data-v="vpn"]').count(), 1); assert.equal(await p.locator('#rail [data-v="cards"]').count(), 1); });
+  await t('rail has VPN and Cards', async () => { assert.equal(await p.locator('#rail [data-v="vpn"]').count(), 1); assert.equal(await p.locator('#rail [data-v="servers"]').count(), 0); assert.equal(await p.locator('#rail [data-v="cards"]').count(), 1); });
   await t('Insights shows servers with usage and a down server', async () => {
     await nav('insights'); await p.waitForSelector('.isrv'); assert.equal(await p.locator('.isrv').count(), 2);
     const txt = await p.locator('#view').innerText(); assert.match(txt, /oracle-1/); assert.match(txt, /home-nas/); assert.match(txt, /1 up, 1 down/); assert.match(txt, /46%/); assert.match(txt, /Down/);
@@ -80,7 +80,7 @@ try {
     await p.click('[data-pa="trback"]'); await p.click('[data-pa="tab"][data-t="search"]'); await p.fill('[data-pin="sq"]', 'invoice'); await p.press('[data-pin="sq"]', 'Enter'); await p.waitForFunction(() => /Invoice/.test(document.querySelector('#view').innerText));
     assert.ok(pu.calls === undefined || true);
   });
-  await t('Pulse full app tab frames the Pulse address', async () => { await p.click('[data-pa="tab"][data-t="app"]'); assert.equal(await p.locator('iframe[title="Anands Pulse"]').count(), 1); });
+  await t('Pulse and Cards have no embedded app frames', async () => { assert.equal(await p.locator('iframe').count(), 0); assert.equal(await p.locator('[data-pa="tab"][data-t="app"]').count(), 0); });
   await t('Cards: scan a card with a photo, AI read, save', async () => {
     resetCards(); await nav('vpn'); await nav('cards'); await p.waitForSelector('.icard'); await p.click('[data-ca="new"]'); await p.waitForSelector('#nf_name');
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -103,7 +103,7 @@ try {
     await p.click('[data-ca="bmove"]'); await p.selectOption('#bg', '22222222-2222-2222-2222-222222222222'); await p.click('[data-ca="bmoveyes"]'); await p.waitForFunction(() => /Moved/.test(document.body.innerText)); assert.equal(csState.lastMove.groupId, '22222222-2222-2222-2222-222222222222'); assert.equal(csState.lastMove.ids.length, 2);
     await p.click('[data-ca="selmode"]'); await p.click('[data-ca="selmode"]'); await p.click('[data-ia="cgrp"][data-g=""]'); await p.waitForFunction(() => document.querySelectorAll('.icsel').length >= 2); await p.locator('.icsel').nth(0).check(); await p.locator('.icsel').nth(1).check(); await p.click('[data-ca="bmerge"]'); await p.waitForSelector('[data-ca="mgyes"]'); await shot(p, 'cards-merge'); await p.click('[data-ca="mgyes"]'); await p.waitForFunction(() => /Cards merged/.test(document.body.innerText)); assert.ok(csState.lastMerge.primaryId && csState.lastMerge.duplicateId);
   });
-  await t('Cards: full app tab and alerts', async () => { await p.click('[data-ca="tab"][data-t="alerts"]'); await p.waitForFunction(() => /Reminder due/.test(document.querySelector('#view').innerText)); await p.click('[data-ca="tab"][data-t="app"]'); assert.equal(await p.locator('iframe[title="Card Scan"]').count(), 1); await p.click('[data-ca="tab"][data-t="cards"]'); });
+  await t('Cards: alerts, no frame tab', async () => { await p.click('[data-ca="tab"][data-t="alerts"]'); await p.waitForFunction(() => /Reminder due/.test(document.querySelector('#view').innerText));  assert.equal(await p.locator('[data-ca="tab"][data-t="app"]').count(), 0); await p.click('[data-ca="tab"][data-t="cards"]'); });
   await t('Settings has the three cards and saves', async () => {
     await p.click('#rail [data-v="settings"]'); for (const k of ['status', 'vpn', 'cards']) assert.equal(await p.locator('#s_' + k + 'u').count(), 1);
     await p.click('[data-act="save"][data-k="vpn"]'); await p.waitForFunction(() => /Connected/.test(document.querySelector('#r_vpn')?.textContent || '')); assert.match(await p.locator('#r_vpn').innerText(), /devices/);
