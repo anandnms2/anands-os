@@ -277,43 +277,14 @@ function settingsV() {
     '<div class="card"><h2 style="font-size:20px;margin-bottom:14px">Local mode (no Puter cloud)</h2><dl class="dl"><dt>Sign-in</dt><dd>' + (S.login.method === 'oidc' ? 'Your SSO' : 'Password') + ', handled by this server</dd><dt>puter.kv</dt><dd>Database in your data volume</dd><dt>puter.fs</dt><dd>Folder in your data volume</dd><dt>puter.ai</dt><dd>Your FreeLLMAPI</dd><dt>puter.com</dt><dd>Apps cannot connect (CSP)</dd></dl></div></div></div>';
 }
 /* ---------- Drive (Cloudreve via WebDAV) ---------- */
-S.drive = { path: '/', items: [], loading: false, error: null, code: null, sel: null, status: null };
+S.drive = { path: '/', items: [], loading: false, error: null, code: null, sel: [], status: null };
+function loadDrive(p, quiet) { return window.AOSDrive ? window.AOSDrive.load(p, quiet) : Promise.resolve(); }
+function driveV() { return window.AOSDrive ? window.AOSDrive.view() : '<div class="wrap"><div class="empty">Loading Drive...</div></div>'; }
 var OPENWITH = { csv: ['spreadsheet'], xlsx: ['spreadsheet'], xls: ['spreadsheet'], docx: ['documents'], doc: ['documents'], pdf: ['pdf'], pptx: ['presentation'], ppt: ['presentation'], jpg: ['photo-studio'], jpeg: ['photo-studio'], png: ['photo-studio'], webp: ['photo-studio'], gif: ['photo-studio'], mp4: ['video-studio'], mov: ['video-studio'], mp3: ['audio-studio'], wav: ['audio-studio'], svg: ['vector-studio'], drawio: ['whiteboard'] };
 /* Apps verified to read a file handed to them at launch (puter.ui.onLaunchedWithItems). The rest open normally and use their own Open dialog, which lists /Drive. */
 var LAUNCHES = ['audio-studio', 'cad', 'circuits', 'documents', 'parametric', 'pdf', 'photo-studio', 'presentation', 'spreadsheet', 'vector-studio', 'video-studio'];
 var TEXTEXT = /^(txt|md|csv|tsv|json|html|htm|xml|yml|yaml|log|ini|conf|js|css|py|sh)$/;
 function dext(n) { var m = /\.([a-z0-9]+)$/i.exec(n); return m ? m[1].toLowerCase() : ''; }
-function dpathOf(p) { return '/Drive' + (p === '/' ? '' : p); }
-function loadDrive(p, quiet) {
-  var D = S.drive; if (p !== undefined) { D.path = p; D.sel = null; } D.loading = !quiet; D.error = null; if (S.view === 'drive') redraw();
-  return api('/api/drive/status').then(function (st) { D.status = st; if (!st.connected) { D.items = []; D.loading = false; D.error = st.configured ? 'Drive is configured but not reachable (' + (st.reason || 'no answer') + ').' : null; D.code = st.configured ? 'unreachable' : 'not_configured'; return; }
-    return api('/_local/fs/readdir', { method: 'POST', json: { path: dpathOf(D.path) } }).then(function (items) { D.items = items; D.loading = false; D.code = null; }); })
-  .catch(function (e) { D.items = []; D.loading = false; D.error = e.message; D.code = e.code || 'error'; }).then(function () { if (S.view === 'drive') redraw(); });
-}
-function driveV() {
-  var D = S.drive, h = '<div class="wrap"><div class="pagehead"><div><h1>Drive</h1><p>Your Cloudreve files inside the OS. Open them with a Suite app and save back to the same place.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' + (D.status && D.status.connected ? '<span class="pill ok"><i class="dot"></i>Connected</span><button class="btn" data-act="dup">' + ic('upload') + 'Upload</button><input type="file" id="dfile" multiple hidden>' : '') + '<button class="btn' + (D.status && D.status.connected ? '' : ' primary') + '" data-act="nav" data-v="settings">' + (D.status && D.status.configured ? 'Drive settings' : 'Connect Drive') + '</button></div></div>';
-  if (D.code === 'not_configured' || (D.status && !D.status.configured)) return h + connectBlock('Connect your Cloudreve', 'dsettings', 'In Cloudreve, open Settings, then WebDAV, and create an account. Enter its address, name and password in Settings here.') + '</div>';
-  if (D.error) return h + '<div class="banner"><i class="dot bad"></i><span>' + esc(D.error) + '</span><button class="btn sm" data-act="dgo" data-p="' + esc(D.path) + '">Retry</button></div></div>';
-  var crumbs = '<button class="link" data-act="dgo" data-p="/">Drive</button>', acc = '';
-  D.path.split('/').filter(Boolean).forEach(function (x) { acc += '/' + x; crumbs += ' <span style="color:var(--muted)">/</span> <button class="link" data-act="dgo" data-p="' + esc(acc) + '">' + esc(x) + '</button>'; });
-  var rows = D.items.slice().sort(function (a, b) { return (b.is_dir ? 1 : 0) - (a.is_dir ? 1 : 0) || a.name.localeCompare(b.name); });
-  var list = D.loading ? '<div class="empty" style="margin:16px">Loading...</div>' : rows.map(function (f) {
-    var rel = f.path.replace(/^\/Drive/, '') || '/', img = /^(jpe?g|png|gif|webp)$/.test(dext(f.name));
-    return '<button class="drow' + (D.sel === f.path ? ' sel' : '') + '" data-act="' + (f.is_dir ? 'dgo' : 'dsel') + '" data-p="' + esc(f.is_dir ? rel : f.path) + '"><span class="dic">' + ic(f.is_dir ? 'folder' : img ? 'photos' : 'doc') + '</span><span class="dn"><b>' + esc(f.name) + '</b></span><span class="dm">' + (f.is_dir ? 'Folder' : bytes(f.size)) + '</span><span class="dm dd">' + (f.modified ? esc(fmt(new Date(f.modified * 1000), { day: 'numeric', month: 'short', year: 'numeric' })) : '') + '</span></button>';
-  }).join('') || '<div class="empty" style="margin:16px">Empty folder</div>';
-  var f = D.sel ? D.items.filter(function (x) { return x.path === D.sel; })[0] : null, panel;
-  if (!f) panel = '<div class="dpanel"><h3 style="font-size:18px;margin-bottom:6px">Open with</h3><p style="color:var(--muted);margin:0;font-size:14px">Pick a file. The Suite apps that can open it appear here. Saving in an app writes straight back to Cloudreve.</p></div>';
-  else {
-    var ows = (OPENWITH[dext(f.name)] || []).map(function (s) { return S.apps.filter(function (a) { return a.slug === s && a.hasSource; })[0]; }).filter(Boolean);
-    var canText = TEXTEXT.test(dext(f.name)) && f.size <= 1048576;
-    panel = '<div class="dpanel"><div class="eyebrow">Selected</div><h3 style="font-size:19px;margin:4px 0 2px;word-break:break-word">' + esc(f.name) + '</h3><p style="color:var(--muted);margin:0 0 14px;font-size:13.5px">' + bytes(f.size) + '</p>' +
-      (canText ? '<button class="btn' + (ows.length ? '' : ' primary') + ' dopen" data-act="dedit" data-p="' + esc(f.path) + '">' + ic('doc') + 'Edit as text</button>' : '') +
-      (ows.length ? ows.map(function (a, i) { return '<button class="btn' + (i === 0 && !canText ? ' primary' : '') + ' dopen" data-act="dopen" data-s="' + a.slug + '" data-p="' + esc(f.path) + '"><img src="/_icons/' + a.slug + '.png" alt="" style="width:20px;height:20px;border-radius:5px">' + (i === 0 && !canText ? 'Open in ' : 'Open in ') + esc(a.name) + (LAUNCHES.indexOf(a.slug) < 0 ? ' <small style="opacity:.7;font-weight:400">(via its Open dialog)</small>' : '') + '</button>'; }).join('') : (canText ? '' : '<p style="color:var(--muted);margin:0 0 10px">No Suite app opens this file type yet.</p>')) +
-      '<a class="btn dopen" href="/_local/fs/get?path=' + encodeURIComponent(f.path) + '" download="' + esc(f.name) + '">' + ic('upload', ' style="transform:rotate(180deg)"') + 'Download</a></div>';
-  }
-  return h + '<div class="dgrid"><div class="card" style="padding:0;overflow:hidden"><div class="dcrumb">' + crumbs + '</div><div class="dlist">' + list + '</div></div>' + panel + '</div>' +
-    '<p class="note" style="margin-top:16px">Apps also see this as the <span class="mono">/Drive</span> folder in their own Open and Save dialogs.</p></div>';
-}
 function dedV() {
   var e = S.dedit || {}, name = (e.path || '').split('/').pop();
   return '<div class="wrap"><div class="winbar"><button class="btn sm" data-act="nav" data-v="drive">' + ic('back') + 'Drive</button><div><b style="font-family:var(--display);font-size:20px;font-weight:500">' + esc(name) + '</b><div class="mono" style="color:var(--muted);font-size:12.5px">' + esc(e.path || '') + '</div></div><span style="flex:1"></span><span id="dstat" style="font-size:13px;color:var(--muted)">' + (e.loading ? 'Loading...' : e.error ? '' : 'Loaded from Drive') + '</span><button class="btn primary sm" data-act="dsave"' + (e.loading || e.error ? ' disabled' : '') + '>Save to Drive</button></div>' +
@@ -328,12 +299,6 @@ function dedSave() {
   var e = S.dedit; if (!e || e.loading) return; var st = $('#dstat'); if (st) { st.textContent = 'Saving...'; st.style.color = 'var(--muted)'; }
   api('/_local/fs/write?path=' + encodeURIComponent(e.path) + '&overwrite=1', { method: 'POST', body: e.text, headers: { 'content-type': 'text/plain' } })
     .then(function () { st = $('#dstat'); if (st) { st.textContent = 'Saved to Drive'; st.style.color = 'var(--ok)'; } }).catch(function (x) { st = $('#dstat'); if (st) { st.textContent = 'Could not save: ' + x.message; st.style.color = 'var(--bad)'; } });
-}
-function driveUpload(files) {
-  var D = S.drive, n = 0, list = Array.prototype.slice.call(files || []); if (!list.length) return;
-  toast('Uploading ' + list.length + ' file' + (list.length === 1 ? '' : 's') + '...');
-  list.reduce(function (p, f) { return p.then(function () { return api('/_local/fs/write?path=' + encodeURIComponent(dpathOf(D.path) + '/' + f.name) + '&overwrite=1', { method: 'POST', body: f, headers: { 'content-type': f.type || 'application/octet-stream' } }).then(function () { n++; }); }); }, Promise.resolve())
-    .then(function () { toast('Uploaded ' + n + ' file' + (n === 1 ? '' : 's') + '.'); }).catch(function (e) { toast('Upload failed: ' + e.message); }).then(function () { loadDrive(undefined, true); });
 }
 function note(id, text, cls) { var el = $('#' + id); if (el) { el.textContent = text; el.style.color = cls === 'ok' ? 'var(--ok)' : cls === 'bad' ? 'var(--bad)' : 'var(--muted)'; } }
 function saveGroup(k, after) {
@@ -574,13 +539,10 @@ document.addEventListener('click', function (ev) {
     case 'vdelno': S.vault.delAsk = false; redraw(); break;
     case 'vdelyes': { var di = vSel(); if (!di) break; window.AOSVault.remove(di.id).then(function () { S.vault.items = S.vault.items.filter(function (x) { return x.id !== di.id; }); S.vault.sel = null; S.vault.delAsk = false; toast('Moved to the trash in your Vault.'); redraw(); }).catch(function (x) { toast(x.message); }); break; }
 
-    case 'dgo': loadDrive(d.p); break;
-    case 'dsel': S.drive.sel = d.p; redraw(); break;
     case 'dopen': if (LAUNCHES.indexOf(d.s) < 0) toast('This app has no direct file hand-off. Use its Open dialog and choose ' + d.p + '.'); launch(d.s, LAUNCHES.indexOf(d.s) < 0 ? null : d.p); break;
     case 'dedit': dedOpen(d.p); break;
     case 'dsave': dedSave(); break;
     case 'dsettings': go('settings'); break;
-    case 'dup': { var fi = $('#dfile'); if (fi) fi.click(); break; }
     case 'app': launch(d.s); break;
     case 'chatx': closeChat(); break;
     case 'chatset': S.chatOpen = true; S.chatSet = !S.chatSet; $('#chat').hidden = false; $('#fab').hidden = true; drawChat(); break;
@@ -614,9 +576,10 @@ document.addEventListener('submit', function (ev) {
   else if (id === 'hf') { ev.preventDefault(); var q = $('#hq').value; $('#hq').value = ''; openChat(q.trim() ? q : undefined); }
   else if (id === 'pwf') { ev.preventDefault(); var e = $('#lerr'); e.textContent = ''; fetch('/auth/password', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-aos': '1' }, body: JSON.stringify({ password: $('#pw').value }) }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not sign in'); }); }).then(function () { boot(); }).catch(function (x) { e.textContent = x.message; }); }
 });
-document.addEventListener('change', function (ev) { if (ev.target.id === 'fileIn') { uploadFiles(ev.target.files); ev.target.value = ''; } if (ev.target.id === 'dfile') { driveUpload(ev.target.files); ev.target.value = ''; } });
+document.addEventListener('change', function (ev) { if (ev.target.id === 'fileIn') { uploadFiles(ev.target.files); ev.target.value = ''; } });
 $('#fab').innerHTML = ic('chat', ' style="width:26px;height:26px"');
 $('#fab').addEventListener('click', function () { openChat(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function () {});
+window.AOS = { S: S, $: $, esc: esc, api: api, toast: toast, LS: LS, fmt: fmt, bytes: bytes, modal: modal, OPENWITH: OPENWITH, LAUNCHES: LAUNCHES, TEXTEXT: TEXTEXT, dedOpen: dedOpen, launch: launch, connectBlock: connectBlock, ic: ic, go: go, redraw: redraw };
 boot();
 })();
