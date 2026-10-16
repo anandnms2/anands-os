@@ -238,7 +238,7 @@
   function loadRb(again) {
     if (D.rbTried && !again) return; D.rbTried = true;
     fetch('/api/rb/status', { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (c) {
-      if (!c || !c.available) return; D.rb = '/rb/?resize=remote'; D.rbUp = !!c.up; D.rbWhy = c.reason || '';
+      if (!c || !c.available) return; D.rb = '/rb/?path=rb/websockify&autoconnect=true&resize=remote'; D.rbUp = !!c.up; D.rbWhy = c.reason || '';
       D.wins.forEach(function (w) { if (w.kind === 'browser') { if (w.b.full === undefined) w.b.full = true; paintBrowser(w); } });
     }).catch(function () {});
   }
