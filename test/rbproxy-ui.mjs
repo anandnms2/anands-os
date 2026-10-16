@@ -14,8 +14,8 @@ try {
   const ctx = await browser.newContext({ viewport: { width: 1300, height: 800 } }); await ctx.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
   const p = await ctx.newPage(); p.setDefaultTimeout(6000); p.on('pageerror', (e) => errs.push(e.message)); await p.goto(B + '/'); await p.waitForSelector('#top .deskbtn'); await p.click('#top .deskbtn'); await p.waitForSelector('#desk:not([hidden])');
   await t('Browser opens in Full mode and shows the container through /rb/', async () => {
-    await p.click('.dk-ic[data-w="browser"]'); const w = p.locator('.dkw[aria-label="Browser"]'); await w.waitFor(); await w.locator('iframe.dk-rb').waitFor();
-    assert.match(await w.locator('iframe.dk-rb').getAttribute('src'), /^\/rb\//); assert.ok(await w.frameLocator('iframe.dk-rb').locator('#k').isVisible());
+    await p.click('.dk-ic[data-w="browser"]'); const w = p.locator('.dkw[aria-label="Browser"]'); await w.waitFor(); await w.locator('iframe.dk-rbf').waitFor();
+    assert.match(await w.locator('iframe.dk-rbf').getAttribute('src'), /^\/rb\//); assert.ok(await w.frameLocator('iframe.dk-rbf').locator('#k').isVisible());
   });
   await t('when the container is down, Full says what is wrong and Simple tabs still works', async () => {
     up.close(); up.closeAllConnections?.(); await p.reload(); await p.waitForSelector('#desk:not([hidden])');
