@@ -16,7 +16,8 @@ const site = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 't
 await new Promise((r) => site.listen(0, '127.0.0.1', r)); const SITE = `http://127.0.0.1:${site.address().port}/`;
 const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'pw', SESSION_SECRET: 'x'.repeat(40), SJ_ALLOW_PRIVATE: '1' } });
 for (let i = 0; i < 50; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
-const nk = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html' }); r.end('<!doctype html><title>Neko fixture</title><body style="margin:0;background:#123"><h1 id="nk" style="color:#fff">Streamed Chrome fixture ' + q.url + '</h1>'); });
+const nkCalls = [];
+const nk = http.createServer((q, r) => { if (q.method === 'POST') { let b = ''; q.on('data', (d) => b += d); q.on('end', () => { nkCalls.push([q.url, q.headers.authorization || '', b]); r.writeHead(200, { 'content-type': 'application/json' }); r.end(JSON.stringify(q.url === '/api/login' ? { token: 'tok1' } : {})); }); return; } r.writeHead(200, { 'content-type': 'text/html' }); r.end('<!doctype html><title>Neko fixture</title><body style="margin:0;background:#123"><h1 id="nk" style="color:#fff">Streamed Chrome fixture ' + q.url + '</h1>'); });
 await new Promise((r) => nk.listen(0, '127.0.0.1', r)); const NK = `http://127.0.0.1:${nk.address().port}`;
 let pass = 0, failed = 0; const t = async (n, f) => { try { await f(); pass++; console.log('ok   ' + n); } catch (e) { failed++; console.log('FAIL ' + n + '\n     ' + (e.stack || e).toString().split('\n').slice(0, 5).join('\n     ')); } };
 const H = { 'x-aos': '1', 'content-type': 'application/json' };
@@ -26,7 +27,7 @@ try {
   await t('Real Chrome settings: saved, the owner is given the sign-in address, bad addresses are refused', async () => {
     assert.equal((await fetch(B + '/api/chrome/open')).status, 401);
     let r = await fetch(B + '/api/settings', { method: 'PUT', headers: { ...H, cookie }, body: JSON.stringify({ chrome: { url: 'http://evil.example.com' } }) }); assert.equal(r.status, 400);
-    r = await fetch(B + '/api/settings', { method: 'PUT', headers: { ...H, cookie }, body: JSON.stringify({ chrome: { url: NK, user: 'anand', pass: 'secret pw' } }) }); assert.equal(r.status, 200); const s = await r.json(); assert.equal(s.chrome.passSet, true); assert.equal(JSON.stringify(s).includes('secret pw'), false);
+    r = await fetch(B + '/api/settings', { method: 'PUT', headers: { ...H, cookie }, body: JSON.stringify({ chrome: { url: NK, user: 'anand', pass: 'secret pw', admin: 'adm pw' } }) }); assert.equal(r.status, 200); const s = await r.json(); assert.equal(s.chrome.passSet, true); assert.equal(s.chrome.adminSet, true); assert.equal(JSON.stringify(s).includes('adm pw'), false); assert.equal(JSON.stringify(s).includes('secret pw'), false);
     const j = await (await fetch(B + '/api/chrome/open', { headers: { cookie } })).json(); assert.equal(j.ok, true); assert.equal(j.src, NK + '/?embed=1&usr=anand&pwd=secret%20pw');
   });
   await t('the open call needs a signed-in owner and hands back a tokened address', async () => {
@@ -74,6 +75,8 @@ try {
         assert.ok((await f.getAttribute('src')).startsWith(NK + '/?embed=1&usr=anand&pwd='));
         await d.frameLocator('.dkw[aria-label="Browser"] iframe.dk-nkf').locator('#nk').waitFor(); const box = await f.boundingBox(), win = await w.boundingBox(); assert.ok(box.width > win.width * 0.95 && box.height > win.height * 0.7, JSON.stringify([box, win]));
         assert.equal(await w.locator('iframe.dk-rbf').isHidden(), true);
+        await d.waitForFunction(() => true); for (let i = 0; i < 40 && !nkCalls.some((c) => c[0] === '/api/room/screen'); i++) await new Promise((r) => setTimeout(r, 250));
+        const sc = nkCalls.find((c) => c[0] === '/api/room/screen'); assert.ok(sc, 'asked Neko to resize its screen'); assert.equal(sc[1], 'Bearer tok1'); const dim = JSON.parse(sc[2]); assert.ok(Math.abs(dim.width - box.width) <= 2 && Math.abs(dim.height - box.height) <= 2, JSON.stringify([dim, box]));
         await w.locator('[data-dk="bmode"][data-m="sj"]').click(); assert.equal(await f.isHidden(), true); assert.equal(await w.locator('iframe.dk-rbf').isVisible(), true); await c3.close();
       });
       await t('new tabs and closing work', async () => {

@@ -109,3 +109,28 @@ export function chromeInfo() {
   return { ok: true, src: origin + '/?embed=1&usr=' + encodeURIComponent(c.user || 'anand') + '&pwd=' + encodeURIComponent(c.pass) };
 }
 export const chromeOrigin = () => { try { const u = (effective().chrome || {}).url; return u ? new URL(u).origin : ''; } catch { return ''; } };
+
+/* Make the streamed screen the same size as the Browser window, so there are no black bars. Needs Neko's admin password. */
+let nkTok = { t: '', at: 0 };
+async function nkFetch(base, p, body, token) {
+  const r = await fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: 'Bearer ' + token } : {}) }, body: JSON.stringify(body), signal: AbortSignal.timeout(8000) });
+  const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch {}
+  return { status: r.status, j, txt: txt.slice(0, 200) };
+}
+export async function chromeFit(width, height) {
+  const c = effective().chrome || {}; if (!c.url || !c.admin) return { ok: false, reason: 'no_admin' };
+  const w = Math.min(2560, Math.max(640, Math.round(Number(width) / 2) * 2)), h = Math.min(1440, Math.max(360, Math.round(Number(height) / 2) * 2));
+  if (!(w > 0) || !(h > 0)) return { ok: false, reason: 'bad_size' };
+  const base = new URL(c.url).origin;
+  try {
+    if (!nkTok.t || Date.now() - nkTok.at > 20 * 60 * 1000) {
+      const l = await nkFetch(base, '/api/login', { username: 'admin-' + Date.now().toString(36), password: c.admin });
+      if (l.status !== 200 || !l.j || !l.j.token) { console.log('[chrome] admin sign-in failed: ' + l.status + ' ' + l.txt); return { ok: false, reason: 'admin_login', status: l.status }; }
+      nkTok = { t: l.j.token, at: Date.now() };
+    }
+    let r = await nkFetch(base, '/api/room/screen', { width: w, height: h, rate: 30 }, nkTok.t);
+    if (r.status === 401) { nkTok = { t: '', at: 0 }; return { ok: false, reason: 'expired' }; }
+    if (r.status >= 300) console.log('[chrome] screen resize refused: ' + r.status + ' ' + r.txt);
+    return { ok: r.status < 300, status: r.status, width: w, height: h };
+  } catch (e) { console.log('[chrome] resize error: ' + (e.message || e)); return { ok: false, reason: 'unreachable' }; }
+}

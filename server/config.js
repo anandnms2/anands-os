@@ -53,7 +53,7 @@ export function effective() {
     pulse: { url: clean(s.pulse?.url) || clean(env.PULSE_URL), token: clean(s.pulse?.token) || clean(env.PULSE_TOKEN), user: clean(s.pulse?.user) || clean(env.PULSE_USER), pass: clean(s.pulse?.pass) || clean(env.PULSE_PASSWORD) },
     dav: { url: clean(s.dav?.url) || clean(env.DAV_URL), user: clean(s.dav?.user) || clean(env.DAV_USER), pass: clean(s.dav?.pass) || clean(env.DAV_PASSWORD) },
     vault: { url: clean(s.vault?.url) || clean(env.VAULT_URL) },
-    chrome: { url: clean(s.chrome?.url) || clean(env.CHROME_URL), user: clean(s.chrome?.user) || clean(env.CHROME_USER) || 'anand', pass: clean(s.chrome?.pass) || clean(env.CHROME_PASSWORD) },
+    chrome: { url: clean(s.chrome?.url) || clean(env.CHROME_URL), user: clean(s.chrome?.user) || clean(env.CHROME_USER) || 'anand', pass: clean(s.chrome?.pass) || clean(env.CHROME_PASSWORD), admin: clean(s.chrome?.admin) || clean(env.CHROME_ADMIN_PASSWORD) },
     authentik: { url: clean(s.authentik?.url) || clean(env.AUTHENTIK_URL) || (OIDC ? (() => { try { return new URL(OIDC.issuer).origin; } catch { return ''; } })() : ''), token: clean(s.authentik?.token) || clean(env.AUTHENTIK_TOKEN) },
     terminal: { host: clean(s.terminal?.host) || clean(env.TERMINAL_HOST), port: Number(s.terminal?.port || env.TERMINAL_PORT || 0) || 22, user: clean(s.terminal?.user) || clean(env.TERMINAL_USER) || 'root', key: clean(s.terminal?.key) || clean(env.TERMINAL_KEY).replace(/\\n/g, '\n'), auth: s.terminal?.auth === 'password' || (!s.terminal?.key && !env.TERMINAL_KEY && s.terminal?.auth !== 'key' && !!clean(s.terminal?.pass)) ? 'password' : 'key', pass: clean(s.terminal?.pass) || clean(env.TERMINAL_PASS) },
     mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
@@ -77,7 +77,7 @@ export function publicSettings() {
     pulse: { url: e.pulse.url, tokenSet: !!e.pulse.token, user: e.pulse.user, passSet: !!e.pulse.pass },
     dav: { url: e.dav.url, user: e.dav.user, passSet: !!e.dav.pass },
     vault: { url: e.vault.url },
-    chrome: { url: e.chrome.url, user: e.chrome.user, passSet: !!e.chrome.pass },
+    chrome: { url: e.chrome.url, user: e.chrome.user, passSet: !!e.chrome.pass, adminSet: !!e.chrome.admin },
     authentik: { url: e.authentik.url, tokenSet: !!e.authentik.token },
     terminal: { host: e.terminal.host, port: e.terminal.port, user: e.terminal.user, keySet: !!e.terminal.key, auth: e.terminal.auth, passSet: !!e.terminal.pass },
     mail: { host: e.mail.host, port: e.mail.port, security: e.mail.security, user: e.mail.user, passSet: !!e.mail.pass, from: e.mail.from, fromName: e.mail.fromName, dailyCap: e.mail.dailyCap },
@@ -107,7 +107,7 @@ export function updateSettings(patch) {
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
   set('vault', 'url', p.vault?.url);
   if (p.chrome?.url !== undefined && String(p.chrome.url).trim() && !/^(https:\/\/[^\s\/]+|http:\/\/(127\.0\.0\.1|localhost)(:\d+)?)$/i.test(String(p.chrome.url).trim().replace(/\/+$/, ''))) throw Object.assign(new Error('Enter the address like https://browser.anands.xyz'), { status: 400 });
-  set('chrome', 'user', p.chrome?.user); set('chrome', 'pass', p.chrome?.pass, true); set('chrome', 'url', p.chrome?.url === undefined ? undefined : String(p.chrome.url).trim().replace(/\/+$/, ''));
+  set('chrome', 'user', p.chrome?.user); set('chrome', 'pass', p.chrome?.pass, true); set('chrome', 'admin', p.chrome?.admin, true); set('chrome', 'url', p.chrome?.url === undefined ? undefined : String(p.chrome.url).trim().replace(/\/+$/, ''));
   set('paperless', 'token', p.paperless?.token, true);
   set('authentik', 'url', p.authentik?.url); set('authentik', 'token', p.authentik?.token, true);
   for (const f of ['ai', 'files', 'storage', 'paperless']) set('links', f, p.links?.[f]);

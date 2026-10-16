@@ -18,7 +18,7 @@ import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
 import { handleProfile } from './profile.js';
 import { handleBrowse, clearCookies as browseClear } from './browse.js';
-import { handleSj, handleSjUpgrade, openInfo as sjOpen, chromeInfo, chromeOrigin, selfCheck as sjCheck, SJ_HOST } from './webproxy.js';
+import { handleSj, handleSjUpgrade, openInfo as sjOpen, chromeInfo, chromeOrigin, chromeFit, selfCheck as sjCheck, SJ_HOST } from './webproxy.js';
 import { handleMailboxes, syncAll } from './mailbox.js';
 import { handleGdrive, googleCallback, gConnected, gConfigured } from './gdrive.js';
 import { ping as davPing } from './webdav.js';
@@ -84,6 +84,7 @@ async function api(req, res, url) {
   if (p === '/api/mailboxes' || p.startsWith('/api/mailboxes/')) return handleMailboxes(req, res, url);
   if (p === '/api/sj/open') return json(res, 200, sjOpen());
   if (p === '/api/chrome/open') return json(res, 200, chromeInfo());
+  if (p === '/api/chrome/fit' && req.method === 'POST') { const b = await readJson(req); return json(res, 200, await chromeFit(b.w, b.h)); }
   if (p === '/api/browse/clear' && req.method === 'POST') { browseClear(req); return json(res, 200, { ok: true }); }
   if (p === '/api/browse' && (req.method === 'GET' || req.method === 'POST')) return handleBrowse(req, res, url);
   if (p === '/api/gdrive' || p.startsWith('/api/gdrive/')) return handleGdrive(req, res, url);

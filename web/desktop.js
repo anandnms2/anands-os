@@ -242,6 +242,14 @@
       D.wins.forEach(function (w) { if (w.kind === 'browser') { if (w.b.full === undefined) w.b.full = true; paintBrowser(w); } });
     }).catch(function () {});
   }
+  /* keep the streamed screen the same size as its window (needs the Neko admin password in Settings; quietly does nothing without it) */
+  function nkFit(f) {
+    var last = '', tm = 0;
+    function send() { if (!f.isConnected || f.hidden) return; var r = f.getBoundingClientRect(), k = Math.round(r.width) + 'x' + Math.round(r.height); if (r.width < 200 || k === last) return; last = k;
+      fetch('/api/chrome/fit', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-aos': '1' }, body: JSON.stringify({ w: r.width, h: r.height }) }).then(function (x) { return x.json(); }).then(function (j) { if (j && j.reason === 'no_admin') last = 'off'; if (j && j.reason === 'expired') last = ''; }).catch(function () { last = ''; }); }
+    var go = function () { clearTimeout(tm); tm = setTimeout(send, 900); };
+    try { if (window.ResizeObserver) new ResizeObserver(go).observe(f); } catch (e) {} f.addEventListener('load', function () { last = ''; setTimeout(send, 2500); });
+  }
   function loadNk(again) {
     if (D.nkTried && !again) return; D.nkTried = true;
     fetch('/api/chrome/open', { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (c) {
@@ -272,7 +280,7 @@
     if (!mb) { mb = document.createElement('div'); mb.className = 'dk-mbar'; br0.insertBefore(mb, br0.querySelector('.dk-barw')); }
     mb.hidden = !showM; mb.innerHTML = '<button class="' + (b.chrome ? '' : 'on') + '" data-dk="bmode" data-m="sj" data-id="' + w.id + '">Built-in browser</button><button class="' + (b.chrome ? 'on' : '') + '" data-dk="bmode" data-m="chrome" data-id="' + w.id + '" title="A real Chrome with your Google sign-in">Real Chrome</button>';
     var nf = w.body.querySelector('.dk-bv iframe.dk-nkf');
-    if (showM && b.chrome && D.nk) { if (!nf) { nf = document.createElement('iframe'); nf.className = 'dkw-frame dk-nkf'; nf.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock'); nf.setAttribute('allow', 'clipboard-read; clipboard-write; fullscreen; microphone; camera; autoplay'); nf.title = 'Real Chrome'; nf.src = D.nk; w.body.querySelector('.dk-bv').appendChild(nf); } nf.hidden = false; }
+    if (showM && b.chrome && D.nk) { if (!nf) { nf = document.createElement('iframe'); nf.className = 'dkw-frame dk-nkf'; nf.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock'); nf.setAttribute('allow', 'clipboard-read; clipboard-write; fullscreen; microphone; camera; autoplay'); nf.title = 'Real Chrome'; nf.src = D.nk; w.body.querySelector('.dk-bv').appendChild(nf); nkFit(nf); } nf.hidden = false; }
     else if (nf) nf.hidden = true;
     var nm = w.body.querySelector('.dk-nkmsg'); if (showM && b.chrome && !D.nk) { if (!nm) { nm = document.createElement('div'); nm.className = 'dk-rbmsg dk-nkmsg'; w.body.querySelector('.dk-bv').appendChild(nm); } nm.innerHTML = '<b>Real Chrome is not set up yet</b><p>' + esc(D.nkWhy || 'Checking...') + '</p><div><button class="btn primary" data-dk="bnkset" data-id="' + w.id + '">Open Settings</button> <button class="btn" data-dk="bmode" data-m="sj" data-id="' + w.id + '">Use the built-in browser</button></div>'; } else if (nm) nm.remove();
     var rf = w.body.querySelector('.dk-bv iframe.dk-rbf');
