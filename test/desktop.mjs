@@ -157,6 +157,9 @@ try {
     assert.deepEqual(await box('browser'), b); assert.deepEqual(await box('files'), a);
     assert.equal(await p.locator('.dkw[aria-label="Browser"]').count(), 0, 'a drag does not open the app');
     await p.reload(); await p.waitForSelector('#dkicons .dk-ic'); assert.deepEqual(await box('files'), a);
+    const names = () => p.locator('#dkicons .dk-ic span').allInnerTexts(); await p.locator('#dkicons').evaluate(() => 0);
+    await p.mouse.click(700, 760, { button: 'right' }); await p.locator('#dkctx button', { hasText: 'Arrange icons by name' }).click(); const n1 = await names(); assert.deepEqual(n1, [...n1].sort((x, y) => x.toLowerCase().localeCompare(y.toLowerCase())));
+    await p.mouse.click(700, 760, { button: 'right' }); await p.locator('#dkctx button', { hasText: 'Arrange icons by type' }).click(); const n2 = await names(); assert.equal(n2.length, n1.length); assert.notDeepEqual(n2, n1);
   });
   await t('Desktop has Photos, Pulse, Cards, Vault, Insights, VPN and Browser as apps', async () => {
     for (const v of ['browser', 'os:photos', 'os:pulse', 'os:cards', 'os:vault', 'os:insights', 'os:vpn']) assert.equal(await p.locator('#dkicons [data-dk="launch"][data-w="' + v + '"]').count(), 1, v);

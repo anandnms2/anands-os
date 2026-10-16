@@ -81,7 +81,10 @@
   }
   function iconsArrange(mode) {
     var cat = catalog(), ids = deskIds().filter(function (id) { return cat.some(function (i) { return i.id === id; }); });
-    if (mode === 'name') { var nm = function (id) { return cat.filter(function (i) { return i.id === id; })[0].name.toLowerCase(); }; ids.sort(function (a, b) { return nm(a) < nm(b) ? -1 : nm(a) > nm(b) ? 1 : 0; }); LS.set('deskicons', ids); }
+    if (mode === 'name' || mode === 'type') {
+      var it = function (id) { return cat.filter(function (i) { return i.id === id; })[0]; }, nm = function (id) { return it(id).name.toLowerCase(); }, order = ['System'].concat(CATS, ['Other']), ty = function (id) { var c = it(id).cat, n = order.indexOf(c); return n < 0 ? 99 : n; };
+      ids.sort(function (a, b) { if (mode === 'type' && ty(a) !== ty(b)) return ty(a) - ty(b); return nm(a) < nm(b) ? -1 : nm(a) > nm(b) ? 1 : 0; }); LS.set('deskicons', ids);
+    }
     LS.set('deskpos', {}); icons();
   }
   (function iconDrag() {
@@ -548,6 +551,7 @@
     if (a === 'launch' || a === 'app') { try { used(a === 'app' ? 'app:' + b.getAttribute('data-s') : b.getAttribute('data-w')); } catch (e) {} }
     if (a === 'mcat') { D.cat = b.getAttribute('data-c'); return void menu(); }
     if (a === 'isort') return void iconsArrange('name');
+    if (a === 'itype') return void iconsArrange('type');
     if (a === 'iauto') return void iconsArrange('auto');
     if (a === 'chooser') { D.menu = false; menu(); task(); return void chooser(); }
     if (a === 'chdone' && w) return void closeWin(w);
@@ -603,7 +607,7 @@
   document.addEventListener('contextmenu', function (ev) {
     if (!D.open) return; var t = ev.target; if (!t.closest || t.closest('#dkctx')) return ev.preventDefault();
     if (t.closest('input, textarea, [contenteditable], canvas, iframe')) return;
-    var deskItems = [['Sort icons by name', 'isort'], ['Line icons up in the grid', 'iauto'], ['Choose desktop icons...', 'chooser'], ['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], ['Keyboard shortcuts', 'keys'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
+    var deskItems = [['Arrange icons by name', 'isort'], ['Arrange icons by type', 'itype'], ['Line icons up in the grid', 'iauto'], ['Choose desktop icons...', 'chooser'], ['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], ['Keyboard shortcuts', 'keys'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
     var el;
     if ((el = t.closest('.dkw-bar'))) { var w = byId(el.closest('.dkw').getAttribute('data-id')); if (!w) return; ev.preventDefault(); return ctx(ev, winItems(w).concat([['Close all windows', 'closeall']])); }
     if ((el = t.closest('.dk-rb'))) { var w2 = byId(el.getAttribute('data-id')); if (!w2) return; ev.preventDefault(); return ctx(ev, winItems(w2)); }
