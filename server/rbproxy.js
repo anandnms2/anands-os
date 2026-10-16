@@ -19,7 +19,7 @@ export function target() {
   if (!/^https?:$/.test(u.protocol)) return null;
   const port = Number(u.port) || (u.protocol === 'https:' ? 443 : 80);
   const auth = c.pass ? 'Basic ' + Buffer.from((c.user || 'kasm_user') + ':' + c.pass).toString('base64') : '';
-  return { https: u.protocol === 'https:', host: u.hostname, port, hostHeader: u.host, origin: u.origin, base: u.pathname.replace(/\/+$/, ''), auth };
+  return { user: c.user || 'kasm_user', passLen: String(c.pass || '').length, https: u.protocol === 'https:', host: u.hostname, port, hostHeader: u.host, origin: u.origin, base: u.pathname.replace(/\/+$/, ''), auth };
 }
 const upPath = (t, url) => t.base + (url.pathname.replace(/^\/rb/, '') || '/') + url.search;
 
@@ -62,8 +62,8 @@ export function handleRbUpgrade(req, socket, head, url) {
 export function status() {
   const t = target(); if (!t) return Promise.resolve({ available: false });
   return new Promise((ok) => {
-    const done = (r) => ok({ available: true, up: r === true, auth: !!t.auth, reason: r === true ? '' : r });
-    const req = (t.https ? https : http).request({ hostname: t.host, port: t.port, path: t.base + '/', method: 'GET', headers: { host: t.hostHeader, ...(t.auth ? { authorization: t.auth } : {}) }, agent: t.https ? agent : undefined, timeout: 3000 }, (r) => { r.resume(); done(r.statusCode === 401 ? 'The container refused the saved password' : r.statusCode < 500 ? true : 'The container answered with an error'); });
+    const done = (r) => { if (r !== true) console.log('[rbrowser] status: ' + r + ' (' + t.host + ':' + t.port + ', login sent: ' + (t.auth ? 'yes' : 'no') + ')'); ok({ available: true, up: r === true, auth: !!t.auth, reason: r === true ? '' : r }); };
+    const req = (t.https ? https : http).request({ hostname: t.host, port: t.port, path: t.base + '/', method: 'GET', headers: { host: t.hostHeader, ...(t.auth ? { authorization: t.auth } : {}) }, agent: t.https ? agent : undefined, timeout: 3000 }, (r) => { r.resume(); done(r.statusCode === 401 ? (t.auth ? 'The container refused the login (user ' + t.user + ', password of ' + t.passLen + ' characters)' : 'No password is saved. Type it in the Password box, then press Save and test') : r.statusCode < 500 ? true : 'The container answered with an error'); });
     req.on('timeout', () => { req.destroy(); done('The container did not answer'); }); req.on('error', () => done('Anands OS cannot reach the container. Put them on the same Docker network.')); req.end();
   });
 }
