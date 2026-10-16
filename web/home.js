@@ -69,13 +69,14 @@
     return h + '</div>';
   }
   var GROUPS = [
-    ['Everyday', [['Pulse', 'pulse', '#pulse', 'Anands Control Center'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Cards', 'card', '#cards', 'Anands Cards'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password'], ['AI Chat', 'chat', 'https://ai.anands.xyz', 'Anands AI'], ['Files', 'folder', 'https://files.anands.xyz', 'Anands Filemanager']]],
-    ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'folder', 'https://storage.anands.xyz', 'Anands S3 Storage']]]
+    ['Everyday', [['Pulse', 'pulse', '#pulse', 'Anands Control Center'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Cards', 'card', '#cards', 'Anands Cards'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password'], ['AI Chat', 'chat', 'https://ai.anands.xyz/oauth/openid', 'Anands AI', 'ai'], ['Files', 'folder', 'https://files.anands.xyz/api/auth/oidc/login', 'Anands Filemanager', 'files']]],
+    ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'folder', 'https://s3-admin.anands.xyz', 'Anands S3 Storage', 'storage']]]
   ];
   function tile(s, state) {
     var st = state(s[3]), inner = '<span class="ic">' + ic(s[1]) + '</span><span class="tx"><b>' + s[0] + '</b></span><i class="dot ' + st[0] + '" title="' + st[1] + '" role="img" aria-label="' + st[1] + '"></i>';
     if (s[2].charAt(0) === '#') return '<button class="svc" data-act="nav" data-v="' + s[2].slice(1) + '">' + inner + '</button>';
-    return '<a class="svc" href="' + s[2] + '" target="_blank" rel="noopener">' + inner + '</a>';
+    var L = (S.settings || {}).links || {}, href = (s[4] && L[s[4]]) || s[2];
+    return '<a class="svc" href="' + esc(href) + '" target="_blank" rel="noopener">' + inner + '</a>';
   }
   function services(state) {
     return GROUPS.map(function (g) { return '<div class="sech"><h2>' + g[0] + '</h2></div><div class="svcs">' + g[1].map(function (s) { return tile(s, state); }).join('') + '</div>'; }).join('');

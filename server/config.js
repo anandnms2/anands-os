@@ -54,6 +54,7 @@ export function effective() {
     vault: { url: clean(s.vault?.url) || clean(env.VAULT_URL) },
     rbrowser: { url: clean(s.rbrowser?.url) || clean(env.REMOTE_BROWSER_URL) },
     mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
+    links: { ai: clean(s.links?.ai) || clean(env.LINK_AI) || 'https://ai.anands.xyz/oauth/openid', files: clean(s.links?.files) || clean(env.LINK_FILES) || 'https://files.anands.xyz/api/auth/oidc/login', storage: clean(s.links?.storage) || clean(env.LINK_STORAGE) || 'https://s3-admin.anands.xyz' },
     public: { url: clean(s.public?.url) || PUBLIC_URL },
     turn: { urls: clean(s.turn?.urls) || clean(env.TURN_URLS), secret: clean(s.turn?.secret) || clean(env.TURN_SECRET), stun: clean(s.turn?.stun) || clean(env.STUN_URLS) },
     llm: { base: clean(s.llm?.base) || clean(env.LLM_BASE_URL), key: clean(s.llm?.key) || clean(env.LLM_API_KEY), model: clean(s.llm?.model) || clean(env.LLM_MODEL) || 'gpt-4o-mini' }
@@ -73,6 +74,7 @@ export function publicSettings() {
     vault: { url: e.vault.url },
     rbrowser: { url: e.rbrowser.url },
     mail: { host: e.mail.host, port: e.mail.port, security: e.mail.security, user: e.mail.user, passSet: !!e.mail.pass, from: e.mail.from, fromName: e.mail.fromName, dailyCap: e.mail.dailyCap },
+    links: e.links,
     public: { url: e.public.url },
     turn: { urls: e.turn.urls, secretSet: !!e.turn.secret, stun: e.turn.stun },
     llm: { base: e.llm.base, keySet: !!e.llm.key, model: e.llm.model }
@@ -96,6 +98,7 @@ export function updateSettings(patch) {
   set('pulse', 'url', p.pulse?.url); set('pulse', 'token', p.pulse?.token, true); set('pulse', 'user', p.pulse?.user); set('pulse', 'pass', p.pulse?.pass, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
   set('vault', 'url', p.vault?.url);
+  for (const f of ['ai', 'files', 'storage']) set('links', f, p.links?.[f]);
   if (p.rbrowser?.url !== undefined && String(p.rbrowser.url).trim() && !/^https?:\/\/[^\s]+$/i.test(String(p.rbrowser.url).trim())) throw Object.assign(new Error('Enter the full address, starting with https://'), { status: 400 });
   set('rbrowser', 'url', p.rbrowser?.url === undefined ? undefined : String(p.rbrowser.url).trim().replace(/\/+$/, ''));
   if (p.mail) {
