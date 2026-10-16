@@ -19,7 +19,7 @@ export function target() {
   if (!/^https?:$/.test(u.protocol)) return null;
   const port = Number(u.port) || (u.protocol === 'https:' ? 443 : 80);
   const auth = c.pass ? 'Basic ' + Buffer.from((c.user || 'kasm_user') + ':' + c.pass).toString('base64') : '';
-  return { user: c.user || 'kasm_user', passLen: String(c.pass || '').length, https: u.protocol === 'https:', host: u.hostname, port, hostHeader: u.host, origin: u.origin, base: u.pathname.replace(/\/+$/, ''), auth };
+  return { creds: c.pass ? (c.user || 'kasm_user') + ':' + c.pass : '', user: c.user || 'kasm_user', passLen: String(c.pass || '').length, https: u.protocol === 'https:', host: u.hostname, port, hostHeader: u.host, origin: u.origin, base: u.pathname.replace(/\/+$/, ''), auth };
 }
 const upPath = (t, url) => t.base + (url.pathname.replace(/^\/rb/, '') || '/') + url.search;
 
@@ -29,9 +29,9 @@ export function handleRbProxy(req, res, url) {
   if (!['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'].includes(req.method)) throw httpError(405, 'Method not allowed');
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) { const o = req.headers.origin; if (o) { let ok = false; try { ok = new URL(o).host === req.headers.host; } catch {} if (!ok) throw httpError(403, 'Cross-site request refused', 'csrf'); } }
   const headers = {}; for (const [k, v] of Object.entries(req.headers)) if (!DROP_REQ.test(k)) headers[k] = v;
-  headers.host = t.hostHeader; if (t.auth) headers.authorization = t.auth;
+  headers.host = t.hostHeader;
   if (req.headers['content-length']) headers['content-length'] = req.headers['content-length'];
-  const up = (t.https ? https : http).request({ hostname: t.host, port: t.port, path: upPath(t, url), method: req.method, headers, agent: t.https ? agent : undefined, timeout: 0 }, (ur) => {
+  const up = (t.https ? https : http).request({ hostname: t.host, port: t.port, path: upPath(t, url), method: req.method, headers, auth: t.creds || undefined, agent: t.https ? agent : undefined, timeout: 0 }, (ur) => {
     if (ur.statusCode === 401) { ur.resume(); return json(res, 502, { error: 'The browser container refused the saved password. Check it in Settings.', code: 'rb_auth' }); }
     const h = {}; for (const [k, v] of Object.entries(ur.headers)) if (!DROP_RES.test(k)) h[k] = v;
     if (h.location) { let l = String(h.location); if (l.startsWith(t.origin)) l = l.slice(t.origin.length) || '/'; if (l.startsWith('/')) h.location = '/rb' + l; }
@@ -63,7 +63,7 @@ export function status() {
   const t = target(); if (!t) return Promise.resolve({ available: false });
   return new Promise((ok) => {
     const done = (r) => { if (r !== true) console.log('[rbrowser] status: ' + r + ' (' + t.host + ':' + t.port + ', login sent: ' + (t.auth ? 'yes' : 'no') + ')'); ok({ available: true, up: r === true, auth: !!t.auth, reason: r === true ? '' : r }); };
-    const req = (t.https ? https : http).request({ hostname: t.host, port: t.port, path: t.base + '/', method: 'GET', headers: { host: t.hostHeader, ...(t.auth ? { authorization: t.auth } : {}) }, agent: t.https ? agent : undefined, timeout: 3000 }, (r) => { r.resume(); done(r.statusCode === 401 ? (t.auth ? 'The container refused the login (user ' + t.user + ', password of ' + t.passLen + ' characters)' : 'No password is saved. Type it in the Password box, then press Save and test') : r.statusCode < 500 ? true : 'The container answered with an error'); });
+    const req = (t.https ? https : http).request({ hostname: t.host, port: t.port, path: t.base + '/', method: 'GET', headers: { host: t.hostHeader }, auth: t.creds || undefined, agent: t.https ? agent : undefined, timeout: 3000 }, (r) => { r.resume(); if (r.statusCode === 401) console.log('[rbrowser] 401 from container, www-authenticate: ' + (r.headers['www-authenticate'] || '-') + ', server: ' + (r.headers.server || '-')); done(r.statusCode === 401 ? (t.auth ? 'The container refused the login (user ' + t.user + ', password of ' + t.passLen + ' characters)' : 'No password is saved. Type it in the Password box, then press Save and test') : r.statusCode < 500 ? true : 'The container answered with an error'); });
     req.on('timeout', () => { req.destroy(); done('The container did not answer'); }); req.on('error', () => done('Anands OS cannot reach the container. Put them on the same Docker network.')); req.end();
   });
 }
