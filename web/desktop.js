@@ -151,7 +151,7 @@
 
   function openApp(slug, file) {
     var a = appBy(slug); if (!a) return toast('That app is not available');
-    var r = (LS.get('recent', []) || []).filter(function (x) { return x !== slug; }); r.unshift(slug); LS.set('recent', r.slice(0, 6));
+    var r = (LS.get('recent', []) || []).filter(function (x) { return x !== slug; }); r.unshift(slug); LS.set('recent', r.slice(0, 6)); try { var rl = (LS.get('rlist', []) || []).filter(function (x) { return x !== 'a:' + slug; }); rl.unshift('a:' + slug); LS.set('rlist', rl.slice(0, 8)); } catch (e) {}
     var w = mk('app', a.name, { icon: '/_icons/' + a.slug + '.png', w: 980, h: 640 }); w.sd = { t: 'app', slug: a.slug, file: file || '' };
     w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(a.name) + '" src="/apps/' + esc(a.slug) + '/' + (file ? '?open=' + enc(file) : '') + '" allow="clipboard-read; clipboard-write; fullscreen; microphone; camera; display-capture"></iframe>'; icons();
     return w;
