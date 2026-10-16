@@ -28,7 +28,14 @@ services:
       PAPERLESS_DBHOST: db
       PAPERLESS_DBPASS: ${PAPERLESS_DB_PASSWORD}
       PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY:?set a long random secret}
-      PAPERLESS_URL: https://docs.anands.xyz
+      PAPERLESS_URL: https://${PAPERLESS_DOMAIN:-docs.anands.xyz}
+      # Behind Coolify's proxy: trust its forwarded host and https headers, or login fails with "CSRF verification failed"
+      PAPERLESS_CSRF_TRUSTED_ORIGINS: https://${PAPERLESS_DOMAIN:-docs.anands.xyz}
+      PAPERLESS_ALLOWED_HOSTS: ${PAPERLESS_DOMAIN:-docs.anands.xyz}
+      PAPERLESS_CORS_ALLOWED_HOSTS: https://${PAPERLESS_DOMAIN:-docs.anands.xyz}
+      PAPERLESS_USE_X_FORWARD_HOST: "true"
+      PAPERLESS_USE_X_FORWARD_PORT: "true"
+      PAPERLESS_PROXY_SSL_HEADER: '["HTTP_X_FORWARDED_PROTO", "https"]'
       PAPERLESS_TIME_ZONE: Africa/Dar_es_Salaam
       PAPERLESS_OCR_LANGUAGE: eng
       PAPERLESS_OCR_LANGUAGES: ""
