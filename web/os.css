@@ -977,3 +977,21 @@ html:has(body.dk-on),body.dk-on{overflow:hidden;overscroll-behavior:none}
 .cpdrop:hover{border-color:var(--accent)}
 .cpdrop b{color:var(--fg)}
 @media (max-width:760px){.capbtn{width:36px;height:36px}}
+
+/* ---------- Security center ---------- */
+.secc{margin-top:18px;padding:18px}
+.sech2{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.sech2 h2{font-size:20px}
+.sectiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:12px 0}
+.sectiles.top{margin-top:18px}
+.sectile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.sectile b{font:500 26px var(--display)}
+.sectile span{color:var(--muted);font-size:13px}
+.sectile b.ok{color:var(--ok)} .sectile b.bad{color:var(--bad)} .sectile b.warn{color:var(--warn)}
+.sectile.score{border-color:var(--accent-line);background:var(--accent-soft)}
+.secrows{display:flex;flex-direction:column}
+.secrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.secrow:first-child{border-top:0}
+.secrow .note{overflow-wrap:anywhere}
+.secic{color:var(--accent-text);display:flex}
+.secflags{display:flex;gap:6px;flex-wrap:wrap}

@@ -52,6 +52,7 @@ export function effective() {
     pulse: { url: clean(s.pulse?.url) || clean(env.PULSE_URL), token: clean(s.pulse?.token) || clean(env.PULSE_TOKEN), user: clean(s.pulse?.user) || clean(env.PULSE_USER), pass: clean(s.pulse?.pass) || clean(env.PULSE_PASSWORD) },
     dav: { url: clean(s.dav?.url) || clean(env.DAV_URL), user: clean(s.dav?.user) || clean(env.DAV_USER), pass: clean(s.dav?.pass) || clean(env.DAV_PASSWORD) },
     vault: { url: clean(s.vault?.url) || clean(env.VAULT_URL) },
+    authentik: { url: clean(s.authentik?.url) || clean(env.AUTHENTIK_URL) || (OIDC ? (() => { try { return new URL(OIDC.issuer).origin; } catch { return ''; } })() : ''), token: clean(s.authentik?.token) || clean(env.AUTHENTIK_TOKEN) },
     rbrowser: { url: clean(s.rbrowser?.url) || clean(env.REMOTE_BROWSER_URL) },
     mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
     links: { ai: clean(s.links?.ai) || clean(env.LINK_AI) || 'https://ai.anands.xyz/oauth/openid', files: clean(s.links?.files) || clean(env.LINK_FILES) || 'https://files.anands.xyz/api/auth/oidc/login', storage: clean(s.links?.storage) || clean(env.LINK_STORAGE) || 'https://s3-admin.anands.xyz' },
@@ -72,6 +73,7 @@ export function publicSettings() {
     pulse: { url: e.pulse.url, tokenSet: !!e.pulse.token, user: e.pulse.user, passSet: !!e.pulse.pass },
     dav: { url: e.dav.url, user: e.dav.user, passSet: !!e.dav.pass },
     vault: { url: e.vault.url },
+    authentik: { url: e.authentik.url, tokenSet: !!e.authentik.token },
     rbrowser: { url: e.rbrowser.url },
     mail: { host: e.mail.host, port: e.mail.port, security: e.mail.security, user: e.mail.user, passSet: !!e.mail.pass, from: e.mail.from, fromName: e.mail.fromName, dailyCap: e.mail.dailyCap },
     links: e.links,
@@ -98,6 +100,7 @@ export function updateSettings(patch) {
   set('pulse', 'url', p.pulse?.url); set('pulse', 'token', p.pulse?.token, true); set('pulse', 'user', p.pulse?.user); set('pulse', 'pass', p.pulse?.pass, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
   set('vault', 'url', p.vault?.url);
+  set('authentik', 'url', p.authentik?.url); set('authentik', 'token', p.authentik?.token, true);
   for (const f of ['ai', 'files', 'storage']) set('links', f, p.links?.[f]);
   if (p.rbrowser?.url !== undefined && String(p.rbrowser.url).trim() && !/^https?:\/\/[^\s]+$/i.test(String(p.rbrowser.url).trim())) throw Object.assign(new Error('Enter the full address, starting with https://'), { status: 400 });
   set('rbrowser', 'url', p.rbrowser?.url === undefined ? undefined : String(p.rbrowser.url).trim().replace(/\/+$/, ''));

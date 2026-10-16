@@ -2,6 +2,7 @@ import { profileOf } from './profile.js';
 import crypto from 'node:crypto';
 import { OIDC, PASSWORD, PUBLIC_URL, OWNER } from './config.js';
 import { sign, verify, SESSION_COOKIE, sessionOf } from './session.js';
+import { createSession, logEvent, endSession } from './sessions.js';
 import { json, readJson, setCookie, cookies, clientIp, isHttps, fetchJson, httpError } from './util.js';
 
 const TTL = 14 * 24 * 3600;
@@ -29,11 +30,12 @@ export async function handleAuth(req, res, url) {
     const ip = clientIp(req);
     if (limited(ip)) throw httpError(429, 'Too many attempts. Wait 15 minutes.', 'rate_limited');
     const { password } = await readJson(req, 4096);
-    if (typeof password !== 'string' || !PASSWORD || !eq(password, PASSWORD)) { noteFail(ip); throw httpError(401, 'Wrong password', 'bad_password'); }
-    setCookie(res, SESSION_COOKIE, sign({ u: 'owner', n: OWNER }, TTL), { maxAge: TTL, secure });
+    if (typeof password !== 'string' || !PASSWORD || !eq(password, PASSWORD)) { noteFail(ip); logEvent(req, 'login_failed', { method: 'password' }); throw httpError(401, 'Wrong password', 'bad_password'); }
+    setCookie(res, SESSION_COOKIE, sign({ u: 'owner', n: OWNER, sid: createSession(req, { u: 'owner', n: OWNER, method: 'password' }) }, TTL), { maxAge: TTL, secure });
     return json(res, 200, { ok: true });
   }
   if (p === '/auth/logout') {
+    try { endSession(req, (sessionOf(req) || {}).sid); } catch {}
     setCookie(res, SESSION_COOKIE, '', { maxAge: 0, secure });
     res.writeHead(302, { location: '/' }); return res.end();
   }
@@ -55,9 +57,10 @@ export async function handleAuth(req, res, url) {
     const email = String(info.email || '').toLowerCase();
     const id = info.preferred_username || email || info.sub;
     if (!id) throw httpError(403, 'Your SSO account has no usable identity');
-    if (OIDC.allowed.length && !OIDC.allowed.includes(email) && !OIDC.allowed.includes(String(info.preferred_username || '').toLowerCase())) throw httpError(403, 'This account is not allowed here');
+    if (OIDC.allowed.length && !OIDC.allowed.includes(email) && !OIDC.allowed.includes(String(info.preferred_username || '').toLowerCase())) { logEvent(req, 'login_denied', { user: email || id, method: 'sso' }); throw httpError(403, 'This account is not allowed here'); }
     setCookie(res, 'aos_oidc', '', { maxAge: 0, secure });
-    setCookie(res, SESSION_COOKIE, sign({ u: id, n: info.name || info.preferred_username || id, e: email || null }, TTL), { maxAge: TTL, secure });
+    const nm = info.name || info.preferred_username || id;
+    setCookie(res, SESSION_COOKIE, sign({ u: id, n: nm, e: email || null, sid: createSession(req, { u: id, n: nm, method: 'sso' }) }, TTL), { maxAge: TTL, secure });
     res.writeHead(302, { location: '/' }); return res.end();
   }
   return false;
