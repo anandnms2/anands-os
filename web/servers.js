@@ -199,7 +199,8 @@
   function probesPage() {
     var pr = I.pr; if (!pr) return I.err.pr ? '<div class="banner"><i class="dot bad"></i><span>' + esc(I.err.pr) + '</span></div>' : '<p class="note">Loading probes...</p>';
     if (!pr.probes.length) return '<div class="empty"><h2>No network probes</h2><p>Add ping, TCP, HTTP or DNS probes in Beszel (newer versions) and they show up here.</p></div>';
-    return '<div class="tablewrap"><table><thead><tr><th>Probe</th><th>Target</th><th>From</th><th>Success</th><th>Average</th><th>Min / max</th><th>Every</th></tr></thead><tbody>' + pr.probes.map(function (p) { return '<tr><td><b>' + esc(p.name) + '</b> ' + pill(p.protocol || '') + '</td><td class="mono">' + esc(p.target || '') + (p.port ? ':' + p.port : '') + '</td><td>' + esc(p.systemName) + '</td><td>' + (p.ok == null ? '–' : pill(p.ok + '%', p.ok >= 99 ? 'ok' : p.ok >= 90 ? 'warn' : 'bad')) + '</td><td class="mono">' + (p.avg == null ? '–' : p.avg + ' ms') + '</td><td class="mono">' + (p.min == null ? '–' : p.min + ' / ' + p.max + ' ms') + '</td><td class="mono">' + (p.interval ? p.interval + ' s' : '–') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    var none = pr.probes.every(function (p) { return p.ok == null && p.avg == null; });
+    return (none ? '<div class="banner" style="margin-bottom:12px"><i class="dot warn"></i><span>The probes are listed, but no results came back from Status' + (pr.statsFrom ? ' (read from ' + esc(pr.statsFrom) + ')' : '') + '. <a href="/api/status/probes?debug=1" target="_blank" rel="noopener" style="color:var(--accent-text)">Show what Status returns</a></span></div>' : '<p class="note" style="margin:0 0 10px">Results over the last hour, refreshed every 30 seconds.</p>') + '<div class="tablewrap"><table><thead><tr><th>Probe</th><th>Target</th><th>From</th><th>Success</th><th>Average</th><th>Min / max</th><th>Every</th></tr></thead><tbody>' + pr.probes.map(function (p) { return '<tr><td><b>' + esc(p.name) + '</b> ' + pill(p.protocol || '') + '</td><td class="mono">' + esc(p.target || '') + (p.port ? ':' + p.port : '') + '</td><td>' + esc(p.systemName) + '</td><td>' + (p.ok == null ? '–' : pill(p.ok + '%', p.ok >= 99 ? 'ok' : p.ok >= 90 ? 'warn' : 'bad')) + '</td><td class="mono">' + (p.avg == null ? '–' : p.avg + ' ms') + '</td><td class="mono">' + (p.min == null ? '–' : p.min + ' / ' + p.max + ' ms') + '</td><td class="mono">' + (p.interval ? p.interval + ' s' : '–') + '</td></tr>'; }).join('') + '</tbody></table></div>';
   }
 
   /* ---------- hooks ---------- */
@@ -228,7 +229,7 @@
   document.addEventListener('input', function (ev) { var t = ev.target, k = t.getAttribute && t.getAttribute('data-sin'); if (!k) return; I[k] = t.value; var pos = t.selectionStart; A.redraw(); var n = document.getElementById(t.id); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } });
   document.addEventListener('change', function (ev) { if (ev.target.id === 'af_n') { var v = $('#af_v'); if (ev.target.value === 'Status') v.value = 1; } });
   /* keep the open page fresh */
-  setInterval(function () { if (S.view !== 'servers' || document.hidden) return; if (I.id) loadDetail(true); else if (I.tab === 'systems') loadSystems(true); }, 30000);
+  setInterval(function () { if (S.view !== 'servers' || document.hidden) return; if (I.id) loadDetail(true); else if (I.tab === 'systems') loadSystems(true); else if (I.tab === 'probes') loadProbes(true); else if (I.tab === 'alerts') loadAlerts(true); }, 30000);
 
   window.AOSSrv = { chart: function (s) { return chart(s); }, reset: function () { chN = 0; CH = {}; }, bars: { bps: bps, by: by, pct: pct, ago: ago, pill: pill }, view: view, open: open, onGo: onGo, state: I };
 })();

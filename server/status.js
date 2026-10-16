@@ -121,10 +121,42 @@ export async function alertsAll() {
     quiet: (quiet.items || []).map((q) => ({ id: q.id, system: q.system, systemName: q.system ? names[q.system] || '' : 'All servers', type: q.type, start: q.start, end: q.end }))
   };
 }
-export async function probes() {
+/* Probe results are not on the probe record. Beszel keeps them in a stats collection whose name changed between versions, so try the known names.
+ * A row is either one probe per row (probe id plus avg, min, max, loss) or one row per system with a map of probe id to [avg, min, max, loss]. */
+const PROBE_STATS = ['network_monitor_stats', 'network_probe_stats', 'probe_stats', 'network_monitors_stats'];
+const PICK = (o, ...ks) => { for (const k of ks) if (o && o[k] != null && o[k] !== '') return o[k]; return null; };
+function fold(rows, ids) {
+  const acc = {};
+  const add = (id, v) => { if (!ids.has(id) || !v) return; const a = acc[id] || (acc[id] = { avg: [], min: [], max: [], loss: [], ok: [], n: 0 }); const n = (x) => (x == null || x === '' || !Number.isFinite(Number(x)) ? null : Number(x)); const f = (k, x) => { if (n(x) != null) a[k].push(n(x)); };
+    if (Array.isArray(v)) { f('avg', v[0]); f('min', v[1]); f('max', v[2]); f('loss', v[3]); } else if (typeof v === 'object') { f('avg', PICK(v, 'avg', 'res', 'latency', 'ms', 'a')); f('min', PICK(v, 'min', 'res_min', 'mn')); f('max', PICK(v, 'max', 'res_max', 'mx')); f('loss', PICK(v, 'loss', 'packet_loss', 'l')); const ok = PICK(v, 'success', 'up', 'ok'); if (ok != null) a.ok.push(ok === true || ok === 1 || ok === '1' ? 1 : 0); } else f('avg', v);
+    a.n++; };
+  for (const r of rows) {
+    const direct = PICK(r, 'probe', 'monitor', 'network_monitor', 'probe_id');
+    if (direct && !Array.isArray(r.stats)) add(direct, r.stats && typeof r.stats === 'object' ? r.stats : r);
+    else if (r.stats && typeof r.stats === 'object' && !Array.isArray(r.stats)) for (const [id, v] of Object.entries(r.stats)) add(id, v);
+  }
+  const mean = (l) => (l.length ? l.reduce((x, y) => x + y, 0) / l.length : null);
+  return Object.fromEntries(Object.entries(acc).map(([id, a]) => {
+    const loss = mean(a.loss), okRate = a.ok.length ? mean(a.ok) * 100 : null;
+    return [id, { avg: round(mean(a.avg)), min: a.min.length ? round(Math.min(...a.min)) : null, max: a.max.length ? round(Math.max(...a.max)) : null, ok: loss != null ? round(100 - loss) : okRate != null ? round(okRate) : null, samples: a.n }];
+  }));
+}
+export async function probes(debug) {
   const [m, sys] = await Promise.all([pb('/api/collections/network_monitors/records' + qs({ perPage: 200 })).catch((e) => (e.status === 404 ? { items: [], none: true } : Promise.reject(e))), pb('/api/collections/systems/records' + qs({ perPage: 100, fields: 'id,name' })).catch(() => ({ items: [] }))]);
   const names = Object.fromEntries((sys.items || []).map((x) => [x.id, x.name]));
-  return { probes: (m.items || []).map((x) => ({ id: x.id, name: x.name || x.target, target: x.target, protocol: x.protocol, port: x.port, interval: x.interval, system: x.system, systemName: names[x.system] || '', ok: x.success_count != null && x.total_count ? Math.round(x.success_count / x.total_count * 1000) / 10 : null, avg: x.res_sum && x.total_count ? Math.round(x.res_sum / x.total_count) : null, min: x.res_min ?? null, max: x.res_max ?? null, cert: x.cert || null })) };
+  const items = m.items || [], ids = new Set(items.map((x) => x.id));
+  let stats = {}, source = null, sample = null;
+  for (const c of PROBE_STATS) {
+    const r = await pb('/api/collections/' + c + '/records' + qs({ perPage: 120, sort: '-created' })).catch(() => null);
+    if (!r) continue; source = c; sample = (r.items || [])[0] || null;
+    let rows = r.items || []; const t = rows.find((x) => x.type); if (t) { const want = rows.filter((x) => x.type === (rows.some((y) => y.type === '1m') ? '1m' : t.type)); if (want.length) rows = want; }
+    stats = fold(rows, ids); break;
+  }
+  const out = { probes: items.map((x) => { const st = stats[x.id] || {};
+    const own = (x.success_count != null && x.total_count ? Math.round(x.success_count / x.total_count * 1000) / 10 : null);
+    return { id: x.id, name: x.name || x.target, target: x.target, protocol: x.protocol, port: x.port, interval: x.interval, system: x.system, systemName: names[x.system] || '', ok: own ?? st.ok ?? null, avg: (x.res_sum && x.total_count ? Math.round(x.res_sum / x.total_count) : null) ?? st.avg ?? null, min: x.res_min ?? st.min ?? null, max: x.res_max ?? st.max ?? null, cert: x.cert || null, enabled: x.enabled !== false, samples: st.samples || 0 }; }), statsFrom: source };
+  if (debug) out.debug = { monitorKeys: items[0] ? Object.keys(items[0]) : [], monitor: items[0] || null, statsCollection: source, statsSample: sample };
+  return out;
 }
 const ALERT_KEYS = Object.keys(ALERT_NAMES);
 export async function saveAlert(b) {
@@ -148,7 +180,7 @@ export async function handleStatus(req, res, url) {
   if (p === '/api/status/services' && m === 'GET') return json(res, 200, await services(sp.get('id')));
   if (p === '/api/status/smart' && m === 'GET') return json(res, 200, await smart(sp.get('id')));
   if (p === '/api/status/alerts' && m === 'GET') return json(res, 200, await alertsAll());
-  if (p === '/api/status/probes' && m === 'GET') return json(res, 200, await probes());
+  if (p === '/api/status/probes' && m === 'GET') return json(res, 200, await probes(sp.get('debug') === '1'));
   if (p === '/api/status/alerts' && m === 'POST') { await saveAlert(await readJson(req, 4096)); return json(res, 200, await alertsAll()); }
   if (p === '/api/status/alerts' && m === 'DELETE') { await deleteAlert(sp.get('id')); return json(res, 200, await alertsAll()); }
   if (p === '/api/status/pause' && m === 'POST') { const b = await readJson(req, 1024); return json(res, 200, await setPaused(b.id, !!b.paused)); }
