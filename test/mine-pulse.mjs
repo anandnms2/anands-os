@@ -37,13 +37,13 @@ try {
     for (const w of ['Pulse', 'Tasks today', 'Next event', 'Cards', 'Photos', 'VPN', 'Everyday', 'Servers and network', 'Suite', 'Vault', 'Invoice 5521 overdue']) assert.ok(txt.includes(w), w); assert.match(txt, /needs you/i);
     assert.match(await p.locator('.live', { hasText: 'Next event' }).innerText(), /14:00/); await shot(p, 'home');
   });
-  await t('Home tiles for AI Chat, Files and Storage open the single sign-on start address, and it can be changed', async () => {
+  await t('Home tiles for Files and Storage (no AI Chat tile) open the single sign-on start address, and it can be changed', async () => {
     await p.goto(B + '/'); await p.waitForSelector('.svc');
     const hrefs = async () => p.evaluate(() => Object.fromEntries([...document.querySelectorAll('a.svc')].map((a) => [a.querySelector('b').textContent, a.getAttribute('href')])));
-    let h = await hrefs(); assert.equal(h['AI Chat'], 'https://ai.anands.xyz/oauth/openid'); assert.equal(h['Files'], 'https://files.anands.xyz/api/auth/oidc/login'); assert.equal(h['Storage'], 'https://s3-admin.anands.xyz');
-    const r = await ctx.request.put(B + '/api/settings', { data: { links: { ai: 'https://chat.example.com/oauth/openid' } }, headers: { 'x-aos': '1' } }); assert.equal(r.status(), 200);
-    await p.reload(); await p.waitForSelector('.svc'); h = await hrefs(); assert.equal(h['AI Chat'], 'https://chat.example.com/oauth/openid');
-    await ctx.request.put(B + '/api/settings', { data: { links: { ai: 'https://ai.anands.xyz/oauth/openid' } }, headers: { 'x-aos': '1' } });
+    let h = await hrefs(); assert.equal(h['AI Chat'], undefined); assert.equal(h['Files'], 'https://files.anands.xyz/api/auth/oidc/login'); assert.equal(h['Storage'], 'https://s3-admin.anands.xyz');
+    const r = await ctx.request.put(B + '/api/settings', { data: { links: { files: 'https://f.example.com/login' } }, headers: { 'x-aos': '1' } }); assert.equal(r.status(), 200);
+    await p.reload(); await p.waitForSelector('.svc'); h = await hrefs(); assert.equal(h['Files'], 'https://f.example.com/login');
+    await ctx.request.put(B + '/api/settings', { data: { links: { files: 'https://files.anands.xyz/api/auth/oidc/login' } }, headers: { 'x-aos': '1' } });
   });
   await t('Cards: Cards/Table toggle matches the real app', async () => {
     await nav('cards'); await p.waitForSelector('.icard'); assert.equal(await p.locator('.ctable').count(), 0);

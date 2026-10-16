@@ -1,6 +1,9 @@
 /* Security center API: who is signed in, sign-in history, and Authentik login events. Owner only. */
 import { effective, PUBLIC_URL } from './config.js';
 import { createPair } from './pair.js';
+import { addToken, SCOPES } from './tokens.js';
+import { createSession } from './sessions.js';
+import { OWNER } from './config.js';
 import { json, readJson, rawFetch, httpError, isHttps } from './util.js';
 import { listSessions, revoke, revokeOthers, history, logEvent } from './sessions.js';
 
@@ -22,6 +25,7 @@ export async function handleSecurity(req, res, url, sess) {
   const p = url.pathname.replace(/^\/api\/security/, '') || '/';
   if (p === '/' && req.method === 'GET') return json(res, 200, { sessions: listSessions(sess.sid), history: history(), method: process.env.OIDC_ISSUER ? 'sso' : 'password', legacy: !sess.sid, authentik: { configured: !!(effective().authentik.url && effective().authentik.token), url: effective().authentik.url } });
   if (p === '/pair' && req.method === 'POST') { const b = await readJson(req, 512); const r = createPair(b.label, sess.n); const base = PUBLIC_URL || ((isHttps(req, '') ? 'https://' : 'http://') + String(req.headers['x-forwarded-host'] || req.headers.host || '')); logEvent(req, 'pair_started', { user: sess.n }); return json(res, 200, { url: base + '/auth/pair/' + r.tok, expires: r.expires }); }
+  if (p === '/token' && req.method === 'POST') { const b = await readJson(req, 512); const name = String(b.name || '').replace(/[<>\n\r]/g, '').trim().slice(0, 40) || 'App token'; if (!SCOPES[b.scope]) throw httpError(400, 'Choose what the token can reach'); const sid = createSession(req, { u: 'owner', n: OWNER, method: 'token', label: name + ' (token)' }); return json(res, 200, { token: addToken(sid, name, b.scope), name, scope: b.scope }); }
   if (p === '/authentik' && req.method === 'GET') return json(res, 200, await authentikEvents());
   if (p === '/revoke' && req.method === 'POST') { const { id } = await readJson(req, 512); if (id === sess.sid) throw httpError(400, 'That is this device. Use Sign out instead.'); if (!revoke(req, String(id), sess.n)) throw httpError(404, 'That session is already gone'); return json(res, 200, { ok: true }); }
   if (p === '/revoke-others' && req.method === 'POST') { await readJson(req, 512); return json(res, 200, { ok: true, count: revokeOthers(req, sess.sid, sess.n) }); }

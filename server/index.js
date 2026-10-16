@@ -2,7 +2,9 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PORT, WEB, SUITE, SHIM, OIDC, PASSWORD, PASSWORD_GENERATED, DATA, effective, publicSettings, updateSettings, env } from './config.js';
-import { sessionOf } from './session.js';
+import { sessionOf, sign, SESSION_COOKIE } from './session.js';
+import { lookup as tokLookup, allowsPath as tokAllows } from './tokens.js';
+import { OWNER } from './config.js';
 import { handleAuth, sessionInfo } from './auth.js';
 import { json, readJson, httpError } from './util.js';
 import { handlePhotos, status as immichStatus } from './immich.js';
@@ -24,6 +26,7 @@ import { handleLocal } from './local.js';
 import { handleSearch } from './search.js';
 import { handleSecurity } from './security.js';
 import { handleTerminal } from './terminal.js';
+import { handleHousehold } from './household.js';
 import { handleMoney } from './money.js';
 import { handlePrefs } from './prefs.js';
 import { handleTeam, areaOf, allowed, isOwner, suiteOk } from './team.js';
@@ -89,6 +92,7 @@ async function api(req, res, url) {
   if (p === '/api/profile' || p === '/api/profile/avatar') return handleProfile(req, res, url, sessionOf(req));
   if (p === '/api/security' || p.startsWith('/api/security/')) return handleSecurity(req, res, url, sessionOf(req));
   if (p === '/api/money' || p.startsWith('/api/money/')) return handleMoney(req, res, url, sessionOf(req));
+  if (p === '/api/house' || p.startsWith('/api/house/')) return handleHousehold(req, res, url, sessionOf(req));
   if (p === '/api/term' || p.startsWith('/api/term/')) return handleTerminal(req, res, url, sessionOf(req));
   if (p === '/api/prefs') return handlePrefs(req, res);
   if (p === '/api/search/files') return handleSearch(req, res, url);
@@ -114,6 +118,7 @@ const server = http.createServer(async (req, res) => {
     if (isPeerPath(p)) return await handlePeer(req, res, url);
     if (isRoomPath(p)) return await handleRooms(req, res, url);
     if (isWorkerPath(p) && ['GET', 'HEAD', 'POST', 'PUT'].includes(req.method)) return await handleWorkerRequest(req, res, url);
+    let viaToken = false; { const au = String(req.headers.authorization || ''); if (/^Bearer aos_/.test(au) && (p.startsWith('/api/') || p.startsWith('/_local/'))) { const r = tokLookup(au.slice(7).trim()); if (!r) throw httpError(401, 'That access token is not valid', 'bad_token'); if (!tokAllows(r, p)) throw httpError(403, 'This token does not cover that part of Anands OS', 'forbidden'); req.headers.cookie = SESSION_COOKIE + '=' + sign({ u: 'owner', n: OWNER, sid: r.sid }, 300); viaToken = true; } }
     if (sessionOf(req)) noteOrigin(req);
     const protectedPath = p.startsWith('/api/') || p.startsWith('/_local/') || p.startsWith('/apps/');
     if (protectedPath && !sessionOf(req)) {
@@ -124,7 +129,7 @@ const server = http.createServer(async (req, res) => {
       const so = sessionOf(req), area = areaOf(p, req.method);
       if (!allowed(so, area) || (p.startsWith('/apps/') && !suiteOk(so, p.split('/')[2]))) throw httpError(403, allowed(so, 'open') ? 'This part of Anands OS is not shared with you' : 'Your access has ended', allowed(so, 'open') ? 'forbidden' : 'access_ended');
     }
-    if (req.method !== 'GET' && req.method !== 'HEAD' && (p.startsWith('/api/') || p.startsWith('/_local/')) && p !== '/api/browse' && req.headers['x-aos'] !== '1') throw httpError(403, 'Missing x-aos header', 'csrf');
+    if (req.method !== 'GET' && req.method !== 'HEAD' && (p.startsWith('/api/') || p.startsWith('/_local/')) && p !== '/api/browse' && !viaToken && req.headers['x-aos'] !== '1') throw httpError(403, 'Missing x-aos header', 'csrf');
     if (p.startsWith('/api/')) return await api(req, res, url);
     if (p.startsWith('/_local/')) return await handleLocal(req, res, url);
     if (p.startsWith('/apps/')) {

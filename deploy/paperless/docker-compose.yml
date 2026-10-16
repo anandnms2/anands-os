@@ -1,0 +1,44 @@
+# Paperless-ngx for Anands: scan, OCR and tag paper documents, searchable by content.
+# Deploy in Coolify as a "Docker Compose" resource from this file, domain docs.anands.xyz -> service "web" port 8000.
+# Fill the variables below in Coolify's environment tab (see README.md).
+services:
+  broker:
+    image: docker.io/library/redis:7
+    restart: unless-stopped
+    volumes: [redisdata:/data]
+  db:
+    image: docker.io/library/postgres:16
+    restart: unless-stopped
+    volumes: [pgdata:/var/lib/postgresql/data]
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: ${PAPERLESS_DB_PASSWORD:?set a database password}
+  web:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart: unless-stopped
+    depends_on: [db, broker]
+    volumes:
+      - data:/usr/src/paperless/data
+      - media:/usr/src/paperless/media
+      - export:/usr/src/paperless/export
+      - consume:/usr/src/paperless/consume
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBPASS: ${PAPERLESS_DB_PASSWORD}
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY:?set a long random secret}
+      PAPERLESS_URL: https://docs.anands.xyz
+      PAPERLESS_TIME_ZONE: Africa/Dar_es_Salaam
+      PAPERLESS_OCR_LANGUAGE: eng
+      PAPERLESS_OCR_LANGUAGES: ""
+      PAPERLESS_APP_TITLE: Anands Documents
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER:-anand}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD:?set the first admin password}
+      # Sign in with Authentik (same login as the rest of Anands)
+      PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
+      PAPERLESS_SOCIAL_AUTO_SIGNUP: "true"
+      PAPERLESS_DISABLE_REGULAR_LOGIN: "false"
+      PAPERLESS_SOCIALACCOUNT_PROVIDERS: >-
+        {"openid_connect":{"APPS":[{"provider_id":"authentik","name":"Anands SSO","client_id":"${PAPERLESS_OIDC_CLIENT_ID}","secret":"${PAPERLESS_OIDC_CLIENT_SECRET}","settings":{"server_url":"${PAPERLESS_OIDC_ISSUER}/.well-known/openid-configuration"}}]}}
+volumes: { redisdata: {}, pgdata: {}, data: {}, media: {}, export: {}, consume: {} }

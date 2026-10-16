@@ -18,11 +18,16 @@ const clamp = (n, lo, hi, d) => { n = Math.round(Number(n)); return Number.isFin
 
 function status() {
   const t = effective().terminal;
-  return { host: t.host, port: t.port, user: t.user, keySet: !!t.key, hostReady: !!(t.host && t.key), pythonOk: fs.existsSync(HELPER), sessions: [...terms.values()].map((x) => ({ id: x.id, target: x.target, started: x.t0 })), needsPassword: !!PASSWORD };
+  return { host: t.host, port: t.port, user: t.user, keySet: !!t.key, auth: t.auth, passSet: !!t.pass, hostReady: !!(t.host && (t.auth === 'password' || t.key)), pythonOk: fs.existsSync(HELPER), sessions: [...terms.values()].map((x) => ({ id: x.id, target: x.target, started: x.t0 })), needsPassword: !!PASSWORD };
 }
-function command(target) {
+function command(target, pw) {
   if (target === 'host') {
-    const t = effective().terminal; if (!t.host || !t.key) throw httpError(400, 'Add the server address and private key in Settings first.', 'not_configured');
+    const t = effective().terminal; if (t.auth === 'password') {
+      if (!t.host) throw httpError(400, 'Add the server address first.', 'not_configured'); const pass = pw || t.pass; if (!pass) throw httpError(400, 'Enter the server password.', 'need_pass');
+      fs.mkdirSync(DIR, { recursive: true, mode: 0o700 });
+      return { cmd: 'ssh', args: ['-tt', '-p', String(t.port), '-o', 'PubkeyAuthentication=no', '-o', 'PreferredAuthentications=password,keyboard-interactive', '-o', 'NumberOfPasswordPrompts=1', '-o', 'StrictHostKeyChecking=accept-new', '-o', 'UserKnownHostsFile=' + path.join(DIR, 'known_hosts'), '-o', 'ServerAliveInterval=30', '-o', 'LogLevel=ERROR', `${t.user}@${t.host}`], label: `${t.user}@${t.host}`, pass };
+    }
+    if (!t.host || !t.key) throw httpError(400, 'Add the server address and private key in Settings first.', 'not_configured');
     fs.mkdirSync(DIR, { recursive: true, mode: 0o700 }); const kf = path.join(DIR, 'id_key'); fs.writeFileSync(kf, t.key.endsWith('\n') ? t.key : t.key + '\n', { mode: 0o600 });
     return { cmd: 'ssh', args: ['-tt', '-i', kf, '-p', String(t.port), '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=accept-new', '-o', 'UserKnownHostsFile=' + path.join(DIR, 'known_hosts'), '-o', 'ServerAliveInterval=30', '-o', 'LogLevel=ERROR', `${t.user}@${t.host}`], label: `${t.user}@${t.host}` };
   }
@@ -48,11 +53,11 @@ export async function handleTerminal(req, res, url, sess) {
     if (PASSWORD && !(typeof b.password === 'string' && eq(b.password, PASSWORD))) { f.n++; if (f.n >= 5) { f.until = Date.now() + 10 * 60 * 1000; f.n = 0; } fails.set(key, f); logEvent(req, 'term_denied', { user: sess.n }); throw httpError(401, 'Wrong password', 'bad_password'); }
     fails.delete(key); if (terms.size >= MAX) throw httpError(429, 'Three terminals are already open. Close one first.', 'too_many');
     if (!fs.existsSync(HELPER)) throw httpError(500, 'The terminal helper is missing.');
-    const target = b.target === 'local' ? 'local' : 'host', c = command(target), cols = clamp(b.cols, 20, 400, 100), rows = clamp(b.rows, 5, 200, 30);
+    fs.mkdirSync(path.join(DIR, 'home'), { recursive: true, mode: 0o700 }); const target = b.target === 'local' ? 'local' : 'host', c = command(target, typeof b.sshpass === 'string' ? b.sshpass.slice(0, 200) : ''), cols = clamp(b.cols, 20, 400, 100), rows = clamp(b.rows, 5, 200, 30);
     const id = crypto.randomBytes(8).toString('hex');
     const proc = spawn('python3', [HELPER, String(cols), String(rows), c.cmd, ...c.args], { stdio: ['pipe', 'pipe', 'pipe', 'pipe'], cwd: path.join(DIR, 'home'), env: { PATH: process.env.PATH, HOME: path.join(DIR, 'home'), TERM: 'xterm-256color', LANG: 'C.UTF-8', SHELL: c.cmd } });
     const t = { id, p: proc, target, label: c.label, hist: Buffer.alloc(0), clients: new Set(), t0: Date.now(), req, who: sess.n, dead: false };
-    proc.stdout.on('data', (d) => push(t, d)); proc.stderr.on('data', (d) => push(t, d)); proc.stdin.on('error', () => {}); proc.stdio[3].on('error', () => {});
+    let sent = false; proc.stdout.on('data', (d) => { push(t, d); if (c.pass && !sent && /pass(word|phrase)[^:\n]*:\s*$/i.test(d.toString().slice(-120))) { sent = true; try { proc.stdin.write(c.pass + '\r'); } catch {} } }); proc.stderr.on('data', (d) => push(t, d)); proc.stdin.on('error', () => {}); proc.stdio[3].on('error', () => {});
     proc.on('error', (e) => { push(t, Buffer.from('\r\nCould not start: ' + e.message + '\r\n')); end(t, 'The terminal could not start.'); });
     proc.on('exit', () => end(t, 'The session ended.')); terms.set(id, t); touch(t);
     logEvent(req, 'term_open', { user: sess.n, note: c.label }); return json(res, 200, { id, label: c.label });

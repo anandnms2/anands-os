@@ -35,6 +35,16 @@ try {
     const r = await fetch(B + '/api/security/revoke', { method: 'POST', headers: { ...H, cookie: owner }, body: JSON.stringify({ id: p.id }) }); assert.equal(r.status, 200);
     const me = await fetch(B + '/api/session', { headers: { cookie: phone } }); assert.ok(me.status === 401 || !(await me.json()).user, 'phone is out');
   });
+  await t('an access token reaches only its own area, needs no cookie, and dies when signed out', async () => {
+    const r = await fetch(B + '/api/security/token', { method: 'POST', headers: { ...H, cookie: owner }, body: JSON.stringify({ name: 'Shortcut', scope: 'money' }) }); assert.equal(r.status, 200); const { token: tk } = await r.json(); assert.ok(tk.startsWith('aos_'));
+    const A = { authorization: 'Bearer ' + tk };
+    assert.equal((await fetch(B + '/api/money/state', { headers: A })).status, 200);
+    assert.equal((await fetch(B + '/api/money/accounts', { method: 'POST', headers: { ...A, 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Cash', type: 'cash', currency: 'USD', opening: 5 }) })).status, 201);
+    assert.equal((await fetch(B + '/api/house/state', { headers: A })).status, 403); assert.equal((await fetch(B + '/api/security', { headers: A })).status, 403);
+    assert.equal((await fetch(B + '/api/money/state', { headers: { authorization: 'Bearer aos_nope' } })).status, 401);
+    const d = await (await fetch(B + '/api/security', { headers: { cookie: owner } })).json(); const s = d.sessions.find((x) => x.method === 'token'); assert.ok(s && s.label.includes('Shortcut'));
+    await fetch(B + '/api/security/revoke', { method: 'POST', headers: { ...H, cookie: owner }, body: JSON.stringify({ id: s.id }) }); assert.equal((await fetch(B + '/api/money/state', { headers: A })).status, 401);
+  });
   await t('made-up and expired tokens are refused', async () => { assert.equal((await fetch(B + '/auth/pair/nope')).status, 403); });
 } finally { srv.kill(); }
 console.log(`\n${pass} passed, ${failed} failed`); process.exit(failed ? 1 : 0);

@@ -25,7 +25,7 @@
 
   /* ---------- shell ---------- */
   var root = document.createElement('div'); root.id = 'desk'; root.hidden = true; document.body.appendChild(root);
-  root.innerHTML = '<div class="dk-wall" id="dkwall"></div><div class="dk-icons" id="dkicons"></div><div class="dk-wins" id="dkwins"></div><div class="dk-menu" id="dkmenu" hidden></div><div class="dk-ctx" id="dkctx" hidden></div>' +
+  root.innerHTML = '<div class="dk-wall" id="dkwall"></div><div class="dk-icons" id="dkicons"></div><div class="dk-wins" id="dkwins"></div><div class="dk-menu" id="dkmenu" hidden></div><div class="dk-ctx" id="dkctx" hidden></div><button class="dk-fab" id="dkfab" data-dk="aifab" aria-label="Ask the assistant" title="Ask the assistant"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg></button>' +
     '<div class="dk-task" id="dktask"></div>';
   function wallImg() { try { return localStorage.getItem('aos.deskwallimg'); } catch (e) { return null; } }
   function wallStyle() { var el = $('#dkwall'), img = D.wall === 'custom' ? wallImg() : null;
@@ -45,7 +45,7 @@
   }
 
   /* ---------- launcher: catalog, desktop icons, taskbar pins, Start menu, icon chooser ---------- */
-  var TOOLS = [['editor', 'Editor', '/tools/editor.html', 1000, 640, 'file'], ['player', 'Player', '/tools/player.html', 920, 600, 'play'], ['recorder', 'Recorder', '/tools/recorder.html', 820, 640, 'mic'], ['terminal', 'Terminal', '/tools/terminal.html', 900, 580, 'terminal'], ['money', 'Money', '/tools/money.html#overview', 1040, 660, 'card'], ['subs', 'Subscriptions', '/tools/money.html#subs', 940, 640, 'card'], ['invest', 'Investments', '/tools/money.html#invest', 980, 640, 'card']];
+  var TOOLS = [['editor', 'Editor', '/tools/editor.html', 1000, 640, 'file'], ['player', 'Player', '/tools/player.html', 920, 600, 'play'], ['recorder', 'Recorder', '/tools/recorder.html', 820, 640, 'mic'], ['terminal', 'Terminal', '/tools/terminal.html', 900, 580, 'terminal'], ['money', 'Money', '/tools/money.html#overview', 1040, 660, 'card'], ['subs', 'Subscriptions', '/tools/money.html#subs', 940, 640, 'card'], ['invest', 'Investments', '/tools/money.html#invest', 980, 640, 'card'], ['belong', 'Belongings', '/tools/home.html#belong', 980, 640, 'folder'], ['house', 'Household', '/tools/home.html#house', 940, 640, 'folder']];
   var SYS = [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat']].concat(TOOLS.map(function (o) { return ['tool:' + o[0], o[1], o[5]]; })).concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; }));
   var DEF_ICONS = ['browser', 'files', 'ai'].concat(OSAPPS.map(function (o) { return 'os:' + o[0]; })).concat(['google']).concat(TOOLS.map(function (o) { return 'tool:' + o[0]; })), DEF_PINS = ['browser', 'files', 'ai'];
   function catalog() {
@@ -55,7 +55,7 @@
   }
   function itemBy(id) { return catalog().filter(function (i) { return i.id === id; })[0]; }
   function itAttr(it) { return (it.slug ? 'data-dk="app" data-s="' + esc(it.slug) + '"' : 'data-dk="launch" data-w="' + esc(it.id) + '"') + ' data-k="' + esc(it.id) + '"'; }
-  var OI = { 'tool:editor': 'editor', 'tool:player': 'player', 'tool:recorder': 'recorder', 'tool:terminal': 'terminal', 'tool:money': 'money', 'tool:subs': 'subs', 'tool:invest': 'invest', browser: 'browser', files: 'files', google: 'drive', ai: 'ai', 'os:photos': 'photos', 'os:pulse': 'pulse', 'os:cards': 'cards', 'os:vault': 'vault', 'os:insights': 'insights', 'os:vpn': 'vpn', 'os:servers': 'servers' };
+  var OI = { 'tool:editor': 'editor', 'tool:player': 'player', 'tool:recorder': 'recorder', 'tool:terminal': 'terminal', 'tool:money': 'money', 'tool:subs': 'subs', 'tool:invest': 'invest', 'tool:belong': 'belong', 'tool:house': 'house', browser: 'browser', files: 'files', google: 'drive', ai: 'ai', 'os:photos': 'photos', 'os:pulse': 'pulse', 'os:cards': 'cards', 'os:vault': 'vault', 'os:insights': 'insights', 'os:vpn': 'vpn', 'os:servers': 'servers' };
   function wIcon(w) { if (w.icon) return w.icon; var k = w.kind === 'rbrowser' || w.kind === 'browser' ? 'browser' : w.kind === 'ai' || w.kind === 'files' ? w.kind : w.tool ? 'tool:' + w.tool : w.view ? 'os:' + w.view : ''; return OI[k] ? '/oicons/' + OI[k] + '.svg' : ''; }
   function itGlyph(it, cls) { if (!it.img && OI[it.id]) it.img = '/oicons/' + OI[it.id] + '.svg'; return it.img ? '<img src="' + esc(it.img) + '" alt="">' : '<span class="dk-icg' + (cls ? ' ' + cls : '') + '">' + ic(it.ic) + '</span>'; }
   function lsList(k, d) { var v = LS.get(k, null); return Array.isArray(v) ? v : d.slice(); }
@@ -426,6 +426,7 @@
     if (a === 'chpin') { var pk = b.getAttribute('data-k'); setPins(toggle(pinIds(), pk, pinIds().indexOf(pk) < 0)); return void chRepaint(); }
     if (a === 'deskadd' || a === 'deskrm') { var dk = b.getAttribute('data-k'); setIcons(toggle(deskIds(), dk, a === 'deskadd')); return void chRepaint(); }
     if (a === 'pinadd' || a === 'pinrm') { setPins(toggle(pinIds(), b.getAttribute('data-k'), a === 'pinadd')); return void chRepaint(); }
+    if (a === 'aifab') { var aw = D.ai.win; if (aw && !aw.min && D.top === aw.id) { aw.min = true; place(aw); task(); } else aiWin(); return; }
     if (a === 'launch') { var k = b.getAttribute('data-w'); if (k === 'ai') return void aiWin(); if (k === 'browser') return void openBrowser(); if (k.indexOf('os:') === 0) return void osWin(k.slice(3)); if (k.indexOf('tool:') === 0) return void toolWin(k.slice(5)); return void filesWin(k === 'google' ? 'google' : 'cloud'); }
     if (a === 'app') return void openApp(b.getAttribute('data-s'));
     if (a === 'settings') { hide(); return void A.go('settings'); }
