@@ -58,10 +58,10 @@ try {
     await d.click('.dk-start'); await d.waitForSelector('#dkmenu:not([hidden])'); const heads = await d.$$eval('#dkmenu .dk-mc', (x) => x.map((y) => y.textContent.trim())); for (const c of ['System', 'Finance', 'Developer Tools']) assert.ok(heads.includes(c), c + ' in ' + heads.join(','));
     const sys = await d.evaluate(() => { const h = [...document.querySelectorAll('#dkmenu .dk-mc')].find((x) => x.textContent.trim() === 'System'); return h ? [...h.nextElementSibling.querySelectorAll('.dk-mi')].length : 0; }); assert.ok(sys <= 4, 'System has ' + sys); await d.close();
   });
-  await t('Documents (Paperless) is a tile on Home, in Suite and on the Desktop and opens its own address', async () => {
+  await t('Paperless is a tile on Home, in Suite and on the Desktop and opens its own address', async () => {
     await ctx.request.put(B + '/api/settings', { data: { links: { paperless: 'https://paperless.example.com' } }, headers: H });
-    const o = await ctx.newPage(); o.on('pageerror', (e) => errs.push(e.message)); await o.goto(B + '/'); await o.waitForSelector('.svc'); assert.equal(await o.locator('a.svc', { hasText: 'Documents' }).getAttribute('href'), 'https://paperless.example.com');
-    await o.goto(B + '/#apps'); await o.waitForSelector('.appcat'); assert.equal(await o.locator('a.app', { hasText: 'Documents' }).getAttribute('href'), 'https://paperless.example.com');
+    const o = await ctx.newPage(); o.on('pageerror', (e) => errs.push(e.message)); await o.goto(B + '/'); await o.waitForSelector('.svc'); assert.equal(await o.locator('a.svc', { hasText: 'Paperless' }).getAttribute('href'), 'https://paperless.example.com');
+    await o.goto(B + '/#apps'); await o.waitForSelector('.appcat'); assert.equal(await o.locator('a.app', { hasText: 'Paperless' }).getAttribute('href'), 'https://paperless.example.com');
     await o.goto(B + '/#desktop'); await o.waitForSelector('#dkfab'); assert.equal(await o.locator('#dkicons [data-w="link:paperless"]').count(), 1);
     await o.close();
   });
