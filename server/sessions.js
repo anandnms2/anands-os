@@ -14,11 +14,11 @@ const uaOf = (req) => String(req.headers['user-agent'] || '').slice(0, 220);
 export function logEvent(req, ev, extra = {}) {
   st.log.unshift({ t: Date.now(), ev, ip: ipOf(req), ua: uaOf(req), ...extra }); st.log.length = Math.min(st.log.length, 200); save();
 }
-export function createSession(req, { u, n, role, method, mid }) {
+export function createSession(req, { u, n, role, method, mid, label }) {
   const id = crypto.randomBytes(9).toString('base64url'); const now = Date.now();
-  st.sessions[id] = { id, u, n, role: role || 'owner', mid: mid || '', method, ip: ipOf(req), ua: uaOf(req), created: now, seen: now };
+  st.sessions[id] = { id, u, n, role: role || 'owner', mid: mid || '', method, label: label || '', ip: ipOf(req), ua: uaOf(req), created: now, seen: now };
   const ids = Object.keys(st.sessions); if (ids.length > 100) for (const k of ids.sort((a, b) => st.sessions[a].seen - st.sessions[b].seen).slice(0, ids.length - 100)) delete st.sessions[k];
-  logEvent(req, 'login', { user: n || u, method }); save(); return id;
+  logEvent(req, method === 'paired' ? 'phone_paired' : 'login', { user: label || n || u, method }); save(); return id;
 }
 /* null when the session was revoked */
 export function check(tok, req) {
@@ -26,7 +26,7 @@ export function check(tok, req) {
   return !st.revokedAll;
 }
 export function listSessions(currentSid) {
-  const out = Object.values(st.sessions).sort((a, b) => b.seen - a.seen).map((s) => ({ id: s.id, current: s.id === currentSid, name: s.n, role: s.role, method: s.method, ip: s.ip, ua: s.ua, created: s.created, seen: s.seen }));
+  const out = Object.values(st.sessions).sort((a, b) => b.seen - a.seen).map((s) => ({ id: s.id, current: s.id === currentSid, name: s.n, role: s.role, method: s.method, label: s.label || '', ip: s.ip, ua: s.ua, created: s.created, seen: s.seen }));
   return out;
 }
 export function revoke(req, id, byName) { const s = st.sessions[id]; if (!s) return false; delete st.sessions[id]; logEvent(req, 'revoked', { user: s.n || s.u, by: byName }); save(); return true; }

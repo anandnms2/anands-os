@@ -36,7 +36,7 @@ try {
   const [bad] = await login('nope'); const [ctx] = await login('pw'); const [other] = await login('pw');
   const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message)); await p.goto(B + '/#security'); await p.waitForSelector('.sectiles.top');
   await t('lists both signed-in devices and marks this one', async () => {
-    await p.waitForFunction(() => document.querySelectorAll('.secc')[0].querySelectorAll('.secrow').length >= 2); assert.equal(await p.locator('.pill', { hasText: 'This device' }).count(), 1);
+    await p.waitForFunction(() => [...document.querySelectorAll('.secc')].find((c) => /Signed-in devices/.test(c.textContent)).querySelectorAll('.secrow').length >= 2); assert.equal(await p.locator('.pill', { hasText: 'This device' }).count(), 1);
   });
   await t('history shows the failed attempt and the sign-ins', async () => {
     const h = await p.locator('.secc', { hasText: 'Sign-in history' }).innerText(); assert.match(h, /Wrong password/); assert.match(h, /Signed in/);
@@ -52,7 +52,7 @@ try {
   });
   await t('signing out another device ends its session', async () => {
     assert.equal((await (await other.request.get(B + '/api/session')).json()).user !== null, true);
-    await p.click('[data-sec="revoke"]'); await p.waitForFunction(() => document.querySelectorAll('.secc')[0].querySelectorAll('.secrow').length === 1);
+    await p.click('[data-sec="revoke"]'); await p.waitForFunction(() => [...document.querySelectorAll('.secc')].find((c) => /Signed-in devices/.test(c.textContent)).querySelectorAll('.secrow').length === 1);
     assert.equal((await (await other.request.get(B + '/api/session')).json()).user, null);
     assert.equal((await ctx.request.get(B + '/api/session')).ok(), true); assert.notEqual((await (await ctx.request.get(B + '/api/session')).json()).user, null);
   });

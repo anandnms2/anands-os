@@ -4,6 +4,7 @@ import { OIDC, PASSWORD, PUBLIC_URL, OWNER } from './config.js';
 import { sign, verify, SESSION_COOKIE, sessionOf } from './session.js';
 import { createSession, logEvent, endSession } from './sessions.js';
 import { redeem, findByEmail, permOf } from './team.js';
+import { peekPair, redeemPair } from './pair.js';
 import { json, readJson, setCookie, cookies, clientIp, isHttps, fetchJson, httpError } from './util.js';
 
 const TTL = 14 * 24 * 3600;
@@ -34,6 +35,14 @@ export async function handleAuth(req, res, url) {
     if (typeof password !== 'string' || !PASSWORD || !eq(password, PASSWORD)) { noteFail(ip); logEvent(req, 'login_failed', { method: 'password' }); throw httpError(401, 'Wrong password', 'bad_password'); }
     setCookie(res, SESSION_COOKIE, sign({ u: 'owner', n: OWNER, sid: createSession(req, { u: 'owner', n: OWNER, method: 'password' }) }, TTL), { maxAge: TTL, secure });
     return json(res, 200, { ok: true });
+  }
+  if (p.startsWith('/auth/pair/') && (req.method === 'GET' || req.method === 'POST')) {
+    const ip = clientIp(req); if (limited(ip)) throw httpError(429, 'Too many attempts. Wait 15 minutes.', 'rate_limited');
+    const tok = decodeURIComponent(p.slice(11)), page = (h, code = 200) => { res.writeHead(code, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'" }); return res.end('<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Pair this phone</title><body style="font:16px system-ui;padding:2.5rem 1.25rem;max-width:26rem;margin:auto;background:#0e0e10;color:#f4f4f5"><h1 style="font-size:1.4rem;margin:0 0 .6rem">' + h + '</body>'); };
+    if (req.method === 'GET') { const v = peekPair(tok); if (!v) { noteFail(ip); logEvent(req, 'login_denied', { method: 'pair' }); return page('Link expired</h1><p>Pairing links last five minutes and work once. Make a new one in Security on your computer.</p>', 403); } return page('Sign in this phone?</h1><p style="color:#b4b4bb">This links <b>' + v.label.replace(/[&<>"]/g, '') + '</b> to your Anands OS. You can sign it out any time from Security on your computer.</p><form method=post><button style="font:inherit;font-weight:600;padding:.8rem 1.2rem;border:0;border-radius:12px;background:#f68712;color:#1a1000;width:100%">Sign in this phone</button></form>'); }
+    const v = redeemPair(tok); if (!v) { noteFail(ip); logEvent(req, 'login_denied', { method: 'pair' }); return page('Link expired</h1><p>Make a new one in Security on your computer.</p>', 403); }
+    setCookie(res, SESSION_COOKIE, sign({ u: 'owner', n: OWNER, sid: createSession(req, { u: 'owner', n: OWNER, method: 'paired', label: v.label }) }, TTL), { maxAge: TTL, secure });
+    res.writeHead(302, { location: '/' }); return res.end();
   }
   if (p.startsWith('/auth/invite/') && req.method === 'GET') {
     const ip = clientIp(req); if (limited(ip)) throw httpError(429, 'Too many attempts. Wait 15 minutes.', 'rate_limited');

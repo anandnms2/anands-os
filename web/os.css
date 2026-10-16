@@ -1064,3 +1064,4 @@ html.guest .deskbtn{display:none}
 .tmsuite{margin-top:10px}.tmchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.tmchips .chip{display:inline-flex;gap:5px;align-items:center;padding:4px 9px;border:1px solid var(--line);border-radius:99px;font-size:12px}
 .tmact{display:flex;gap:8px;margin-top:14px}.tmlink{margin:14px 0}.tmcopy{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.tmcopy input{flex:1;min-width:220px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
 .tmbtns{display:flex;gap:6px;flex-wrap:wrap}
+.dk-wins{isolation:isolate;z-index:1}

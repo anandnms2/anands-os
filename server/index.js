@@ -24,6 +24,7 @@ import { handleLocal } from './local.js';
 import { handleSearch } from './search.js';
 import { handleSecurity } from './security.js';
 import { handleTerminal } from './terminal.js';
+import { handleMoney } from './money.js';
 import { handlePrefs } from './prefs.js';
 import { handleTeam, areaOf, allowed, isOwner, suiteOk } from './team.js';
 import { isWorkerPath, handleWorkerRequest, isGuestPage, serveGuestPage } from './workers.js';
@@ -87,6 +88,7 @@ async function api(req, res, url) {
   if ((p === '/api/profile' || p === '/api/profile/avatar') && !isOwner(sessionOf(req))) return json(res, 200, { name: sessionOf(req).n, username: sessionOf(req).n });
   if (p === '/api/profile' || p === '/api/profile/avatar') return handleProfile(req, res, url, sessionOf(req));
   if (p === '/api/security' || p.startsWith('/api/security/')) return handleSecurity(req, res, url, sessionOf(req));
+  if (p === '/api/money' || p.startsWith('/api/money/')) return handleMoney(req, res, url, sessionOf(req));
   if (p === '/api/term' || p.startsWith('/api/term/')) return handleTerminal(req, res, url, sessionOf(req));
   if (p === '/api/prefs') return handlePrefs(req, res);
   if (p === '/api/search/files') return handleSearch(req, res, url);

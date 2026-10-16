@@ -9,7 +9,7 @@ var P = {
   doc: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z M14 3v6h6 M8 13h8 M8 17h5',
   home: 'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z', photos: 'M3 3h18v18H3z M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z M21 15l-5-5L5 21',
   vpn: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z M9 12l2 2 4-4', cards: 'M3 6h18v12H3z M7 10h6 M7 14h4 M16 10h2v4h-2z',
-  insights: 'M3 3v18h18 M7 15l4-5 3 3 5-7', apps: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7H3z'.replace('H3z', 'h-7z'), settings: 'M4 6h10 M18 6h2 M4 12h4 M12 12h8 M4 18h12 M20 18h0 M14 4v4 M8 10v4 M16 16v4',
+  insights: 'M3 3v18h18 M7 15l4-5 3 3 5-7', money: 'M2 6h20v12H2z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M6 9.5h.01 M18 14.5h.01', apps: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7H3z'.replace('H3z', 'h-7z'), settings: 'M4 6h10 M18 6h2 M4 12h4 M12 12h8 M4 18h12 M20 18h0 M14 4v4 M8 10v4 M16 16v4',
   chat: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z', heart: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z',
   x: 'M18 6L6 18M6 6l12 12', key: 'M15 7a4 4 0 1 1-3.5 5.9L4 20.5V22h2v-2h2v-2h2l2.4-2.4A4 4 0 0 1 15 7z M16.5 9.5h.01', plus: 'M12 5v14M5 12h14', copy: 'M9 9h11v11H9z M5 15V5h10', eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', open: 'M14 3h7v7 M21 3l-9 9 M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5', mail: 'M3 5h18v14H3z M3 7l9 7 9-7', check: 'M4 4h16v16H4z M8 12l3 3 5-6', cal: 'M4 5h16v16H4z M4 10h16 M9 3v4 M15 3v4', hourglass: 'M6 3h12 M6 21h12 M7 3c0 5 5 6 5 9s-5 4-5 9 M17 3c0 5-5 6-5 9s5 4 5 9', truck: 'M2 6h11v10H2z M13 10h5l3 3v3h-8z M6 19.5a1.5 1.5 0 1 0 .01 0 M17 19.5a1.5 1.5 0 1 0 .01 0', list: 'M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01', refresh: 'M20 12a8 8 0 1 1-2.3-5.7 M20 4v5h-5', trash: 'M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6 M10 11v6 M14 11v6', share: 'M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7 M16 6l-4-4-4 4 M12 2v13', archive: 'M3 4h18v4H3z M5 8v12h14V8 M10 12h4', send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z', upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M21 21l-4.3-4.3', l: 'M15 18l-6-6 6-6', r: 'M9 18l6-6-6-6', back: 'M19 12H5M11 6l-6 6 6 6',
@@ -86,7 +86,7 @@ function googleBack() {
 }
 function isOwnerU() { return !S.user || !S.user.role || S.user.role === 'owner'; }
 function can(a) { if (isOwnerU()) return true; var p = S.user.perm || {}; return a === 'open' || (p.apps || []).indexOf(a) > -1; }
-var VAREA = { photos: 'photos', drive: 'drive', dedit: 'drive', vault: 'vault', insights: 'insights', servers: 'insights', pulse: 'pulse', vpn: 'vpn', cards: 'cards', apps: 'suite', app: 'suite', home: 'open', appearance: 'open' };
+var VAREA = { photos: 'photos', drive: 'drive', dedit: 'drive', vault: 'vault', insights: 'insights', servers: 'insights', pulse: 'pulse', vpn: 'vpn', cards: 'cards', money: '_owner', subs: '_owner', invest: '_owner', apps: 'suite', app: 'suite', home: 'open', appearance: 'open' };
 function viewOk(v) { return isOwnerU() || (VAREA[v] !== undefined && can(VAREA[v])); }
 function boot() {
   Promise.all([api('/api/session'), fetch('/apps.json').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })]).then(function (x) {
@@ -99,7 +99,7 @@ function boot() {
 }
 
 /* ---------- shell ---------- */
-var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['pulse', 'Pulse', 'pulse'], ['vpn', 'VPN', 'vpn'], ['cards', 'Cards', 'cards'], ['apps', 'Suite', 'apps']];
+var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['pulse', 'Pulse', 'pulse'], ['vpn', 'VPN', 'vpn'], ['cards', 'Cards', 'cards'], ['money', 'Money', 'money'], ['apps', 'Suite', 'apps']];
 function cur(v) { if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; if (v === 'insights' && S.view === 'servers') return true; return S.view === v || (v === 'apps' && S.view === 'app'); }
 function buildNav() {
   var h = '<button class="logo" data-act="nav" data-v="home" aria-label="Home"><img src="/logo-white.png" alt=""></button><div class="rsep"></div>';
@@ -111,9 +111,9 @@ function buildNav() {
   $('#tabs').innerHTML = t;
 }
 /* The address bar follows the page (#photos, #vault ...), so Refresh stays on the page and Back goes to the previous one. */
-var ROUTES = ['home', 'photos', 'drive', 'vault', 'insights', 'servers', 'pulse', 'vpn', 'cards', 'apps', 'settings', 'security', 'appearance', 'team'], popping = false;
+var ROUTES = ['home', 'photos', 'drive', 'vault', 'insights', 'servers', 'pulse', 'vpn', 'cards', 'money', 'subs', 'invest', 'apps', 'settings', 'security', 'appearance', 'team'], popping = false;
 function routeNow() { var h = location.hash.replace(/^#/, ''); return ROUTES.indexOf(h) >= 0 ? h : ''; }
-var RECV = { photos: ['Photos', 'photos'], pulse: ['Pulse', 'pulse'], cards: ['Cards', 'cards'], vault: ['Vault', 'vault'], drive: ['Drive', 'drive'], insights: ['Insights', 'insights'], servers: ['Servers', 'servers'], vpn: ['VPN', 'vpn'], security: ['Security', 'vault'] };
+var RECV = { photos: ['Photos', 'photos'], pulse: ['Pulse', 'pulse'], cards: ['Cards', 'cards'], vault: ['Vault', 'vault'], drive: ['Drive', 'drive'], insights: ['Insights', 'insights'], servers: ['Servers', 'servers'], vpn: ['VPN', 'vpn'], money: ['Money', 'money'], subs: ['Subscriptions', 'subs'], invest: ['Investments', 'invest'], security: ['Security', 'vault'] };
 function noteRecent(k) { try { var r = (LS.get('rlist', []) || []).filter(function (x) { return x !== k; }); r.unshift(k); LS.set('rlist', r.slice(0, 8)); } catch (e) {} }
 function go(v, x) {
   if (RECV[v]) noteRecent('v:' + v);

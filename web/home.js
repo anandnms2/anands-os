@@ -73,13 +73,14 @@
     ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'folder', 'https://s3-admin.anands.xyz', 'Anands S3 Storage', 'storage']]]
   ];
   function tile(s, state) {
-    var st = state(s[3]), OIM = { Pulse: 'pulse', Photos: 'photos', Cards: 'cards', Drive: 'drive', Vault: 'vault', 'AI Chat': 'ai', Files: 'files', 'Cloud Insights': 'insights', Servers: 'servers', VPN: 'vpn', Status: 'status', Storage: 'storage' }, inner = '<span class="ic' + (OIM[s[0]] ? ' img' : '') + '">' + (OIM[s[0]] ? '<img src="/oicons/' + OIM[s[0]] + '.svg" alt="">' : ic(s[1])) + '</span><span class="tx"><b>' + s[0] + '</b></span><i class="dot ' + st[0] + '" title="' + st[1] + '" role="img" aria-label="' + st[1] + '"></i>';
+    var st = state(s[3]), OIM = { Pulse: 'pulse', Photos: 'photos', Cards: 'cards', Drive: 'drive', Vault: 'vault', 'AI Chat': 'ai', Files: 'files', 'Cloud Insights': 'insights', Servers: 'servers', VPN: 'vpn', Status: 'status', Storage: 'storage', Money: 'money', Subscriptions: 'subs', Investments: 'invest' }, inner = '<span class="ic' + (OIM[s[0]] ? ' img' : '') + '">' + (OIM[s[0]] ? '<img src="/oicons/' + OIM[s[0]] + '.svg" alt="">' : ic(s[1])) + '</span><span class="tx"><b>' + s[0] + '</b></span><i class="dot ' + st[0] + '" title="' + st[1] + '" role="img" aria-label="' + st[1] + '"></i>';
     if (s[2].charAt(0) === '#') return '<button class="svc" data-act="nav" data-v="' + s[2].slice(1) + '">' + inner + '</button>';
     var L = (S.settings || {}).links || {}, href = (s[4] && L[s[4]]) || s[2];
     return '<a class="svc" href="' + esc(href) + '" target="_blank" rel="noopener">' + inner + '</a>';
   }
   function services(state) {
-    return GROUPS.map(function (g) { return '<div class="sech"><h2>' + g[0] + '</h2></div><div class="svcs">' + g[1].map(function (s) { return tile(s, state); }).join('') + '</div>'; }).join('');
+    var own = window.AOS && AOS.isOwner && AOS.isOwner(), G = own ? GROUPS.concat([['Money', [['Money', 'card', '#money', ''], ['Subscriptions', 'pulse', '#subs', ''], ['Investments', 'pulse', '#invest', '']]]]) : GROUPS;
+    return G.map(function (g) { return '<div class="sech"><h2>' + g[0] + '</h2></div><div class="svcs">' + g[1].map(function (s) { return tile(s, state); }).join('') + '</div>'; }).join('');
   }
   window.AOSHome = { right: right, today: today, services: services, onGo: onGo, load: load, state: H };
   A.homeLoad = load;
