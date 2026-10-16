@@ -1041,3 +1041,14 @@ button.wd-li:hover{color:var(--accent-text)}
 .kbr{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
 .kbr:first-child{border-top:0}
 .kbh kbd{font:12px var(--mono);border:1px solid var(--line);border-radius:6px;padding:1px 7px;background:var(--surface2)}
+
+/* ---------- phone app: offline bar and share sheet ---------- */
+#offbar{position:fixed;left:0;right:0;top:0;z-index:2000;background:var(--warn);color:#1a1200;padding:calc(6px + env(safe-area-inset-top,0px)) 14px 6px;font-size:13px;text-align:center}
+html.offline #top{margin-top:30px}
+.card.shr{max-width:460px;width:100%;padding:0;overflow:hidden}
+.shrb{padding:6px 18px 18px;display:grid;gap:12px}
+.shq{margin:0;padding:10px 14px;border-left:3px solid var(--accent);background:var(--surface2);border-radius:0 10px 10px 0;overflow-wrap:anywhere;display:grid;gap:4px}
+.shq a{color:var(--accent-text);text-decoration:underline}
+.shf{display:flex;gap:6px;flex-wrap:wrap}
+.shact{display:grid;gap:8px}
+.shact .btn{display:flex;align-items:center;gap:10px;justify-content:flex-start;padding:12px 14px}

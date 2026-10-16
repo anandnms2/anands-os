@@ -107,5 +107,5 @@ document.addEventListener('keydown', function (ev) {
   if (ev.target && ev.target.id === 'cpt' && ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); var n = document.querySelector('[data-cap="savenote"]'); if (n) n.click(); }
 });
 window.addEventListener('online', flush); setTimeout(flush, 4000);
-window.AOSCapture = { open: open, addTask: function (text) { var o = parseTask(text); if (!o.title) return toast('Write the task first'); return sendTask(o).catch(function (e) { toast(e.message); }); }, addNote: function (text) { return sendNote(text).catch(function (e) { toast(e.message); }); }, parseTask: parseTask, flush: flush };
+window.AOSCapture = { putFile: putFile, stamp: stamp, open: open, addTask: function (text) { var o = parseTask(text); if (!o.title) return toast('Write the task first'); return sendTask(o).catch(function (e) { toast(e.message); }); }, addNote: function (text) { return sendNote(text).catch(function (e) { toast(e.message); }); }, parseTask: parseTask, flush: flush };
 })();

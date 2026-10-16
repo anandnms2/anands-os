@@ -95,6 +95,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/auth/google/callback') { if (!sessionOf(req)) throw httpError(401, 'Sign in to Anands OS first, then connect Google Drive from Settings.'); return await googleCallback(req, res, url); }
     if (p.startsWith('/auth/')) { if (await handleAuth(req, res, url) !== false) return; throw httpError(404, 'Not found'); }
     if (p === '/api/session') return json(res, 200, sessionInfo(req));
+    if (p === '/share-target') { res.writeHead(303, { location: '/' }); return res.end(); }
     if (p === '/_suite/puter.js') { return serveStatic(req, res, path.dirname(SHIM), path.basename(SHIM), {}); }
     if (p === '/_suite/peer.js') { return serveStatic(req, res, path.dirname(SHIM), 'peer.js', {}); }
     if ((req.method === 'GET' || req.method === 'HEAD') && isGuestPage(p)) return serveGuestPage(req, res, p);

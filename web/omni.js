@@ -106,7 +106,7 @@ function dynamic(q) {
 var ORDER = ['Create', 'Go to', 'Actions', 'Apps', 'Mail', 'WhatsApp', 'Tasks', 'Contacts', 'Vault', 'Files', 'Photos', 'Servers'];
 function compute() {
   var q = O.q.trim(), ws = words(q), list = [];
-  if (!q) { list = commands().filter(function (x) { return x.g === 'Go to' || x.g === 'Actions'; }).slice(0, 12); }
+  if (!q) { var all = commands(); list = all.filter(function (x) { return x.g === 'Go to'; }).slice(0, 8).concat(all.filter(function (x) { return x.g === 'Actions'; }).slice(0, 6)); }
   else {
     list = dynamic(q).concat(commands().filter(function (x) { return hit(x, ws); }).sort(function (a, b) { return rank(a, ws) - rank(b, ws); }).slice(0, 7), localSources(q, ws));
     ['Mail', 'Contacts', 'Files', 'Photos'].forEach(function (g) { (O.groups[g] || []).forEach(function (x) { if (!list.some(function (y) { return y.g === x.g && y.n === x.n; })) list.push(x); }); });

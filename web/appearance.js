@@ -157,7 +157,7 @@ function view() {
   h += '<div class="card apc"><h2>Text size</h2>' + seg('fs', L.fs, [[14, 'Small'], [15, 'Normal'], [16, 'Large'], [18, 'Larger']]) + '</div>';
   h += '<div class="card apc"><h2>Desktop widgets</h2><p class="note" style="margin:0 0 10px">They sit on your Desktop. Drag one by its title to move it. Hidden on phones.</p>' + WD.map(function (w) { var s = wstate(w[0]); return '<label class="aprow wrow"><input type="checkbox" data-ap="widget" data-v="' + w[0] + '"' + (s.on ? ' checked' : '') + '><span><b>' + w[1] + '</b><span class="note"> ' + w[2] + '</span></span></label>'; }).join('') + '<div class="aprow"><button class="btn sm" data-ap="resetw">Reset positions</button>' + (window.AOSDesk ? '<button class="btn sm" data-ap="opendesk">Open Desktop</button>' : '') + '</div></div>';
   h += '<div class="card apc"><h2>Keyboard</h2><label class="apchk"><input type="checkbox" data-ap="keys"' + (L.keys !== false ? ' checked' : '') + '> Single-key shortcuts (g then a letter to go places, n for a new capture, d for dark mode)</label><div class="aprow"><button class="btn sm" data-ap="help">Show all shortcuts</button></div></div>';
-  return h + '</div>';
+  return h + (window.AOSShare ? AOSShare.card() : '') + '</div>';
 }
 document.addEventListener('click', function (e) {
   var b = e.target.closest && e.target.closest('[data-ap]'); if (!b) return; var a = b.getAttribute('data-ap'), v = b.getAttribute('data-v');
