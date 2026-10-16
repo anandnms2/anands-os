@@ -11,7 +11,7 @@ function ua(s) {
 }
 function when(t) { return t ? A.fmt(new Date(t), { day: '2-digit', hour: '2-digit' }) : ''; }
 function ago(t) { var m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; }
-var EVN = { login: ['Signed in', 'ok'], login_failed: ['Wrong password', 'bad'], login_denied: ['Not allowed', 'bad'], logout: ['Signed out', ''], revoked: ['Session ended', 'warn'], revoked_all: ['All other sessions ended', 'warn'], invite_used: ['Guest link used', ''], invite_created: ['Guest link created', ''] };
+var EVN = { term_open: ['Terminal opened', 'warn'], term_close: ['Terminal closed', ''], term_denied: ['Terminal blocked', 'bad'], login: ['Signed in', 'ok'], login_failed: ['Wrong password', 'bad'], login_denied: ['Not allowed', 'bad'], logout: ['Signed out', ''], revoked: ['Session ended', 'warn'], revoked_all: ['All other sessions ended', 'warn'], invite_used: ['Guest link used', ''], invite_created: ['Guest link created', ''] };
 function pill(e) { var x = EVN[e] || [e, '']; return '<span class="pill ' + (x[1] || '') + '"><i class="dot"></i>' + esc(x[0]) + '</span>'; }
 
 function load() {

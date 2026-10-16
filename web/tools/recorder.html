@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recorder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/os.css"><link rel="stylesheet" href="/tools/tool.css"><link rel="stylesheet" href="/tools/recorder.css"></head>
+<body><div class="tl rc" id="rc"><div class="rbody">
+<div class="rmodes" role="radiogroup" aria-label="What to record" id="modes"></div>
+<div class="rstage" id="rstage"><video id="live" muted playsinline></video><div class="rhint" id="rhint"><b>Ready to record</b><span class="tmuted" id="rsub"></span></div><div class="rcount" id="rcount" hidden></div></div>
+<div class="rlevel" id="lvl" hidden><i id="lvlbar"></i></div>
+<div class="rctl" id="rctl"></div>
+<div class="rsave" id="rsave" hidden><video id="prev" controls playsinline></video><div class="rname"><input class="tin" id="rfn" aria-label="File name"><span class="tmuted" id="rinfo"></span></div><div class="rctl"><button class="tb pri" id="rsv"></button><button class="tb" id="rdl"></button><button class="tb" id="rdc"></button></div></div>
+<div class="rlist"><h3>Saved recordings</h3><div id="rlist"></div></div></div></div>
+<script src="/tools/tool.js"></script><script src="/tools/recorder.js"></script></body></html>

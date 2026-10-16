@@ -1,0 +1,13 @@
+.pl{flex-direction:row}.pmain{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--stage)}
+.pstage{flex:1;min-height:0;position:relative;display:grid;place-items:center;overflow:hidden}.pstage video{width:100%;height:100%;object-fit:contain;background:#000;display:none}.pstage.v video{display:block}.pstage.v .part{display:none}
+.part{text-align:center;display:grid;gap:8px;justify-items:center;padding:20px}.part b{font-family:var(--display);font-size:22px;font-weight:500;max-width:90%;overflow:hidden;text-overflow:ellipsis}
+.disc{width:150px;height:150px;border-radius:50%;background:conic-gradient(from 20deg,#ff9a3c,#f0526b,#8e5bff,#34c3ff,#ff9a3c);display:grid;place-items:center;box-shadow:0 12px 40px var(--shade)}.disc:after{content:"";width:46px;height:46px;border-radius:50%;background:var(--stage);border:6px solid var(--surface)}
+.playing .disc{animation:spin 6s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.playing .disc{animation:none}}
+.pctl{padding:10px 14px 12px;background:var(--surface);border-top:1px solid var(--line)}.pctl input[type=range]{width:100%;accent-color:var(--accent)}.ptime{display:flex;justify-content:space-between;font:12px var(--mono);color:var(--muted);margin:2px 0 6px}
+.prow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.prow .sp{flex:1}.tb.big{padding:9px 16px}.tb.big svg.i{width:20px;height:20px}.pvol{font-size:10px;color:var(--muted);letter-spacing:.1em}
+.pside{width:290px;flex:none;border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.ptabs{display:flex;border-bottom:1px solid var(--line)}.ptabs button{flex:1;padding:10px 6px;border:0;background:none;font-size:13px;color:var(--muted);border-bottom:2px solid transparent}.ptabs button.on{color:var(--accent-text);border-bottom-color:var(--accent)}
+.pbody{flex:1;overflow:auto;min-height:0}.pbody .crumb{padding:8px 10px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);word-break:break-all}
+.trow .acts{display:flex;gap:2px;flex:none}.trow .acts button{border:0;background:none;padding:3px;border-radius:6px;display:grid;opacity:.7}.trow .acts button:hover{opacity:1;background:var(--surface2)}.trow.cur{color:var(--accent-text);background:var(--accent-soft)}
+.plhead{display:flex;gap:6px;padding:8px}.plhead input{flex:1}
+@media(max-width:700px){.pl{flex-direction:column}.pside{width:100%;height:42%;border-left:0;border-top:1px solid var(--line)}}

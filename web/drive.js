@@ -213,7 +213,7 @@ function openItem(f) {
   if (f.is_dir) { D.sec = 'my'; return load(rel(f.path), false, false, rootOf(f.path)); }
   noteRecent(f.path); var k = kindOf(f).k;
   if (PREV[k] && !(k === 'image' && ext(f.name) === 'svg' && false)) return preview(f);
-  if (A.TEXTEXT.test(ext(f.name)) && f.size <= 1048576) return A.dedOpen(f.path);
+  if (A.TEXTEXT.test(ext(f.name)) && f.size <= 1048576) { if (window.AOSDesk && AOSDesk.tool && AOSDesk.state && AOSDesk.state.open) return void AOSDesk.tool('editor', f.path); return A.dedOpen(f.path); }
   var ows = openWith(f); if (ows.length) return openIn(ows[0].slug, f);
   download([f]);
 }

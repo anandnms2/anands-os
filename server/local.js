@@ -156,11 +156,19 @@ function statObj(abs, rel, st) {
   return { id: crypto.createHash('sha1').update(rel).digest('hex').slice(0, 16), uid: crypto.createHash('sha1').update(rel).digest('hex').slice(0, 16), name: path.basename(rel) || '/', path: rel, is_dir: st.isDirectory(), size: st.isDirectory() ? 0 : st.size, modified: Math.floor(st.mtimeMs / 1000), created: Math.floor((st.birthtimeMs || st.mtimeMs) / 1000) };
 }
 async function stat(abs, rel) { try { return statObj(abs, rel, await fsp.stat(abs)); } catch { throw notFound(); } }
-const MIME = { txt: 'text/plain', md: 'text/markdown', html: 'text/html', css: 'text/css', js: 'text/javascript', json: 'application/json', csv: 'text/csv', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', pdf: 'application/pdf', mp3: 'audio/mpeg', mp4: 'video/mp4', wav: 'audio/wav' };
+const MIME = { txt: 'text/plain', md: 'text/markdown', html: 'text/html', css: 'text/css', js: 'text/javascript', json: 'application/json', csv: 'text/csv', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', pdf: 'application/pdf', mp3: 'audio/mpeg', mp4: 'video/mp4', wav: 'audio/wav', webm: 'video/webm', ogg: 'audio/ogg', oga: 'audio/ogg', m4a: 'audio/mp4', flac: 'audio/flac', opus: 'audio/ogg', mov: 'video/quicktime', m4v: 'video/mp4', mkv: 'video/x-matroska' };
 const mime = (f) => MIME[path.extname(f).slice(1).toLowerCase()] || 'application/octet-stream';
-function sendFile(res, abs, st) {
+function sendFile(res, abs, st, req) {
   const type = mime(abs); const safe = /^(image\/(png|jpeg|gif|webp)|audio|video|application\/pdf|text\/plain|text\/csv|application\/json)/.test(type);
-  res.writeHead(200, { 'content-type': type, 'content-length': st.size, 'cache-control': 'private, no-cache', 'x-content-type-options': 'nosniff', ...(safe ? {} : { 'content-disposition': 'attachment' }), 'content-security-policy': "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'" });
+  const h = { 'content-type': type, 'cache-control': 'private, no-cache', 'x-content-type-options': 'nosniff', 'accept-ranges': 'bytes', ...(safe ? {} : { 'content-disposition': 'attachment' }), 'content-security-policy': "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'" };
+  const m = req && /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ''));
+  if (m && (m[1] || m[2])) { // media players ask for slices so that seeking works
+    let a = m[1] === '' ? Math.max(0, st.size - Number(m[2])) : Number(m[1]), b = m[1] === '' || m[2] === '' ? st.size - 1 : Math.min(Number(m[2]), st.size - 1);
+    if (a > b || a >= st.size) { res.writeHead(416, { 'content-range': 'bytes */' + st.size }); return res.end(); }
+    res.writeHead(206, { ...h, 'content-range': `bytes ${a}-${b}/${st.size}`, 'content-length': b - a + 1 });
+    return fs.createReadStream(abs, { start: a, end: b }).on('error', () => res.destroy()).pipe(res);
+  }
+  res.writeHead(200, { ...h, 'content-length': st.size });
   fs.createReadStream(abs).on('error', () => res.destroy()).pipe(res);
 }
 
@@ -171,7 +179,7 @@ export async function handleLocal(req, res, url) {
   const p = url.pathname.replace(/^\/_local/, '');
   if (user.home && (p.startsWith('/workers/') || p.startsWith('/mail-service/') || p.startsWith('/mail/'))) throw httpError(403, 'Only the owner can use this', 'forbidden');
   if (p === '/auth/user' && req.method === 'GET') return json(res, 200, { ...user, email: user.home ? (user.email || null) : (mailbox.defaultAddress() || user.email || effective().mail.from || null) });
-  if (p === '/fs/get' && req.method === 'GET') { if (driveRel(url.searchParams.get('path'), user) !== null) return driveFs(p, req, res, url, {}, user); const { abs } = resolve(url.searchParams.get('path'), user); let st; try { st = await fsp.stat(abs); } catch { throw notFound(); } if (st.isDirectory()) throw httpError(400, 'Is a directory'); return sendFile(res, abs, st); }
+  if (p === '/fs/get' && req.method === 'GET') { if (driveRel(url.searchParams.get('path'), user) !== null) return driveFs(p, req, res, url, {}, user); const { abs } = resolve(url.searchParams.get('path'), user); let st; try { st = await fsp.stat(abs); } catch { throw notFound(); } if (st.isDirectory()) throw httpError(400, 'Is a directory'); return sendFile(res, abs, st, req); }
   if (req.method !== 'POST') throw httpError(405, 'Method not allowed');
   const app = slug(req.headers['x-app']);
   const kvApp = user.home ? ('m' + user.mid + '-' + app).slice(0, 60) : app;
