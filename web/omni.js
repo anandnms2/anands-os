@@ -13,11 +13,11 @@ function pulseView(v) { return function () { var P = px(); if (P) { P.view = v; 
 /* ---------- commands ---------- */
 function commands() {
   var c = [];
-  var add = function (n, s, i, run, kw) { c.push({ g: 'Go to', n: n, s: s, ic: i, run: run, kw: kw || '' }); };
-  add('Home', 'Overview', 'home', nav('home')); add('Photos', 'Immich library', 'photos', nav('photos')); add('Drive', 'Files', 'cloud', nav('drive'), 'files storage');
-  add('Vault', 'Passwords', 'lock', nav('vault'), 'passwords'); add('Cloud Insights', 'Servers and deployments', 'insights', nav('insights'), 'coolify'); add('Servers', 'Server health', 'monitor', nav('servers'));
-  add('Pulse', 'Mail, WhatsApp, tasks', 'pulse', nav('pulse'), 'inbox'); add('VPN', 'WireGuard', 'vpn', nav('vpn'), 'wireguard'); add('Cards', 'Business cards and contacts', 'cards', nav('cards'), 'contacts');
-  add('Suite', 'All apps', 'apps', nav('apps')); add('Settings', 'Connections and preferences', 'settings', nav('settings'), 'connections');
+  var add = function (n, s, i, run, kw, area) { if (area && !A.can(area)) return; c.push({ g: 'Go to', n: n, s: s, ic: i, run: run, kw: kw || '' }); };
+  add('Home', 'Overview', 'home', nav('home')); add('Photos', 'Immich library', 'photos', nav('photos'), '', 'photos'); add('Drive', 'Files', 'cloud', nav('drive'), 'files storage', 'drive');
+  add('Vault', 'Passwords', 'lock', nav('vault'), 'passwords', 'vault'); add('Cloud Insights', 'Servers and deployments', 'insights', nav('insights'), 'coolify', 'insights'); add('Servers', 'Server health', 'monitor', nav('servers'), '', 'insights');
+  add('Pulse', 'Mail, WhatsApp, tasks', 'pulse', nav('pulse'), 'inbox', 'pulse'); add('VPN', 'WireGuard', 'vpn', nav('vpn'), 'wireguard', 'vpn'); add('Cards', 'Business cards and contacts', 'cards', nav('cards'), 'contacts', 'cards');
+  add('Suite', 'All apps', 'apps', nav('apps'), '', 'suite'); add('Settings', 'Connections and preferences', 'settings', nav('settings'), 'connections');
   if (window.AOSSec) add('Security center', 'Sessions, sign-in history, password health', 'shield', nav('security'), 'sessions logins passwords');
   if (window.AOSAppearance) add('Appearance', 'Theme, wallpaper, widgets', 'image', nav('appearance'), 'theme wallpaper colour widgets');
   if (window.AOSTeam) add('Team and guests', 'Invite people and set what they can open', 'cards', nav('team'), 'guest invite members share access');

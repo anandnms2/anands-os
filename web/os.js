@@ -84,10 +84,16 @@ function googleBack() {
     else { S.settingsMsg = m; go('settings'); setTimeout(function () { var e = document.getElementById('r_google'); if (e) { e.textContent = m; e.className = 'note bad'; } toast(m); }, 300); }
   } catch (e) {}
 }
+function isOwnerU() { return !S.user || !S.user.role || S.user.role === 'owner'; }
+function can(a) { if (isOwnerU()) return true; var p = S.user.perm || {}; return a === 'open' || (p.apps || []).indexOf(a) > -1; }
+var VAREA = { photos: 'photos', drive: 'drive', dedit: 'drive', vault: 'vault', insights: 'insights', servers: 'insights', pulse: 'pulse', vpn: 'vpn', cards: 'cards', apps: 'suite', app: 'suite', home: 'open', appearance: 'open' };
+function viewOk(v) { return isOwnerU() || (VAREA[v] !== undefined && can(VAREA[v])); }
 function boot() {
   Promise.all([api('/api/session'), fetch('/apps.json').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })]).then(function (x) {
     S.login = x[0]; S.user = x[0].user; S.apps = x[1];
-    if (S.user) { return Promise.all([loadSettings()]).then(function () { buildNav(); var r0 = routeNow(); if (r0 && r0 !== 'home') { popping = true; try { go0(r0); } finally { popping = false; } } else render(); loadImm(); loadIns(false); googleBack(); }); }
+    if (S.user && !isOwnerU()) { var sp = (S.user.perm || {}).suite || []; S.apps = can('suite') ? S.apps.filter(function (a) { return sp.indexOf('*') > -1 || sp.indexOf(a.slug) > -1; }) : []; }
+    document.documentElement.classList.toggle('guest', !!S.user && !isOwnerU());
+    if (S.user) { return Promise.all([loadSettings()]).then(function () { buildNav(); var r0 = routeNow(); if (r0 && r0 !== 'home') { popping = true; try { go0(r0); } finally { popping = false; } } else render(); if (can('photos')) loadImm(); if (can('insights')) loadIns(false); googleBack(); }); }
     render();
   }).catch(function () { $('#view').innerHTML = '<div class="center"><div class="empty"><h2>Cannot reach the server</h2><p>Reload the page in a moment.</p></div></div>'; });
 }
@@ -97,11 +103,11 @@ var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', '
 function cur(v) { if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; if (v === 'insights' && S.view === 'servers') return true; return S.view === v || (v === 'apps' && S.view === 'app'); }
 function buildNav() {
   var h = '<button class="logo" data-act="nav" data-v="home" aria-label="Home"><img src="/logo-white.png" alt=""></button><div class="rsep"></div>';
-  NAV.forEach(function (n) { h += '<button class="nav" data-act="nav" data-v="' + n[0] + '" title="' + n[1] + '"' + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
-  h += '<button class="nav" data-act="chat" title="Ask the assistant">' + ic('chat') + 'Ask AI</button>';
-  h += '<button class="nav bot" data-act="nav" data-v="settings" title="Settings"' + (S.view === 'settings' ? ' aria-current="page"' : '') + '>' + ic('settings') + 'Settings</button>';
+  NAV.filter(function (n) { return viewOk(n[0]); }).forEach(function (n) { h += '<button class="nav" data-act="nav" data-v="' + n[0] + '" title="' + n[1] + '"' + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
+  if (can('chat')) h += '<button class="nav" data-act="chat" title="Ask the assistant">' + ic('chat') + 'Ask AI</button>';
+  if (isOwnerU()) h += '<button class="nav bot" data-act="nav" data-v="settings" title="Settings"' + (S.view === 'settings' ? ' aria-current="page"' : '') + '>' + ic('settings') + 'Settings</button>';
   $('#rail').innerHTML = h;
-  var t = ''; NAV.concat([['pal', 'Search', 'search']]).forEach(function (n) { t += '<button ' + (n[0] === 'pal' ? 'data-act="pal"' : 'data-act="nav" data-v="' + n[0] + '"') + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
+  var t = ''; NAV.filter(function (n) { return viewOk(n[0]); }).concat([['pal', 'Search', 'search']]).forEach(function (n) { t += '<button ' + (n[0] === 'pal' ? 'data-act="pal"' : 'data-act="nav" data-v="' + n[0] + '"') + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
   $('#tabs').innerHTML = t;
 }
 /* The address bar follows the page (#photos, #vault ...), so Refresh stays on the page and Back goes to the previous one. */
@@ -114,12 +120,12 @@ function go(v, x) {
 document.addEventListener('error', function (e) { var v = e.target; if (v && v.tagName === 'VIDEO' && v.dataset.src && !v.dataset.tx) { v.dataset.tx = '1'; v.src = v.dataset.src + '?tx=1'; v.load(); v.play().catch(function () {}); return; } var t = e.target; if (!t || t.tagName !== 'IMG' || !t.classList.contains('phimg')) return; if (!t.dataset.tried) { t.dataset.tried = '1'; t.src = '/api/photos/asset/' + t.dataset.id + '/preview'; return; } t.removeAttribute('src'); t.parentNode.classList.add('nothumb'); }, true);
 window.addEventListener('popstate', function () { if (!S.user) return; var r = routeNow() || 'home'; popping = true; try { go0(r); } finally { popping = false; } });
 var lastSeen = Date.now(); document.addEventListener('visibilitychange', function () { if (document.hidden) { lastSeen = Date.now(); return; } if (S.user && Date.now() - lastSeen > 30000 && S.view === 'photos' && S.imm && S.imm.connected && !S.lb) { var fresh = function () { return { items: [], next: 1, loading: false, error: null, loaded: false }; }; S.tl = fresh(); S.fav = fresh(); S.albums = null; loadImm(); loadAlbums(); } });
-function go0(v, x) { if (window.AOSOnGo && window.AOSOnGo[v]) setTimeout(window.AOSOnGo[v], 0); if (v === 'vault' && S.view !== 'vault') S.vault.noAuto = false; S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); if (window.AOSHome) window.AOSHome.onGo(v); }
+function go0(v, x) { if (!viewOk(v)) v = 'home'; if (window.AOSOnGo && window.AOSOnGo[v]) setTimeout(window.AOSOnGo[v], 0); if (v === 'vault' && S.view !== 'vault') S.vault.noAuto = false; S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); if (window.AOSHome) window.AOSHome.onGo(v); }
 function redraw() { var y = $('#view').scrollTop; render(); $('#view').scrollTop = y; }
 function render() {
   var app = $('#app'), tabs = $('#tabs'), fab = $('#fab');
   if (!S.user) { app.hidden = true; tabs.hidden = true; fab.hidden = true; $('#chat').hidden = true; $('#login').hidden = false; $('#login').innerHTML = loginV(); return; }
-  $('#login').hidden = true; app.hidden = false; tabs.hidden = false; fab.hidden = S.chatOpen;
+  $('#login').hidden = true; app.hidden = false; tabs.hidden = false; fab.hidden = S.chatOpen || !can('chat');
   if (window.AOSProfile) AOSProfile.paint(); else $('#avatar').textContent = (S.user.name || 'A').charAt(0).toUpperCase();
   var v = $('#view');
   if (S.view === 'home') v.innerHTML = homeV();
@@ -154,6 +160,7 @@ function svcState(n) {
 }
 var ICONROW = ['spreadsheet', 'documents', 'presentation', 'whiteboard', 'pdf', 'email', 'calendar', 'notes', 'photo-studio', 'video-studio', 'chess'];
 function homeV() {
+  if (!isOwnerU()) return guestHomeV();
   var hr = Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(new Date())), g = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
   var d = S.ins.data, count = function (t) { return d ? d.resources.filter(function (r) { return r.t === t; }).length : '–'; };
   var cats = {}; S.apps.forEach(function (a) { cats[a.category] = (cats[a.category] || 0) + 1; });
@@ -659,7 +666,13 @@ document.addEventListener('change', function (ev) { if (ev.target.id === 'x_pr')
 $('#fab').innerHTML = ic('chat', ' style="width:26px;height:26px"');
 $('#fab').addEventListener('click', function () { openChat(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function () {});
+function guestHomeV() {
+  var u = S.user, p = u.perm || {}, areas = [['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['pulse', 'Pulse', 'pulse'], ['cards', 'Cards', 'cards'], ['insights', 'Insights', 'insights'], ['vpn', 'VPN', 'vpn']].filter(function (a) { return can(a[0]); });
+  var h = '<div class="wrap"><div class="pagehead"><div><h1>Welcome, ' + esc((u.name || '').split(' ')[0] || 'there') + '</h1><p class="note" style="margin:4px 0 0">' + (u.role === 'guest' ? 'You are a guest here.' : 'You are a team member.') + (p.expires ? ' Your access ends on ' + fmt(new Date(p.expires), { day: '2-digit' }) + '.' : '') + '</p></div></div>';
+  var tiles = areas.map(function (a) { return '<button class="svc" data-act="nav" data-v="' + a[0] + '"><span class="ic">' + ic(a[2]) + '</span><span class="tx"><b>' + a[1] + '</b></span></button>'; }).join('') + S.apps.filter(function (a) { return a.hasSource; }).map(function (a) { return '<button class="svc" data-act="app" data-s="' + esc(a.slug) + '"><span class="ic"><img src="/_icons/' + esc(a.slug) + '.png" alt="" style="width:26px;height:26px;border-radius:7px"></span><span class="tx"><b>' + esc(a.name) + '</b></span></button>'; }).join('');
+  return h + (tiles ? '<div class="svcs" style="margin-top:20px">' + tiles + '</div>' : '<div class="empty"><h2>Nothing shared yet</h2><p>Ask Anand to give you access to something.</p></div>') + '</div>';
+}
 window.AOSViews = window.AOSViews || {}; window.AOSOnGo = window.AOSOnGo || {};
-window.AOS = { vaultLock: function () { vLock(false); if (S.view === 'vault') redraw(); }, vaultReport: function () { var V = S.vault; if (!V.items) return null; return V.items.filter(function (i) { return i.type === 'login'; }).map(function (i) { return { id: i.id, name: i.name, user: i.user, url: i.url, flags: vFlags(i), age: i.age, totp: !!i.totp }; }); }, insTabs: insTabs, S: S, $: $, esc: esc, api: api, toast: toast, LS: LS, fmt: fmt, bytes: bytes, modal: modal, OPENWITH: OPENWITH, LAUNCHES: LAUNCHES, TEXTEXT: TEXTEXT, dedOpen: dedOpen, launch: launch, connectBlock: connectBlock, ic: ic, go: go, redraw: redraw, photoCard: photoCard, curItems: curItems, openAlbum: openAlbum, loadPage: loadPage, loadAlbums: loadAlbums, photosGrid: photosGrid, drawLb: drawLb, render: render };
+window.AOS = { can: can, isOwner: isOwnerU, vaultLock: function () { vLock(false); if (S.view === 'vault') redraw(); }, vaultReport: function () { var V = S.vault; if (!V.items) return null; return V.items.filter(function (i) { return i.type === 'login'; }).map(function (i) { return { id: i.id, name: i.name, user: i.user, url: i.url, flags: vFlags(i), age: i.age, totp: !!i.totp }; }); }, insTabs: insTabs, S: S, $: $, esc: esc, api: api, toast: toast, LS: LS, fmt: fmt, bytes: bytes, modal: modal, OPENWITH: OPENWITH, LAUNCHES: LAUNCHES, TEXTEXT: TEXTEXT, dedOpen: dedOpen, launch: launch, connectBlock: connectBlock, ic: ic, go: go, redraw: redraw, photoCard: photoCard, curItems: curItems, openAlbum: openAlbum, loadPage: loadPage, loadAlbums: loadAlbums, photosGrid: photosGrid, drawLb: drawLb, render: render };
 boot();
 })();

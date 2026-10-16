@@ -21,5 +21,6 @@ export const SESSION_COOKIE = 'aos_session';
 export function sessionOf(req) { const s = verify(cookies(req)[SESSION_COOKIE]); return s && s.u && check(s, req) ? s : null; }
 export function userFromSession(s) {
   const id = crypto.createHash('sha256').update('anands:' + s.u).digest('hex');
-  return { uuid: id.slice(0, 8) + '-' + id.slice(8, 12) + '-' + id.slice(12, 16) + '-' + id.slice(16, 20) + '-' + id.slice(20, 32), username: s.n || s.u, email: s.e || null, is_temp: false };
+  const member = s.role && s.role !== 'owner';
+  return { uuid: id.slice(0, 8) + '-' + id.slice(8, 12) + '-' + id.slice(12, 16) + '-' + id.slice(16, 20) + '-' + id.slice(20, 32), username: s.n || s.u, email: s.e || null, is_temp: false, role: member ? s.role : 'owner', mid: member ? s.mid : '', home: member ? 'users/' + s.mid : '' };
 }

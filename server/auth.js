@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { OIDC, PASSWORD, PUBLIC_URL, OWNER } from './config.js';
 import { sign, verify, SESSION_COOKIE, sessionOf } from './session.js';
 import { createSession, logEvent, endSession } from './sessions.js';
+import { redeem, findByEmail, permOf } from './team.js';
 import { json, readJson, setCookie, cookies, clientIp, isHttps, fetchJson, httpError } from './util.js';
 
 const TTL = 14 * 24 * 3600;
@@ -34,6 +35,15 @@ export async function handleAuth(req, res, url) {
     setCookie(res, SESSION_COOKIE, sign({ u: 'owner', n: OWNER, sid: createSession(req, { u: 'owner', n: OWNER, method: 'password' }) }, TTL), { maxAge: TTL, secure });
     return json(res, 200, { ok: true });
   }
+  if (p.startsWith('/auth/invite/') && req.method === 'GET') {
+    const ip = clientIp(req); if (limited(ip)) throw httpError(429, 'Too many attempts. Wait 15 minutes.', 'rate_limited');
+    const r = redeem(decodeURIComponent(p.slice(13)));
+    if (r.err) { noteFail(ip); logEvent(req, 'login_denied', { method: 'invite' }); res.writeHead(403, { 'content-type': 'text/html; charset=utf-8' }); return res.end('<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><body style="font:16px system-ui;padding:2.5rem 1.25rem;max-width:30rem;margin:auto"><h1 style="font-size:1.4rem">Invitation</h1><p>' + r.err.replace(/[<>&]/g, '') + '</p>'); }
+    const m = r.m, ttl = m.expires ? Math.max(60, Math.min(TTL, Math.floor((m.expires - Date.now()) / 1000))) : TTL;
+    setCookie(res, SESSION_COOKIE, sign({ u: 'm_' + m.id, n: m.name, role: m.role, mid: m.id, sid: createSession(req, { u: 'm_' + m.id, n: m.name, role: m.role, mid: m.id, method: 'invite' }) }, ttl), { maxAge: ttl, secure });
+    logEvent(req, 'invite_used', { user: m.name });
+    res.writeHead(302, { location: '/' }); return res.end();
+  }
   if (p === '/auth/logout') {
     try { endSession(req, (sessionOf(req) || {}).sid); } catch {}
     setCookie(res, SESSION_COOKIE, '', { maxAge: 0, secure });
@@ -57,7 +67,14 @@ export async function handleAuth(req, res, url) {
     const email = String(info.email || '').toLowerCase();
     const id = info.preferred_username || email || info.sub;
     if (!id) throw httpError(403, 'Your SSO account has no usable identity');
-    if (OIDC.allowed.length && !OIDC.allowed.includes(email) && !OIDC.allowed.includes(String(info.preferred_username || '').toLowerCase())) { logEvent(req, 'login_denied', { user: email || id, method: 'sso' }); throw httpError(403, 'This account is not allowed here'); }
+    const isOwner = !OIDC.allowed.length || OIDC.allowed.includes(email) || OIDC.allowed.includes(String(info.preferred_username || '').toLowerCase());
+    const mem = isOwner ? null : findByEmail(email);
+    if (!isOwner && !mem) { logEvent(req, 'login_denied', { user: email || id, method: 'sso' }); throw httpError(403, 'This account is not allowed here'); }
+    if (mem) {
+      setCookie(res, 'aos_oidc', '', { maxAge: 0, secure });
+      setCookie(res, SESSION_COOKIE, sign({ u: 'm_' + mem.id, n: mem.name, e: email, role: mem.role, mid: mem.id, sid: createSession(req, { u: 'm_' + mem.id, n: mem.name, role: mem.role, mid: mem.id, method: 'sso' }) }, TTL), { maxAge: TTL, secure });
+      res.writeHead(302, { location: '/' }); return res.end();
+    }
     setCookie(res, 'aos_oidc', '', { maxAge: 0, secure });
     const nm = info.name || info.preferred_username || id;
     setCookie(res, SESSION_COOKIE, sign({ u: id, n: nm, e: email || null, sid: createSession(req, { u: id, n: nm, method: 'sso' }) }, TTL), { maxAge: TTL, secure });
@@ -67,6 +84,7 @@ export async function handleAuth(req, res, url) {
 }
 export function sessionInfo(req) {
   const s = sessionOf(req);
+  if (s && s.role && s.role !== 'owner') { const perm = permOf(s); return { user: { name: s.n || s.u, email: s.e || null, avatar: null, title: s.role === 'guest' ? 'Guest' : 'Team member', role: s.role, perm }, ...loginInfo() }; }
   const pf = s ? profileOf() : null;
-  return { user: s ? { name: (pf.name || s.n || s.u), email: (pf.email || s.e || null), avatar: pf.avatar, title: pf.title } : null, ...loginInfo() };
+  return { user: s ? { name: (pf.name || s.n || s.u), email: (pf.email || s.e || null), avatar: pf.avatar, title: pf.title, role: 'owner' } : null, ...loginInfo() };
 }

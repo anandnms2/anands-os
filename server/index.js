@@ -24,6 +24,7 @@ import { handleLocal } from './local.js';
 import { handleSearch } from './search.js';
 import { handleSecurity } from './security.js';
 import { handlePrefs } from './prefs.js';
+import { handleTeam, areaOf, allowed, isOwner, suiteOk } from './team.js';
 import { isWorkerPath, handleWorkerRequest, isGuestPage, serveGuestPage } from './workers.js';
 import { noteOrigin, publicOrigin } from './origin.js';
 import { handlePeer, handleRooms, isPeerPath, isRoomPath } from './meet.js';
@@ -39,9 +40,11 @@ const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self' " + rbOrigin(), "manifes
 /* Apps can only talk to this server. puter.com is not reachable from them: nothing else is in connect-src. */
 const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
 
+/* what a team member or guest may see of the connections: where things are, never who they sign in as */
+function redact(o) { const out = {}; for (const [g, v] of Object.entries(o)) { if (!v || typeof v !== 'object') { out[g] = v; continue; } out[g] = {}; for (const [k, x] of Object.entries(v)) out[g][k] = ['user', 'clientId', 'from', 'fromName', 'host', 'port', 'secret', 'stun', 'urls'].includes(k) ? (typeof x === 'boolean' ? x : '') : x; } return out; }
 async function api(req, res, url) {
   const p = url.pathname;
-  if (p === '/api/settings' && req.method === 'GET') return json(res, 200, publicSettings());
+  if (p === '/api/settings' && req.method === 'GET') return json(res, 200, isOwner(sessionOf(req)) ? publicSettings() : redact(publicSettings()));
   if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); clearStatusCache(); clearCardsCache(); clearPulseCache(); return json(res, 200, publicSettings()); }
   if (p === '/api/settings/test' && req.method === 'POST') {
     const { target } = await readJson(req, 1024);
@@ -79,11 +82,13 @@ async function api(req, res, url) {
   if (p === '/api/vpn' || p.startsWith('/api/vpn/')) return handleVpn(req, res, url);
   if (p === '/api/cards' || p === '/api/my-cards' || p.startsWith('/api/my-cards/') || p.startsWith('/api/cards/') || p.startsWith('/api/cs/')) return handleCards(req, res, url);
   if (p === '/api/insights') return handleInsights(req, res, url);
+  if (p === '/api/team' || p.startsWith('/api/team/')) return handleTeam(req, res, url, sessionOf(req));
+  if ((p === '/api/profile' || p === '/api/profile/avatar') && !isOwner(sessionOf(req))) return json(res, 200, { name: sessionOf(req).n, username: sessionOf(req).n });
   if (p === '/api/profile' || p === '/api/profile/avatar') return handleProfile(req, res, url, sessionOf(req));
   if (p === '/api/security' || p.startsWith('/api/security/')) return handleSecurity(req, res, url, sessionOf(req));
   if (p === '/api/prefs') return handlePrefs(req, res);
   if (p === '/api/search/files') return handleSearch(req, res, url);
-  if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url);
+  if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url, sessionOf(req));
   throw httpError(404, 'Unknown API route');
 }
 
@@ -110,6 +115,10 @@ const server = http.createServer(async (req, res) => {
     if (protectedPath && !sessionOf(req)) {
       if (p.startsWith('/apps/')) { res.writeHead(401, { 'content-type': 'text/html; charset=utf-8' }); return res.end('<!doctype html><meta charset=utf-8><body style="font:16px system-ui;padding:2rem">Sign in at <a href="/">Anands OS</a> first.'); }
       throw httpError(401, 'Sign in first', 'auth_required');
+    }
+    if (protectedPath && sessionOf(req) && !isOwner(sessionOf(req))) {
+      const so = sessionOf(req), area = areaOf(p, req.method);
+      if (!allowed(so, area) || (p.startsWith('/apps/') && !suiteOk(so, p.split('/')[2]))) throw httpError(403, allowed(so, 'open') ? 'This part of Anands OS is not shared with you' : 'Your access has ended', allowed(so, 'open') ? 'forbidden' : 'access_ended');
     }
     if (req.method !== 'GET' && req.method !== 'HEAD' && (p.startsWith('/api/') || p.startsWith('/_local/')) && p !== '/api/browse' && req.headers['x-aos'] !== '1') throw httpError(403, 'Missing x-aos header', 'csrf');
     if (p.startsWith('/api/')) return await api(req, res, url);

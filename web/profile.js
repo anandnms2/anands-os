@@ -18,8 +18,8 @@ function menu(show) {
   var u = S.user || {}, m = document.createElement('div'); m.id = 'pfmenu'; m.className = 'pfmenu'; m.setAttribute('role', 'menu');
   m.innerHTML = '<div class="pfhead"><span class="pfav">' + avatarHtml(u.avatar) + '</span><div><b>' + esc(u.name || 'You') + '</b><span>' + esc(u.title || u.email || '') + '</span></div></div>' +
     '<button role="menuitem" data-pf="edit">' + ic('user') + 'Edit profile</button><button role="menuitem" data-pf="pic">' + ic('image') + 'Change picture</button>' +
-    '<button role="menuitem" data-pf="settings">' + ic('settings') + 'Settings</button>' +
-    (window.AOSSec ? '<button role="menuitem" data-pf="go:security">' + ic('shield') + 'Security center</button>' : '') + (window.AOSAppearance ? '<button role="menuitem" data-pf="go:appearance">' + ic('image') + 'Appearance</button>' : '') + (window.AOSTeam && (u.role || 'owner') === 'owner' ? '<button role="menuitem" data-pf="go:team">' + ic('cards') + 'Team and guests</button>' : '') + '<div class="pfsep"></div><a role="menuitem" href="/auth/logout">' + ic('out') + 'Sign out</a>';
+    (A.isOwner && !A.isOwner() ? '' : '<button role="menuitem" data-pf="settings">' + ic('settings') + 'Settings</button>') +
+    (window.AOSSec && !(A.isOwner && !A.isOwner()) ? '<button role="menuitem" data-pf="go:security">' + ic('shield') + 'Security center</button>' : '') + (window.AOSAppearance ? '<button role="menuitem" data-pf="go:appearance">' + ic('image') + 'Appearance</button>' : '') + (window.AOSTeam && (u.role || 'owner') === 'owner' ? '<button role="menuitem" data-pf="go:team">' + ic('cards') + 'Team and guests</button>' : '') + '<div class="pfsep"></div><a role="menuitem" href="/auth/logout">' + ic('out') + 'Sign out</a>';
   document.getElementById('top').appendChild(m);
 }
 function load() { return api('/api/profile').then(function (p) { PF.data = p; return p; }); }

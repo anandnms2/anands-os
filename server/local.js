@@ -11,6 +11,7 @@ import { handleMailService } from './calmail.js';
 import * as mail from './mail.js';
 import * as mailbox from './mailbox.js';
 import { sessionOf, userFromSession } from './session.js';
+import { allowed } from './team.js';
 import { json, readJson, httpError } from './util.js';
 import { llmChat } from './chat.js';
 import * as dav from './webdav.js';
@@ -66,8 +67,9 @@ function resolve(p, user) {
   const parts = rel.split('/').filter((x) => x && x !== '.');
   if (parts[0] && user && parts[0].toLowerCase() === String(user.username).toLowerCase()) parts.shift();
   if (parts.some((x) => x === '..')) throw httpError(400, 'Bad path', 'bad_path');
-  const abs = path.join(FS_ROOT, ...parts);
-  if (abs !== FS_ROOT && !abs.startsWith(FS_ROOT + path.sep)) throw httpError(400, 'Bad path', 'bad_path');
+  const base = user && user.home ? path.join(FS_ROOT, user.home) : FS_ROOT; if (user && user.home) fs.mkdirSync(base, { recursive: true });
+  const abs = path.join(base, ...parts);
+  if (abs !== base && !abs.startsWith(base + path.sep)) throw httpError(400, 'Bad path', 'bad_path');
   return { abs, rel: '/' + parts.join('/') };
 }
 /* Mail keeps messages in <home>/.mail. Nothing delivers into it here, so create the folders on first look instead of showing a permission gate that can never pass. */
@@ -82,6 +84,7 @@ function driveRel(p, user) {
   const parts = String(p ?? '/').replace(/\\/g, '/').replace(/^~/, '').split('/').filter((x) => x && x !== '.');
   if (parts[0] && user && parts[0].toLowerCase() === String(user.username).toLowerCase()) parts.shift();
   const m = parts[0] && MOUNTS.find((x) => x.dir.toLowerCase() === parts[0].toLowerCase()); if (!m) return null;
+  if (user && user.home && !(user.drive)) throw httpError(403, 'Your Drive is not shared with you', 'forbidden');
   if (parts.some((x) => x === '..')) throw httpError(400, 'Bad path', 'bad_path');
   return { m, rel: '/' + parts.slice(1).join('/') };
 }
@@ -164,13 +167,17 @@ function sendFile(res, abs, st) {
 export async function handleLocal(req, res, url) {
   const s = sessionOf(req); if (!s) throw httpError(401, 'Sign in first', 'auth_required');
   const user = userFromSession(s);
+  if (user.home) { user.drive = allowed(s, 'drive'); }
   const p = url.pathname.replace(/^\/_local/, '');
-  if (p === '/auth/user' && req.method === 'GET') return json(res, 200, { ...user, email: mailbox.defaultAddress() || user.email || effective().mail.from || null });
+  if (user.home && (p.startsWith('/workers/') || p.startsWith('/mail-service/') || p.startsWith('/mail/'))) throw httpError(403, 'Only the owner can use this', 'forbidden');
+  if (p === '/auth/user' && req.method === 'GET') return json(res, 200, { ...user, email: user.home ? (user.email || null) : (mailbox.defaultAddress() || user.email || effective().mail.from || null) });
   if (p === '/fs/get' && req.method === 'GET') { if (driveRel(url.searchParams.get('path'), user) !== null) return driveFs(p, req, res, url, {}, user); const { abs } = resolve(url.searchParams.get('path'), user); let st; try { st = await fsp.stat(abs); } catch { throw notFound(); } if (st.isDirectory()) throw httpError(400, 'Is a directory'); return sendFile(res, abs, st); }
   if (req.method !== 'POST') throw httpError(405, 'Method not allowed');
   const app = slug(req.headers['x-app']);
-  if (p === '/kv') { const b = await readJson(req, 9 * 1024 * 1024); return json(res, 200, { result: kvOp(app, b) }); }
-  if (p === '/ai/chat') { const b = await readJson(req, 2 * 1024 * 1024); return json(res, 200, await llmChat(b.messages, { model: b.model, temperature: b.temperature })); }
+  const kvApp = user.home ? ('m' + user.mid + '-' + app).slice(0, 60) : app;
+  if (p === '/kv') { const b = await readJson(req, 9 * 1024 * 1024); return json(res, 200, { result: kvOp(kvApp, b) }); }
+  if (p === '/ai/chat') {
+    if (user.home && !allowed(s, 'chat')) throw httpError(403, 'The assistant is not shared with you', 'forbidden'); const b = await readJson(req, 2 * 1024 * 1024); return json(res, 200, await llmChat(b.messages, { model: b.model, temperature: b.temperature })); }
   if (p === '/fs/write') {
     if (driveRel(url.searchParams.get('path'), user) !== null) return driveWrite(req, res, url, user);
     const { abs, rel } = resolve(url.searchParams.get('path'), user);

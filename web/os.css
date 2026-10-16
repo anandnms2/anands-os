@@ -1052,3 +1052,15 @@ html.offline #top{margin-top:30px}
 .shf{display:flex;gap:6px;flex-wrap:wrap}
 .shact{display:grid;gap:8px}
 .shact .btn{display:flex;align-items:center;gap:10px;justify-content:flex-start;padding:12px 14px}
+/* colorful app icons */
+.svc .ic.img{background:none;border:0;padding:0;overflow:hidden}.svc .ic.img img{width:100%;height:100%;display:block;border-radius:inherit}
+.dk-rg img{width:18px;height:18px;border-radius:5px}
+/* team and guests */
+html.guest .deskbtn{display:none}
+.tmform{margin:14px 0}.tmrow{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}.tmrow label{display:flex;flex-direction:column;gap:4px;flex:1;min-width:180px;font-size:12.5px;color:var(--muted)}
+.tmrow input,.tmrow select{padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:inherit}
+.tmh{margin:14px 0 6px;font-size:13px}.tmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.tmck{display:flex;gap:9px;align-items:flex-start;padding:9px 11px;border:1px solid var(--line);border-radius:11px;cursor:pointer}.tmck small{display:block;color:var(--muted);font-size:12px}.tmck em{color:var(--accent-text);font-style:normal}
+.tmsuite{margin-top:10px}.tmchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.tmchips .chip{display:inline-flex;gap:5px;align-items:center;padding:4px 9px;border:1px solid var(--line);border-radius:99px;font-size:12px}
+.tmact{display:flex;gap:8px;margin-top:14px}.tmlink{margin:14px 0}.tmcopy{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.tmcopy input{flex:1;min-width:220px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.tmbtns{display:flex;gap:6px;flex-wrap:wrap}
