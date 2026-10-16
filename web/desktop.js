@@ -77,6 +77,8 @@
   }
   function icons() {
     var cat = catalog(), ids = deskIds().filter(function (id) { return cat.some(function (i) { return i.id === id; }); }), pos = cells(ids);
+    var box = $('#dkicons'), mob = window.matchMedia('(max-width:760px)').matches; box.classList.toggle('mob', mob);
+    if (mob) { box.innerHTML = ids.map(function (id) { var it = cat.filter(function (i) { return i.id === id; })[0]; return '<button class="dk-ic" ' + itAttr(it) + '>' + itGlyph(it) + '<span>' + esc(it.name) + '</span></button>'; }).join(''); return; }
     $('#dkicons').innerHTML = ids.map(function (id) { var it = cat.filter(function (i) { return i.id === id; })[0]; return '<button class="dk-ic" style="left:' + pos[id][0] * CW + 'px;top:' + pos[id][1] * CH + 'px" ' + itAttr(it) + '>' + itGlyph(it) + '<span>' + esc(it.name) + '</span></button>'; }).join('');
   }
   function iconsArrange(mode) {
@@ -90,7 +92,7 @@
   (function iconDrag() {
     var st = null;
     document.addEventListener('pointerdown', function (e) {
-      var b = e.target.closest && e.target.closest('#dkicons .dk-ic'); if (!b || e.button) return;
+      var b = e.target.closest && e.target.closest('#dkicons .dk-ic'); if (!b || e.button || b.parentNode.classList.contains('mob')) return;
       st = { b: b, x: e.clientX, y: e.clientY, id: b.getAttribute('data-k'), on: false, l: parseFloat(b.style.left), t: parseFloat(b.style.top) };
     });
     document.addEventListener('pointermove', function (e) {

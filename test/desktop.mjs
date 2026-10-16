@@ -306,6 +306,13 @@ try {
     const q = await m.newPage(); await q.goto(B + '/'); await q.waitForSelector('#top .deskbtn'); await q.click('#top .deskbtn'); await q.waitForSelector('#desk:not([hidden])');  await q.click('.dk-ic[data-w="files"]', { timeout: 5000 }); await q.waitForSelector('.dkw');
     const bb = await q.locator('.dkw').boundingBox(); assert.ok(bb.width >= 385); const tk = await q.locator('.dk-task').boundingBox(); assert.ok(Math.abs(tk.y + tk.height - 780) <= 1, 'taskbar sits at the bottom of the screen'); assert.ok(Math.abs(bb.y + bb.height - tk.y) <= 1, 'window fills the space above the taskbar'); assert.ok(await q.evaluate(() => getComputedStyle(document.querySelector('.dkw-body')).overscrollBehaviorY === 'contain')); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await shot(q, 'desktop-mobile'); await m.close();
   });
+  await t('mobile: desktop icons form a scrolling 4-column grid with nothing overlapping', async () => {
+    const m = await browser.newContext({ viewport: { width: 390, height: 780 }, colorScheme: 'dark' }); await m.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
+    const q = await m.newPage(); await q.goto(B + '/'); await q.waitForSelector('#top .deskbtn'); await q.click('#top .deskbtn'); await q.waitForSelector('.dk-icons.mob .dk-ic');
+    const r = await q.$$eval('.dk-icons.mob .dk-ic', (a) => a.map((e) => { const b = e.getBoundingClientRect(); return [Math.round(b.x), Math.round(b.y), Math.round(b.width), Math.round(b.height)]; }));
+    assert.equal(new Set(r.map((x) => x[0])).size, 4, 'four columns'); for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) { const a = r[i], b = r[j]; assert.ok(a[0] + a[2] <= b[0] + 1 || b[0] + b[2] <= a[0] + 1 || a[1] + a[3] <= b[1] + 1 || b[1] + b[3] <= a[1] + 1, 'icons ' + i + ' and ' + j + ' overlap'); }
+    assert.equal(await q.locator('.dk-task .dk-tray').first().isVisible(), false); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await m.close();
+  });
   await t('no page errors', async () => assert.deepEqual(errs, []));
 } finally { await browser.close(); srv.kill(); dav.close(); google.close(); llm.close(); site.close(); }
 console.log(`\n${pass} passed, ${failed} failed`); if (failed) console.log(log.slice(-1500)); process.exit(failed ? 1 : 0);
