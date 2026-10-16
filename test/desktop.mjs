@@ -111,7 +111,7 @@ try {
     await p.click('.dkw[aria-label="Google Drive"] [data-dk="wclose"]');
   });
   await t('right-click menus: desktop, icon, window title bar, taskbar button', async () => {
-    await p.click('#dkicons [data-w="os:photos"]'); await p.waitForSelector('.dkw[aria-label="Photos"]');
+    await p.locator('#dkicons [data-w="os:photos"]').evaluate((b) => b.click()); await p.waitForSelector('.dkw[aria-label="Photos"]');
     await p.dispatchEvent('.dk-wall', 'contextmenu', { clientX: 600, clientY: 500, bubbles: true }); assert.ok(await p.locator('#dkctx button', { hasText: 'Open Files' }).isVisible()); assert.ok(await p.locator('#dkctx button', { hasText: 'Show desktop' }).isVisible());
     await p.keyboard.press('Escape');
     await p.click('#dkicons [data-w="browser"]', { button: 'right' }); assert.ok(await p.locator('#dkctx button', { hasText: /^Open$/ }).isVisible()); await p.keyboard.press('Escape');
@@ -134,15 +134,24 @@ try {
     await w.locator('[data-calc="C"]').click(); await p.keyboard.type('10/4'); await p.keyboard.type('+50%='); assert.equal(await val(), '3'); await p.keyboard.type('1/0='); assert.equal(await val(), 'Error');
     assert.equal(await p.locator('.dk-rb[title="Calculator"]').count(), 1); await w.locator('.dk-wc [data-dk="wclose"]').evaluate((b) => b.click());
   });
+  await t('Desktop icons: grid, drag to move and swap, sort, line up', async () => {
+    const box = async (k) => p.locator('#dkicons [data-k="' + k + '"]').evaluate((e) => [parseFloat(e.style.left), parseFloat(e.style.top)]);
+    const a = await box('browser'), b = await box('files'); assert.equal(a[0] % 100, 0); assert.equal(a[1] % 106, 0);
+    const bb = await p.locator('#dkicons [data-k="browser"]').boundingBox(), fb = await p.locator('#dkicons [data-k="files"]').boundingBox();
+    await p.mouse.move(bb.x + 40, bb.y + 40); await p.mouse.down(); await p.mouse.move(fb.x + 40, fb.y + 44, { steps: 8 }); await p.mouse.up();
+    assert.deepEqual(await box('browser'), b); assert.deepEqual(await box('files'), a);
+    assert.equal(await p.locator('.dkw[aria-label="Browser"]').count(), 0, 'a drag does not open the app');
+    await p.reload(); await p.waitForSelector('#dkicons .dk-ic'); assert.deepEqual(await box('files'), a);
+  });
   await t('Desktop has Photos, Pulse, Cards, Vault, Insights, VPN and Browser as apps', async () => {
     for (const v of ['browser', 'os:photos', 'os:pulse', 'os:cards', 'os:vault', 'os:insights', 'os:vpn']) assert.equal(await p.locator('#dkicons [data-dk="launch"][data-w="' + v + '"]').count(), 1, v);
     await p.click('.dk-start'); await p.waitForSelector('#dkmenu:not([hidden])'); for (const v of ['browser', 'os:photos', 'os:pulse']) assert.equal(await p.locator('#dkmenu [data-w="' + v + '"]').count(), 1, v); await p.click('.dk-start');
   });
   await t('Photos and Pulse open in windows without the OS frame', async () => {
-    await p.dblclick('#dkicons [data-w="os:photos"]').catch(() => {}); if (!(await p.locator('.dkw[aria-label="Photos"]').count())) await p.click('#dkicons [data-w="os:photos"]');
+    if (!(await p.locator('.dkw[aria-label="Photos"]').count())) await p.locator('#dkicons [data-w="os:photos"]').evaluate((b) => b.click());
     await p.waitForSelector('.dkw[aria-label="Photos"] iframe'); const fr = p.frameLocator('.dkw[aria-label="Photos"] iframe'); await fr.locator('#view h1').first().waitFor(); assert.equal(await fr.locator('#view h1').first().innerText(), 'Photos');
     assert.equal(await fr.locator('#rail').isVisible(), false); assert.equal(await fr.locator('#top').isVisible(), false); await shot(p, 'desktop-photos');
-    await p.click('#dkicons [data-w="os:pulse"]'); await p.waitForSelector('.dkw[aria-label="Pulse"] iframe'); await p.frameLocator('.dkw[aria-label="Pulse"] iframe').locator('#view h1').first().waitFor();
+    await p.locator('#dkicons [data-w="os:pulse"]').evaluate((b) => b.click()); await p.waitForSelector('.dkw[aria-label="Pulse"] iframe'); await p.frameLocator('.dkw[aria-label="Pulse"] iframe').locator('#view h1').first().waitFor();
     assert.equal(await p.locator('.dkw[aria-label="Pulse"]').count(), 1); await p.locator('#dkicons [data-w="os:pulse"]').evaluate((b) => b.click()); assert.equal(await p.locator('.dkw[aria-label="Pulse"]').count(), 1, 'reuses the open window');
   });
   await t('Browser: start page, address bar, links, forms, back and forward', async () => {

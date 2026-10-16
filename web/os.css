@@ -588,7 +588,7 @@ button.prow{cursor:pointer}button.prow:hover{background:var(--accent-soft)}
 #desk[hidden]{display:none}
 body.dk-on{overflow:hidden}
 .dk-wall{position:absolute;inset:0}
-.dk-icons{position:absolute;left:18px;top:16px;bottom:70px;display:flex;flex-direction:column;flex-wrap:wrap;gap:10px;align-content:flex-start}
+.dk-icons{position:absolute;left:12px;top:12px;right:12px;bottom:70px;pointer-events:none}.dk-icons .dk-ic{pointer-events:auto;position:absolute;touch-action:none;user-select:none}.dk-ic.drag{z-index:3;opacity:.85;background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.35);cursor:grabbing}
 .dk-ic{width:88px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px;border:1px solid transparent;border-radius:10px;background:none;color:#fff;font:inherit;font-size:12.5px;cursor:pointer;text-shadow:0 1px 4px rgba(0,0,0,.7);text-align:center}
 .dk-ic:hover,.dk-ic:focus-visible{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25)}
 .dk-ic img{width:46px;height:46px;border-radius:11px}

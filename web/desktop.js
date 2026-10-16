@@ -66,10 +66,46 @@
   function setPins(l) { LS.set('deskpins', l); task(); }
   function used(id) { var u = LS.get('deskuse', {}) || {}; u[id] = (u[id] || 0) + 1; LS.set('deskuse', u); var r = (LS.get('deskrecent', []) || []).filter(function (x) { return x !== id; }); r.unshift(id); LS.set('deskrecent', r.slice(0, 6)); }
   function toggle(list, id, on) { var l = list.filter(function (x) { return x !== id; }); if (on) l.push(id); return l; }
-  function icons() {
-    var cat = catalog();
-    $('#dkicons').innerHTML = deskIds().map(function (id) { return cat.filter(function (i) { return i.id === id; })[0]; }).filter(Boolean).map(function (it) { return '<button class="dk-ic" ' + itAttr(it) + '>' + itGlyph(it) + '<span>' + esc(it.name) + '</span></button>'; }).join('');
+  /* Desktop icons sit on a grid. Each has a cell (column, row); drag one onto another cell to move it, onto an icon to swap. */
+  var CW = 100, CH = 106;
+  function gridSize() { var c = $('#dkicons'); return { cols: Math.max(1, Math.floor(((c && c.clientWidth) || 800) / CW)), rows: Math.max(1, Math.floor(((c && c.clientHeight) || 600) / CH)) }; }
+  function cells(ids) {
+    var g = gridSize(), saved = LS.get('deskpos', {}) || {}, taken = {}, out = {};
+    ids.forEach(function (id) { var q = saved[id]; if (q && q[0] < g.cols && q[1] < g.rows && !taken[q[0] + ',' + q[1]]) { taken[q[0] + ',' + q[1]] = id; out[id] = [q[0], q[1]]; } });
+    var c = 0, r = 0; ids.forEach(function (id) { if (out[id]) return; while (taken[c + ',' + r]) { r++; if (r >= g.rows) { r = 0; c++; } } if (c >= g.cols) { c = g.cols - 1; r = g.rows - 1; } taken[c + ',' + r] = id; out[id] = [c, r]; });
+    return out;
   }
+  function icons() {
+    var cat = catalog(), ids = deskIds().filter(function (id) { return cat.some(function (i) { return i.id === id; }); }), pos = cells(ids);
+    $('#dkicons').innerHTML = ids.map(function (id) { var it = cat.filter(function (i) { return i.id === id; })[0]; return '<button class="dk-ic" style="left:' + pos[id][0] * CW + 'px;top:' + pos[id][1] * CH + 'px" ' + itAttr(it) + '>' + itGlyph(it) + '<span>' + esc(it.name) + '</span></button>'; }).join('');
+  }
+  function iconsArrange(mode) {
+    var cat = catalog(), ids = deskIds().filter(function (id) { return cat.some(function (i) { return i.id === id; }); });
+    if (mode === 'name') { var nm = function (id) { return cat.filter(function (i) { return i.id === id; })[0].name.toLowerCase(); }; ids.sort(function (a, b) { return nm(a) < nm(b) ? -1 : nm(a) > nm(b) ? 1 : 0; }); LS.set('deskicons', ids); }
+    LS.set('deskpos', {}); icons();
+  }
+  (function iconDrag() {
+    var st = null;
+    document.addEventListener('pointerdown', function (e) {
+      var b = e.target.closest && e.target.closest('#dkicons .dk-ic'); if (!b || e.button) return;
+      st = { b: b, x: e.clientX, y: e.clientY, id: b.getAttribute('data-k'), on: false, l: parseFloat(b.style.left), t: parseFloat(b.style.top) };
+    });
+    document.addEventListener('pointermove', function (e) {
+      if (!st) return; var dx = e.clientX - st.x, dy = e.clientY - st.y;
+      if (!st.on) { if (Math.abs(dx) + Math.abs(dy) < 7) return; st.on = true; st.b.classList.add('drag'); try { st.b.setPointerCapture(e.pointerId); } catch (x) {} }
+      st.b.style.left = (st.l + dx) + 'px'; st.b.style.top = (st.t + dy) + 'px'; e.preventDefault();
+    });
+    function end(e) {
+      if (!st) return; var s = st; st = null; if (!s.on) return; s.b.classList.remove('drag'); D.noClick = Date.now();
+      var g = gridSize(), ids = deskIds(), pos = cells(ids), c = Math.max(0, Math.min(g.cols - 1, Math.round((parseFloat(s.b.style.left)) / CW))), r = Math.max(0, Math.min(g.rows - 1, Math.round((parseFloat(s.b.style.top)) / CH))), from = pos[s.id];
+      var other = ids.filter(function (i) { return i !== s.id && pos[i] && pos[i][0] === c && pos[i][1] === r; })[0];
+      var all = {}; ids.forEach(function (i) { all[i] = pos[i]; }); all[s.id] = [c, r]; if (other) all[other] = from; LS.set('deskpos', all); icons();
+    }
+    document.addEventListener('dragstart', function (e) { if (e.target.closest && e.target.closest('#dkicons')) e.preventDefault(); });
+    document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+    document.addEventListener('click', function (e) { if (D.noClick && Date.now() - D.noClick < 400 && e.target.closest && e.target.closest('#dkicons .dk-ic')) { e.stopPropagation(); e.preventDefault(); D.noClick = 0; } }, true);
+    window.addEventListener('resize', function () { if (D.open) icons(); });
+  })();
   function pinBtn(it) { return '<button class="dk-pin" ' + itAttr(it) + ' title="' + esc(it.name) + '">' + (it.img ? '<img src="' + esc(it.img) + '" alt="">' : ic(it.ic)) + '</button>'; }
   function task() {
     var cat = catalog(), pins = pinIds().map(function (id) { return cat.filter(function (i) { return i.id === id; })[0]; }).filter(Boolean);
@@ -458,6 +494,8 @@
     if (D.menu && (a === 'launch' || a === 'app' || a === 'settings' || a === 'chooser')) { D.menu = false; menu(); task(); }
     if (a === 'launch' || a === 'app') { try { used(a === 'app' ? 'app:' + b.getAttribute('data-s') : b.getAttribute('data-w')); } catch (e) {} }
     if (a === 'mcat') { D.cat = b.getAttribute('data-c'); return void menu(); }
+    if (a === 'isort') return void iconsArrange('name');
+    if (a === 'iauto') return void iconsArrange('auto');
     if (a === 'chooser') { D.menu = false; menu(); task(); return void chooser(); }
     if (a === 'chdone' && w) return void closeWin(w);
     if (a === 'chsuggest') { setIcons(suggest()); return void chRepaint(); }
@@ -512,7 +550,7 @@
   document.addEventListener('contextmenu', function (ev) {
     if (!D.open) return; var t = ev.target; if (!t.closest || t.closest('#dkctx')) return ev.preventDefault();
     if (t.closest('input, textarea, [contenteditable], canvas, iframe')) return;
-    var deskItems = [['Choose desktop icons...', 'chooser'], ['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], ['Keyboard shortcuts', 'keys'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
+    var deskItems = [['Sort icons by name', 'isort'], ['Line icons up in the grid', 'iauto'], ['Choose desktop icons...', 'chooser'], ['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], ['Keyboard shortcuts', 'keys'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
     var el;
     if ((el = t.closest('.dkw-bar'))) { var w = byId(el.closest('.dkw').getAttribute('data-id')); if (!w) return; ev.preventDefault(); return ctx(ev, winItems(w).concat([['Close all windows', 'closeall']])); }
     if ((el = t.closest('.dk-rb'))) { var w2 = byId(el.getAttribute('data-id')); if (!w2) return; ev.preventDefault(); return ctx(ev, winItems(w2)); }
