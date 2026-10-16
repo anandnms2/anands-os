@@ -48,8 +48,9 @@
   var TOOLS = [['editor', 'Editor', '/tools/editor.html', 1000, 640, 'file'], ['player', 'Player', '/tools/player.html', 920, 600, 'play'], ['recorder', 'Recorder', '/tools/recorder.html', 820, 640, 'mic'], ['terminal', 'Terminal', '/tools/terminal.html', 900, 580, 'terminal'], ['money', 'Money', '/tools/money.html#overview', 1040, 660, 'card'], ['subs', 'Subscriptions', '/tools/money.html#subs', 940, 640, 'card'], ['invest', 'Investments', '/tools/money.html#invest', 980, 640, 'card'], ['belong', 'Belongings', '/tools/home.html#belong', 980, 640, 'folder'], ['house', 'Household', '/tools/home.html#house', 940, 640, 'folder']];
   var SYS = [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat']].concat(TOOLS.map(function (o) { return ['tool:' + o[0], o[1], o[5]]; })).concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; }));
   var DEF_ICONS = ['browser', 'files', 'ai'].concat(OSAPPS.map(function (o) { return 'os:' + o[0]; })).concat(['google']).concat(TOOLS.map(function (o) { return 'tool:' + o[0]; })), DEF_PINS = ['browser', 'files', 'ai'];
+  var NCAT = { 'tool:editor': 'Developer Tools', 'tool:terminal': 'Developer Tools', 'tool:player': 'Creative Tools', 'tool:recorder': 'Creative Tools', 'tool:money': 'Finance', 'tool:subs': 'Finance', 'tool:invest': 'Finance', 'tool:belong': 'Productivity', 'tool:house': 'Productivity', 'os:photos': 'Creative Tools', 'os:pulse': 'Productivity', 'os:cards': 'Business', 'os:vault': 'Productivity', 'os:insights': 'Engineering', 'os:servers': 'Engineering', 'os:vpn': 'Engineering' };
   function catalog() {
-    var l = SYS.map(function (i) { return { id: i[0], name: i[1], ic: i[2], cat: 'System', hay: i[1] + ' system' + (i[0] === 'google' ? ' drive cloud' : '') + (i[0] === 'browser' ? ' web internet' : '') }; });
+    var l = SYS.map(function (i) { return { id: i[0], name: i[1], ic: i[2], cat: NCAT[i[0]] || 'System', hay: i[1] + ' system' + (i[0] === 'google' ? ' drive cloud' : '') + (i[0] === 'browser' ? ' web internet' : '') }; });
     apps().forEach(function (a) { l.push({ id: 'app:' + a.slug, name: a.name, img: '/_icons/' + a.slug + '.png', slug: a.slug, cat: CATS.indexOf(a.category) >= 0 ? a.category : 'Other', hay: a.name + ' ' + (a.category || '') + ' ' + (a.alternativeTo || '') }); });
     return l;
   }
@@ -115,11 +116,12 @@
     o = o || {}; var ar = area(), small = ar.w < 760, n = D.n++, w = { id: 'w' + (++D.id0), kind: kind, title: title, icon: o.icon || '', x: 230 + (n % 8) * 30, y: 40 + (n % 8) * 26, w: Math.min(o.w || 900, ar.w - 20), h: Math.min(o.h || 580, ar.h - 20), min: false, max: small, z: ++D.z, data: o.data || {} };
     w.x = Math.max(0, Math.min(w.x, ar.w - w.w)); w.y = Math.max(0, Math.min(w.y, ar.h - w.h));
     var el = document.createElement('div'); el.className = 'dkw'; el.setAttribute('data-id', w.id); el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', title);
-    el.innerHTML = '<div class="dkw-bar" data-bar><span class="dkw-t">' + (w.icon ? '<img src="' + esc(w.icon) + '" alt="">' : '') + '<b>' + esc(title) + '</b></span><span class="sp"></span><button data-dk="wmin" data-id="' + w.id + '" aria-label="Minimise">&#8211;</button><button data-dk="wmax" data-id="' + w.id + '" aria-label="Maximise">&#9633;</button><button class="x" data-dk="wclose" data-id="' + w.id + '" aria-label="Close">&#10005;</button></div><div class="dkw-body"></div><i class="rz rz-r" data-rz="r"></i><i class="rz rz-b" data-rz="b"></i><i class="rz rz-br" data-rz="br"></i>';
+    el.innerHTML = '<div class="dkw-bar" data-bar><span class="dkw-t">' + (w.icon ? '<img src="' + esc(w.icon) + '" alt="">' : '') + '<b>' + esc(title) + '</b></span><span class="sp"></span><button data-dk="wtab" data-id="' + w.id + '" aria-label="Open in a new tab" title="Open in a new tab" hidden><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg></button><button data-dk="wmin" data-id="' + w.id + '" aria-label="Minimise">&#8211;</button><button data-dk="wmax" data-id="' + w.id + '" aria-label="Maximise">&#9633;</button><button class="x" data-dk="wclose" data-id="' + w.id + '" aria-label="Close">&#10005;</button></div><div class="dkw-body"></div><i class="rz rz-r" data-rz="r"></i><i class="rz rz-b" data-rz="b"></i><i class="rz rz-br" data-rz="br"></i>';
     el.insertAdjacentHTML('beforeend', '<div class="dk-wc"><button data-dk="wmin" data-id="' + w.id + '" aria-label="Minimise">&#8211;</button><button data-dk="wmax" data-id="' + w.id + '" aria-label="Exit full screen">&#10530;</button><button data-dk="wclose" data-id="' + w.id + '" aria-label="Close">&#10005;</button></div>');
     w.el = el; w.body = el.querySelector('.dkw-body'); $('#dkwins').appendChild(el); D.wins.push(w); place(w); focus(w); task(); return w;
   }
   D.id0 = 0;
+  function tabUrl(w, u) { w.url = u; var b = w.el.querySelector('[data-bar] [data-dk="wtab"]'); if (b) b.hidden = !u; }
   var sessT = 0;
   function saveSess() {
     clearTimeout(sessT); sessT = setTimeout(function () {
@@ -154,7 +156,7 @@
     var a = appBy(slug); if (!a) return toast('That app is not available');
     var r = (LS.get('recent', []) || []).filter(function (x) { return x !== slug; }); r.unshift(slug); LS.set('recent', r.slice(0, 6)); try { var rl = (LS.get('rlist', []) || []).filter(function (x) { return x !== 'a:' + slug; }); rl.unshift('a:' + slug); LS.set('rlist', rl.slice(0, 8)); } catch (e) {}
     var w = mk('app', a.name, { icon: '/_icons/' + a.slug + '.png', w: 980, h: 640 }); w.sd = { t: 'app', slug: a.slug, file: file || '' };
-    w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(a.name) + '" src="/apps/' + esc(a.slug) + '/' + (file ? '?open=' + enc(file) : '') + '" allow="clipboard-read; clipboard-write; fullscreen; microphone; camera; display-capture"></iframe>'; icons();
+    w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(a.name) + '" src="/apps/' + esc(a.slug) + '/' + (file ? '?open=' + enc(file) : '') + '" allow="clipboard-read; clipboard-write; fullscreen; microphone; camera; display-capture"></iframe>'; icons(); tabUrl(w, '/apps/' + a.slug + '/' + (file ? '?open=' + enc(file) : ''));
     return w;
   }
   function openFileInApp(path) {
@@ -170,13 +172,13 @@
     var ex = D.wins.filter(function (x) { return x.kind === 'tool' && x.tool === id; })[0];
     if (ex) { focus(ex); if (path) { try { ex.body.querySelector('iframe').contentWindow.postMessage({ aosTool: 'open', path: path }, location.origin); } catch (e) {} } return ex; }
     var w = mk('tool', o[1], { w: o[3], h: o[4], icon: '/oicons/' + id + '.svg' }); w.tool = id; w.sd = { t: 'tool', id: id, path: path || '' };
-    w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(o[1]) + '" src="' + o[2] + (path ? '?path=' + enc(path) : '') + '" allow="clipboard-read; clipboard-write; fullscreen; microphone; camera; display-capture; autoplay"></iframe>'; return w;
+    w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(o[1]) + '" src="' + o[2] + (path ? '?path=' + enc(path) : '') + '" allow="clipboard-read; clipboard-write; fullscreen; microphone; camera; display-capture; autoplay"></iframe>'; tabUrl(w, o[2] + (path ? '?path=' + enc(path) : '')); return w;
   }
   function osWin(view) {
     var o = OSAPPS.filter(function (x) { return x[0] === view; })[0]; if (!o) return;
     var ex = D.wins.filter(function (x) { return x.kind === 'os' && x.view === view; })[0]; if (ex) { focus(ex); return ex; }
     var w = mk('os', o[1], { w: 1040, h: 660 }); w.view = view; w.sd = { t: 'os', view: view };
-    w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(o[1]) + '" src="/?embed=1#' + esc(view) + '" allow="clipboard-read; clipboard-write; fullscreen"></iframe>'; return w;
+    w.body.innerHTML = '<iframe class="dkw-frame" title="' + esc(o[1]) + '" src="/?embed=1#' + esc(view) + '" allow="clipboard-read; clipboard-write; fullscreen"></iframe>'; tabUrl(w, '/#' + view); return w;
   }
 
   /* ---------- browser ---------- */
@@ -368,7 +370,7 @@
   function filesWin(src) {
     var url = '/?embed=1' + (src === 'google' ? '&root=google' : '') + '#drive', ex = D.wins.filter(function (x) { return x.kind === 'files'; })[0];
     if (ex) { var fr = ex.body.querySelector('iframe'); if (fr && ex.src !== src) { fr.src = url; ex.src = src; } ex.title = src === 'google' ? 'Google Drive' : 'Files'; ex.el.querySelector('.dkw-t b').textContent = ex.title; focus(ex); return ex; }
-    var w = mk('files', src === 'google' ? 'Google Drive' : 'Files', { w: 1080, h: 680 }); w.src = src; w.sd = { t: 'files', src: src || '' };
+    var w = mk('files', src === 'google' ? 'Google Drive' : 'Files', { w: 1080, h: 680 }); w.src = src; w.sd = { t: 'files', src: src || '' }; tabUrl(w, '/#drive');
     w.body.innerHTML = '<iframe class="dkw-frame" title="Files" src="' + url + '" allow="clipboard-read; clipboard-write; fullscreen"></iframe>'; return w;
   }
 
@@ -434,6 +436,7 @@
     if (w && (a === 'bmstar' || a === 'bmgo') && window.AOSBS) return void (a === 'bmstar' ? AOSBS.star(w) : AOSBS.go(w, b.getAttribute('data-u')));
     if (w && w.kind === 'rbrowser' && /^rb/.test(a)) return void rbHand(a, b, w);
     if (w && w.kind === 'browser' && /^b/.test(a) && a !== 'bar') return void bhand(a, b, w);
+    if (a === 'wtab' && w) { if (w.url) window.open(w.url, '_blank', 'noopener'); return; }
     if (a === 'wmin' && w) { w.min = true; place(w); task(); return; }
     if (a === 'wmax' && w) { w.max = !w.max; place(w); return; }
     if (a === 'wclose' && w) return void closeWin(w);

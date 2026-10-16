@@ -1,16 +1,18 @@
-/* Money, Subscriptions and Investments as pages inside Anands OS (the app itself lives in /tools/money.html). */
+/* Native Anands apps (Money, Subscriptions, Investments, Belongings, Household, Editor, Player, Recorder, Terminal) as pages inside
+ * the OS. Each page is a tool in /tools; the bar on top offers the same "New tab" as the Suite apps. */
 (function () {
   'use strict';
-  var TAB = { money: 'overview', subs: 'subs', invest: 'invest' }, TITLE = { money: 'Money', subs: 'Subscriptions', invest: 'Investments' };
-  Object.keys(TAB).forEach(function (v) {
-    window.AOSViews[v] = function () {
-      return '<div class="wrap appwin" style="display:flex;flex-direction:column;height:100%;max-width:none;padding:0"><iframe class="appframe" title="' + TITLE[v] + '" src="/tools/money.html?embed=1#' + TAB[v] + '" allow="clipboard-write"></iframe></div>';
-    };
-  });
-  var PAGES = { editor: ['Editor', 'editor.html'], player: ['Player', 'player.html'], recorder: ['Recorder', 'recorder.html'], terminal: ['Terminal', 'terminal.html'], belong: ['Belongings', 'home.html#belong'], house: ['Household', 'home.html#house'] };
+  var PAGES = {
+    money: ['Money', 'money.html#overview'], subs: ['Subscriptions', 'money.html#subs'], invest: ['Investments', 'money.html#invest'],
+    belong: ['Belongings', 'home.html#belong'], house: ['Household', 'home.html#house'],
+    editor: ['Editor', 'editor.html'], player: ['Player', 'player.html'], recorder: ['Recorder', 'recorder.html'], terminal: ['Terminal', 'terminal.html']
+  };
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   Object.keys(PAGES).forEach(function (v) {
+    var p = PAGES[v], url = '/tools/' + p[1], src = url + (url.indexOf('#') < 0 ? '?embed=1' : '');
     window.AOSViews[v] = function () {
-      return '<div class="wrap appwin" style="display:flex;flex-direction:column;height:100%;max-width:none;padding:0"><iframe class="appframe" title="' + PAGES[v][0] + '" src="/tools/' + PAGES[v][1] + (PAGES[v][1].indexOf('#') < 0 ? '?embed=1' : '') + '" allow="clipboard-read; clipboard-write; fullscreen; microphone; camera; display-capture; autoplay"></iframe></div>';
+      return '<div class="wrap appwin" style="display:flex;flex-direction:column;height:100%;max-width:none"><div class="winbar"><button class="btn sm" data-act="nav" data-v="apps">Suite</button><img src="/oicons/' + v + '.svg" alt=""><b style="font-family:var(--display);font-size:20px;font-weight:500">' + esc(p[0]) + '</b><span style="flex:1"></span><span class="pill ok" title="Runs on your own server"><i class="dot"></i>Local mode</span><a class="btn sm" href="' + url + '" target="_blank" rel="noopener">New tab</a></div>' +
+        '<iframe class="appframe" title="' + esc(p[0]) + '" src="' + src + '" allow="clipboard-read; clipboard-write; fullscreen; microphone; camera; display-capture; autoplay"></iframe></div>';
     };
   });
 })();
