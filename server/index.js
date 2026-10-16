@@ -21,6 +21,7 @@ import { handleGdrive, googleCallback, gConnected, gConfigured } from './gdrive.
 import { ping as davPing } from './webdav.js';
 import { handleVault, status as vaultStatus } from './vault.js';
 import { handleLocal } from './local.js';
+import { handleSearch } from './search.js';
 import { isWorkerPath, handleWorkerRequest, isGuestPage, serveGuestPage } from './workers.js';
 import { noteOrigin, publicOrigin } from './origin.js';
 import { handlePeer, handleRooms, isPeerPath, isRoomPath } from './meet.js';
@@ -77,6 +78,7 @@ async function api(req, res, url) {
   if (p === '/api/cards' || p === '/api/my-cards' || p.startsWith('/api/my-cards/') || p.startsWith('/api/cards/') || p.startsWith('/api/cs/')) return handleCards(req, res, url);
   if (p === '/api/insights') return handleInsights(req, res, url);
   if (p === '/api/profile' || p === '/api/profile/avatar') return handleProfile(req, res, url, sessionOf(req));
+  if (p === '/api/search/files') return handleSearch(req, res, url);
   if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url);
   throw httpError(404, 'Unknown API route');
 }

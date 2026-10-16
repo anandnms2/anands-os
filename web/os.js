@@ -105,7 +105,7 @@ function buildNav() {
   $('#tabs').innerHTML = t;
 }
 /* The address bar follows the page (#photos, #vault ...), so Refresh stays on the page and Back goes to the previous one. */
-var ROUTES = ['home', 'photos', 'drive', 'vault', 'insights', 'servers', 'pulse', 'vpn', 'cards', 'apps', 'settings'], popping = false;
+var ROUTES = ['home', 'photos', 'drive', 'vault', 'insights', 'servers', 'pulse', 'vpn', 'cards', 'apps', 'settings', 'security', 'appearance', 'team'], popping = false;
 function routeNow() { var h = location.hash.replace(/^#/, ''); return ROUTES.indexOf(h) >= 0 ? h : ''; }
 function go(v, x) {
   if (!popping && ROUTES.indexOf(v) >= 0 && routeNow() !== v) { try { history.pushState({ v: v }, '', '#' + v); } catch (e) {} }
@@ -114,7 +114,7 @@ function go(v, x) {
 document.addEventListener('error', function (e) { var v = e.target; if (v && v.tagName === 'VIDEO' && v.dataset.src && !v.dataset.tx) { v.dataset.tx = '1'; v.src = v.dataset.src + '?tx=1'; v.load(); v.play().catch(function () {}); return; } var t = e.target; if (!t || t.tagName !== 'IMG' || !t.classList.contains('phimg')) return; if (!t.dataset.tried) { t.dataset.tried = '1'; t.src = '/api/photos/asset/' + t.dataset.id + '/preview'; return; } t.removeAttribute('src'); t.parentNode.classList.add('nothumb'); }, true);
 window.addEventListener('popstate', function () { if (!S.user) return; var r = routeNow() || 'home'; popping = true; try { go0(r); } finally { popping = false; } });
 var lastSeen = Date.now(); document.addEventListener('visibilitychange', function () { if (document.hidden) { lastSeen = Date.now(); return; } if (S.user && Date.now() - lastSeen > 30000 && S.view === 'photos' && S.imm && S.imm.connected && !S.lb) { var fresh = function () { return { items: [], next: 1, loading: false, error: null, loaded: false }; }; S.tl = fresh(); S.fav = fresh(); S.albums = null; loadImm(); loadAlbums(); } });
-function go0(v, x) { if (v === 'vault' && S.view !== 'vault') S.vault.noAuto = false; S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); if (window.AOSHome) window.AOSHome.onGo(v); }
+function go0(v, x) { if (window.AOSOnGo && window.AOSOnGo[v]) setTimeout(window.AOSOnGo[v], 0); if (v === 'vault' && S.view !== 'vault') S.vault.noAuto = false; S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); if (window.AOSHome) window.AOSHome.onGo(v); }
 function redraw() { var y = $('#view').scrollTop; render(); $('#view').scrollTop = y; }
 function render() {
   var app = $('#app'), tabs = $('#tabs'), fab = $('#fab');
@@ -135,6 +135,7 @@ function render() {
   else if (S.view === 'apps') v.innerHTML = appsV();
   else if (S.view === 'app') v.innerHTML = appWinV();
   else if (S.view === 'settings') v.innerHTML = settingsV();
+  else if (window.AOSViews && window.AOSViews[S.view]) v.innerHTML = window.AOSViews[S.view]();
 }
 
 /* ---------- login ---------- */
@@ -528,7 +529,7 @@ function palItems() {
 }
 function palList(q) { q = (q || '').toLowerCase().trim(); return PAL.filter(function (x) { return !q || (x.n + ' ' + x.s).toLowerCase().indexOf(q) > -1; }).slice(0, 8); }
 function palDraw(q) { var r = $('#palres'); if (!r) return; var ls = palList(q); r.innerHTML = ls.length ? ls.map(function (x, i) { return '<button class="it' + (i === 0 ? ' sel' : '') + '" data-act="pick" data-i="' + PAL.indexOf(x) + '">' + (x.img ? '<img src="' + x.img + '" alt="">' : '<span style="color:var(--accent-text)">' + ic(x.ic) + '</span>') + '<span>' + esc(x.n) + '</span><small>' + esc(x.s) + '</small></button>'; }).join('') : '<p style="margin:12px;color:var(--muted)">Nothing matches.</p>'; }
-function palette() { if (!S.user) return; PAL = palItems(); var m = $('#modal'); m.hidden = false; m.innerHTML = '<div class="modal" data-act="mx"><div class="card pal" role="dialog" aria-modal="true" aria-label="Search"><input id="pi" data-in="pal" placeholder="Search apps, albums, server resources" autocomplete="off" aria-label="Search"><div class="res" id="palres"></div></div></div>'; palDraw(''); var i = $('#pi'); if (i) i.focus(); loadAlbums().then(function () { if ($('#pi')) { PAL = palItems(); palDraw($('#pi').value); } }); }
+function palette() { if (!S.user) return; if (window.AOSOmni) return window.AOSOmni.open(); PAL = palItems(); var m = $('#modal'); m.hidden = false; m.innerHTML = '<div class="modal" data-act="mx"><div class="card pal" role="dialog" aria-modal="true" aria-label="Search"><input id="pi" data-in="pal" placeholder="Search apps, albums, server resources" autocomplete="off" aria-label="Search"><div class="res" id="palres"></div></div></div>'; palDraw(''); var i = $('#pi'); if (i) i.focus(); loadAlbums().then(function () { if ($('#pi')) { PAL = palItems(); palDraw($('#pi').value); } }); }
 function openAlbum(id, name) {
   S.tab = 'timeline'; S.pq = ''; S.album = { id: id, name: name, items: [], next: null, loading: true, loaded: false }; go('photos');
   api('/api/photos/albums/' + id).then(function (r) { S.album.items = r.items; S.album.name = r.name || name; S.album.loaded = true; }).catch(function (e) { S.album.error = e.message; S.album.loaded = true; }).then(function () { S.album.loading = false; if (S.view === 'photos') photosGrid(); });
@@ -658,6 +659,7 @@ document.addEventListener('change', function (ev) { if (ev.target.id === 'x_pr')
 $('#fab').innerHTML = ic('chat', ' style="width:26px;height:26px"');
 $('#fab').addEventListener('click', function () { openChat(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function () {});
-window.AOS = { insTabs: insTabs, S: S, $: $, esc: esc, api: api, toast: toast, LS: LS, fmt: fmt, bytes: bytes, modal: modal, OPENWITH: OPENWITH, LAUNCHES: LAUNCHES, TEXTEXT: TEXTEXT, dedOpen: dedOpen, launch: launch, connectBlock: connectBlock, ic: ic, go: go, redraw: redraw, photoCard: photoCard, curItems: curItems, openAlbum: openAlbum, loadPage: loadPage, loadAlbums: loadAlbums, photosGrid: photosGrid, drawLb: drawLb, render: render };
+window.AOSViews = window.AOSViews || {}; window.AOSOnGo = window.AOSOnGo || {};
+window.AOS = { vaultLock: function () { vLock(false); if (S.view === 'vault') redraw(); }, vaultReport: function () { var V = S.vault; if (!V.items) return null; return V.items.filter(function (i) { return i.type === 'login'; }).map(function (i) { return { id: i.id, name: i.name, user: i.user, url: i.url, flags: vFlags(i), age: i.age, totp: !!i.totp }; }); }, insTabs: insTabs, S: S, $: $, esc: esc, api: api, toast: toast, LS: LS, fmt: fmt, bytes: bytes, modal: modal, OPENWITH: OPENWITH, LAUNCHES: LAUNCHES, TEXTEXT: TEXTEXT, dedOpen: dedOpen, launch: launch, connectBlock: connectBlock, ic: ic, go: go, redraw: redraw, photoCard: photoCard, curItems: curItems, openAlbum: openAlbum, loadPage: loadPage, loadAlbums: loadAlbums, photosGrid: photosGrid, drawLb: drawLb, render: render };
 boot();
 })();

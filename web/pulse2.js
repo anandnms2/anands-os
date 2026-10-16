@@ -314,7 +314,9 @@
     if (a === 'addtask') { var t = $('#nt').value.trim(); if (!t) return toast('Write the task first'); return void s('/task', { method: 'POST', json: { title: t, due_date: $('#nd').value || undefined, pri: $('#np').value, dom: $('#ndm').value } }).then(function () { P.adding = false; toast('Task added'); return load(true).then(redraw); }).catch(function (e) { toast(e.message); }); }
     if (a === 'entsearch') { P.entq = $('#entq').value.trim(); return void loadEnts(); }
   });
-  window.AOSPulse2 = { on: on, view: view, onGo: onGo, state: P };
+  function openRef(it) { P.view = 'inbox'; P.filter = 'all'; A.LS.set('pxview', 'inbox'); P.sres = { items: [it] }; P.sel = null; A.go('pulse'); setTimeout(function () { open(it.id); }, 80); }
+  function openTask(id) { P.view = 'tasks'; A.LS.set('pxview', 'tasks'); A.go('pulse'); setTimeout(function () { pick('task', id); }, 80); }
+  window.AOSPulse2 = { on: on, view: view, onGo: onGo, state: P, openRef: openRef, openTask: openTask, load: load };
 
   /* drag the edge of the Pulse sidebar or the list pane to resize; saved on this device */
   (function () {

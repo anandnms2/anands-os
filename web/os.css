@@ -941,3 +941,39 @@ html:has(body.dk-on),body.dk-on{overflow:hidden;overscroll-behavior:none}
 .dk-star.on{color:var(--accent)}.dk-star.on .i{fill:var(--accent)}
 @media (max-width:760px){.bsb{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.bsnav{flex-direction:row;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;padding:6px}.bsnav button{flex:none;padding:8px 12px}.bsnav button span{display:inline}.bsmain{padding:4px 14px 24px}.bsr{flex-direction:column;align-items:stretch;gap:8px}.bsc{max-width:none;flex-wrap:wrap}.bsc .input{min-width:0}}
 .vremb{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);margin:2px 0 14px;line-height:1.4}.vremb input{margin-top:2px;accent-color:var(--accent)}
+
+/* ---------- Ctrl+K and Quick capture ---------- */
+.capbtn{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent-text)}
+.capbtn:hover{border-color:var(--accent)}
+.pal.omni{max-width:640px}
+.omin{display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--line);color:var(--muted)}
+.omin input{border:0;border-bottom:0;padding:16px 4px;flex:1;min-width:0}
+.omin kbd,.omfoot kbd{font:11px var(--mono);border:1px solid var(--line);border-radius:6px;padding:1px 6px;background:var(--surface2);color:var(--muted);margin-right:4px}
+.omh{padding:10px 12px 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.omic{color:var(--accent-text);display:flex}
+.omn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pal .it small{max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pal .it img{object-fit:cover}
+.omnone{margin:14px;color:var(--muted)}
+.omfoot{display:flex;gap:16px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.omfoot i{color:var(--fg)}
+.pal.omni .res{max-height:min(460px,60vh)}
+.card.cap{max-width:520px;width:100%;padding:0;overflow:hidden}
+.caph{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 6px}
+.caph h2{font-size:20px}
+.cptabs{display:flex;gap:6px;padding:8px 14px 0;overflow-x:auto}
+.cptabs button{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:none;color:var(--muted);white-space:nowrap}
+.cptabs button[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-text)}
+.cpmain{padding:14px 18px 18px;display:grid;gap:12px}
+.cpmain textarea{resize:vertical;min-height:130px}
+.cpact{display:flex;gap:10px;justify-content:flex-end}
+.cpvoice{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0}
+.cprec{width:84px;height:84px;border-radius:50%;border:3px solid var(--accent);background:none;display:flex;align-items:center;justify-content:center}
+.cprec i{width:34px;height:34px;border-radius:50%;background:var(--bad);transition:.15s}
+.cprec.on i{border-radius:8px;width:26px;height:26px;animation:cpp 1.2s infinite}
+@keyframes cpp{50%{opacity:.45}}
+.cptime{font-size:22px}
+.cpdrop{display:flex;flex-direction:column;align-items:center;gap:6px;padding:34px 12px;border:2px dashed var(--line);border-radius:16px;cursor:pointer;color:var(--muted);text-align:center}
+.cpdrop:hover{border-color:var(--accent)}
+.cpdrop b{color:var(--fg)}
+@media (max-width:760px){.capbtn{width:36px;height:36px}}
