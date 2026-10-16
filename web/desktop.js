@@ -412,41 +412,94 @@
   }
 
   /* ---------- calculator (desktop only, not part of the Suite) ---------- */
-  function calcEval(src) {
-    var t = src.replace(/\u00d7/g, '*').replace(/\u00f7/g, '/').replace(/\u2212/g, '-').replace(/,/g, ''), i = 0;
-    function ws() { while (t[i] === ' ') i++; }
-    function num() { ws(); var m = /^(\d+\.?\d*|\.\d+)/.exec(t.slice(i)); if (!m) throw 0; i += m[0].length; var v = parseFloat(m[0]); ws(); while (t[i] === '%') { v /= 100; i++; ws(); } return v; }
-    function atom() { ws(); if (t[i] === '-') { i++; return -atom(); } if (t[i] === '+') { i++; return atom(); } if (t[i] === '(') { i++; var v = expr(); ws(); if (t[i] !== ')') throw 0; i++; ws(); while (t[i] === '%') { v /= 100; i++; ws(); } return v; } return num(); }
-    function term() { var v = atom(); for (;;) { ws(); if (t[i] === '*') { i++; v *= atom(); } else if (t[i] === '/') { i++; v /= atom(); } else return v; } }
-    function expr() { var v = term(); for (;;) { ws(); if (t[i] === '+') { i++; v += term(); } else if (t[i] === '-') { i++; v -= term(); } else return v; } }
+  var CALC_FN = { sin: 1, cos: 1, tan: 1, asin: 1, acos: 1, atan: 1, ln: 1, log: 1, sqrt: 1, cbrt: 1 };
+  function calcEval(src, deg, ans) {
+    var t = String(src).replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/√/g, 'sqrt').replace(/∛/g, 'cbrt').replace(/π/g, 'pi').replace(/,/g, ''), i = 0;
     var open = (t.match(/\(/g) || []).length - (t.match(/\)/g) || []).length; while (open-- > 0) t += ')';
-    var v = expr(); ws(); if (i < t.length || !isFinite(v)) throw 0; return Math.round(v * 1e12) / 1e12;
+    function ws() { while (t[i] === ' ') i++; }
+    function fact(n) { if (n < 0 || n !== Math.floor(n) || n > 170) throw 0; var r = 1; for (var k = 2; k <= n; k++) r *= k; return r; }
+    function rad(x) { return deg ? x * Math.PI / 180 : x; } function back(x) { return deg ? x * 180 / Math.PI : x; }
+    function call(f, x) {
+      switch (f) { case 'sin': return Math.sin(rad(x)); case 'cos': return Math.cos(rad(x)); case 'tan': if (deg && Math.abs(((x % 180) + 180) % 180 - 90) < 1e-9) throw 0; return Math.tan(rad(x));
+        case 'asin': if (Math.abs(x) > 1) throw 0; return back(Math.asin(x)); case 'acos': if (Math.abs(x) > 1) throw 0; return back(Math.acos(x)); case 'atan': return back(Math.atan(x));
+        case 'ln': if (x <= 0) throw 0; return Math.log(x); case 'log': if (x <= 0) throw 0; return Math.log10(x); case 'sqrt': if (x < 0) throw 0; return Math.sqrt(x); case 'cbrt': return Math.cbrt(x); }
+      throw 0;
+    }
+    function primary() {
+      ws(); var m, rest = t.slice(i);
+      if ((m = /^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/i.exec(rest)) && !/^\d+\.?\d*e(?![+-]?\d)/i.test(rest)) { i += m[0].length; return parseFloat(m[0]); }
+      if ((m = /^\d+\.?\d*|^\.\d+/.exec(rest))) { i += m[0].length; return parseFloat(m[0]); }
+      if ((m = /^(asin|acos|atan|sin|cos|tan|ln|log|sqrt|cbrt)/.exec(rest))) { i += m[0].length; ws(); if (t[i] !== '(') throw 0; i++; var a = expr(); ws(); if (t[i] !== ')') throw 0; i++; return call(m[0], a); }
+      if (rest.indexOf('pi') === 0) { i += 2; return Math.PI; } if (rest.indexOf('Ans') === 0) { i += 3; return ans || 0; } if (rest[0] === 'e') { i++; return Math.E; }
+      if (t[i] === '(') { i++; var v = expr(); ws(); if (t[i] !== ')') throw 0; i++; return v; }
+      throw 0;
+    }
+    function postfix() { var v = primary(); for (;;) { ws(); if (t[i] === '!') { i++; v = fact(v); } else if (t[i] === '%') { i++; v /= 100; } else return v; } }
+    function power() { var b = postfix(); ws(); if (t[i] === '^') { i++; var e = unary(); var r = Math.pow(b, e); if (!isFinite(r)) throw 0; return r; } return b; }
+    function unary() { ws(); if (t[i] === '-') { i++; return -unary(); } if (t[i] === '+') { i++; return unary(); } return power(); }
+    function startsOperand() { ws(); return t[i] === '(' || /^(\d|\.|pi|Ans|e(?![+\-\d])|asin|acos|atan|sin|cos|tan|ln|log|sqrt|cbrt)/.test(t.slice(i)); }
+    function term() { var v = unary(); for (;;) { ws(); if (t[i] === '*') { i++; v *= unary(); } else if (t[i] === '/') { i++; var d = unary(); if (d === 0) throw 0; v /= d; } else if (startsOperand()) { v *= unary(); } else return v; } }
+    function expr() { var v = term(); for (;;) { ws(); if (t[i] === '+') { i++; v += term(); } else if (t[i] === '-') { i++; v -= term(); } else return v; } }
+    var v = expr(); ws(); if (i < t.length || !isFinite(v)) throw 0;
+    if (Math.abs(v) < 1e-12) return 0; return parseFloat(v.toPrecision(13));
   }
+  function calcFmt(v) { if (v === 0) return '0'; var a = Math.abs(v); if (a >= 1e15 || a < 1e-9) return String(parseFloat(v.toExponential(9))).replace('e+', 'e'); return String(v); }
   function calcWin() {
     var ex = D.wins.filter(function (x) { return x.kind === 'calc'; })[0]; if (ex) { focus(ex); return ex; }
-    var w = mk('calc', 'Calculator', { w: 320, h: 470, icon: '/oicons/calc.svg' }); w.sd = { t: 'calc' }; w.x = Math.max(0, Math.round((area().w - w.w) / 2)); place(w);
-    var keys = [['C', 'fn'], ['(', 'fn'], [')', 'fn'], ['\u00f7', 'op'], ['7'], ['8'], ['9'], ['\u00d7', 'op'], ['4'], ['5'], ['6'], ['\u2212', 'op'], ['1'], ['2'], ['3'], ['+', 'op'], ['%', 'fn'], ['0'], ['.'], ['=', 'eq']];
-    w.body.innerHTML = '<div class="dk-calc" tabindex="0"><div class="dk-cx" aria-live="polite"><div class="dk-ch" data-calc-h></div><div class="dk-cv" data-calc-v>0</div></div><div class="dk-ck">' + keys.map(function (k) { return '<button class="' + (k[1] || 'num') + '" data-calc="' + esc(k[0]) + '">' + esc(k[0]) + '</button>'; }).join('') + '</div><button class="dk-cb" data-calc="\u232b" aria-label="Delete the last character">\u232b Delete</button></div>';
-    var box = w.body.querySelector('.dk-calc'), V = w.body.querySelector('[data-calc-v]'), H = w.body.querySelector('[data-calc-h]'), cur = '', done = false;
-    function show(err) { V.textContent = err ? 'Error' : (cur === '' ? '0' : cur); V.classList.toggle('bad', !!err); }
-    function press(k) {
-      var isOp = /^[+\u2212\u00d7\u00f7]$/.test(k);
-      if (k === 'C') { cur = ''; H.textContent = ''; done = false; return show(); }
-      if (k === '\u232b') { if (done) { cur = ''; done = false; H.textContent = ''; } else cur = cur.slice(0, -1); return show(); }
-      if (k === '=') { if (!cur) return; try { var r = calcEval(cur); H.textContent = cur + ' ='; cur = String(r); done = true; show(); } catch (e) { show(true); cur = ''; done = false; } return; }
-      if (done) { if (isOp || k === '%') done = false; else { cur = ''; done = false; H.textContent = ''; } }
-      if (isOp) { if (!cur && k !== '\u2212') return; if (/[+\u2212\u00d7\u00f7]$/.test(cur)) cur = cur.slice(0, -1); }
-      if (k === '.') { var last = cur.split(/[+\u2212\u00d7\u00f7()%]/).pop(); if (last.indexOf('.') >= 0) return; if (!last) cur += '0'; }
-      if (k === '%' && !/[\d)]$/.test(cur)) return;
-      cur += k; if (cur.length > 60) cur = cur.slice(0, 60); show();
+    var w = mk('calc', 'Calculator', { w: 360, h: 560, icon: '/oicons/calc.svg' }); w.sd = { t: 'calc' }; w.x = Math.max(0, Math.round((area().w - w.w) / 2)); place(w);
+    var pref = LS.get('calcprefs', {}) || {}, S = { mode: pref.mode || 'auto', deg: pref.deg !== false, mem: Number(LS.get('calcmem', 0)) || 0, hist: LS.get('calchist', []) || [], showH: !!pref.hist, cur: '', last: 0, done: false, wide: false };
+    var STD = [['C', 'fn'], ['(', 'fn'], [')', 'fn'], ['÷', 'op'], ['7'], ['8'], ['9'], ['×', 'op'], ['4'], ['5'], ['6'], ['−', 'op'], ['1'], ['2'], ['3'], ['+', 'op'], ['±', 'fn'], ['0'], ['.'], ['=', 'eq']];
+    var SCI2 = [['π', 'f'], ['e', 'f'], ['sin(', 'f'], ['cos(', 'f'], ['tan(', 'f'], ['√(', 'f'], ['x²', 'f'], ['^', 'f'], ['ln(', 'f'], ['log(', 'f'], ['asin(', 'f'], ['acos(', 'f'], ['atan(', 'f'], ['!', 'f'], ['1/x', 'f'], ['%', 'f'], ['Ans', 'f'], ['∛(', 'f'], ['⌫', 'f']];
+    var btn = function (k) { var lab = k[0]; return '<button class="' + (k[1] || 'num') + '" data-calc="' + esc(lab) + '">' + esc(lab.length > 1 ? lab.replace('(', '') : lab) + '</button>'; };
+    w.body.innerHTML = '<div class="dk-calc" tabindex="0"><div class="dk-cbar"><div class="dk-cseg" role="group" aria-label="Mode"><button data-cm="std">Standard</button><button data-cm="sci">Scientific</button></div><button class="dk-cdeg" data-cm="deg" title="Angles in degrees or radians"></button><span class="sp"></span><button class="dk-chb" data-cm="hist" title="History">History</button></div>' +
+      '<div class="dk-cmem"><button data-calc="MC">MC</button><button data-calc="MR">MR</button><button data-calc="M+">M+</button><button data-calc="M−">M−</button><button data-calc="MS">MS</button><span class="dk-cmi" data-mi></span></div>' +
+      '<div class="dk-cmain"><div class="dk-calcl"><div class="dk-cx" aria-live="polite"><div class="dk-calch" data-calc-h></div><div class="dk-cv" data-calc-v>0</div></div><div class="dk-cpad"><div class="dk-csci">' + SCI2.map(function (k) { return btn(k); }).join('') + '</div><div class="dk-ck">' + STD.map(btn).join('') + '</div></div></div><aside class="dk-chist" data-hist></aside></div></div>';
+    var box = w.body.querySelector('.dk-calc'), V = box.querySelector('[data-calc-v]'), H = box.querySelector('[data-calc-h]'), MI = box.querySelector('[data-mi]'), HL = box.querySelector('[data-hist]');
+    function save() { LS.set('calcprefs', { mode: S.mode, deg: S.deg, hist: S.showH }); }
+    function sci() { return S.mode === 'sci' || (S.mode === 'auto' && S.wide); }
+    function fit() { V.style.fontSize = ''; var fs = parseFloat(getComputedStyle(V).fontSize), n = 0; while (V.scrollWidth > V.parentNode.clientWidth - 4 && fs > 14 && n++ < 40) { fs *= 0.92; V.style.fontSize = fs + 'px'; } }
+    function paint() {
+      box.classList.toggle('sci', sci()); box.classList.toggle('showh', S.showH);
+      box.querySelectorAll('[data-cm="std"]').forEach(function (b) { b.classList.toggle('on', !sci()); }); box.querySelectorAll('[data-cm="sci"]').forEach(function (b) { b.classList.toggle('on', sci()); });
+      box.querySelector('[data-cm="deg"]').textContent = S.deg ? 'DEG' : 'RAD'; box.querySelector('[data-cm="hist"]').classList.toggle('on', S.showH);
+      MI.textContent = S.mem ? 'M = ' + calcFmt(S.mem) : ''; box.querySelector('[data-calc="MC"]').disabled = box.querySelector('[data-calc="MR"]').disabled = !S.mem;
+      HL.innerHTML = '<div class="dk-hh2"><b>History</b><button data-cm="hclr"' + (S.hist.length ? '' : ' disabled') + '>Clear</button></div>' + (S.hist.length ? S.hist.map(function (h, n) { return '<button class="dk-hi" data-hi="' + n + '"><span>' + esc(h[0]) + ' =</span><b>' + esc(h[1]) + '</b></button>'; }).join('') : '<p class="note">Your calculations will show here.</p>');
     }
-    box.addEventListener('click', function (e) { var b = e.target.closest('[data-calc]'); if (b) { press(b.getAttribute('data-calc')); box.focus(); } });
-    box.addEventListener('keydown', function (e) {
-      if (e.ctrlKey || e.metaKey || e.altKey) { if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'c') { try { navigator.clipboard.writeText(V.textContent); } catch (x) {} e.preventDefault(); } return; }
-      var k = e.key, m = { '*': '\u00d7', '/': '\u00f7', '-': '\u2212', 'x': '\u00d7', 'X': '\u00d7', ',': '.', 'Enter': '=', '=': '=', 'Backspace': '\u232b', 'Escape': 'C', 'Delete': 'C' };
-      if (m[k]) k = m[k]; if (/^[0-9.+()%\u00d7\u00f7\u2212=C\u232b]$/.test(k)) { e.preventDefault(); e.stopPropagation(); press(k); }
+    function show(err) { V.textContent = err ? 'Error' : (S.cur === '' ? '0' : S.cur); V.classList.toggle('bad', !!err); fit(); }
+    function curVal() { if (S.cur === '') return 0; return calcEval(S.cur, S.deg, S.last); }
+    function add(s) { if (S.done) { if (/^[+−×÷^!%]/.test(s)) S.done = false; else { S.cur = ''; S.done = false; H.textContent = ''; } } S.cur += s; if (S.cur.length > 120) S.cur = S.cur.slice(0, 120); show(); }
+    function equals() { if (!S.cur) return; try { var r = calcEval(S.cur, S.deg, S.last), txt = calcFmt(r); H.textContent = S.cur + ' ='; S.hist.unshift([S.cur, txt]); S.hist = S.hist.slice(0, 40); LS.set('calchist', S.hist); S.last = r; S.cur = txt; S.done = true; show(); paint(); } catch (e) { show(true); S.cur = ''; S.done = false; } }
+    function memory(op) {
+      try { if (op === 'MC') S.mem = 0; else if (op === 'MR') { add(calcFmt(S.mem)); } else { var v = curVal(); if (op === 'MS') S.mem = v; else if (op === 'M+') S.mem += v; else S.mem -= v; S.mem = parseFloat(S.mem.toPrecision(13)); } LS.set('calcmem', S.mem); paint(); } catch (e) { show(true); }
+    }
+    function press(k) {
+      if (k === 'C') { S.cur = ''; H.textContent = ''; S.done = false; return show(); }
+      if (k === '⌫') { if (S.done) { S.cur = ''; S.done = false; H.textContent = ''; } else S.cur = S.cur.replace(/(asin\(|acos\(|atan\(|sin\(|cos\(|tan\(|ln\(|log\(|√\(|∛\(|Ans|.)$/, ''); return show(); }
+      if (k === '=') return equals();
+      if (/^M[CRS+−]$/.test(k)) return memory(k === 'M−' ? 'M−' : k);
+      if (k === '±') { if (!S.cur) { S.cur = '−'; return show(); } S.cur = /^−\(.*\)$/.test(S.cur) ? S.cur.slice(2, -1) : '−(' + S.cur + ')'; S.done = false; return show(); }
+      if (k === 'x²') return add('^2'); if (k === '1/x') { if (!S.cur) return; S.cur = '1÷(' + S.cur + ')'; S.done = false; return show(); }
+      var isOp = /^[+−×÷^]$/.test(k);
+      if (isOp) { if (!S.cur && !S.done && k !== '−') return; if (/[+−×÷^]$/.test(S.cur) && !S.done) S.cur = S.cur.slice(0, -1); }
+      if (k === '.') { var last = S.cur.split(/[+−×÷()%^!]/).pop(); if (S.done) { S.cur = ''; S.done = false; H.textContent = ''; last = ''; } if (last.indexOf('.') >= 0) return; if (!last) S.cur += '0'; }
+      if ((k === '%' || k === '!') && !/[\d)πe]$/.test(S.cur)) return;
+      add(k);
+    }
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-calc]'); if (b) { press(b.getAttribute('data-calc')); return void box.focus(); }
+      var m = e.target.closest('[data-cm]'); if (m) { var c = m.getAttribute('data-cm'); if (c === 'std' || c === 'sci') S.mode = c; else if (c === 'deg') S.deg = !S.deg; else if (c === 'hist') S.showH = !S.showH; else if (c === 'hclr') { S.hist = []; LS.set('calchist', []); } save(); paint(); return void box.focus(); }
+      var h = e.target.closest('[data-hi]'); if (h) { var it = S.hist[+h.getAttribute('data-hi')]; if (it) { S.cur = it[1]; S.done = true; H.textContent = it[0] + ' ='; show(); } box.focus(); }
     });
-    setTimeout(function () { box.focus(); }, 30); return w;
+    var KEYS = { '*': '×', '/': '÷', '-': '−', 'x': '×', 'X': '×', ',': '.', 'Enter': '=', '=': '=', 'Backspace': '⌫', 'Escape': 'C', 'Delete': 'C', 'p': 'π', 's': 'sin(', 'c': 'cos(', 't': 'tan(', 'l': 'ln(', 'g': 'log(', 'r': '√(', 'e': 'e', 'a': 'Ans', 'm': 'MS', 'q': 'x²' };
+    box.addEventListener('keydown', function (e) {
+      if (e.ctrlKey || e.metaKey || e.altKey) { var lk = e.key.toLowerCase(); if ((e.ctrlKey || e.metaKey) && !e.altKey && lk === 'c') { try { navigator.clipboard.writeText(V.textContent); } catch (x) {} e.preventDefault(); } return; }
+      var k = e.key; if (KEYS[k]) k = KEYS[k];
+      if (/^(asin|acos|atan|sin|cos|tan|ln|log|√|∛)\($|^(Ans|e|π|x²|MS)$|^[0-9.+()%×÷−=C⌫^!]$/.test(k)) { e.preventDefault(); e.stopPropagation(); press(k); }
+    });
+    box.addEventListener('paste', function (e) { var tx = (e.clipboardData && e.clipboardData.getData('text')) || ''; tx = tx.replace(/\s+/g, '').replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−'); if (/^[0-9.+()%×÷−^!]+$/.test(tx)) { e.preventDefault(); add(tx); } });
+    function size() { var wide = box.clientWidth >= 620; if (wide !== S.wide) { S.wide = wide; paint(); } fit(); }
+    if (window.ResizeObserver) { var ro = new ResizeObserver(size); ro.observe(box); w.onclose = function () { ro.disconnect(); }; }
+    S.wide = box.clientWidth >= 620; paint(); show(); setTimeout(function () { size(); box.focus(); }, 30); return w;
   }
 
   /* ---------- assistant ---------- */
@@ -578,7 +631,7 @@
   function lockKeys(say) {
     if (!document.fullscreenElement) return;
     if (!(navigator.keyboard && navigator.keyboard.lock)) { if (say) toast('Full screen is on. This browser keeps Alt + Tab and the Windows key, so use the Ctrl + Alt shortcuts.'); return; }
-    navigator.keyboard.lock().then(function () { if (say) toast('Keys captured. Hold Esc to leave full screen.'); }).catch(function () {});
+    navigator.keyboard.lock().then(function () { if (say) toast('Keys captured. Hold Esc to leave full screen.'); }).catch(function () { toast('Your browser did not allow key capture. Use the Ctrl + Alt shortcuts.'); });
   }
   document.addEventListener('fullscreenchange', function () { if (document.fullscreenElement) lockKeys(false); else { try { navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); } catch (e) {} } });
   function topWin() { var w = byId(D.top); return w && !w.min ? w : null; }
@@ -592,7 +645,7 @@
   function helpPanel(show) {
     var el = $('#dkhelp'); if (!show) { if (el) el.hidden = true; return; }
     if (!el) { el = document.createElement('div'); el.id = 'dkhelp'; el.className = 'dk-help'; root.appendChild(el); el.addEventListener('click', function (e) { if (e.target === el || e.target.closest('[data-hx]')) el.hidden = true; }); }
-    el.innerHTML = '<div class="dk-hbox" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="dk-hh"><b>Keyboard shortcuts</b><button data-hx aria-label="Close">&#10005;</button></div>' + SHORTCUTS.map(function (g) { return '<h4>' + g[0] + '</h4>' + g[1].map(function (r) { return '<div class="dk-hr"><span class="dk-keys">' + r[0].split(/\s+/).map(function (k) { return /^(\+|or|to|\(tap\))$/.test(k) ? '<em>' + k + '</em>' : '<kbd>' + esc(k) + '</kbd>'; }).join('') + '</span><span>' + esc(r[1]) + '</span></div>'; }).join(''); }).join('') + '<p class="dk-hn">Your browser or computer keeps a few of these for itself, such as Alt + Tab and the Windows key. Press the full screen button on the taskbar (Chrome or Edge) and Alt + Tab and the Windows key work here too. Otherwise use the Ctrl + Alt versions.</p></div>'; el.hidden = false;
+    el.innerHTML = '<div class="dk-hbox" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="dk-hh"><b>Keyboard shortcuts</b><button data-hx aria-label="Close">&#10005;</button></div>' + SHORTCUTS.map(function (g) { return '<h4>' + g[0] + '</h4>' + g[1].map(function (r) { return '<div class="dk-hr"><span class="dk-keys">' + r[0].split(/\s+/).map(function (k) { return /^(\+|or|to|\(tap\))$/.test(k) ? '<em>' + k + '</em>' : '<kbd>' + esc(k) + '</kbd>'; }).join('') + '</span><span>' + esc(r[1]) + '</span></div>'; }).join(''); }).join('') + '<p class="dk-hn">Your browser or computer keeps a few of these for itself, such as Alt + Tab and the Windows key. Use the full screen button on the taskbar, not the F11 key (Chrome or Edge), and Alt + Tab and the Windows key work here too. Otherwise use the Ctrl + Alt versions.</p></div>'; el.hidden = false;
   }
   function switcher(dir) {
     var sw = D.sw; if (!sw) { var l = D.wins.filter(function (x) { return x.kind !== 'ai'; }).sort(function (a, b) { return b.z - a.z; }); if (!l.length) return; sw = D.sw = { l: l, i: 0 }; var el = document.createElement('div'); el.id = 'dkalt'; el.className = 'dk-alt'; root.appendChild(el); sw.el = el; }
@@ -631,6 +684,16 @@
   document.addEventListener('keyup', function (ev) { if (shortcut({ t: 'keyup', key: ev.key, alt: ev.altKey, ctrl: ev.ctrlKey, shift: ev.shiftKey, meta: ev.metaKey })) ev.preventDefault(); }, true);
   window.addEventListener('blur', function () { switcherEnd(false); D.metaTap = false; });
   D.shortcut = shortcut;
+  /* Keys typed inside an app window go to that window, not to the desktop. Every window is served from this same site, so listen inside it too and run the same shortcuts.
+     (Anands OS pages inside a window already forward their keys; they are skipped here so nothing runs twice.) */
+  function hookFrame(f) {
+    try {
+      var cw = f.contentWindow, d = cw && cw.document; if (!d || d.__aosk || cw.AOS) return; d.__aosk = 1;
+      var h = function (e) { if (!D.open) return; if (shortcut({ t: e.type === 'keyup' ? 'keyup' : 'keydown', key: e.key, alt: e.altKey, ctrl: e.ctrlKey, shift: e.shiftKey, meta: e.metaKey, edit: !!(e.getModifierState && e.getModifierState('AltGraph')) })) { e.preventDefault(); e.stopPropagation(); } };
+      d.addEventListener('keydown', h, true); d.addEventListener('keyup', h, true);
+    } catch (e) {}
+  }
+  var wins0 = $('#dkwins'); if (wins0) { wins0.addEventListener('load', function (e) { if (e.target && e.target.tagName === 'IFRAME') hookFrame(e.target); }, true); }
 
   /* drag and resize */
   var drag = null;

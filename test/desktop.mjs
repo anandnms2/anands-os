@@ -127,12 +127,27 @@ try {
     assert.equal(await p.locator('.dk-rb[title="Assistant"]').count(), 0); const w = p.locator('.dkw[aria-label="Assistant"]'); assert.ok(await w.isVisible());
     await p.click('.dk-pin[data-w="ai"]'); if (await w.isVisible() && !(await w.isHidden())) { await p.click('.dk-pin[data-w="ai"]'); } assert.ok(await w.isHidden()); await p.click('.dk-pin[data-w="ai"]'); assert.ok(await w.isVisible());
   });
-  await t('Calculator: desktop only, keys and keyboard work, no eval', async () => {
-    const L = await (await ctx.request.get(B + '/apps.json')).json(); assert.ok(!L.some((x) => /calc/i.test(x.slug)) || true);
+  await t('Calculator: keys, scientific, memory, history, resizing, no eval', async () => {
     await p.keyboard.press('Control+Alt+c'); const w = p.locator('.dkw[aria-label="Calculator"]'); await w.waitFor(); const val = () => w.locator('[data-calc-v]').innerText();
     for (const k of ['1', '2', '\u00d7', '(', '3', '+', '4', ')', '=']) await w.locator('[data-calc="' + k + '"]').click(); assert.equal(await val(), '84');
-    await w.locator('[data-calc="C"]').click(); await p.keyboard.type('10/4'); await p.keyboard.type('+50%='); assert.equal(await val(), '3'); await p.keyboard.type('1/0='); assert.equal(await val(), 'Error');
-    assert.equal(await p.locator('.dk-rb[title="Calculator"]').count(), 1); await w.locator('.dk-wc [data-dk="wclose"]').evaluate((b) => b.click());
+    await w.locator('[data-calc="C"]').click(); await p.keyboard.type('10/4+50%='); assert.equal(await val(), '3'); await p.keyboard.type('1/0='); assert.equal(await val(), 'Error');
+    await w.locator('[data-cm="sci"]').click(); assert.ok(await w.locator('.dk-calc.sci').count(), 'scientific on');
+    await p.keyboard.press('Escape'); await p.keyboard.type('s30)='); assert.equal(await val(), '0.5'); await p.keyboard.press('Escape'); await p.keyboard.type('2^10='); assert.equal(await val(), '1024');
+    await p.keyboard.press('Escape'); await p.keyboard.type('5!='); assert.equal(await val(), '120'); await p.keyboard.press('Escape'); await p.keyboard.type('2p='); assert.equal(await val(), '6.28318530718');
+    await w.locator('[data-cm="deg"]').click(); await p.keyboard.press('Escape'); await p.keyboard.type('s'); await w.locator('[data-calc="\u03c0"]').click(); await p.keyboard.type(')='); assert.equal(await val(), '0');
+    await p.keyboard.press('Escape'); await p.keyboard.type('7'); await w.locator('[data-calc="MS"]').click(); await p.keyboard.press('Escape'); await w.locator('[data-calc="M+"]').click(); assert.match(await w.locator('[data-mi]').innerText(), /M = 7/);
+    await w.locator('[data-calc="MR"]').click(); assert.equal(await val(), '7'); await w.locator('[data-calc="MC"]').click(); assert.equal(await w.locator('[data-mi]').innerText(), '');
+    await w.locator('[data-cm="hist"]').click(); assert.ok(await w.locator('.dk-hi').count() >= 3, 'history lists calculations'); await w.locator('[data-cm="hist"]').click();
+    assert.equal(await p.locator('.dk-rb[title="Calculator"]').count(), 1);
+    await shot(p, 'calc-narrow-sci');
+    const big = await w.locator('[data-calc-v]').evaluate((e) => parseFloat(getComputedStyle(e).fontSize)); await w.evaluate((e) => { const x = e.closest('.dkw'); x.style.left = '230px'; x.style.top = '10px'; x.style.width = '920px'; x.style.height = '640px'; }); await p.waitForTimeout(150);
+    assert.ok((await w.locator('[data-calc-v]').evaluate((e) => parseFloat(getComputedStyle(e).fontSize))) > big, 'text grows with the window'); assert.ok(await w.locator('.dk-csci').isVisible()); await shot(p, 'calc-wide');
+    await w.locator('.dk-wc [data-dk="wclose"]').evaluate((b) => b.click());
+  });
+  await t('Shortcuts work while focus is inside an app window', async () => {
+    await p.fill('#dkq', '').catch(() => {}); await p.evaluate(() => document.querySelector('[data-dk="launch"][data-w="ai"]') && 0);
+    const nf = p.locator('.dkw iframe[src^="/apps/notes/"]').first(); if (!(await nf.count())) return; const fr = nf.contentFrame(); await fr.locator('body').click({ position: { x: 20, y: 20 } }).catch(() => {});
+    await p.keyboard.press('Control+Alt+c'); await p.waitForSelector('.dkw[aria-label="Calculator"]', { timeout: 4000 }); await p.locator('.dkw[aria-label="Calculator"] .dk-wc [data-dk="wclose"]').evaluate((b) => b.click());
   });
   await t('Desktop icons: grid, drag to move and swap, sort, line up', async () => {
     const box = async (k) => p.locator('#dkicons [data-k="' + k + '"]').evaluate((e) => [parseFloat(e.style.left), parseFloat(e.style.top)]);
