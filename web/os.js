@@ -88,7 +88,7 @@ function googleBack() {
 }
 function isOwnerU() { return !S.user || !S.user.role || S.user.role === 'owner'; }
 function can(a) { if (isOwnerU()) return true; var p = S.user.perm || {}; return a === 'open' || (p.apps || []).indexOf(a) > -1; }
-var VAREA = { photos: 'photos', drive: 'drive', dedit: 'drive', vault: 'vault', insights: 'insights', servers: 'insights', pulse: 'pulse', vpn: 'vpn', cards: 'cards', money: '_owner', subs: '_owner', invest: '_owner', editor: '_owner', player: '_owner', recorder: '_owner', terminal: '_owner', belong: '_owner', house: '_owner', paperless: '_owner', apps: 'suite', app: 'suite', home: 'open', appearance: 'open' };
+var VAREA = { photos: 'photos', drive: 'drive', dedit: 'drive', vault: 'vault', insights: 'insights', servers: 'insights', ai: 'insights', pulse: 'pulse', vpn: 'vpn', cards: 'cards', money: '_owner', subs: '_owner', invest: '_owner', editor: '_owner', player: '_owner', recorder: '_owner', terminal: '_owner', belong: '_owner', house: '_owner', paperless: '_owner', apps: 'suite', app: 'suite', home: 'open', appearance: 'open' };
 function viewOk(v) { return isOwnerU() || (VAREA[v] !== undefined && can(VAREA[v])); }
 function boot() {
   Promise.all([api('/api/session'), fetch('/apps.json').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })]).then(function (x) {
@@ -102,7 +102,7 @@ function boot() {
 
 /* ---------- shell ---------- */
 var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['pulse', 'Pulse', 'pulse'], ['vpn', 'VPN', 'vpn'], ['cards', 'Cards', 'cards'], ['apps', 'Suite', 'apps']];
-function cur(v) { if (v === 'apps' && ['money', 'subs', 'invest', 'belong', 'house', 'paperless', 'editor', 'player', 'recorder', 'terminal'].indexOf(S.view) >= 0) return true; if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; if (v === 'insights' && S.view === 'servers') return true; return S.view === v || (v === 'apps' && S.view === 'app'); }
+function cur(v) { if (v === 'apps' && ['money', 'subs', 'invest', 'belong', 'house', 'paperless', 'editor', 'player', 'recorder', 'terminal'].indexOf(S.view) >= 0) return true; if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; if (v === 'insights' && (S.view === 'servers' || S.view === 'ai')) return true; return S.view === v || (v === 'apps' && S.view === 'app'); }
 function buildNav() {
   var h = '<button class="logo" data-act="nav" data-v="home" aria-label="Home"><img src="/logo-white.png" alt=""></button><div class="rsep"></div>';
   NAV.filter(function (n) { return viewOk(n[0]); }).forEach(function (n) { h += '<button class="nav" data-act="nav" data-v="' + n[0] + '" title="' + n[1] + '"' + (cur(n[0]) ? ' aria-current="page"' : '') + '>' + ic(n[2]) + n[1] + '</button>'; });
@@ -113,9 +113,9 @@ function buildNav() {
   $('#tabs').innerHTML = t;
 }
 /* The address bar follows the page (#photos, #vault ...), so Refresh stays on the page and Back goes to the previous one. */
-var ROUTES = ['home', 'photos', 'drive', 'vault', 'insights', 'servers', 'pulse', 'vpn', 'cards', 'money', 'subs', 'invest', 'editor', 'player', 'recorder', 'terminal', 'belong', 'house', 'paperless', 'apps', 'settings', 'security', 'appearance', 'team'], popping = false;
+var ROUTES = ['home', 'photos', 'drive', 'vault', 'insights', 'servers', 'ai', 'pulse', 'vpn', 'cards', 'money', 'subs', 'invest', 'editor', 'player', 'recorder', 'terminal', 'belong', 'house', 'paperless', 'apps', 'settings', 'security', 'appearance', 'team'], popping = false;
 function routeNow() { var h = location.hash.replace(/^#/, ''); return ROUTES.indexOf(h) >= 0 ? h : ''; }
-var RECV = { photos: ['Photos', 'photos'], pulse: ['Pulse', 'pulse'], cards: ['Cards', 'cards'], vault: ['Vault', 'vault'], drive: ['Drive', 'drive'], insights: ['Insights', 'insights'], servers: ['Servers', 'servers'], vpn: ['VPN', 'vpn'], money: ['Money', 'money'], subs: ['Subscriptions', 'subs'], invest: ['Investments', 'invest'], editor: ['Editor', 'editor'], player: ['Player', 'player'], recorder: ['Recorder', 'recorder'], terminal: ['Terminal', 'terminal'], belong: ['Belong', 'belong'], house: ['House', 'house'], paperless: ['Paperless', 'paperless'], security: ['Security', 'vault'] };
+var RECV = { photos: ['Photos', 'photos'], pulse: ['Pulse', 'pulse'], cards: ['Cards', 'cards'], vault: ['Vault', 'vault'], drive: ['Drive', 'drive'], insights: ['Insights', 'insights'], servers: ['Servers', 'servers'], ai: ['AI', 'ai'], vpn: ['VPN', 'vpn'], money: ['Money', 'money'], subs: ['Subscriptions', 'subs'], invest: ['Investments', 'invest'], editor: ['Editor', 'editor'], player: ['Player', 'player'], recorder: ['Recorder', 'recorder'], terminal: ['Terminal', 'terminal'], belong: ['Belong', 'belong'], house: ['House', 'house'], paperless: ['Paperless', 'paperless'], security: ['Security', 'vault'] };
 function noteRecent(k) { try { var r = (LS.get('rlist', []) || []).filter(function (x) { return x !== k; }); r.unshift(k); LS.set('rlist', r.slice(0, 8)); } catch (e) {} }
 function go(v, x) {
   if (RECV[v]) noteRecent('v:' + v);
@@ -125,7 +125,7 @@ function go(v, x) {
 document.addEventListener('error', function (e) { var v = e.target; if (v && v.tagName === 'VIDEO' && v.dataset.src && !v.dataset.tx) { v.dataset.tx = '1'; v.src = v.dataset.src + '?tx=1'; v.load(); v.play().catch(function () {}); return; } var t = e.target; if (!t || t.tagName !== 'IMG' || !t.classList.contains('phimg')) return; if (!t.dataset.tried) { t.dataset.tried = '1'; t.src = '/api/photos/asset/' + t.dataset.id + '/preview'; return; } t.removeAttribute('src'); t.parentNode.classList.add('nothumb'); }, true);
 window.addEventListener('popstate', function () { if (!S.user) return; var r = routeNow() || 'home'; popping = true; try { go0(r); } finally { popping = false; } });
 var lastSeen = Date.now(); document.addEventListener('visibilitychange', function () { if (document.hidden) { lastSeen = Date.now(); return; } if (S.user && Date.now() - lastSeen > 30000 && S.view === 'photos' && S.imm && S.imm.connected && !S.lb) { var fresh = function () { return { items: [], next: 1, loading: false, error: null, loaded: false }; }; S.tl = fresh(); S.fav = fresh(); S.albums = null; loadImm(); loadAlbums(); } });
-function go0(v, x) { if (!viewOk(v)) v = 'home'; if (window.AOSOnGo && window.AOSOnGo[v]) setTimeout(window.AOSOnGo[v], 0); if (v === 'vault' && S.view !== 'vault') S.vault.noAuto = false; S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); if (window.AOSHome) window.AOSHome.onGo(v); }
+function go0(v, x) { if (!viewOk(v)) v = 'home'; if (window.AOSOnGo && window.AOSOnGo[v]) setTimeout(window.AOSOnGo[v], 0); if (v === 'vault' && S.view !== 'vault') S.vault.noAuto = false; S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSAI) window.AOSAI.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); if (window.AOSHome) window.AOSHome.onGo(v); }
 function redraw() { var y = $('#view').scrollTop; render(); $('#view').scrollTop = y; }
 function render() {
   var app = $('#app'), tabs = $('#tabs'), fab = $('#fab');
@@ -140,6 +140,7 @@ function render() {
   else if (S.view === 'dedit') v.innerHTML = dedV();
   else if (S.view === 'insights') v.innerHTML = insightsV();
   else if (S.view === 'servers') v.innerHTML = window.AOSSrv ? window.AOSSrv.view() : '';
+  else if (S.view === 'ai') v.innerHTML = window.AOSAI ? window.AOSAI.view() : '';
   else if (S.view === 'pulse') v.innerHTML = window.AOSPulse ? window.AOSPulse.view() : '';
   else if (S.view === 'vpn') v.innerHTML = window.AOSInt ? window.AOSInt.vpnView() : '';
   else if (S.view === 'cards') v.innerHTML = window.AOSInt ? window.AOSInt.cardsView() : '';
@@ -265,7 +266,7 @@ function runSearch(q) {
 function mmss(s) { return s == null ? 'n/a' : Math.floor(s / 60) + 'm ' + ('0' + (s % 60)).slice(-2) + 's'; }
 function pill(s) { return s === 'ok' ? '<span class="pill ok"><i class="dot"></i>Healthy</span>' : s === 'nohc' ? '<span class="pill warn"><i class="dot warn"></i>No health check</span>' : '<span class="pill bad"><i class="dot bad"></i>Not healthy</span>'; }
 function insightsV() { return insightsV0(); }
-function insTabs(a) { return '<div class="toolbar"><div class="seg" role="tablist">' + [['insights', 'Cloud'], ['servers', 'Servers']].map(function (t) { return '<button data-act="nav" data-v="' + t[0] + '" aria-pressed="' + (a === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>'; }
+function insTabs(a) { return '<div class="toolbar"><div class="seg" role="tablist">' + [['insights', 'Cloud'], ['servers', 'Servers'], ['ai', 'AI']].map(function (t) { return '<button data-act="nav" data-v="' + t[0] + '" aria-pressed="' + (a === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div></div>'; }
 function insightsV0() {
   var head = '<div class="wrap"><div class="pagehead"><div><h1>Insights</h1></div><div style="display:flex;gap:10px"><button class="btn" data-act="refresh">' + (S.ins.loading ? 'Refreshing...' : 'Refresh') + '</button></div></div>' + insTabs('insights');
   var d = S.ins.data;
@@ -381,7 +382,7 @@ function saveGroup(k, after) {
   if (k === 'paperless') body.paperless = { token: v('s_pt') };
   if (k === 'rbrowser') body.rbrowser = { url: v('s_rb') };
   if (k === 'links') body.links = { ai: v('s_la'), files: v('s_lf'), storage: v('s_ls'), paperless: v('s_lp') };
-  if (k === 'status' || k === 'vpn' || k === 'cards') body[k] = { url: v('s_' + k + 'u'), user: v('s_' + k + 'n'), pass: v('s_' + k + 'p') };
+  if (k === 'status' || k === 'vpn' || k === 'cards' || k === 'aiusage') body[k] = { url: v('s_' + k + 'u'), user: v('s_' + k + 'n'), pass: v('s_' + k + 'p') };
   if (k === 'google') body.google = { clientId: v('s_gid'), clientSecret: v('s_gsec') };
   if (k === 'pulse') body.pulse = { url: v('s_pulseu'), token: v('s_pulset'), user: v('s_pulseus'), pass: v('s_pulsepw') };
   if (k === 'dav') body.dav = { url: v('s_du'), user: v('s_dn'), pass: v('s_dp') };
@@ -397,6 +398,7 @@ function saveGroup(k, after) {
       if (k === 'dav') { S.drive.status = r; S.drive.items = []; }
       if (k === 'vault') { S.vault.status = r; }
       if (window.AOSInt && (k === 'status' || k === 'vpn' || k === 'cards')) window.AOSInt.after(k, r);
+      if (k === 'aiusage' && window.AOSAI) window.AOSAI.after(r);
       if (k === 'coolify') { S.ins = { data: null, error: null, code: null, loading: false }; if (r.connected) loadIns(true); }
       note('r_' + k, r.connected ? (k === 'mail' ? 'Connected and signed in to your mail server. Send a test email to be sure.' : 'Connected') + (r.version ? ' (Immich ' + r.version + ')' : r.resources != null ? ' (' + r.resources + ' ' + (r.unit || 'resources') + ')' : '') + '.' : 'Saved, but not reachable: ' + (r.reason || 'no answer') + '.', r.connected ? 'ok' : 'bad'); if (after) after(r); });
   }).catch(function (e) { note('r_' + k, e.message, 'bad'); });

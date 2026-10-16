@@ -44,12 +44,12 @@
     });
     var grid = [0, .5, 1].map(function (f) { var y = Y(mx * f); return '<line x1="0" x2="' + W + '" y1="' + y + '" y2="' + y + '" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>'; }).join('');
     var fmt = spec.fmt || function (v) { return String(v); };
-    CH[id] = { t: spec.t, series: live.map(function (s, si) { return { name: s.name, v: s.v, color: s.color || COL[si % COL.length] }; }), fmt: fmt, range: I.range, n: n, W: W, L: L, R: R, stack: !!stack };
+    CH[id] = { t: spec.t, series: live.map(function (s, si) { return { name: s.name, v: s.v, color: s.color || COL[si % COL.length] }; }), fmt: fmt, range: spec.range || I.range, n: n, W: W, L: L, R: R, stack: !!stack };
     var legend = live.length > 1 || spec.legend ? '<div class="ich-lg">' + live.map(function (s, si) { return '<span><i style="background:' + (s.color || COL[si % COL.length]) + '"></i>' + esc(s.name) + '</span>'; }).join('') + '</div>' : '';
     return '<div class="card ichart"><div class="ich-h"><b>' + esc(spec.title) + '</b>' + (spec.note ? '<span class="note">' + spec.note + '</span>' : '') + '</div>' +
       '<div class="ich-plot" data-ch="' + id + '"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" class="ich-svg" role="img" aria-label="' + esc(spec.title) + '">' + grid + paths + '<line class="ich-x" x1="0" x2="0" y1="0" y2="' + H + '" stroke="var(--muted)" stroke-width="1" vector-effect="non-scaling-stroke" style="display:none"/></svg>' +
       '<span class="ich-y ich-ytop">' + esc(fmt(mx)) + '</span><span class="ich-y ich-ybot">' + esc(fmt(0)) + '</span><div class="ich-tip" hidden></div></div>' +
-      '<div class="ich-ax"><span>' + tlabel(spec.t[0], I.range) + '</span><span>' + tlabel(spec.t[Math.floor(n / 2)], I.range) + '</span><span>' + tlabel(spec.t[n - 1], I.range) + '</span></div>' + legend + '</div>';
+      '<div class="ich-ax"><span>' + tlabel(spec.t[0], spec.range || I.range) + '</span><span>' + tlabel(spec.t[Math.floor(n / 2)], spec.range || I.range) + '</span><span>' + tlabel(spec.t[n - 1], spec.range || I.range) + '</span></div>' + legend + '</div>';
   }
   function nice(v) { var p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
   document.addEventListener('pointermove', function (ev) {
@@ -57,7 +57,7 @@
     var c = CH[plot.getAttribute('data-ch')]; if (!c) return; var r = plot.getBoundingClientRect(), f = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)), i = Math.round(f * (c.n - 1));
     var line = plot.querySelector('.ich-x'), x = c.n < 2 ? c.W / 2 : c.L + i * (c.W - c.L - c.R) / (c.n - 1); line.setAttribute('x1', x); line.setAttribute('x2', x); line.style.display = '';
     var tip = plot.querySelector('.ich-tip'); tip.hidden = false;
-    tip.innerHTML = '<b>' + esc(A.fmt(new Date(ts(c.t[i])), c.range === '1m' || c.range === '10m' || c.range === '20m' ? { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit' })) + '</b>' + c.series.map(function (s) { return '<span><i style="background:' + s.color + '"></i>' + (c.series.length > 1 ? esc(s.name) + ' ' : '') + esc(s.v[i] == null ? '–' : c.fmt(s.v[i])) + '</span>'; }).join('');
+    tip.innerHTML = '<b>' + esc(A.fmt(new Date(ts(c.t[i])), c.range === '1m' || c.range === '10m' || c.range === '20m' ? { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } : c.range === 'D' ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', hour: '2-digit' })) + '</b>' + c.series.map(function (s) { return '<span><i style="background:' + s.color + '"></i>' + (c.series.length > 1 ? esc(s.name) + ' ' : '') + esc(s.v[i] == null ? '–' : c.fmt(s.v[i])) + '</span>'; }).join('');
     tip.style.left = Math.min(Math.max(0, f * r.width - 70), r.width - 150) + 'px';
   });
 
@@ -230,5 +230,5 @@
   /* keep the open page fresh */
   setInterval(function () { if (S.view !== 'servers' || document.hidden) return; if (I.id) loadDetail(true); else if (I.tab === 'systems') loadSystems(true); }, 30000);
 
-  window.AOSSrv = { view: view, open: open, onGo: onGo, state: I };
+  window.AOSSrv = { chart: function (s) { return chart(s); }, reset: function () { chN = 0; CH = {}; }, bars: { bps: bps, by: by, pct: pct, ago: ago, pill: pill }, view: view, open: open, onGo: onGo, state: I };
 })();

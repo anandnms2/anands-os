@@ -46,6 +46,7 @@ export function effective() {
     immich: { url: clean(s.immich?.url) || clean(env.IMMICH_URL), key: clean(s.immich?.key) || clean(env.IMMICH_API_KEY) },
     coolify: { url: clean(s.coolify?.url) || clean(env.COOLIFY_URL), token: clean(s.coolify?.token) || clean(env.COOLIFY_TOKEN) },
     status: { url: clean(s.status?.url) || clean(env.STATUS_URL), user: clean(s.status?.user) || clean(env.STATUS_USER), pass: clean(s.status?.pass) || clean(env.STATUS_PASSWORD) },
+    aiusage: { url: clean(s.aiusage?.url) || clean(env.FREELLM_URL), user: clean(s.aiusage?.user) || clean(env.FREELLM_USER), pass: clean(s.aiusage?.pass) || clean(env.FREELLM_PASSWORD) },
     vpn: { url: clean(s.vpn?.url) || clean(env.VPN_URL), user: clean(s.vpn?.user) || clean(env.VPN_USER), pass: clean(s.vpn?.pass) || clean(env.VPN_PASSWORD) },
     cards: { url: clean(s.cards?.url) || clean(env.CARDS_URL), user: clean(s.cards?.user) || clean(env.CARDS_USER), pass: clean(s.cards?.pass) || clean(env.CARDS_PASSWORD) },
     google: { clientId: clean(s.google?.clientId) || clean(env.GOOGLE_CLIENT_ID), clientSecret: clean(s.google?.clientSecret) || clean(env.GOOGLE_CLIENT_SECRET) },
@@ -69,6 +70,7 @@ export function publicSettings() {
     immich: { url: e.immich.url, keySet: !!e.immich.key },
     coolify: { url: e.coolify.url, tokenSet: !!e.coolify.token },
     status: { url: e.status.url, user: e.status.user, passSet: !!e.status.pass },
+    aiusage: { url: e.aiusage.url, user: e.aiusage.user, passSet: !!e.aiusage.pass },
     vpn: { url: e.vpn.url, user: e.vpn.user, passSet: !!e.vpn.pass },
     cards: { url: e.cards.url, user: e.cards.user, passSet: !!e.cards.pass },
     google: { clientId: e.google.clientId, secretSet: !!e.google.clientSecret },
@@ -99,7 +101,7 @@ export function updateSettings(patch) {
   const p = patch || {};
   set('immich', 'url', p.immich?.url); set('immich', 'key', p.immich?.key, true);
   set('coolify', 'url', p.coolify?.url); set('coolify', 'token', p.coolify?.token, true);
-  for (const g of ['status', 'vpn', 'cards']) { set(g, 'url', p[g]?.url); set(g, 'user', p[g]?.user); set(g, 'pass', p[g]?.pass, true); }
+  for (const g of ['status', 'vpn', 'cards', 'aiusage']) { set(g, 'url', p[g]?.url); set(g, 'user', p[g]?.user); set(g, 'pass', p[g]?.pass, true); }
   set('google', 'clientId', p.google?.clientId); set('google', 'clientSecret', p.google?.clientSecret, true);
   set('pulse', 'url', p.pulse?.url); set('pulse', 'token', p.pulse?.token, true); set('pulse', 'user', p.pulse?.user); set('pulse', 'pass', p.pulse?.pass, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);

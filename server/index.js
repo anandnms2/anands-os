@@ -10,6 +10,7 @@ import { json, readJson, httpError } from './util.js';
 import { handlePhotos, status as immichStatus } from './immich.js';
 import { handleX, handleImmichProxy } from './immich-x.js';
 import { handleInsights, insights, clearInsightsCache } from './coolify.js';
+import { handleAiUsage, test as aiTest, clearAiUsageCache } from './aiusage.js';
 import { handleStatus, test as statusTest, clearStatusCache } from './status.js';
 import { handleVpn, test as vpnTest } from './vpn.js';
 import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
@@ -51,7 +52,7 @@ function redact(o) { const out = {}; for (const [g, v] of Object.entries(o)) { i
 async function api(req, res, url) {
   const p = url.pathname;
   if (p === '/api/settings' && req.method === 'GET') return json(res, 200, isOwner(sessionOf(req)) ? publicSettings() : redact(publicSettings()));
-  if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); clearStatusCache(); clearCardsCache(); clearPulseCache(); return json(res, 200, publicSettings()); }
+  if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); clearStatusCache(); clearAiUsageCache(); clearCardsCache(); clearPulseCache(); return json(res, 200, publicSettings()); }
   if (p === '/api/settings/test' && req.method === 'POST') {
     const { target } = await readJson(req, 1024);
     if (target === 'immich') return json(res, 200, await immichStatus());
@@ -61,6 +62,7 @@ async function api(req, res, url) {
     if (target === 'mail') return json(res, 200, await mail.verify());
     if (target === 'google') return json(res, 200, { configured: gConfigured(), connected: gConnected(), reason: gConfigured() ? (gConnected() ? '' : 'Not connected yet. Use Connect Google Drive.') : 'Add the client ID and secret.' });
     if (target === 'pulse') return json(res, 200, await pulseTest());
+    if (target === 'aiusage') return json(res, 200, await aiTest());
     if (target === 'status') return json(res, 200, await statusTest());
     if (target === 'vpn') return json(res, 200, await vpnTest());
     if (target === 'cards') return json(res, 200, await cardsTest());
@@ -85,6 +87,7 @@ async function api(req, res, url) {
   if (p === '/api/browse' && (req.method === 'GET' || req.method === 'POST')) return handleBrowse(req, res, url);
   if (p === '/api/gdrive' || p.startsWith('/api/gdrive/')) return handleGdrive(req, res, url);
   if (p === '/api/pulse' || p.startsWith('/api/pulse/')) return handlePulse(req, res, url);
+  if (p === '/api/aiusage' || p.startsWith('/api/aiusage/')) return handleAiUsage(req, res, url);
   if (p === '/api/status' || p.startsWith('/api/status/')) return handleStatus(req, res, url);
   if (p === '/api/vpn' || p.startsWith('/api/vpn/')) return handleVpn(req, res, url);
   if (p === '/api/cards' || p === '/api/my-cards' || p.startsWith('/api/my-cards/') || p.startsWith('/api/cards/') || p.startsWith('/api/cs/')) return handleCards(req, res, url);

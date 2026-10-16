@@ -5,6 +5,7 @@ import { json, readJson, fetchJson, httpError } from './util.js';
 import { photoContext } from './immich.js';
 import { insightsContext } from './coolify.js';
 import { statusContext } from './status.js';
+import { aiContext } from './aiusage.js';
 import { vpnContext } from './vpn.js';
 import { cardsContext } from './cardscan.js';
 import { pulseContext } from './pulse.js';
@@ -52,6 +53,7 @@ export async function handleChat(req, res, url, sess) {
   const jobs = [];
   if (want.photos !== false) jobs.push(photoContext().then((v) => { ctx.photos = v; used.push('photos'); }).catch((e) => { ctx.photos = { connected: false, note: e.message }; }));
   if (want.insights !== false) jobs.push(insightsContext().then((v) => { ctx.cloud = v; used.push('insights'); }));
+  if (want.insights !== false) jobs.push(aiContext().then((v) => { if (v) { ctx.aiUsage = v; used.push('AI usage'); } }));
   if (want.insights !== false) jobs.push(statusContext().then((v) => { if (v) { ctx.servers = v; used.push('servers'); } }));
   if (want.insights !== false) jobs.push(vpnContext().then((v) => { if (v) { ctx.vpn = v; used.push('vpn'); } }));
   if (want.cards !== false) jobs.push(cardsContext(hist[hist.length - 1].content).then((v) => { if (v) { ctx.businessCards = v; used.push('cards'); } }));

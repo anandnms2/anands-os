@@ -15,7 +15,7 @@ function commands() {
   var c = [];
   var add = function (n, s, i, run, kw, area) { if (area && !A.can(area)) return; c.push({ g: 'Go to', n: n, s: s, ic: i, run: run, kw: kw || '' }); };
   add('Home', 'Overview', 'home', nav('home')); add('Photos', 'Immich library', 'photos', nav('photos'), '', 'photos'); add('Drive', 'Files', 'cloud', nav('drive'), 'files storage', 'drive');
-  add('Vault', 'Passwords', 'lock', nav('vault'), 'passwords', 'vault'); add('Cloud Insights', 'Servers and deployments', 'insights', nav('insights'), 'coolify', 'insights'); add('Servers', 'Server health', 'monitor', nav('servers'), '', 'insights');
+  add('Vault', 'Passwords', 'lock', nav('vault'), 'passwords', 'vault'); add('Cloud Insights', 'Servers and deployments', 'insights', nav('insights'), 'coolify', 'insights'); add('Servers', 'Server health', 'monitor', nav('servers'), '', 'insights'); add('AI Insights', 'FreeLLMAPI usage, models and keys', 'insights', nav('ai'), 'freellmapi llm tokens', 'insights');
   add('Pulse', 'Mail, WhatsApp, tasks', 'pulse', nav('pulse'), 'inbox', 'pulse'); add('VPN', 'WireGuard', 'vpn', nav('vpn'), 'wireguard', 'vpn'); add('Cards', 'Business cards and contacts', 'cards', nav('cards'), 'contacts', 'cards');
   add('Suite', 'All apps', 'apps', nav('apps'), '', 'suite'); add('Settings', 'Connections and preferences', 'settings', nav('settings'), 'connections');
   if (window.AOSSec) add('Security center', 'Sessions, sign-in history, password health', 'shield', nav('security'), 'sessions logins passwords');
