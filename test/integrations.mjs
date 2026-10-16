@@ -38,9 +38,10 @@ try {
     r = await api('POST', '/api/status/alerts', { system: 'sysaaa111', name: 'CPU', value: 90, min: 5 }); assert.equal(r.data.rules.length, 2); assert.equal(beszel.alerts[1].value, 90);
     assert.equal((await api('POST', '/api/status/alerts', { system: 'sysaaa111', name: 'Bogus', value: 1 })).status, 400); assert.equal((await api('POST', '/api/status/alerts', { system: 'sysaaa111', name: 'CPU', value: 'x' })).status, 400);
     r = await api('DELETE', '/api/status/alerts?id=' + beszel.alerts[1].id); assert.equal(r.data.rules.length, 1);
-    r = await api('GET', '/api/status/probes'); assert.equal(r.data.probes[0].ok, 99); assert.equal(r.data.probes[0].avg, 50);
-    const p2 = r.data.probes[1]; assert.equal(r.data.statsFrom, 'network_monitor_stats'); assert.equal(p2.avg, 50); assert.equal(p2.min, 30); assert.equal(p2.max, 120); assert.equal(p2.ok, 95); assert.equal(p2.samples, 2);
-    assert.ok((await api('GET', '/api/status/probes?debug=1')).data.debug.statsSample);
+    r = await api('GET', '/api/status/probes'); const p1 = r.data.probes[0], p2 = r.data.probes[1];
+    assert.equal(p1.ok, 99); assert.equal(p1.now, 8.3); assert.equal(p1.avg, 12.8); assert.equal(p1.min, 5.5); assert.equal(p1.max, 41.2); assert.equal(p1.cert.days, 39); assert.equal(p1.cert.issuer, 'YR2');
+    assert.equal(r.data.statsFrom, 'network_monitor_stats'); assert.equal(p2.ok, 75); assert.equal(p2.avg, 145); assert.equal(p2.min, 90); assert.equal(p2.max, 258); assert.equal(p2.now, 2);
+    assert.ok((await api('GET', '/api/status/probes?debug=1')).data.debug.monitorKeys.includes('resAvg1h'));
   });
   await t('vpn lists devices with online state', async () => { const r = await api('GET', '/api/vpn'); assert.equal(r.data.total, 2); assert.equal(r.data.online, 1); assert.equal(r.data.clients[0].online, true); assert.equal(r.data.clients[0].rx, 1000); assert.ok(!JSON.stringify(r.data).includes('SK')); });
   await t('vpn create, disable, enable, rename, delete', async () => {

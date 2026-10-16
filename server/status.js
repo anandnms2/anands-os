@@ -121,40 +121,32 @@ export async function alertsAll() {
     quiet: (quiet.items || []).map((q) => ({ id: q.id, system: q.system, systemName: q.system ? names[q.system] || '' : 'All servers', type: q.type, start: q.start, end: q.end }))
   };
 }
-/* Probe results are not on the probe record. Beszel keeps them in a stats collection whose name changed between versions, so try the known names.
- * A row is either one probe per row (probe id plus avg, min, max, loss) or one row per system with a map of probe id to [avg, min, max, loss]. */
-const PROBE_STATS = ['network_monitor_stats', 'network_probe_stats', 'probe_stats', 'network_monitors_stats'];
-const PICK = (o, ...ks) => { for (const k of ks) if (o && o[k] != null && o[k] !== '') return o[k]; return null; };
-function fold(rows, ids) {
+/* Probes (Beszel 0.18+). Each probe record carries the last reading and the last-hour figures (res, resAvg1h, resMin1h, resMax1h, loss1h, certInfo),
+ * all in microseconds. History rows live in network_monitor_stats (monitor, res_sum, res_min, res_max, success_count, total_count, type) and fill in
+ * when a record has no hourly figures yet. */
+const ms = (v) => (v == null || !Number.isFinite(Number(v)) ? null : Math.round(Number(v) / 100) / 10);
+function history(rows, ids) {
   const acc = {};
-  const add = (id, v) => { if (!ids.has(id) || !v) return; const a = acc[id] || (acc[id] = { avg: [], min: [], max: [], loss: [], ok: [], n: 0 }); const n = (x) => (x == null || x === '' || !Number.isFinite(Number(x)) ? null : Number(x)); const f = (k, x) => { if (n(x) != null) a[k].push(n(x)); };
-    if (Array.isArray(v)) { f('avg', v[0]); f('min', v[1]); f('max', v[2]); f('loss', v[3]); } else if (typeof v === 'object') { f('avg', PICK(v, 'avg', 'res', 'latency', 'ms', 'a')); f('min', PICK(v, 'min', 'res_min', 'mn')); f('max', PICK(v, 'max', 'res_max', 'mx')); f('loss', PICK(v, 'loss', 'packet_loss', 'l')); const ok = PICK(v, 'success', 'up', 'ok'); if (ok != null) a.ok.push(ok === true || ok === 1 || ok === '1' ? 1 : 0); } else f('avg', v);
-    a.n++; };
   for (const r of rows) {
-    const direct = PICK(r, 'probe', 'monitor', 'network_monitor', 'probe_id');
-    if (direct && !Array.isArray(r.stats)) add(direct, r.stats && typeof r.stats === 'object' ? r.stats : r);
-    else if (r.stats && typeof r.stats === 'object' && !Array.isArray(r.stats)) for (const [id, v] of Object.entries(r.stats)) add(id, v);
+    const id = r.monitor; if (!ids.has(id)) continue; const a = acc[id] || (acc[id] = { sum: 0, n: 0, ok: 0, min: null, max: null, rows: 0 });
+    a.sum += Number(r.res_sum) || 0; a.n += Number(r.total_count) || 0; a.ok += Number(r.success_count) || 0; a.rows++;
+    if (r.res_min != null) a.min = a.min == null ? Number(r.res_min) : Math.min(a.min, Number(r.res_min)); if (r.res_max != null) a.max = a.max == null ? Number(r.res_max) : Math.max(a.max, Number(r.res_max));
   }
-  const mean = (l) => (l.length ? l.reduce((x, y) => x + y, 0) / l.length : null);
-  return Object.fromEntries(Object.entries(acc).map(([id, a]) => {
-    const loss = mean(a.loss), okRate = a.ok.length ? mean(a.ok) * 100 : null;
-    return [id, { avg: round(mean(a.avg)), min: a.min.length ? round(Math.min(...a.min)) : null, max: a.max.length ? round(Math.max(...a.max)) : null, ok: loss != null ? round(100 - loss) : okRate != null ? round(okRate) : null, samples: a.n }];
-  }));
+  return Object.fromEntries(Object.entries(acc).map(([id, a]) => [id, { avg: a.n ? ms(a.sum / a.n) : null, min: ms(a.min), max: ms(a.max), ok: a.n ? round(a.ok / a.n * 100) : null, samples: a.rows }]));
 }
 export async function probes(debug) {
   const [m, sys] = await Promise.all([pb('/api/collections/network_monitors/records' + qs({ perPage: 200 })).catch((e) => (e.status === 404 ? { items: [], none: true } : Promise.reject(e))), pb('/api/collections/systems/records' + qs({ perPage: 100, fields: 'id,name' })).catch(() => ({ items: [] }))]);
   const names = Object.fromEntries((sys.items || []).map((x) => [x.id, x.name]));
   const items = m.items || [], ids = new Set(items.map((x) => x.id));
-  let stats = {}, source = null, sample = null;
-  for (const c of PROBE_STATS) {
-    const r = await pb('/api/collections/' + c + '/records' + qs({ perPage: 120, sort: '-created' })).catch(() => null);
-    if (!r) continue; source = c; sample = (r.items || [])[0] || null;
-    let rows = r.items || []; const t = rows.find((x) => x.type); if (t) { const want = rows.filter((x) => x.type === (rows.some((y) => y.type === '1m') ? '1m' : t.type)); if (want.length) rows = want; }
-    stats = fold(rows, ids); break;
+  let hist = {}, source = null, sample = null;
+  if (items.some((x) => x.resAvg1h == null)) {
+    const r = await pb('/api/collections/network_monitor_stats/records' + qs({ perPage: 200, sort: '-created', filter: 'type="1m"' })).catch(() => null);
+    if (r) { source = 'network_monitor_stats'; sample = (r.items || [])[0] || null; hist = history(r.items || [], ids); }
   }
-  const out = { probes: items.map((x) => { const st = stats[x.id] || {};
-    const own = (x.success_count != null && x.total_count ? Math.round(x.success_count / x.total_count * 1000) / 10 : null);
-    return { id: x.id, name: x.name || x.target, target: x.target, protocol: x.protocol, port: x.port, interval: x.interval, system: x.system, systemName: names[x.system] || '', ok: own ?? st.ok ?? null, avg: (x.res_sum && x.total_count ? Math.round(x.res_sum / x.total_count) : null) ?? st.avg ?? null, min: x.res_min ?? st.min ?? null, max: x.res_max ?? st.max ?? null, cert: x.cert || null, enabled: x.enabled !== false, samples: st.samples || 0 }; }), statsFrom: source };
+  const out = { probes: items.map((x) => { const h = hist[x.id] || {}; const exp = x.certInfo && x.certInfo.expires ? Number(x.certInfo.expires) : null;
+    return { id: x.id, name: x.name || x.target, target: x.target, protocol: x.protocol, port: x.port, interval: x.interval, system: x.system, systemName: names[x.system] || (x.server || ''), enabled: x.enabled !== false,
+      now: ms(x.res), ok: x.loss1h != null ? round(100 - Number(x.loss1h)) : h.ok ?? null, avg: ms(x.resAvg1h) ?? h.avg ?? null, min: ms(x.resMin1h) ?? h.min ?? null, max: ms(x.resMax1h) ?? h.max ?? null,
+      cert: exp ? { expires: new Date(exp).toISOString(), days: Math.floor((exp - Date.now()) / 86400e3), issuer: x.certInfo.issuer || '' } : null, updated: x.updated || null }; }), statsFrom: source };
   if (debug) out.debug = { monitorKeys: items[0] ? Object.keys(items[0]) : [], monitor: items[0] || null, statsCollection: source, statsSample: sample };
   return out;
 }
