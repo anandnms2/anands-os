@@ -111,20 +111,26 @@
   function itemOf(st) { var p = st.path; return { name: st.name, path: p, size: st.size, is_dir: !!st.is_dir, read: function () { return fs.read(p); }, text: function () { return fs.read(p).then(function (b) { return b.text(); }); } }; }
   var launchP = null;
   try { var lo = new URLSearchParams(location.search).getAll('open'); if (lo.length) launchP = Promise.all(lo.map(function (p) { return fs.stat(p).then(itemOf).catch(function () { return null; }); })).then(function (a) { return a.filter(Boolean); }); } catch (e) {}
-  // Apps with no launch hand-off but a hidden <input type=file>: feed the Drive file to it once the app has started.
+  // Apps that only take launch files when they run inside Puter's desktop (env "app") get the Drive file the way a person would give it:
+  // Photo Studio through its hidden <input type=file>, the PDF editor as a dropped file. Both wait until the app has wired itself up.
   (function () {
-    var m = location.pathname.match(/\/apps\/([^\/]+)/); if (!launchP || !m || ['photo-studio'].indexOf(m[1]) < 0) return;
+    var m = location.pathname.match(/\/apps\/([^\/]+)/); if (!launchP || !m || ['photo-studio', 'pdf'].indexOf(m[1]) < 0) return;
+    var slug = m[1];
+    function toFiles(items) { return Promise.all(items.map(function (it) { return it.read().then(function (b) { return new File([b], it.name, { type: b.type || (/\.pdf$/i.test(it.name) ? 'application/pdf' : '') }); }); })); }
     launchP.then(function (items) {
-      if (!items.length) return; var tries = 0, done = false;
+      if (!items.length) return; var tries = 0, done = false, filesP = toFiles(items);
+      filesP.catch(function () { try { var n = document.createElement('div'); n.textContent = 'Could not read ' + items[0].name + ' from Drive.'; n.style.cssText = 'position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#111;color:#fff;padding:8px 14px;border-radius:8px;z-index:99999;font:14px system-ui'; document.body.appendChild(n); setTimeout(function () { n.remove(); }, 6000); } catch (e) {} });
+      function give(files) {
+        if (slug === 'pdf') { var dt = new DataTransfer(); files.forEach(function (f) { dt.items.add(f); }); window.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true })); return; }
+        var inp = document.getElementById('file-input') || document.querySelector('input[type=file]');
+        var dt2 = new DataTransfer(); files.forEach(function (f) { dt2.items.add(f); }); inp.files = dt2.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       (function poll() {
-        if (done) return; var inp = document.getElementById('file-input') || document.querySelector('input[type=file]');
-        if (!inp) { if (++tries < 100) setTimeout(poll, 300); return; }
+        if (done) return; tries++;
+        var ready = slug === 'pdf' ? (document.readyState === 'complete' && tries > 6) : (function () { var i = document.getElementById('file-input') || document.querySelector('input[type=file]'); return !!i && typeof i.onchange === 'function'; })();
+        if (!ready) { if (tries < 200) setTimeout(poll, 300); return; }
         done = true;
-        setTimeout(function () {
-          Promise.all(items.map(function (it) { return it.read().then(function (b) { return new File([b], it.name, { type: b.type || '' }); }); })).then(function (files) {
-            var dt = new DataTransfer(); files.forEach(function (f) { dt.items.add(f); }); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
-          }).catch(function () {});
-        }, 1200);
+        setTimeout(function () { filesP.then(give).catch(function () {}); }, 500);
       })();
     });
   })();
