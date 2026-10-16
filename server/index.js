@@ -18,7 +18,7 @@ import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
 import { handleProfile } from './profile.js';
 import { handleBrowse, clearCookies as browseClear } from './browse.js';
-import { handleRb } from './rbrowser.js';
+import { handleRbProxy, handleRbUpgrade, status as rbStatus } from './rbproxy.js';
 import { handleMailboxes, syncAll } from './mailbox.js';
 import { handleGdrive, googleCallback, gConnected, gConfigured } from './gdrive.js';
 import { ping as davPing } from './webdav.js';
@@ -42,9 +42,8 @@ import { serveStatic } from './static.js';
 const CONNECT_EXTRA = (env.CONNECT_SRC_EXTRA || '').trim();
 const BASE_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'permissions-policy': 'camera=(self), microphone=(self), display-capture=(self), geolocation=()' };
 const UI_CSP_PARTS = ["default-src 'self'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self' blob:", "connect-src 'self'"];
-const rbOrigin = () => { try { const u = effective().rbrowser.url; return u ? new URL(u).origin : ''; } catch { return ''; } };
 const pulseOrigin = () => { try { const u = effective().pulse.url; return u ? new URL(u).origin : ''; } catch { return ''; } };
-const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self' " + rbOrigin(), "manifest-src 'self'", "worker-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'self'"].join('; ');
+const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self'", "manifest-src 'self'", "worker-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'self'"].join('; ');
 /* Apps can only talk to this server. puter.com is not reachable from them: nothing else is in connect-src. */
 const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
 
@@ -83,7 +82,7 @@ async function api(req, res, url) {
   if (p.startsWith('/api/immich/')) return handleImmichProxy(req, res, url);
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
   if (p === '/api/mailboxes' || p.startsWith('/api/mailboxes/')) return handleMailboxes(req, res, url);
-  if (p === '/api/rb' || p.startsWith('/api/rb/')) return handleRb(req, res, url);
+  if (p === '/api/rb/status') return json(res, 200, await rbStatus());
   if (p === '/api/browse/clear' && req.method === 'POST') { browseClear(req); return json(res, 200, { ok: true }); }
   if (p === '/api/browse' && (req.method === 'GET' || req.method === 'POST')) return handleBrowse(req, res, url);
   if (p === '/api/gdrive' || p.startsWith('/api/gdrive/')) return handleGdrive(req, res, url);
@@ -128,7 +127,7 @@ const server = http.createServer(async (req, res) => {
     if (isWorkerPath(p) && ['GET', 'HEAD', 'POST', 'PUT'].includes(req.method)) return await handleWorkerRequest(req, res, url);
     let viaToken = false; { const au = String(req.headers.authorization || ''); if (/^Bearer aos_/.test(au) && (p.startsWith('/api/') || p.startsWith('/_local/'))) { const r = tokLookup(au.slice(7).trim()); if (!r) throw httpError(401, 'That access token is not valid', 'bad_token'); if (!tokAllows(r, p)) throw httpError(403, 'This token does not cover that part of Anands OS', 'forbidden'); req.headers.cookie = SESSION_COOKIE + '=' + sign({ u: 'owner', n: OWNER, sid: r.sid }, 300); viaToken = true; } }
     if (sessionOf(req)) noteOrigin(req);
-    const protectedPath = p.startsWith('/api/') || p.startsWith('/_local/') || p.startsWith('/apps/');
+    const protectedPath = p.startsWith('/api/') || p.startsWith('/_local/') || p.startsWith('/apps/') || p === '/rb' || p.startsWith('/rb/');
     if (protectedPath && !sessionOf(req)) {
       if (p.startsWith('/apps/')) { res.writeHead(401, { 'content-type': 'text/html; charset=utf-8' }); return res.end('<!doctype html><meta charset=utf-8><body style="font:16px system-ui;padding:2rem">Sign in at <a href="/">Anands OS</a> first.'); }
       throw httpError(401, 'Sign in first', 'auth_required');
@@ -138,6 +137,7 @@ const server = http.createServer(async (req, res) => {
       if (!allowed(so, area) || (p.startsWith('/apps/') && !suiteOk(so, p.split('/')[2]))) throw httpError(403, allowed(so, 'open') ? 'This part of Anands OS is not shared with you' : 'Your access has ended', allowed(so, 'open') ? 'forbidden' : 'access_ended');
     }
     if (req.method !== 'GET' && req.method !== 'HEAD' && (p.startsWith('/api/') || p.startsWith('/_local/')) && p !== '/api/browse' && !viaToken && req.headers['x-aos'] !== '1') throw httpError(403, 'Missing x-aos header', 'csrf');
+    if (p === '/rb' || p.startsWith('/rb/')) { if (!isOwner(sessionOf(req))) throw httpError(403, 'The Full browser is only for the owner', 'forbidden'); return handleRbProxy(req, res, url); }
     if (p.startsWith('/api/')) return await api(req, res, url);
     if (p.startsWith('/_local/')) return await handleLocal(req, res, url);
     if (p.startsWith('/apps/')) {
@@ -171,6 +171,15 @@ const server = http.createServer(async (req, res) => {
     if (!res.headersSent) json(res, status, { error: e.message || 'Server error', code: e.code });
     else res.destroy();
   }
+});
+server.on('upgrade', (req, socket, head) => {
+  try {
+    const url = new URL(req.url, 'http://x');
+    if (!url.pathname.startsWith('/rb/')) return socket.destroy();
+    const so = sessionOf(req); const o = req.headers.origin; let same = !o; try { if (o) same = new URL(o).host === req.headers.host; } catch {}
+    if (!so || !isOwner(so) || !same) { socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n'); return socket.destroy(); }
+    handleRbUpgrade(req, socket, head, url);
+  } catch { socket.destroy(); }
 });
 server.requestTimeout = 0; server.headersTimeout = 30000;
 server.listen(PORT, () => {

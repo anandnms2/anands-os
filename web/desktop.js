@@ -179,7 +179,7 @@
       var sd = r && r.sd, w = null; if (!sd) return;
       try {
         if (sd.t === 'app') w = openApp(sd.slug, sd.file); else if (sd.t === 'os') w = osWin(sd.view); else if (sd.t === 'tool') w = toolWin(sd.id, sd.path); else if (sd.t === 'files') w = filesWin(sd.src); else if (sd.t === 'viewer') w = viewer(sd.path, sd.remote);
-        else if (sd.t === 'ext' && window.AOSDeskX) w = window.AOSDeskX.open(sd.id); else if (sd.t === 'ai') w = aiWin(); else if (sd.t === 'calc') w = calcWin(); else if (sd.t === 'rb') w = rbWin(); else if (sd.t === 'br') { w = browserWin(sd.urls && sd.urls[0]); (sd.urls || []).slice(1).forEach(function (u) { newTab(w, u); }); }
+        else if (sd.t === 'ext' && window.AOSDeskX) w = window.AOSDeskX.open(sd.id); else if (sd.t === 'ai') w = aiWin(); else if (sd.t === 'calc') w = calcWin();  else if (sd.t === 'br') { w = browserWin(sd.urls && sd.urls[0]); (sd.urls || []).slice(1).forEach(function (u) { newTab(w, u); }); }
       } catch (e) { w = null; }
       if (!w) return;
       if (typeof r.x === 'number') { w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h; } w.max = !!r.max; w.min = !!r.min; place(w); if (r.act) act = w;
@@ -235,7 +235,13 @@
     return searchFor(t);
   }
   function btab(w) { var b = w.b; return b.tabs.filter(function (t) { return t.id === b.cur; })[0]; }
-  function loadRb() { if (D.rbTried) return; D.rbTried = true; fetch('/api/rb/status', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (c) { D.rbn = !!(c && c.available); }).catch(function () {}); fetch('/api/settings', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (c) { var u = c && c.rbrowser && c.rbrowser.url; if (u && /^https?:/i.test(u)) { D.rb = u; D.wins.forEach(function (w) { if (w.kind === 'browser') { if (w.b.full === undefined) w.b.full = true; paintBrowser(w); } }); } }).catch(function () {}); }
+  function loadRb(again) {
+    if (D.rbTried && !again) return; D.rbTried = true;
+    fetch('/api/rb/status', { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (c) {
+      if (!c || !c.available) return; D.rb = '/rb/?resize=remote'; D.rbUp = !!c.up; D.rbWhy = c.reason || '';
+      D.wins.forEach(function (w) { if (w.kind === 'browser') { if (w.b.full === undefined) w.b.full = true; paintBrowser(w); } });
+    }).catch(function () {});
+  }
   function browserWin(url) {
     loadRb();
     var w = mk('browser', 'Browser', { w: 1000, h: 640 }); w.sd = { t: 'br' }; w.b = { tabs: [], cur: 0, n: 0, full: D.rb ? (url ? false : true) : undefined }; newTab(w, url); return w;
@@ -248,14 +254,15 @@
   }
   function bstart(w) {
     return '<div class="dk-start2"><h2>Browser</h2><form data-dk-form="url" data-id="' + w.id + '" class="dk-sf"><input class="input dk-url" placeholder="Search the web or type an address" autocomplete="off" aria-label="Search"><button class="btn primary">Go</button></form><div class="dk-q">' + QUICK.map(function (q) { return '<button class="btn" data-dk="bgo" data-id="' + w.id + '" data-u="' + esc(q[1]) + '">' + esc(q[0]) + '</button>'; }).join('') + '</div>' +
-      '<p class="note">Pages open through your Anands server in a sandbox, so sites cannot see your Anands session. Simple pages work best. Cookies are kept for your session, so many sign-ins and forms work. For video calls, payments and heavy web apps press Full browser (a complete remote Chrome, set up in Settings) or open the page in a real tab.</p></div>';
+      '<p class="note">Pages open through your Anands server in a sandbox, so sites cannot see your Anands session. Simple pages work best. Cookies are kept for your session, so many sign-ins and forms work. For video calls, payments and heavy web apps press Full browser (a complete Chrome with sound, set up in Settings) or open the page in a real tab.</p></div>';
   }
   function paintBrowser(w) {
     var b = w.b, t = btab(w);
     if (!w.body.querySelector('.dk-br')) w.body.innerHTML = '<div class="dk-br"><div class="dk-bts" role="tablist"></div><div class="dk-barw"></div><div class="dk-bv"><div class="dk-sw"></div></div></div>';
     w.body.querySelector('.dk-bts').innerHTML = b.tabs.map(function (x) { return '<div class="dk-bt' + (x.id === b.cur ? ' on' : '') + '" data-dk="btab" data-id="' + w.id + '" data-t="' + x.id + '" role="tab" aria-selected="' + (x.id === b.cur) + '"><span>' + esc(x.title) + '</span>' + (b.tabs.length > 1 ? '<button data-dk="bclose" data-id="' + w.id + '" data-t="' + x.id + '" aria-label="Close tab">&#10005;</button>' : '') + '</div>'; }).join('') + '<button class="dk-bnew" data-dk="bnew" data-id="' + w.id + '" aria-label="New tab">+</button><button class="dk-bnew" data-dk="bset" data-id="' + w.id + '" aria-label="Browser settings" title="Browser settings">' + ic('settings') + '</button>' + (D.rb ? '<button class="btn sm dk-bfull' + (b.full ? ' on' : '') + '" data-dk="bfull" data-id="' + w.id + '" title="A complete remote browser: sign-ins, video, web apps">' + (b.full ? 'Simple tabs' : 'Full browser') + '</button>' : '');
     var rf = w.body.querySelector('.dk-bv iframe.dk-rb');
-    if (b.full && D.rb) { if (!rf) { rf = document.createElement('iframe'); rf.className = 'dkw-frame dk-rb'; rf.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock'); rf.setAttribute('allow', 'clipboard-read; clipboard-write; fullscreen; microphone; camera; autoplay'); rf.title = 'Full browser'; rf.src = D.rb; w.body.querySelector('.dk-bv').appendChild(rf); } rf.hidden = false; w.body.querySelector('.dk-barw').hidden = true; } else { if (rf) rf.hidden = true; w.body.querySelector('.dk-barw').hidden = false; }
+    if (b.full && D.rb) { if (!rf) { rf = document.createElement('iframe'); rf.className = 'dkw-frame dk-rb'; rf.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock'); rf.setAttribute('allow', 'clipboard-read; clipboard-write; fullscreen; microphone; camera; autoplay'); rf.title = 'Full browser'; rf.src = D.rbUp === false ? 'about:blank' : D.rb; w.body.querySelector('.dk-bv').appendChild(rf); } rf.hidden = D.rbUp === false; if (D.rbUp !== false && rf.getAttribute('src') === 'about:blank') rf.src = D.rb; w.body.querySelector('.dk-barw').hidden = true; } else { if (rf) rf.hidden = true; w.body.querySelector('.dk-barw').hidden = false; }
+    var mg = w.body.querySelector('.dk-rbmsg'); if (b.full && D.rb && D.rbUp === false) { if (!mg) { mg = document.createElement('div'); mg.className = 'dk-rbmsg'; w.body.querySelector('.dk-bv').appendChild(mg); } mg.innerHTML = '<b>The Full browser is not reachable</b><p>' + esc(D.rbWhy || 'Check that its container is running.') + '</p><div><button class="btn primary" data-dk="bretry" data-id="' + w.id + '">Try again</button> <button class="btn" data-dk="bfull" data-id="' + w.id + '">Use Simple tabs</button></div>'; } else if (mg) mg.remove();
     var keep = (document.activeElement && document.activeElement.classList.contains('dk-url') && w.body.contains(document.activeElement)) ? document.activeElement.value : null;
     w.body.querySelector('.dk-barw').innerHTML = '<form class="dk-bar2" data-dk-form="url" data-id="' + w.id + '"><button type="button" class="btn sm" data-dk="bback" data-id="' + w.id + '"' + (t.i > 0 ? '' : ' disabled') + ' aria-label="Back">' + ic('back') + '</button><button type="button" class="btn sm" data-dk="bfwd" data-id="' + w.id + '"' + (t.i < t.hist.length - 1 ? '' : ' disabled') + ' aria-label="Forward">' + ic('r') + '</button><button type="button" class="btn sm" data-dk="breload" data-id="' + w.id + '" aria-label="Reload"' + (t.url ? '' : ' disabled') + '>&#8635;</button><button type="button" class="btn sm" data-dk="bhome" data-id="' + w.id + '" aria-label="Start page">' + ic('home') + '</button>' +
       '<input class="input dk-url" aria-label="Address or search" placeholder="Search or type a web address" value="' + esc(t.url) + '" autocomplete="off" spellcheck="false"><button type="button" class="btn sm dk-star" data-dk="bmstar" data-id="' + w.id + '" aria-label="Bookmark this page" title="Bookmark this page"' + (t.url ? '' : ' disabled') + '>' + ic('star') + '</button><button type="button" class="btn sm" data-dk="bext" data-id="' + w.id + '"' + (t.url ? '' : ' disabled') + ' title="Open this page in a real browser tab" aria-label="Open in a real tab">' + ic('ext') + '</button></form>';
@@ -294,57 +301,8 @@
     document.body.appendChild(f); f.submit(); f.remove();
   }
 
-  /* ---------- full Chromium running inside the Anands OS server, streamed here ---------- */
-  function openBrowser(url) { if (D.rbn) return rbWin(url); if (!D.rbTried) { loadRb(); return void fetch('/api/rb/status', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (c) { D.rbn = !!(c && c.available); openBrowser(url); }).catch(function () { D.rbn = false; browserWin(url); }); } return browserWin(url); }
-  function rbWin(url) {
-    var ex = D.wins.filter(function (x) { return x.kind === 'rbrowser'; })[0]; if (ex) { focus(ex); if (url) rbPost(ex, '/open', { url: normUrl(url) }); return ex; }
-    var w = mk('rbrowser', 'Browser', { w: 1100, h: 700 }); w.sd = { t: 'rb' }; w.r = { tabs: [], active: null, q: [], mv: null, wh: null, fw: 0, fh: 0, down: false };
-    w.body.innerHTML = '<div class="dk-br"><div class="dk-bts" role="tablist"></div><div class="dk-barw"></div><div class="dk-bv dk-rv"><canvas class="dk-rc" tabindex="0" aria-label="Web page"></canvas><div class="dk-rmsg" hidden></div></div></div>';
-    rbBar(w); var cv = w.body.querySelector('.dk-rc'); rbWire(w, cv); if (window.AOSBS) AOSBS.sync(w);
-    var es = new EventSource('/api/rb/events'); w.r.es = es; w.onclose = function () { try { es.close(); } catch (e) {} clearInterval(w.r.tick); };
-    es.addEventListener('tabs', function (e) { var d = JSON.parse(e.data); w.r.tabs = d.tabs; w.r.active = d.active; rbBar(w); var t = rbTab(w); if (window.AOSBS && t && t.url && !t.loading && t.url !== w.r.lastv) { w.r.lastv = t.url; AOSBS.visit(t.url, t.title); } w.title = (t && t.title ? t.title + ' - ' : '') + 'Browser'; task(); });
-    es.addEventListener('frame', function (e) { var d = JSON.parse(e.data); if (d.tab !== w.r.active) return; var im = new Image(); im.onload = function () { if (cv.width !== im.width || cv.height !== im.height) { cv.width = im.width; cv.height = im.height; } cv.getContext('2d').drawImage(im, 0, 0); w.r.fw = d.w; w.r.fh = d.h; var m = w.body.querySelector('.dk-rmsg'); if (m) m.hidden = true; }; im.src = 'data:image/jpeg;base64,' + d.d; });
-    es.addEventListener('down', function () { var m = w.body.querySelector('.dk-rmsg'); if (m) { m.hidden = false; m.textContent = 'The browser stopped. It restarts when you open a page.'; } });
-    es.onerror = function () { var m = w.body.querySelector('.dk-rmsg'); if (m && es.readyState === 2) { m.hidden = false; m.textContent = 'The browser is not available right now. Use Simple browser from the top bar.'; } };
-    w.r.tick = setInterval(function () { rbFlush(w); }, 40);
-    var ro = new ResizeObserver(function () { clearTimeout(w.r.rt); w.r.rt = setTimeout(function () { var v = w.body.querySelector('.dk-rv'); if (v && v.clientWidth > 100) rbPost(w, '/size', { w: v.clientWidth, h: v.clientHeight, dpr: window.devicePixelRatio || 1 }, true); }, 250); }); ro.observe(w.body.querySelector('.dk-rv'));
-    setTimeout(function () { var v = w.body.querySelector('.dk-rv'); if (v) rbPost(w, '/size', { w: v.clientWidth, h: v.clientHeight, dpr: window.devicePixelRatio || 1 }, true); if (url) rbPost(w, '/open', { url: normUrl(url) }); else cv.focus(); }, 300);
-    return w;
-  }
-  function rbTab(w) { return w.r.tabs.filter(function (t) { return t.id === w.r.active; })[0]; }
-  function rbPost(w, path, body, quiet) { return fetch('/api/rb' + path, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-aos': '1' }, body: JSON.stringify(body || {}) }).then(function (r) { return r.json().then(function (j) { if (!r.ok && !quiet) toast(j.error || 'The browser could not do that'); return j; }); }).catch(function () {}); }
-  function rbBar(w) {
-    var r = w.r, t = rbTab(w), st = w.body.querySelector('.dk-bts');
-    st.innerHTML = r.tabs.map(function (x) { return '<div class="dk-bt' + (x.id === r.active ? ' on' : '') + '" data-dk="rbtab" data-id="' + w.id + '" data-t="' + esc(x.id) + '" role="tab" aria-selected="' + (x.id === r.active) + '"><span>' + esc((x.loading ? '... ' : '') + (x.title || x.url || 'New tab')) + '</span>' + (r.tabs.length > 1 ? '<button data-dk="rbclose" data-id="' + w.id + '" data-t="' + esc(x.id) + '" aria-label="Close tab">&#10005;</button>' : '') + '</div>'; }).join('') + '<button class="dk-bnew" data-dk="rbnew" data-id="' + w.id + '" aria-label="New tab">+</button><button class="btn sm dk-bfull" data-dk="rbsimple" data-id="' + w.id + '" title="Lighter browser that works inside this site">Simple browser</button>';
-    var bar = w.body.querySelector('.dk-barw'), keep = (document.activeElement && document.activeElement.classList.contains('dk-url') && bar.contains(document.activeElement)) ? document.activeElement.value : null;
-    bar.innerHTML = '<form class="dk-bar2" data-dk-form="rburl" data-id="' + w.id + '"><button type="button" class="btn sm" data-dk="rbback" data-id="' + w.id + '" aria-label="Back">' + ic('back') + '</button><button type="button" class="btn sm" data-dk="rbfwd" data-id="' + w.id + '" aria-label="Forward">' + ic('r') + '</button><button type="button" class="btn sm" data-dk="rbreload" data-id="' + w.id + '" aria-label="Reload">&#8635;</button><input class="input dk-url" aria-label="Address or search" placeholder="Search or type a web address" value="' + esc(t ? t.url : '') + '" autocomplete="off" spellcheck="false"><button type="button" class="btn sm dk-star" data-dk="bmstar" data-id="' + w.id + '" aria-label="Bookmark this page" title="Bookmark this page">' + ic('star') + '</button><button type="button" class="btn sm" data-dk="rbset" data-id="' + w.id + '" aria-label="Browser settings" title="Browser settings">' + ic('settings') + '</button></form>';
-    if (keep !== null) { var ui = bar.querySelector('.dk-url'); ui.value = keep; ui.focus(); }
-    if (window.AOSBS) AOSBS.bar(w);
-  }
-  function rbQ(w, e, flushNow) { w.r.q.push(e); if (flushNow) rbFlush(w); }
-  function rbFlush(w) {
-    var r = w.r; if (!r.active) return; var ev = r.q; r.q = []; if (r.mv) { ev.push(r.mv); r.mv = null; } if (r.wh) { ev.push(r.wh); r.wh = null; }
-    if (ev.length) rbPost(w, '/input', { tab: r.active, ev: ev }, true);
-  }
-  function rbWire(w, cv) {
-    function zoomBy(d) { var z = d === 0 ? 100 : Math.max(25, Math.min(300, (Number(LS.get('brzoom', 100)) || 100) + d)); LS.set('brzoom', z); rbPost(w, '/prefs', { zoom: z }, true); A.toast && A.toast('Zoom ' + z + '%'); }
-    function pos(e) { var b = cv.getBoundingClientRect(), fw = w.r.fw || cv.width || 1, fh = w.r.fh || cv.height || 1; return { x: Math.round((e.clientX - b.left) * fw / b.width), y: Math.round((e.clientY - b.top) * fh / b.height) }; }
-    var mod = function (e) { return (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.metaKey ? 4 : 0) | (e.shiftKey ? 8 : 0); };
-    cv.addEventListener('mousemove', function (e) { var p = pos(e); w.r.mv = { t: 'm', k: 'move', x: p.x, y: p.y, mod: mod(e), held: e.buttons ? 1 : 0, b: e.buttons & 4 ? 1 : e.buttons & 2 ? 2 : 0 }; });
-    cv.addEventListener('mousedown', function (e) { cv.focus(); var p = pos(e); w.r.down = true; rbQ(w, { t: 'm', k: 'down', x: p.x, y: p.y, b: e.button, cc: e.detail || 1, mod: mod(e) }, true); e.preventDefault(); });
-    window.addEventListener('mouseup', function (e) { if (!w.r.down) return; w.r.down = false; if (!document.contains(cv)) return; var p = pos(e); rbQ(w, { t: 'm', k: 'up', x: p.x, y: p.y, b: e.button, cc: e.detail || 1, mod: mod(e) }, true); });
-    cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-    cv.addEventListener('wheel', function (e) { e.preventDefault(); if (e.ctrlKey || e.metaKey) { zoomBy(e.deltaY < 0 ? 10 : -10); return; } var p = pos(e), k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 600 : 1; var o = w.r.wh || { t: 'w', x: p.x, y: p.y, dx: 0, dy: 0, mod: mod(e) }; o.x = p.x; o.y = p.y; o.dx += e.deltaX * k; o.dy += e.deltaY * k; w.r.wh = o; }, { passive: false });
-    cv.addEventListener('keydown', function (e) {
-      var m = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
-      if (m && (k === '+' || k === '=' || k === '-' || k === '_' || k === '0')) { zoomBy(k === '0' ? 0 : (k === '-' || k === '_') ? -10 : 10); e.preventDefault(); return; } /* page zoom goes through the zoom setting, never raw Chromium zoom */
-      if (m && k === 'v') return; /* the paste event brings the text */
-      if (m && (k === 'c' || k === 'x')) { rbQ(w, { t: 'k', k: 'down', key: e.key, code: e.code, kc: e.keyCode, mod: mod(e) }, true); rbPost(w, '/copy', { tab: w.r.active }, true).then(function (j) { if (j && j.text) { try { navigator.clipboard.writeText(j.text); } catch (x) {} } }); e.preventDefault(); return; }
-      rbQ(w, { t: 'k', k: 'down', key: e.key, code: e.code, kc: e.keyCode, mod: mod(e), rep: e.repeat ? 1 : 0 }, true); e.preventDefault();
-    });
-    cv.addEventListener('keyup', function (e) { var m = e.ctrlKey || e.metaKey; if (m && e.key.toLowerCase() === 'v') return; rbQ(w, { t: 'k', k: 'up', key: e.key, code: e.code, kc: e.keyCode, mod: mod(e) }, true); e.preventDefault(); });
-    cv.addEventListener('paste', function (e) { var t = e.clipboardData && e.clipboardData.getData('text'); if (t) rbQ(w, { t: 'text', s: t }, true); e.preventDefault(); });
-  }
+  /* ---------- Full browser: a separate Kasm Chrome shown at /rb/ (see server/rbproxy.js) ---------- */
+  function openBrowser(url) { return browserWin(url); }
   function rbSettings(w, keep) {
     if (window.AOSBS) return AOSBS.toggle(w);
     var old = w.body.querySelector('.dk-bset'); if (old && !keep) return void old.remove(); if (old) old.remove();
@@ -357,27 +315,12 @@
       '<p class="note">Saved on this device.</p>';
     w.body.querySelector('.dk-br').appendChild(el);
   }
-  function rbHand(a, b, w) {
-    var id = b.getAttribute('data-t');
-    if (a === 'rbtab') return void rbPost(w, '/activate', { tab: id });
-    if (a === 'rbclose') return void rbPost(w, '/close', { tab: id });
-    if (a === 'rbnew') { var home = newHome(); return void rbPost(w, '/open', home ? { url: normUrl(home) } : {}).then(function () { var u = w.body.querySelector('.dk-url'); if (u) u.focus(); }); }
-    if (a === 'rbback') return void rbPost(w, '/go', { tab: w.r.active, dir: 'back' });
-    if (a === 'rbfwd') return void rbPost(w, '/go', { tab: w.r.active, dir: 'forward' });
-    if (a === 'rbreload') return void rbPost(w, '/go', { tab: w.r.active, dir: 'reload' });
-    if (a === 'rbsimple') return void browserWin();
-    if (a === 'rbset') return void rbSettings(w);
-    if (a === 'bmstar') return void (window.AOSBS && AOSBS.star(w));
-    if (a === 'bmgo') return void (window.AOSBS && AOSBS.go(w, b.getAttribute('data-u')));
-    if (a === 'rbsetx') { var bs = w.body.querySelector('.dk-bset'); if (bs) bs.remove(); return; }
-    if (a === 'rbclear') { return void rbPost(w, '/clear', {}).then(function () { toast('Cookies and cache cleared'); }); }
-    if (a === 'rbq') { var q = b.getAttribute('data-q'); LS.set('brqual', q); rbPost(w, '/quality', { q: q }); return void rbSettings(w, true); }
-  }
   function bhand(a, b, w) {
     var t = btab(w);
     if (a === 'bset') return void rbSettings(w);
     if (a === 'bmstar') return void (window.AOSBS && AOSBS.star(w));
     if (a === 'bmgo') return void (window.AOSBS && AOSBS.go(w, b.getAttribute('data-u')));
+    if (a === 'bretry') { D.rbTried = false; loadRb(true); return; }
     if (a === 'bfull') { w.b.full = !w.b.full; return void paintBrowser(w); }
     if (a === 'bsetx') { var bs2 = w.body.querySelector('.dk-bset'); if (bs2) bs2.remove(); return; }
     if (a === 'bnew') { w.b.full = false; return void newTab(w, newHome()); }
@@ -569,7 +512,6 @@
     if (a === 'settings') { hide(); return void A.go('settings'); }
     if (a === 'tb') { if (!w) return; if (!w.min && D.top === w.id) { w.min = true; place(w); task(); } else focus(w); return; }
     if (w && (a === 'bmstar' || a === 'bmgo') && window.AOSBS) return void (a === 'bmstar' ? AOSBS.star(w) : AOSBS.go(w, b.getAttribute('data-u')));
-    if (w && w.kind === 'rbrowser' && /^rb/.test(a)) return void rbHand(a, b, w);
     if (w && w.kind === 'browser' && /^b/.test(a) && a !== 'bar') return void bhand(a, b, w);
     if (a === 'wtab' && w) { if (w.url) window.open(w.url, '_blank', 'noopener'); return; }
     if (a === 'wmin' && w) { w.min = true; place(w); task(); return; }
@@ -593,8 +535,7 @@
     if (ev.key === 'Escape') { if (D.menu) { D.menu = false; menu(); task(); } return; }
     if (ev.key === 'Enter' && !ev.shiftKey && ev.target.id === 'dkain') { ev.preventDefault(); var v = ev.target.value; ev.target.value = ''; aiSend(v); }
   });
-  document.addEventListener('submit', function (ev) { var fm = ev.target; if (fm.getAttribute && fm.getAttribute('data-dk-form') === 'rburl') { ev.preventDefault(); var rw = byId(fm.getAttribute('data-id')); if (rw) { var ri = fm.querySelector('.dk-url'), u = normUrl(ri.value); if (u) { rbPost(rw, rw.r.active ? '/nav' : '/open', { tab: rw.r.active, url: u }); var cvv = rw.body.querySelector('.dk-rc'); if (cvv) cvv.focus(); } } return; }
-    if (fm.getAttribute && fm.getAttribute('data-dk-form') === 'url') { ev.preventDefault(); var bw = byId(fm.getAttribute('data-id')); if (bw) { var inp = fm.querySelector('.dk-url'); nav(bw, btab(bw), inp.value); } return; } if (ev.target.getAttribute && ev.target.getAttribute('data-dk-form') === 'ai') { ev.preventDefault(); var i = $('#dkain'); var v = i.value; i.value = ''; aiSend(v); } });
+  document.addEventListener('submit', function (ev) { var fm = ev.target;     if (fm.getAttribute && fm.getAttribute('data-dk-form') === 'url') { ev.preventDefault(); var bw = byId(fm.getAttribute('data-id')); if (bw) { var inp = fm.querySelector('.dk-url'); nav(bw, btab(bw), inp.value); } return; } if (ev.target.getAttribute && ev.target.getAttribute('data-dk-form') === 'ai') { ev.preventDefault(); var i = $('#dkain'); var v = i.value; i.value = ''; aiSend(v); } });
   document.addEventListener('input', function (ev) {
     var t = ev.target; if (t.id === 'dkcq') { var cw = byId(t.closest('.dkw').getAttribute('data-id')); if (cw) { cw.q = t.value; var p2 = t.selectionStart; paintChooser(cw); var n2 = cw.body.querySelector('#dkcq'); if (n2) { n2.focus(); n2.setSelectionRange(p2, p2); } } return; }
     if (t.id === 'dkq') { D.q = t.value; var pos = t.selectionStart; menu(); var n = $('#dkq'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
@@ -732,6 +673,6 @@
   window.addEventListener('popstate', function () { if (location.hash === '#desktop') { if (!D.open) show(); } else if (D.open) hide(false); });
   (function wait(n) { if (S.user) { if (location.hash === '#desktop') show(); return; } if (n < 80) setTimeout(function () { wait(n + 1); }, 150); })(0);
 
-  window.AOSBR = { ENGINES: ENGINES, QLAB: QLAB, rbPost: rbPost, rbTab: rbTab, btab: btab, nav: nav, normUrl: normUrl, newTab: newTab };
+  window.AOSBR = { ENGINES: ENGINES, QLAB: QLAB, rbPost: function () { return Promise.resolve(); }, rbTab: function () { return null; }, btab: btab, nav: nav, normUrl: normUrl, newTab: newTab };
   window.AOSDesk = { x: { mk: mk, focus: focus, place: place, closeWin: closeWin, task: task, area: area, root: root, catalog: catalog, launchKey: launchKey, calcEval: calcEval, byId: byId, saveSess: saveSess, openFile: openFileInApp }, tool: toolWin, show: show, hide: hide, state: D, openApp: openApp, walls: WALLS, light: LIGHT, setWall: function (k) { D.wall = k; LS.set('deskwall', k); wallStyle(); }, wallImg: wallImg };
 })();

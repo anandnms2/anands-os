@@ -81,6 +81,8 @@ Limits: calls are a mesh (everyone connects to everyone), so quality drops beyon
 
 `node test/meet.mjs` runs these tests (needs Playwright; set `E2E_SUITE` to include the real Meetings app).
 
-## Browser (real Chromium inside the OS)
+## Browser (Simple and Full)
 
-The Desktop Browser window runs a real Chromium on the server and streams it to you over the normal HTTPS port: tabs, sign-ins that persist (profile in `/data/rbrowser`), forms, scrolling, copy and paste. It uses about 300 to 600 MB of RAM while open and stops itself after 10 minutes with no browser window open. There is no sound, camera or microphone; for those, run `browser/docker-compose.yml` (Neko) as a separate service and set its address in Settings. If Chromium is missing (a custom image), the Browser falls back to the simpler page proxy.
+Desktop Browser has two modes. Simple opens pages through this server in a sandbox (fast, good for plain pages). Full is a complete Chrome with sound that runs in its own container (Kasm Chrome, see `browser/docker-compose.yml`) and is shown inside the window at `/rb/`.
+
+The container is never public. Anands OS only lets the owner in, signs in to it for you and relays the page and the screen WebSocket (`server/rbproxy.js`). Put the container on the same Docker network as Anands OS, then in Settings enter its address (for example `https://anands-chrome:6901`), user `kasm_user` and the password you set. Its profile (logins, extensions) lives in the container's volume. It is one shared Chrome, with no camera or microphone.

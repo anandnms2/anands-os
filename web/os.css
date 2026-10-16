@@ -1197,3 +1197,5 @@ html.guest .deskbtn{display:none}
 .dk-ql-x{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:9px 10px;border-radius:9px;cursor:pointer}.dk-ql-x b{font:500 14.5px system-ui;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dk-ql-x small{color:#a9a199;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%}.dk-ql-x.on{background:#f68712;color:#1a1005}.dk-ql-x.on small{color:#3a2208}
 .dk-ql-e{padding:18px;text-align:center;color:#a9a199;margin:0}.dk-ql-h{display:flex;gap:16px;padding:8px 14px;border-top:1px solid rgba(255,255,255,.08);color:#7d766f;font-size:11.5px}
 @media (max-width:760px){.dk-cp{right:6px;left:6px;width:auto}.dk-sn-cs{opacity:1}}
+
+.dk-rbmsg{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;padding:24px;background:#17171b;color:#e8e2da}.dk-rbmsg p{margin:0;max-width:420px;color:#a9a199}.dk-rbmsg div{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px}

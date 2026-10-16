@@ -1,31 +1,17 @@
-# Full Chromium for the Anands OS Desktop (Neko: Chromium streamed over WebRTC).
-# Deploy this as its own Coolify "Docker Compose" resource, give the `browser` service a domain (for example browser.anands.xyz, port 8080),
-# then paste  https://browser.anands.xyz/?usr=anand&pwd=<BROWSER_PASSWORD>  into Anands OS > Settings > Full browser.
-# Open the media port below (TCP and UDP 52000) in the Hetzner firewall. Without it the page loads but the video stays black.
+# Full browser for Anands OS Desktop: Kasm Chrome. Never publish it. Put it on the same Docker network as Anands OS.
 services:
-  browser:
-    image: ghcr.io/m1k1o/neko/chromium:latest
+  chrome:
+    image: kasmweb/chrome:1.17.0
+    container_name: anands-chrome
     restart: unless-stopped
-    shm_size: 2gb
-    cap_add:
-      - SYS_ADMIN
-    security_opt:
-      - seccomp=unconfined
-    ports:
-      - "52000:52000/udp"
-      - "52000:52000/tcp"
+    shm_size: "2gb"
     environment:
-      NEKO_DESKTOP_SCREEN: ${BROWSER_SCREEN:-1920x1080@30}
-      NEKO_MEMBER_PROVIDER: multiuser
-      NEKO_MEMBER_MULTIUSER_USER_PASSWORD: ${BROWSER_PASSWORD:?set BROWSER_PASSWORD}
-      NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD: ${BROWSER_ADMIN_PASSWORD:?set BROWSER_ADMIN_PASSWORD}
-      NEKO_WEBRTC_UDPMUX: "52000"
-      NEKO_WEBRTC_TCPMUX: "52000"
-      NEKO_WEBRTC_IP_RETRIEVAL_URL: https://checkip.amazonaws.com
-      NEKO_SESSION_IMPLICIT_HOSTING: "true"
+      VNC_PW: "${CHROME_PW:?set CHROME_PW}"   # the user name is always kasm_user
     volumes:
-      - browser-profile:/home/neko/.config/chromium
+      - chrome-profile:/home/kasm-user/.config/google-chrome
+      - chrome-downloads:/home/kasm-user/Downloads
     expose:
-      - "8080"
+      - "6901"
 volumes:
-  browser-profile:
+  chrome-profile:
+  chrome-downloads:
