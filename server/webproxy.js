@@ -34,7 +34,7 @@ async function wispServer() {
       allow_udp_streams: false, allow_private_ips: env.SJ_ALLOW_PRIVATE === '1', allow_loopback_ips: env.SJ_ALLOW_PRIVATE === '1',
       dns_servers: String(env.SJ_DNS || '1.1.1.1,8.8.8.8').split(',').map((s) => s.trim()).filter(Boolean)
     });
-    try { m.logging.set_level(m.logging.NONE); } catch {}
+    try { m.logging.set_level(env.SJ_LOG === '1' ? m.logging.DEBUG : m.logging.WARN); } catch {}
     wisp = m.server;
   } catch (e) { loadError = e.message; }
   return wisp;
@@ -84,4 +84,17 @@ export async function handleSjUpgrade(req, socket, head, url) {
   const w = await wispServer(); if (!w) return deny();
   req.url = '/sj/wisp/'; // the tunnel itself does not look at the token
   w.routeRequest(req, socket, head);
+}
+
+/* one look at startup: can this server resolve names and open a connection to the internet? Shown in the logs so a blocked network is obvious. */
+export async function selfCheck() {
+  if (!available()) return;
+  const dns = await import('node:dns'), net = await import('node:net');
+  const servers = String(env.SJ_DNS || '1.1.1.1,8.8.8.8').split(',').map((s) => s.trim()).filter(Boolean);
+  const r = new dns.promises.Resolver(); r.setServers(servers);
+  let ip = '', why = '';
+  try { ip = (await r.resolve4('example.com'))[0]; } catch (e) { why = 'wisp DNS (' + servers.join(',') + ') failed: ' + (e.code || e.message); }
+  if (!ip) { try { ip = (await dns.promises.lookup('example.com', { family: 4 })).address; why += '; system DNS works'; } catch (e) { why += '; system DNS failed: ' + (e.code || e.message); } }
+  if (!ip) return console.log('[sj] outbound check FAILED: ' + why);
+  await new Promise((res) => { const s = net.connect({ host: ip, port: 443, timeout: 6000 }, () => { console.log('[sj] outbound check ok (' + ip + ':443' + (why ? '; ' + why : '') + ')'); s.destroy(); res(); }); s.on('timeout', () => { console.log('[sj] outbound check FAILED: connect to ' + ip + ':443 timed out'); s.destroy(); res(); }); s.on('error', (e) => { console.log('[sj] outbound check FAILED: ' + (e.code || e.message)); res(); }); });
 }

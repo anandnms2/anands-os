@@ -18,7 +18,7 @@ import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
 import { handleProfile } from './profile.js';
 import { handleBrowse, clearCookies as browseClear } from './browse.js';
-import { handleSj, handleSjUpgrade, openInfo as sjOpen, SJ_HOST } from './webproxy.js';
+import { handleSj, handleSjUpgrade, openInfo as sjOpen, selfCheck as sjCheck, SJ_HOST } from './webproxy.js';
 import { handleMailboxes, syncAll } from './mailbox.js';
 import { handleGdrive, googleCallback, gConnected, gConfigured } from './gdrive.js';
 import { ping as davPing } from './webdav.js';
@@ -184,6 +184,7 @@ server.requestTimeout = 0; server.headersTimeout = 30000;
 server.listen(PORT, () => {
   console.log(`Anands OS listening on :${PORT}  data=${DATA}  suite=${fs.existsSync(SUITE) ? 'ok' : 'MISSING ' + SUITE}`);
   setTimeout(() => syncAll().catch(() => {}), 5000);
+  setTimeout(() => sjCheck().catch(() => {}), 3000);
   if (OIDC) console.log(`Sign-in: SSO (${OIDC.issuer})${PASSWORD ? ' and password' : ''}`);
   else console.log('Sign-in: password' + (PASSWORD_GENERATED ? ` (generated; also in ${DATA}/initial-password): ${PASSWORD}` : ' (APP_PASSWORD)'));
 });
