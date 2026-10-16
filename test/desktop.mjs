@@ -144,6 +144,13 @@ try {
     assert.ok((await w.locator('[data-calc-v]').evaluate((e) => parseFloat(getComputedStyle(e).fontSize))) > big, 'text grows with the window'); assert.ok(await w.locator('.dk-csci').isVisible()); await shot(p, 'calc-wide');
     await w.locator('.dk-wc [data-dk="wclose"]').evaluate((b) => b.click());
   });
+  await t('the assistant button hides while a window is maximised and returns after', async () => {
+    assert.ok(await p.locator('#dkfab').isVisible(), 'button visible with no maximised window');
+    await p.keyboard.press('Control+Alt+c'); const w = p.locator('.dkw[aria-label="Calculator"]'); await w.waitFor();
+    await w.locator('[data-dk="wmax"]').first().click(); await p.waitForFunction(() => document.getElementById('dkfab').offsetParent === null, null, { timeout: 4000 });
+    await w.locator('[data-dk="wmax"]').first().click(); await p.waitForFunction(() => document.getElementById('dkfab').offsetParent !== null, null, { timeout: 4000 });
+    await w.locator('[data-dk="wclose"]').first().click();
+  });
   await t('Calculator: digits stay readable in the light theme, and long numbers show their last digits', async () => {
     const w = p.locator('.dkw[aria-label="Calculator"]'); if (!(await w.count())) { await p.keyboard.press('Control+Alt+c'); await w.waitFor(); }
     await p.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));

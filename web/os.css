@@ -1205,3 +1205,5 @@ html.guest .deskbtn{display:none}
 .dk-mbar button{border:0;border-radius:8px;padding:5px 12px;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;cursor:pointer}
 .dk-mbar button:hover{color:var(--fg)}.dk-mbar button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
 .dk-mbar[hidden]{display:none}
+
+.dk-fab.away{display:none}

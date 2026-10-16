@@ -110,7 +110,11 @@
     window.addEventListener('resize', function () { if (D.open) icons(); });
   })();
   function pinBtn(it) { return '<button class="dk-pin" ' + itAttr(it) + ' title="' + esc(it.name) + '">' + (it.img ? '<img src="' + esc(it.img) + '" alt="">' : ic(it.ic)) + '</button>'; }
+  /* the assistant button is out of the way while a window fills the screen */
+  function fabVis() { var f = document.getElementById('dkfab'); if (f) f.classList.toggle('away', !!document.fullscreenElement || D.wins.some(function (x) { return x.max && !x.min && x.kind !== 'ai'; })); }
+  document.addEventListener('fullscreenchange', function () { fabVis(); });
   function task() {
+    fabVis();
     var cat = catalog(), pins = pinIds().map(function (id) { return cat.filter(function (i) { return i.id === id; })[0]; }).filter(Boolean);
     var h = '<button class="dk-start' + (D.menu ? ' on' : '') + '" data-dk="menu" aria-label="Start"><img src="/logo-orange.png" alt=""></button><button class="dk-pin dk-qs" data-dk="qs" title="Quick Launcher (Ctrl + Space)" aria-label="Quick Launcher">' + ic('search') + '</button><div class="dk-pins">' + pins.map(pinBtn).join('') + '</div><div class="dk-run">';
     D.wins.forEach(function (w) { if (w.kind === 'ai') return; h += '<button class="dk-rb' + (w.min ? ' min' : '') + (w.id === D.top && !w.min ? ' on' : '') + '" data-dk="tb" data-id="' + w.id + '" title="' + esc(w.title) + '">' + (wIcon(w) ? '<img src="' + esc(wIcon(w)) + '" alt="">' : '<span class="dk-rg">' + ic(KIND_IC[w.kind] || (w.view && OSICON[w.view]) || 'folder') + '</span>') + '<span>' + esc(w.title) + '</span></button>'; });
@@ -186,7 +190,7 @@
     });
     if (act && !act.min) focus(act); else task();
   }
-  function place(w) { saveSess(); var el = w.el, ar = area(); el.hidden = w.min; el.style.zIndex = w.z; if (w.max) { el.style.left = 0; el.style.top = 0; el.style.width = ar.w + 'px'; el.style.height = ar.h + 'px'; } else { el.style.left = w.x + 'px'; el.style.top = w.y + 'px'; el.style.width = w.w + 'px'; el.style.height = w.h + 'px'; } el.classList.toggle('max', !!w.max); el.classList.toggle('bare', !!w.max && (w.kind === 'rbrowser' || w.kind === 'browser')); }
+  function place(w) { saveSess(); var el = w.el, ar = area(); el.hidden = w.min; el.style.zIndex = w.z; if (w.max) { el.style.left = 0; el.style.top = 0; el.style.width = ar.w + 'px'; el.style.height = ar.h + 'px'; } else { el.style.left = w.x + 'px'; el.style.top = w.y + 'px'; el.style.width = w.w + 'px'; el.style.height = w.h + 'px'; } el.classList.toggle('max', !!w.max); el.classList.toggle('bare', !!w.max && (w.kind === 'rbrowser' || w.kind === 'browser')); fabVis(); }
   function focus(w) { w.z = ++D.z; D.top = w.id; if (w.min) { w.min = false; } D.wins.forEach(function (x) { x.el.classList.toggle('act', x === w); place(x); }); task(); }
   function byId(id) { return D.wins.filter(function (w) { return w.id === id; })[0]; }
   function closeWin(w) { saveSess(); if (w.onclose) { try { w.onclose(); } catch (e) {} } w.el.remove(); D.wins = D.wins.filter(function (x) { return x !== w; }); if (D.ai.win === w) D.ai.win = null; if (D.top === w.id) { var t = D.wins.filter(function (x) { return !x.min; }).sort(function (a, b) { return b.z - a.z; })[0]; D.top = t ? t.id : null; if (t) focus(t); } task(); }
