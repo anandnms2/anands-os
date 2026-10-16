@@ -492,5 +492,5 @@
   (function wait(n) { if (S.user) { if (location.hash === '#desktop') show(); return; } if (n < 80) setTimeout(function () { wait(n + 1); }, 150); })(0);
 
   window.AOSBR = { ENGINES: ENGINES, QLAB: QLAB, rbPost: rbPost, rbTab: rbTab, btab: btab, nav: nav, normUrl: normUrl, newTab: newTab };
-  window.AOSDesk = { show: show, hide: hide, state: D, openApp: openApp };
+  window.AOSDesk = { show: show, hide: hide, state: D, openApp: openApp, walls: WALLS, light: LIGHT, setWall: function (k) { D.wall = k; LS.set('deskwall', k); wallStyle(); }, wallImg: wallImg };
 })();

@@ -995,3 +995,49 @@ html:has(body.dk-on),body.dk-on{overflow:hidden;overscroll-behavior:none}
 .secrow .note{overflow-wrap:anywhere}
 .secic{color:var(--accent-text);display:flex}
 .secflags{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ---------- Appearance, widgets, shortcuts ---------- */
+html.oswall #main{background:linear-gradient(var(--wallshade),var(--wallshade)),var(--wall);background-size:cover;background-attachment:fixed}
+html.oswall{--wallshade:rgba(8,8,10,.55)}
+@media (prefers-color-scheme:light){html.oswall:not([data-theme="dark"]){--wallshade:rgba(246,245,242,.62)}}
+html.oswall[data-theme="light"]{--wallshade:rgba(246,245,242,.62)}
+html.oswall #top{background:transparent}
+.apc{margin-top:16px;padding:18px;display:grid;gap:12px}
+.apc h2{font-size:19px}
+.apsw{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.apdot{width:34px;height:34px;border-radius:50%;border:2px solid transparent;box-shadow:0 0 0 1px var(--line);padding:0;position:relative}
+.apdot.on{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--fg)}
+.apdot.custom{background:conic-gradient(#f43f5e,#eab308,#22c55e,#3b82f6,#8b5cf6,#f43f5e);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;cursor:pointer}
+.apdot.custom input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.apwall{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.apw{aspect-ratio:16/10;border-radius:10px;border:2px solid transparent;box-shadow:0 0 0 1px var(--line);padding:0}
+.apw.on{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent)}
+.aprow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.apchk{display:flex;gap:10px;align-items:flex-start;line-height:1.35}
+.apchk input,.wrow input{width:18px;height:18px;accent-color:var(--accent);flex:none;margin-top:2px}
+.wrow{padding:6px 0;border-top:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+#dkwid{position:absolute;inset:0 0 52px 0;pointer-events:none}
+.wd{position:absolute;pointer-events:auto;background:rgba(14,14,17,.74);color:#f4efe9;border:1px solid rgba(255,255,255,.12);border-radius:16px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden;font-size:13.5px}
+.wd.drag{box-shadow:0 18px 44px rgba(0,0,0,.5);opacity:.92}
+.wd-h{display:flex;align-items:center;justify-content:space-between;padding:8px 8px 4px 14px;cursor:grab;touch-action:none;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(244,239,233,.65)}
+.wd-h button{background:none;border:0;color:inherit;width:24px;height:24px;border-radius:6px;opacity:0}
+.wd:hover .wd-h button{opacity:1}
+.wd-b{padding:2px 14px 14px;max-height:260px;overflow:auto}
+.wd-time{font:500 34px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.wd-sub{color:rgba(244,239,233,.7);margin-top:2px}
+.wd-row{display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12)}
+.wd-li{display:flex;gap:10px;align-items:baseline;width:100%;background:none;border:0;color:inherit;text-align:left;padding:5px 0;border-radius:6px}
+button.wd-li:hover{color:var(--accent-text)}
+.wd-li i{width:9px;height:9px;border:1.5px solid rgba(244,239,233,.55);border-radius:50%;flex:none;align-self:center}
+.wd-li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wd-li small{color:rgba(244,239,233,.6);font-variant-numeric:tabular-nums}
+.wd-none{margin:6px 0;color:rgba(244,239,233,.65)}
+.wd-add{margin-top:6px;background:none;border:1px dashed rgba(255,255,255,.3);color:inherit;border-radius:8px;padding:5px 10px;width:100%}
+.wd-add:hover{border-color:var(--accent);color:var(--accent-text)}
+.wd-note{width:100%;min-height:120px;resize:vertical;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:inherit;border-radius:10px;padding:8px;font:inherit}
+@media (max-width:759px){#dkwid{display:none}}
+.card.kbh{max-width:480px;width:100%;padding:0;max-height:86vh;overflow:auto}
+.kbg{padding:4px 18px 12px}
+.kbr{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+.kbr:first-child{border-top:0}
+.kbh kbd{font:12px var(--mono);border:1px solid var(--line);border-radius:6px;padding:1px 7px;background:var(--surface2)}
