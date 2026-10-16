@@ -154,5 +154,22 @@ function generate(len, opts) {
   sets.forEach(function (st) { out.push(st[rnd(st.length)]); }); while (out.length < len) out.push(all[rnd(all.length)]);
   for (var i = out.length - 1; i > 0; i--) { var j = rnd(i + 1), t = out[i]; out[i] = out[j]; out[j] = t; } return out.join('');
 }
-window.AOSVault = { login: login, save: save, remove: remove, lock: lock, generate: generate, totp: totp, _b64d: b64d, _b64e: b64e, _decrypt: decryptStr, _stretch: stretch, _masterKey: masterKey };
+
+/* ---- optional "remember on this device": email and master password are sealed with a non-extractable key kept in this browser's IndexedDB ---- */
+var CRED = 'aos.vault.cred';
+function idb() { return new Promise(function (ok, no) { var r = indexedDB.open('aos-vault', 1); r.onupgradeneeded = function () { r.result.createObjectStore('k'); }; r.onsuccess = function () { ok(r.result); }; r.onerror = function () { no(r.error); }; }); }
+function idbGet(k) { return idb().then(function (d) { return new Promise(function (ok, no) { var q = d.transaction('k').objectStore('k').get(k); q.onsuccess = function () { ok(q.result); }; q.onerror = function () { no(q.error); }; }); }); }
+function idbSet(k, v) { return idb().then(function (d) { return new Promise(function (ok, no) { var t = d.transaction('k', 'readwrite'); t.objectStore('k').put(v, k); t.oncomplete = function () { ok(); }; t.onerror = function () { no(t.error); }; }); }); }
+function idbDel(k) { return idb().then(function (d) { return new Promise(function (ok) { var t = d.transaction('k', 'readwrite'); t.objectStore('k').delete(k); t.oncomplete = ok; t.onerror = ok; }); }); }
+function devKey(create) { return idbGet('dev').then(function (k) { if (k || !create) return k || null; return subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']).then(function (nk) { return idbSet('dev', nk).then(function () { return nk; }); }); }); }
+function remember(email, pw) {
+  return devKey(true).then(function (k) { var iv = crypto.getRandomValues(new Uint8Array(12)); return subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, enc.encode(JSON.stringify({ e: email, p: pw }))).then(function (ct) { localStorage.setItem(CRED, JSON.stringify({ iv: b64e(iv), ct: b64e(new Uint8Array(ct)) })); }); });
+}
+function saved() {
+  var raw; try { raw = JSON.parse(localStorage.getItem(CRED) || 'null'); } catch (e) { raw = null; } if (!raw) return Promise.resolve(null);
+  return devKey(false).then(function (k) { if (!k) return null; return subtle.decrypt({ name: 'AES-GCM', iv: b64d(raw.iv) }, k, b64d(raw.ct)).then(function (pt) { var o = JSON.parse(dec.decode(pt)); return { email: o.e, pw: o.p }; }); }).catch(function () { return null; });
+}
+function hasSaved() { try { return !!localStorage.getItem(CRED); } catch (e) { return false; } }
+function forget() { try { localStorage.removeItem(CRED); } catch (e) {} return idbDel('dev'); }
+window.AOSVault = { remember: remember, saved: saved, hasSaved: hasSaved, forget: forget, login: login, save: save, remove: remove, lock: lock, generate: generate, totp: totp, _b64d: b64d, _b64e: b64e, _decrypt: decryptStr, _stretch: stretch, _masterKey: masterKey };
 })();

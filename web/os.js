@@ -114,7 +114,7 @@ function go(v, x) {
 document.addEventListener('error', function (e) { var v = e.target; if (v && v.tagName === 'VIDEO' && v.dataset.src && !v.dataset.tx) { v.dataset.tx = '1'; v.src = v.dataset.src + '?tx=1'; v.load(); v.play().catch(function () {}); return; } var t = e.target; if (!t || t.tagName !== 'IMG' || !t.classList.contains('phimg')) return; if (!t.dataset.tried) { t.dataset.tried = '1'; t.src = '/api/photos/asset/' + t.dataset.id + '/preview'; return; } t.removeAttribute('src'); t.parentNode.classList.add('nothumb'); }, true);
 window.addEventListener('popstate', function () { if (!S.user) return; var r = routeNow() || 'home'; popping = true; try { go0(r); } finally { popping = false; } });
 var lastSeen = Date.now(); document.addEventListener('visibilitychange', function () { if (document.hidden) { lastSeen = Date.now(); return; } if (S.user && Date.now() - lastSeen > 30000 && S.view === 'photos' && S.imm && S.imm.connected && !S.lb) { var fresh = function () { return { items: [], next: 1, loading: false, error: null, loaded: false }; }; S.tl = fresh(); S.fav = fresh(); S.albums = null; loadImm(); loadAlbums(); } });
-function go0(v, x) { S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); if (window.AOSHome) window.AOSHome.onGo(v); }
+function go0(v, x) { if (v === 'vault' && S.view !== 'vault') S.vault.noAuto = false; S.view = v; if (x) for (var k in x) S[k] = x[k]; buildNav(); render(); $('#view').scrollTop = 0; if (v === 'drive') loadDrive(); if (v === 'vault') loadVault(); if (v === 'photos') { loadAlbums(); if (S.imm && S.imm.connected) loadPage(S.tl, '/api/photos/timeline'); } if (v === 'insights' && !S.ins.data && !S.ins.loading) loadIns(false); if (window.AOSInt) window.AOSInt.onGo(v); if (window.AOSSrv) window.AOSSrv.onGo(v); if (window.AOSPulse) window.AOSPulse.onGo(v); if (window.AOSHome) window.AOSHome.onGo(v); }
 function redraw() { var y = $('#view').scrollTop; render(); $('#view').scrollTop = y; }
 function render() {
   var app = $('#app'), tabs = $('#tabs'), fab = $('#fab');
@@ -394,7 +394,7 @@ S.vault = { folders: [], edit: null, items: null, skipped: null, sel: null, fold
 function vWeak(p) { return !!p && (p.length < 10 || /^(password|qwerty|123456|summer|letmein)/i.test(p)); }
 function vReused(it) { return !!it.pw && S.vault.items.filter(function (x) { return x.pw === it.pw; }).length > 1; }
 function vFlags(it) { var f = []; if (it.type === 'login' && it.pw) { if (vWeak(it.pw)) f.push('weak'); if (vReused(it)) f.push('reused'); if (it.age > 365) f.push('old'); } return f; }
-function vLock(auto) { var V = S.vault; try { window.AOSVault.lock(); } catch (e) {} V.edit = null; V.items = null; V.sel = null; V.show = false; V.q = ''; V.folder = 'All'; V.twofa = null; V.err = auto === true ? 'Locked after 5 minutes without activity.' : ''; if (S.view === 'vault') redraw(); if (auto !== true) toast('Vault locked. Nothing is kept in memory.'); }
+function vLock(auto) { var V = S.vault; try { window.AOSVault.lock(); } catch (e) {} V.edit = null; V.items = null; V.sel = null; V.show = false; V.q = ''; V.folder = 'All'; V.twofa = null; V.pending = null; V.noAuto = true; V.err = auto === true ? 'Locked after 5 minutes without activity.' : ''; if (S.view === 'vault') redraw(); if (auto !== true) toast('Vault locked. Nothing is kept in memory.'); }
 function vTouch() { if (S.vault.items) S.vault.lockAt = Date.now() + VLOCK_MS; }
 function vClip(text, label) {
   var done = function () { toast(label + ' copied. The clipboard is cleared in 30 seconds.'); clearTimeout(vClip.t); vClip.t = setTimeout(function () { try { navigator.clipboard.writeText('').catch(function () {}); } catch (e) {} }, 30000); };
@@ -464,7 +464,7 @@ function vaultV() {
   if (!V.items) {
     var two = V.twofa;
     return '<div class="wrap">' + head + '<span class="pill warn"><i class="dot warn"></i>Locked</span></div></div><div class="card vlockcard"><div class="vlockic">' + ic('lock') + '</div><h2 style="font-size:24px;margin:10px 0 4px">' + (two ? 'Two-step code' : 'Vault is locked') + '</h2><p style="color:var(--muted);margin:0 0 18px;font-size:14.5px">' + (two ? 'Enter the code from your authenticator app.' : 'Enter your master password. It is used in this tab only.') + '</p>' +
-      '<form id="vf" autocomplete="off">' + (two ? '<div class="field"><label for="v2">Code</label><input class="input mono" id="v2" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>' : '<div class="field"><label for="vem">Email</label><input class="input" id="vem" type="email" autocomplete="username" value="' + esc(V.email) + '" placeholder="you@example.com"></div><div class="field"><label for="vpw">Master password</label><input class="input" id="vpw" type="password" autocomplete="off" placeholder="Master password"></div>') +
+      '<form id="vf" autocomplete="off">' + (!two && V.savedOn ? '<p class="note" style="margin:0 0 12px">Saved login: <b>' + esc(V.savedEmail) + '</b></p><button class="btn primary" type="button" data-act="vsaved" style="width:100%;justify-content:center;margin-bottom:10px"' + (V.busy ? ' disabled' : '') + '>' + ic('key') + 'Unlock with saved login</button><p style="text-align:center;margin:0 0 6px"><button class="btn sm ghost" type="button" data-act="vforget">Forget saved login</button></p>' : '') + (two ? '<div class="field"><label for="v2">Code</label><input class="input mono" id="v2" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>' : '<div class="field"><label for="vem">Email</label><input class="input" id="vem" type="email" autocomplete="username" value="' + esc(V.email) + '" placeholder="you@example.com"></div><div class="field"><label for="vpw">Master password</label><input class="input" id="vpw" type="password" autocomplete="off" placeholder="Master password"></div><label class="vremb"><input type="checkbox" id="vrem"' + (V.rem ? ' checked' : '') + '> Remember me on this device, so next time I only enter the code</label>') +
       (V.err ? '<p role="alert" style="color:var(--bad);font-size:14px;margin:-4px 0 12px">' + esc(V.err) + '</p>' : '') +
       '<button class="btn primary" type="submit" style="width:100%;justify-content:center"' + (V.busy ? ' disabled' : '') + '>' + ic('key') + (V.busy ? 'Unlocking...' : 'Unlock') + '</button></form></div>'+ '</div>';
   }
@@ -479,7 +479,11 @@ function vaultV() {
     '<div class="vsplit"><div class="vlistc"><div id="vlist">' + vListHtml() + '</div></div>' + vDetail() + '</div>' +
     (V.skipped && (V.skipped.org || V.skipped.other) ? '<p class="note" style="margin-top:12px">Not shown here: ' + (V.skipped.org ? V.skipped.org + ' shared (organization) item' + (V.skipped.org === 1 ? '' : 's') : '') + (V.skipped.org && V.skipped.other ? ', ' : '') + (V.skipped.other ? V.skipped.other + ' card, identity or unreadable item' + (V.skipped.other === 1 ? '' : 's') : '') + '. Open them in the Vault web app.</p>' : '')+ '</div>';
 }
-function loadVault() { return api('/api/vault/status').then(function (s) { S.vault.status = s; }).catch(function () { S.vault.status = { configured: true, connected: false }; }).then(function () { if (S.view === 'vault') redraw(); }); }
+function loadVault() { S.vault.savedOn = !!(window.AOSVault && AOSVault.hasSaved()); return api('/api/vault/status').then(function (s) { S.vault.status = s; }).catch(function () { S.vault.status = { configured: true, connected: false }; }).then(function () { if (S.view === 'vault') redraw(); vAuto(); }); }
+function vAuto(force) {
+  var V = S.vault; if (!window.AOSVault || V.items || V.busy || V.twofa || (V.noAuto && !force) || !V.status || !V.status.configured || !AOSVault.hasSaved()) return;
+  AOSVault.saved().then(function (c) { if (!c) { V.savedOn = false; if (S.view === 'vault') redraw(); return; } V.savedEmail = c.email; V.savedOn = true; V.email = c.email; V.pending = c.pw; V.fromSaved = true; vDo(c.email, c.pw, null, false); });
+}
 function vTick() {
   var V = S.vault; if (!V.items) return;
   var rem = Math.round((V.lockAt - Date.now()) / 1000); if (rem <= 0) { vLock(true); return; }
@@ -491,17 +495,26 @@ setInterval(vTick, 1000);
 document.addEventListener('click', vTouch, true); document.addEventListener('keydown', vTouch, true);
 function vSubmit() {
   var V = S.vault; if (V.busy) return;
-  var emailEl = $('#vem'), pwEl = $('#vpw'), codeEl = $('#v2');
-  if (!V.twofa) { V.email = emailEl ? emailEl.value.trim() : V.email; V.pending = pwEl ? pwEl.value : ''; if (!V.email || !V.pending) { V.err = 'Enter your email and master password.'; redraw(); return; } LS.set('vault.email', V.email); }
+  var emailEl = $('#vem'), pwEl = $('#vpw'), codeEl = $('#v2'), remEl = $('#vrem');
+  if (!V.twofa) { V.email = emailEl ? emailEl.value.trim() : V.email; V.pending = pwEl ? pwEl.value : ''; V.rem = remEl ? remEl.checked : V.rem; if (!V.email || !V.pending) { V.err = 'Enter your email and master password.'; redraw(); return; } LS.set('vault.email', V.email); V.fromSaved = false; }
   var tf = V.twofa ? { code: (codeEl ? codeEl.value : '').replace(/\s/g, ''), provider: V.twofa.provider } : null; if (tf && !tf.code) return;
-  V.busy = true; V.err = ''; redraw();
-  window.AOSVault.login(V.email, V.pending, tf).then(function (r) { V.items = r.items; V.folders = r.folders; V.edit = null; V.skipped = r.skipped; V.pending = null; V.twofa = null; V.busy = false; V.sel = null; V.lockAt = Date.now() + VLOCK_MS; redraw(); vTick(); })
-    .catch(function (e) {
-      V.busy = false;
-      if (e.code === '2fa') { var p = e.providers.filter(function (x) { return x === 0 || x === 1; })[0]; if (p === undefined) { V.err = 'This account needs a two-step method that is not supported here (security key or similar). Use the Vault web app.'; V.pending = null; } else V.twofa = { provider: p }; }
-      else { V.err = e.code === 'not_configured' ? 'Add the Vault address in Settings first.' : e.message; if (V.twofa) V.twofa = V.twofa; else V.pending = null; }
-      redraw(); var f = $('#vpw') || $('#v2'); if (f) f.focus();
-    });
+  vDo(V.email, V.pending, tf, V.rem && !V.fromSaved);
+}
+function vDo(email, pw, tf, remember) {
+  var V = S.vault; V.busy = true; V.err = ''; redraw();
+  window.AOSVault.login(email, pw, tf).then(function (r) {
+    if (remember) { AOSVault.remember(email, pw).then(function () { V.savedOn = true; V.savedEmail = email; }).catch(function () {}); }
+    V.items = r.items; V.folders = r.folders; V.edit = null; V.skipped = r.skipped; V.pending = null; V.twofa = null; V.busy = false; V.sel = null; V.lockAt = Date.now() + VLOCK_MS; V.fromSaved = false; redraw(); vTick();
+  }).catch(function (e) {
+    V.busy = false;
+    if (e.code === '2fa') { var p = e.providers.filter(function (x) { return x === 0 || x === 1; })[0]; if (p === undefined) { V.err = 'This account needs a two-step method that is not supported here (security key or similar). Use the Vault web app.'; V.pending = null; } else V.twofa = { provider: p }; }
+    else {
+      V.err = e.code === 'not_configured' ? 'Add the Vault address in Settings first.' : e.message;
+      if (V.twofa) V.twofa = V.twofa; else V.pending = null;
+      if (V.fromSaved && e.code === 'bad_login' && !tf) { AOSVault.forget(); V.savedOn = false; V.err = 'The saved login no longer works (master password changed?). Enter it again.'; V.fromSaved = false; }
+    }
+    redraw(); var f = $('#vpw') || $('#v2'); if (f) f.focus();
+  });
 }
 
 /* ---------- palette ---------- */
@@ -589,6 +602,8 @@ document.addEventListener('click', function (ev) {
     case 'refresh': loadIns(true); break;
     case 'cat': S.appCat = d.c; redraw(); break;
     case 'vlock': vLock(); break;
+    case 'vsaved': vAuto(true); break;
+    case 'vforget': AOSVault.forget().then(function () { S.vault.savedOn = false; S.vault.noAuto = true; if (S.view === 'vault') redraw(); toast('Saved login removed from this device.'); }); break;
     case 'vsel': S.vault.edit = null; S.vault.delAsk = false; S.vault.sel = d.id; S.vault.show = false; redraw(); vTick(); if (innerWidth < 900) { var vp = $('.dpanel'); if (vp) vp.scrollIntoView({ block: 'start' }); } break;
     case 'vreveal': S.vault.show = !S.vault.show; redraw(); vTick(); break;
     case 'vfold': S.vault.folder = d.f; redraw(); vTick(); break;
