@@ -17,7 +17,7 @@ function conf() {
 async function pl(path, init = {}, timeout = 20000) {
   conf(); const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), timeout);
   try {
-    const r = await fetch(base() + path, { ...init, signal: ctl.signal, headers: { authorization: 'Token ' + token(), accept: 'application/json; version=5', ...(init.headers || {}) } });
+    const r = await fetch(base() + path, { ...init, signal: ctl.signal, headers: { authorization: 'Token ' + token(), accept: 'application/json', ...(init.headers || {}) } });
     return r;
   } catch (e) { throw httpError(502, e.name === 'AbortError' ? 'Paperless did not answer in time' : 'Could not reach Paperless: ' + (e.cause?.code || e.message), 'unreachable'); } finally { clearTimeout(t); }
 }
