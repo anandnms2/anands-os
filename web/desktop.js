@@ -46,9 +46,9 @@
 
   /* ---------- launcher: catalog, desktop icons, taskbar pins, Start menu, icon chooser ---------- */
   var TOOLS = [['editor', 'Editor', '/tools/editor.html', 1000, 640, 'file'], ['player', 'Player', '/tools/player.html', 920, 600, 'play'], ['recorder', 'Recorder', '/tools/recorder.html', 820, 640, 'mic'], ['terminal', 'Terminal', '/tools/terminal.html', 900, 580, 'terminal'], ['money', 'Money', '/tools/money.html#overview', 1040, 660, 'card'], ['subs', 'Subscriptions', '/tools/money.html#subs', 940, 640, 'card'], ['invest', 'Investments', '/tools/money.html#invest', 980, 640, 'card'], ['belong', 'Belongings', '/tools/home.html#belong', 980, 640, 'folder'], ['house', 'Household', '/tools/home.html#house', 940, 640, 'folder'], ['paperless', 'Paperless', '/tools/paperless.html', 1100, 680, 'file']];
-  var SYS = [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat']].concat(TOOLS.map(function (o) { return ['tool:' + o[0], o[1], o[5]]; })).concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; }));
-  var DEF_ICONS = ['browser', 'files', 'ai'].concat(OSAPPS.map(function (o) { return 'os:' + o[0]; })).concat(['google']).concat(TOOLS.map(function (o) { return 'tool:' + o[0]; })), DEF_PINS = ['browser', 'files', 'ai'];
-  var NCAT = { 'tool:paperless': 'Productivity', 'tool:editor': 'Developer Tools', 'tool:terminal': 'Developer Tools', 'tool:player': 'Creative Tools', 'tool:recorder': 'Creative Tools', 'tool:money': 'Finance', 'tool:subs': 'Finance', 'tool:invest': 'Finance', 'tool:belong': 'Productivity', 'tool:house': 'Productivity', 'os:photos': 'Creative Tools', 'os:pulse': 'Productivity', 'os:cards': 'Business', 'os:vault': 'Productivity', 'os:insights': 'Engineering', 'os:servers': 'Engineering', 'os:vpn': 'Engineering' };
+  var SYS = [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat'], ['calc', 'Calculator', 'card']].concat(TOOLS.map(function (o) { return ['tool:' + o[0], o[1], o[5]]; })).concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; }));
+  var DEF_ICONS = ['browser', 'files', 'ai'].concat(OSAPPS.map(function (o) { return 'os:' + o[0]; })).concat(['google']).concat(TOOLS.map(function (o) { return 'tool:' + o[0]; })), DEF_PINS = ['browser', 'files', 'ai', 'calc'];
+  var NCAT = { calc: 'Productivity', 'tool:paperless': 'Productivity', 'tool:editor': 'Developer Tools', 'tool:terminal': 'Developer Tools', 'tool:player': 'Creative Tools', 'tool:recorder': 'Creative Tools', 'tool:money': 'Finance', 'tool:subs': 'Finance', 'tool:invest': 'Finance', 'tool:belong': 'Productivity', 'tool:house': 'Productivity', 'os:photos': 'Creative Tools', 'os:pulse': 'Productivity', 'os:cards': 'Business', 'os:vault': 'Productivity', 'os:insights': 'Engineering', 'os:servers': 'Engineering', 'os:vpn': 'Engineering' };
   function catalog() {
     var l = SYS.map(function (i) { return { id: i[0], name: i[1], ic: i[2], cat: NCAT[i[0]] || 'System', hay: i[1] + ' system' + (i[0] === 'google' ? ' drive cloud' : '') + (i[0] === 'browser' ? ' web internet' : '') }; });
     apps().forEach(function (a) { l.push({ id: 'app:' + a.slug, name: a.name, img: '/_icons/' + a.slug + '.png', slug: a.slug, cat: CATS.indexOf(a.category) >= 0 ? a.category : 'Other', hay: a.name + ' ' + (a.category || '') + ' ' + (a.alternativeTo || '') }); });
@@ -56,7 +56,7 @@
   }
   function itemBy(id) { return catalog().filter(function (i) { return i.id === id; })[0]; }
   function itAttr(it) { return (it.slug ? 'data-dk="app" data-s="' + esc(it.slug) + '"' : 'data-dk="launch" data-w="' + esc(it.id) + '"') + ' data-k="' + esc(it.id) + '"'; }
-  var OI = { 'tool:paperless': 'paperless', 'tool:editor': 'editor', 'tool:player': 'player', 'tool:recorder': 'recorder', 'tool:terminal': 'terminal', 'tool:money': 'money', 'tool:subs': 'subs', 'tool:invest': 'invest', 'tool:belong': 'belong', 'tool:house': 'house', browser: 'browser', files: 'files', google: 'drive', ai: 'ai', 'os:photos': 'photos', 'os:pulse': 'pulse', 'os:cards': 'cards', 'os:vault': 'vault', 'os:insights': 'insights', 'os:vpn': 'vpn', 'os:servers': 'servers' };
+  var OI = { calc: 'calc', 'tool:paperless': 'paperless', 'tool:editor': 'editor', 'tool:player': 'player', 'tool:recorder': 'recorder', 'tool:terminal': 'terminal', 'tool:money': 'money', 'tool:subs': 'subs', 'tool:invest': 'invest', 'tool:belong': 'belong', 'tool:house': 'house', browser: 'browser', files: 'files', google: 'drive', ai: 'ai', 'os:photos': 'photos', 'os:pulse': 'pulse', 'os:cards': 'cards', 'os:vault': 'vault', 'os:insights': 'insights', 'os:vpn': 'vpn', 'os:servers': 'servers' };
   function wIcon(w) { if (w.icon) return w.icon; var k = w.kind === 'rbrowser' || w.kind === 'browser' ? 'browser' : w.kind === 'ai' || w.kind === 'files' ? w.kind : w.tool ? 'tool:' + w.tool : w.view ? 'os:' + w.view : ''; return OI[k] ? '/oicons/' + OI[k] + '.svg' : ''; }
   function itGlyph(it, cls) { if (!it.img && OI[it.id]) it.img = '/oicons/' + OI[it.id] + '.svg'; return it.img ? '<img src="' + esc(it.img) + '" alt="">' : '<span class="dk-icg' + (cls ? ' ' + cls : '') + '">' + ic(it.ic) + '</span>'; }
   function lsList(k, d) { var v = LS.get(k, null); return Array.isArray(v) ? v : d.slice(); }
@@ -74,8 +74,8 @@
   function task() {
     var cat = catalog(), pins = pinIds().map(function (id) { return cat.filter(function (i) { return i.id === id; })[0]; }).filter(Boolean);
     var h = '<button class="dk-start' + (D.menu ? ' on' : '') + '" data-dk="menu" aria-label="Start"><img src="/logo-orange.png" alt=""></button><div class="dk-pins">' + pins.map(pinBtn).join('') + '</div><div class="dk-run">';
-    D.wins.forEach(function (w) { h += '<button class="dk-rb' + (w.min ? ' min' : '') + (w.id === D.top && !w.min ? ' on' : '') + '" data-dk="tb" data-id="' + w.id + '" title="' + esc(w.title) + '">' + (wIcon(w) ? '<img src="' + esc(wIcon(w)) + '" alt="">' : '<span class="dk-rg">' + ic(KIND_IC[w.kind] || (w.view && OSICON[w.view]) || 'folder') + '</span>') + '<span>' + esc(w.title) + '</span></button>'; });
-    h += '</div><span class="sp"></span><button class="dk-tray" data-dk="wall" title="Wallpaper">' + ic('photos') + '</button><span class="dk-clock" id="dkclock">' + esc(clock()) + '</span><button class="dk-exit" data-dk="exit" title="Back to Anands OS">' + ic('out') + 'Exit</button>';
+    D.wins.forEach(function (w) { if (w.kind === 'ai') return; h += '<button class="dk-rb' + (w.min ? ' min' : '') + (w.id === D.top && !w.min ? ' on' : '') + '" data-dk="tb" data-id="' + w.id + '" title="' + esc(w.title) + '">' + (wIcon(w) ? '<img src="' + esc(wIcon(w)) + '" alt="">' : '<span class="dk-rg">' + ic(KIND_IC[w.kind] || (w.view && OSICON[w.view]) || 'folder') + '</span>') + '<span>' + esc(w.title) + '</span></button>'; });
+    h += '</div><span class="sp"></span><button class="dk-tray" data-dk="fs" title="Full screen, so Alt + Tab and the Windows key work here" aria-label="Full screen">' + ic('ext') + '</button><button class="dk-tray" data-dk="wall" title="Wallpaper">' + ic('photos') + '</button><span class="dk-clock" id="dkclock">' + esc(clock()) + '</span><button class="dk-exit" data-dk="exit" title="Back to Anands OS">' + ic('out') + 'Exit</button>';
     $('#dktask').innerHTML = h;
   }
   function menu() {
@@ -140,7 +140,7 @@
       var sd = r && r.sd, w = null; if (!sd) return;
       try {
         if (sd.t === 'app') w = openApp(sd.slug, sd.file); else if (sd.t === 'os') w = osWin(sd.view); else if (sd.t === 'tool') w = toolWin(sd.id, sd.path); else if (sd.t === 'files') w = filesWin(sd.src); else if (sd.t === 'viewer') w = viewer(sd.path, sd.remote);
-        else if (sd.t === 'ai') w = aiWin(); else if (sd.t === 'rb') w = rbWin(); else if (sd.t === 'br') { w = browserWin(sd.urls && sd.urls[0]); (sd.urls || []).slice(1).forEach(function (u) { newTab(w, u); }); }
+        else if (sd.t === 'ai') w = aiWin(); else if (sd.t === 'calc') w = calcWin(); else if (sd.t === 'rb') w = rbWin(); else if (sd.t === 'br') { w = browserWin(sd.urls && sd.urls[0]); (sd.urls || []).slice(1).forEach(function (u) { newTab(w, u); }); }
       } catch (e) { w = null; }
       if (!w) return;
       if (typeof r.x === 'number') { w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h; } w.max = !!r.max; w.min = !!r.min; place(w); if (r.act) act = w;
@@ -375,6 +375,44 @@
     w.body.innerHTML = '<iframe class="dkw-frame" title="Files" src="' + url + '" allow="clipboard-read; clipboard-write; fullscreen"></iframe>'; return w;
   }
 
+  /* ---------- calculator (desktop only, not part of the Suite) ---------- */
+  function calcEval(src) {
+    var t = src.replace(/\u00d7/g, '*').replace(/\u00f7/g, '/').replace(/\u2212/g, '-').replace(/,/g, ''), i = 0;
+    function ws() { while (t[i] === ' ') i++; }
+    function num() { ws(); var m = /^(\d+\.?\d*|\.\d+)/.exec(t.slice(i)); if (!m) throw 0; i += m[0].length; var v = parseFloat(m[0]); ws(); while (t[i] === '%') { v /= 100; i++; ws(); } return v; }
+    function atom() { ws(); if (t[i] === '-') { i++; return -atom(); } if (t[i] === '+') { i++; return atom(); } if (t[i] === '(') { i++; var v = expr(); ws(); if (t[i] !== ')') throw 0; i++; ws(); while (t[i] === '%') { v /= 100; i++; ws(); } return v; } return num(); }
+    function term() { var v = atom(); for (;;) { ws(); if (t[i] === '*') { i++; v *= atom(); } else if (t[i] === '/') { i++; v /= atom(); } else return v; } }
+    function expr() { var v = term(); for (;;) { ws(); if (t[i] === '+') { i++; v += term(); } else if (t[i] === '-') { i++; v -= term(); } else return v; } }
+    var open = (t.match(/\(/g) || []).length - (t.match(/\)/g) || []).length; while (open-- > 0) t += ')';
+    var v = expr(); ws(); if (i < t.length || !isFinite(v)) throw 0; return Math.round(v * 1e12) / 1e12;
+  }
+  function calcWin() {
+    var ex = D.wins.filter(function (x) { return x.kind === 'calc'; })[0]; if (ex) { focus(ex); return ex; }
+    var w = mk('calc', 'Calculator', { w: 320, h: 470, icon: '/oicons/calc.svg' }); w.sd = { t: 'calc' }; w.x = Math.max(0, Math.round((area().w - w.w) / 2)); place(w);
+    var keys = [['C', 'fn'], ['(', 'fn'], [')', 'fn'], ['\u00f7', 'op'], ['7'], ['8'], ['9'], ['\u00d7', 'op'], ['4'], ['5'], ['6'], ['\u2212', 'op'], ['1'], ['2'], ['3'], ['+', 'op'], ['%', 'fn'], ['0'], ['.'], ['=', 'eq']];
+    w.body.innerHTML = '<div class="dk-calc" tabindex="0"><div class="dk-cx" aria-live="polite"><div class="dk-ch" data-calc-h></div><div class="dk-cv" data-calc-v>0</div></div><div class="dk-ck">' + keys.map(function (k) { return '<button class="' + (k[1] || 'num') + '" data-calc="' + esc(k[0]) + '">' + esc(k[0]) + '</button>'; }).join('') + '</div><button class="dk-cb" data-calc="\u232b" aria-label="Delete the last character">\u232b Delete</button></div>';
+    var box = w.body.querySelector('.dk-calc'), V = w.body.querySelector('[data-calc-v]'), H = w.body.querySelector('[data-calc-h]'), cur = '', done = false;
+    function show(err) { V.textContent = err ? 'Error' : (cur === '' ? '0' : cur); V.classList.toggle('bad', !!err); }
+    function press(k) {
+      var isOp = /^[+\u2212\u00d7\u00f7]$/.test(k);
+      if (k === 'C') { cur = ''; H.textContent = ''; done = false; return show(); }
+      if (k === '\u232b') { if (done) { cur = ''; done = false; H.textContent = ''; } else cur = cur.slice(0, -1); return show(); }
+      if (k === '=') { if (!cur) return; try { var r = calcEval(cur); H.textContent = cur + ' ='; cur = String(r); done = true; show(); } catch (e) { show(true); cur = ''; done = false; } return; }
+      if (done) { if (isOp || k === '%') done = false; else { cur = ''; done = false; H.textContent = ''; } }
+      if (isOp) { if (!cur && k !== '\u2212') return; if (/[+\u2212\u00d7\u00f7]$/.test(cur)) cur = cur.slice(0, -1); }
+      if (k === '.') { var last = cur.split(/[+\u2212\u00d7\u00f7()%]/).pop(); if (last.indexOf('.') >= 0) return; if (!last) cur += '0'; }
+      if (k === '%' && !/[\d)]$/.test(cur)) return;
+      cur += k; if (cur.length > 60) cur = cur.slice(0, 60); show();
+    }
+    box.addEventListener('click', function (e) { var b = e.target.closest('[data-calc]'); if (b) { press(b.getAttribute('data-calc')); box.focus(); } });
+    box.addEventListener('keydown', function (e) {
+      if (e.ctrlKey || e.metaKey || e.altKey) { if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'c') { try { navigator.clipboard.writeText(V.textContent); } catch (x) {} e.preventDefault(); } return; }
+      var k = e.key, m = { '*': '\u00d7', '/': '\u00f7', '-': '\u2212', 'x': '\u00d7', 'X': '\u00d7', ',': '.', 'Enter': '=', '=': '=', 'Backspace': '\u232b', 'Escape': 'C', 'Delete': 'C' };
+      if (m[k]) k = m[k]; if (/^[0-9.+()%\u00d7\u00f7\u2212=C\u232b]$/.test(k)) { e.preventDefault(); e.stopPropagation(); press(k); }
+    });
+    setTimeout(function () { box.focus(); }, 30); return w;
+  }
+
   /* ---------- assistant ---------- */
   function aiWin() { if (D.ai.win) { focus(D.ai.win); return D.ai.win; } var w = mk('ai', 'Assistant', { w: 460, h: 600 }); w.sd = { t: 'ai' }; w.x = Math.max(0, area().w - w.w - 30); place(w); D.ai.win = w; paintAi(); return w; }
   function paintAi() {
@@ -430,7 +468,7 @@
     if (a === 'deskadd' || a === 'deskrm') { var dk = b.getAttribute('data-k'); setIcons(toggle(deskIds(), dk, a === 'deskadd')); return void chRepaint(); }
     if (a === 'pinadd' || a === 'pinrm') { setPins(toggle(pinIds(), b.getAttribute('data-k'), a === 'pinadd')); return void chRepaint(); }
     if (a === 'aifab') { var aw = D.ai.win; if (aw && !aw.min && D.top === aw.id) { aw.min = true; place(aw); task(); } else aiWin(); return; }
-    if (a === 'launch') { var k = b.getAttribute('data-w'); if (k === 'ai') return void aiWin(); if (k === 'browser') return void openBrowser(); if (k.indexOf('link:') === 0) { var lu = (window.AOS && AOS.link(k.slice(5))) || ''; if (!/^https?:\/\//.test(lu)) return void toast('Set this address in Settings, Direct sign-in links.'); window.open(lu, '_blank', 'noopener'); return; } if (k.indexOf('os:') === 0) return void osWin(k.slice(3)); if (k.indexOf('tool:') === 0) return void toolWin(k.slice(5)); return void filesWin(k === 'google' ? 'google' : 'cloud'); }
+    if (a === 'launch') { var k = b.getAttribute('data-w'); if (k === 'ai') { var aw2 = D.ai.win; if (aw2 && !aw2.min && D.top === aw2.id) { aw2.min = true; place(aw2); task(); return; } return void aiWin(); } if (k === 'calc') return void calcWin(); if (k === 'browser') return void openBrowser(); if (k.indexOf('link:') === 0) { var lu = (window.AOS && AOS.link(k.slice(5))) || ''; if (!/^https?:\/\//.test(lu)) return void toast('Set this address in Settings, Direct sign-in links.'); window.open(lu, '_blank', 'noopener'); return; } if (k.indexOf('os:') === 0) return void osWin(k.slice(3)); if (k.indexOf('tool:') === 0) return void toolWin(k.slice(5)); return void filesWin(k === 'google' ? 'google' : 'cloud'); }
     if (a === 'app') return void openApp(b.getAttribute('data-s'));
     if (a === 'settings') { hide(); return void A.go('settings'); }
     if (a === 'tb') { if (!w) return; if (!w.min && D.top === w.id) { w.min = true; place(w); task(); } else focus(w); return; }
@@ -443,6 +481,7 @@
     if (a === 'wclose' && w) return void closeWin(w);
     if (a === 'showdesk') { D.wins.forEach(function (x) { x.min = true; place(x); }); task(); return; }
     if (a === 'keys') return void helpPanel(true);
+    if (a === 'fs') return void fullKeys();
     if (a === 'closeall') { D.wins.slice().forEach(closeWin); return; }
     if (a === 'wall') return void wallPanel();
     if (a === 'wallset') { D.wall = b.getAttribute('data-k'); LS.set('deskwall', D.wall); wallStyle(); return void wallPanel(); }
@@ -489,23 +528,36 @@
   var SHORTCUTS = [
     ['Windows', [['Alt + Tab', 'Switch window (hold Alt, press Tab again to go on, Shift to go back)'], ['Alt + F4', 'Close the window'], ['Alt + F9', 'Minimise the window'], ['Alt + F10', 'Maximise or restore'], ['Win + Up / Down', 'Maximise, restore or minimise'], ['Win + Left / Right', 'Snap to the left or right half'], ['Ctrl + Alt + Arrows', 'The same, if Win keys are taken by your computer']]],
     ['Desktop', [['Win (tap)  or  Ctrl + Esc', 'Open or close the Start menu'], ['Win + S', 'Start menu, searching'], ['Win + D  or  Ctrl + Alt + D', 'Show the desktop, again to bring windows back'], ['Win + 1 to 9  or  Ctrl + Alt + 1 to 9', 'Go to the 1st to 9th window on the taskbar'], ['Ctrl + K', 'Search everything'], ['F1  or  Ctrl + /', 'This list']]],
-    ['Open an app', [['Win + E  or  Ctrl + Alt + E', 'Files'], ['Ctrl + Alt + T', 'Terminal'], ['Ctrl + Alt + B', 'Browser'], ['Ctrl + Alt + A', 'Assistant'], ['Ctrl + Alt + P', 'Paperless']]]
+    ['Open an app', [['Win + E  or  Ctrl + Alt + E', 'Files'], ['Ctrl + Alt + T', 'Terminal'], ['Ctrl + Alt + B', 'Browser'], ['Ctrl + Alt + A', 'Assistant'], ['Ctrl + Alt + P', 'Paperless'], ['Ctrl + Alt + C', 'Calculator']]]
   ];
+  /* Full screen plus the Keyboard Lock API (Chrome and Edge): while locked, Alt + Tab, the Windows key, Esc and friends come to this page instead of the computer. */
+  function fullKeys() {
+    var el = document.documentElement;
+    if (document.fullscreenElement) { try { if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); } catch (e) {} return void document.exitFullscreen(); }
+    if (!el.requestFullscreen) return toast('This browser cannot go full screen. Use the Ctrl + Alt shortcuts.');
+    el.requestFullscreen().then(function () { lockKeys(true); }).catch(function () { toast('Full screen was refused. Use the Ctrl + Alt shortcuts.'); });
+  }
+  function lockKeys(say) {
+    if (!document.fullscreenElement) return;
+    if (!(navigator.keyboard && navigator.keyboard.lock)) { if (say) toast('Full screen is on. This browser keeps Alt + Tab and the Windows key, so use the Ctrl + Alt shortcuts.'); return; }
+    navigator.keyboard.lock().then(function () { if (say) toast('Keys captured. Hold Esc to leave full screen.'); }).catch(function () {});
+  }
+  document.addEventListener('fullscreenchange', function () { if (document.fullscreenElement) lockKeys(false); else { try { navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); } catch (e) {} } });
   function topWin() { var w = byId(D.top); return w && !w.min ? w : null; }
   function toggleMenu(force) { D.menu = force === undefined ? !D.menu : force; D.q = ''; menu(); task(); var q = $('#dkq'); if (D.menu && q) q.focus(); }
-  function launchKey(k) { if (k === 'ai') return aiWin(); if (k === 'browser') return openBrowser(); if (k.indexOf('os:') === 0) return osWin(k.slice(3)); if (k.indexOf('tool:') === 0) { var id = k.slice(5); if (/^(terminal|money|subs|invest|belong|house|paperless)$/.test(id) && !(window.AOS && AOS.isOwner && AOS.isOwner())) return toast('Only the owner can open this.'); return toolWin(id); } return filesWin(k === 'google' ? 'google' : 'cloud'); }
+  function launchKey(k) { if (k === 'ai') return aiWin(); if (k === 'calc') return calcWin(); if (k === 'browser') return openBrowser(); if (k.indexOf('os:') === 0) return osWin(k.slice(3)); if (k.indexOf('tool:') === 0) { var id = k.slice(5); if (/^(terminal|money|subs|invest|belong|house|paperless)$/.test(id) && !(window.AOS && AOS.isOwner && AOS.isOwner())) return toast('Only the owner can open this.'); return toolWin(id); } return filesWin(k === 'google' ? 'google' : 'cloud'); }
   function snap(w, side) { var ar = area(); w.max = false; w.w = Math.max(320, Math.floor(ar.w / 2)); w.h = ar.h; w.y = 0; w.x = side < 0 ? 0 : ar.w - w.w; place(w); focus(w); }
   function winUp(w) { if (!w.max) { w.max = true; place(w); } }
   function winDown(w) { if (w.max) { w.max = false; place(w); } else { w.min = true; place(w); task(); var n = D.wins.filter(function (x) { return !x.min; }).sort(function (a, b) { return b.z - a.z; })[0]; if (n) focus(n); } }
   function showDesk() { var vis = D.wins.filter(function (x) { return !x.min; }); if (vis.length) { D.hid = vis; vis.forEach(function (x) { x.min = true; place(x); }); task(); } else if (D.hid) { var l = D.hid.filter(function (x) { return D.wins.indexOf(x) >= 0; }); D.hid = null; l.forEach(function (x, i) { x.min = false; if (i === l.length - 1) focus(x); else place(x); }); task(); } }
-  function nthWin(n) { var w = D.wins[n - 1]; if (w) { if (!w.min && D.top === w.id) { w.min = true; place(w); task(); } else focus(w); } else { var pins = pinIds(); if (pins[n - 1] && pins[n - 1].indexOf('link:') !== 0) launchKey(pins[n - 1]); } }
+  function nthWin(n) { var w = D.wins.filter(function (x) { return x.kind !== 'ai'; })[n - 1]; if (w) { if (!w.min && D.top === w.id) { w.min = true; place(w); task(); } else focus(w); } else { var pins = pinIds(); if (pins[n - 1] && pins[n - 1].indexOf('link:') !== 0) launchKey(pins[n - 1]); } }
   function helpPanel(show) {
     var el = $('#dkhelp'); if (!show) { if (el) el.hidden = true; return; }
     if (!el) { el = document.createElement('div'); el.id = 'dkhelp'; el.className = 'dk-help'; root.appendChild(el); el.addEventListener('click', function (e) { if (e.target === el || e.target.closest('[data-hx]')) el.hidden = true; }); }
-    el.innerHTML = '<div class="dk-hbox" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="dk-hh"><b>Keyboard shortcuts</b><button data-hx aria-label="Close">&#10005;</button></div>' + SHORTCUTS.map(function (g) { return '<h4>' + g[0] + '</h4>' + g[1].map(function (r) { return '<div class="dk-hr"><span class="dk-keys">' + r[0].split(/\s+/).map(function (k) { return /^(\+|or|to|\(tap\))$/.test(k) ? '<em>' + k + '</em>' : '<kbd>' + esc(k) + '</kbd>'; }).join('') + '</span><span>' + esc(r[1]) + '</span></div>'; }).join(''); }).join('') + '<p class="dk-hn">Your browser or computer keeps a few of these for itself, such as Alt + Tab and the Windows key. Use the Ctrl + Alt versions then.</p></div>'; el.hidden = false;
+    el.innerHTML = '<div class="dk-hbox" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="dk-hh"><b>Keyboard shortcuts</b><button data-hx aria-label="Close">&#10005;</button></div>' + SHORTCUTS.map(function (g) { return '<h4>' + g[0] + '</h4>' + g[1].map(function (r) { return '<div class="dk-hr"><span class="dk-keys">' + r[0].split(/\s+/).map(function (k) { return /^(\+|or|to|\(tap\))$/.test(k) ? '<em>' + k + '</em>' : '<kbd>' + esc(k) + '</kbd>'; }).join('') + '</span><span>' + esc(r[1]) + '</span></div>'; }).join(''); }).join('') + '<p class="dk-hn">Your browser or computer keeps a few of these for itself, such as Alt + Tab and the Windows key. Press the full screen button on the taskbar (Chrome or Edge) and Alt + Tab and the Windows key work here too. Otherwise use the Ctrl + Alt versions.</p></div>'; el.hidden = false;
   }
   function switcher(dir) {
-    var sw = D.sw; if (!sw) { var l = D.wins.slice().sort(function (a, b) { return b.z - a.z; }); if (!l.length) return; sw = D.sw = { l: l, i: 0 }; var el = document.createElement('div'); el.id = 'dkalt'; el.className = 'dk-alt'; root.appendChild(el); sw.el = el; }
+    var sw = D.sw; if (!sw) { var l = D.wins.filter(function (x) { return x.kind !== 'ai'; }).sort(function (a, b) { return b.z - a.z; }); if (!l.length) return; sw = D.sw = { l: l, i: 0 }; var el = document.createElement('div'); el.id = 'dkalt'; el.className = 'dk-alt'; root.appendChild(el); sw.el = el; }
     var n = sw.l.length; sw.i = (sw.i + dir + n) % n; if (n === 1) sw.i = 0;
     sw.el.innerHTML = sw.l.map(function (w, i) { return '<div class="dk-alti' + (i === sw.i ? ' on' : '') + '">' + (wIcon(w) ? '<img src="' + esc(wIcon(w)) + '" alt="">' : '<span class="dk-rg">' + ic(KIND_IC[w.kind] || (w.view && OSICON[w.view]) || 'folder') + '</span>') + '<span>' + esc(w.title) + '</span></div>'; }).join('');
   }
@@ -533,7 +585,7 @@
       if (low === 'd') { showDesk(); return true; }
       if (/^[1-9]$/.test(key)) { nthWin(+key); return true; }
       if (win && !k.alt && !k.ctrl && low === 's') { toggleMenu(true); return true; }
-      var app = { e: 'files', t: 'tool:terminal', b: 'browser', a: 'ai', p: 'tool:paperless' }[low]; if (app && (cA || (win && low === 'e'))) { launchKey(app); return true; }
+      var app = { e: 'files', t: 'tool:terminal', b: 'browser', a: 'ai', p: 'tool:paperless', c: 'calc' }[low]; if (app && (cA || (win && low === 'e'))) { launchKey(app); return true; }
     }
     return false;
   }

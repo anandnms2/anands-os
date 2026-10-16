@@ -1127,3 +1127,15 @@ html.guest .deskbtn{display:none}
 .cl-m span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cl-m b{text-align:right;font-weight:500}
 .cl-spark{height:56px;display:flex;align-items:flex-end;gap:3px}.cl-spark i{flex:1;background:var(--accent);opacity:.85;border-radius:3px 3px 0 0;min-height:3px}.cl-spark i.f{background:var(--bad);opacity:1}
 @media (max-width:860px){.cl-cols{grid-template-columns:minmax(0,1fr)}.cl-strip{grid-template-columns:1fr}}
+
+/* desktop calculator */
+.dk-calc{height:100%;display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--surface,#1a1714);outline:none}
+.dk-cx{min-height:92px;border-radius:12px;background:rgba(0,0,0,.28);padding:10px 14px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;gap:2px;overflow:hidden}
+.dk-ch{font-size:13px;color:var(--muted);min-height:18px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dk-cv{font-family:var(--mono,ui-monospace,monospace);font-size:34px;line-height:1.15;max-width:100%;overflow-x:auto;white-space:nowrap}.dk-cv.bad{color:#f0526b}
+.dk-ck{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.dk-ck button,.dk-cb{border:0;border-radius:12px;font:inherit;font-size:19px;cursor:pointer;color:inherit;background:rgba(255,255,255,.09)}
+.dk-ck button:hover,.dk-cb:hover{background:rgba(255,255,255,.17)}.dk-ck button:active{transform:scale(.97)}
+.dk-ck .op,.dk-ck .fn{color:var(--accent);background:rgba(255,255,255,.05)}
+.dk-ck .eq{background:var(--accent);color:#1a1209;font-weight:700}.dk-ck .eq:hover{filter:brightness(1.08)}
+.dk-cb{height:38px;font-size:14px;color:var(--muted)}
