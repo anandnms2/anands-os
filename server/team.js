@@ -31,6 +31,7 @@ export function areaOf(p, method) {
   if (p === '/api/session' || p === '/api/prefs' && method === 'GET') return 'open';
   if (p === '/api/desk' || p === '/api/rates') return 'open';
   if (p === '/api/sj/open') return 'owner';
+  if (p === '/api/chrome/open') return 'owner';
   if (p === '/api/profile') return method === 'GET' ? 'open' : 'owner';
   if (p === '/api/settings') return method === 'GET' ? 'open' : 'owner';
   if (/^\/api\/(photos|immich)(\/|$)/.test(p)) return 'photos';

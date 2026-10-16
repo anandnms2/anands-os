@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { sign, verify } from './session.js';
+import { effective } from './config.js';
 import { serveStatic } from './static.js';
 
 const require = createRequire(import.meta.url);
@@ -98,3 +99,13 @@ export async function selfCheck() {
   if (!ip) return console.log('[sj] outbound check FAILED: ' + why);
   await new Promise((res) => { const s = net.connect({ host: ip, port: 443, timeout: 6000 }, () => { console.log('[sj] outbound check ok (' + ip + ':443' + (why ? '; ' + why : '') + ')'); s.destroy(); res(); }); s.on('timeout', () => { console.log('[sj] outbound check FAILED: connect to ' + ip + ':443 timed out'); s.destroy(); res(); }); s.on('error', (e) => { console.log('[sj] outbound check FAILED: ' + (e.code || e.message)); res(); }); });
 }
+
+/* the optional real Chrome (Neko, streamed over WebRTC) that the Browser window can switch to. Only the owner is given its address and sign-in. */
+export function chromeInfo() {
+  const c = effective().chrome || {};
+  if (!c.url) return { ok: false, reason: 'No address saved yet. Add it in Settings, under Real Chrome.' };
+  if (!c.pass) return { ok: false, reason: 'No password saved yet. Add it in Settings, under Real Chrome.' };
+  let origin; try { origin = new URL(c.url).origin; } catch { return { ok: false, reason: 'The saved address is not valid.' }; }
+  return { ok: true, src: origin + '/?embed=1&usr=' + encodeURIComponent(c.user || 'anand') + '&pwd=' + encodeURIComponent(c.pass) };
+}
+export const chromeOrigin = () => { try { const u = (effective().chrome || {}).url; return u ? new URL(u).origin : ''; } catch { return ''; } };

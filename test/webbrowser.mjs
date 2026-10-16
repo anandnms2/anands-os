@@ -16,11 +16,19 @@ const site = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 't
 await new Promise((r) => site.listen(0, '127.0.0.1', r)); const SITE = `http://127.0.0.1:${site.address().port}/`;
 const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'pw', SESSION_SECRET: 'x'.repeat(40), SJ_ALLOW_PRIVATE: '1' } });
 for (let i = 0; i < 50; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
+const nk = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html' }); r.end('<!doctype html><title>Neko fixture</title><body style="margin:0;background:#123"><h1 id="nk" style="color:#fff">Streamed Chrome fixture ' + q.url + '</h1>'); });
+await new Promise((r) => nk.listen(0, '127.0.0.1', r)); const NK = `http://127.0.0.1:${nk.address().port}`;
 let pass = 0, failed = 0; const t = async (n, f) => { try { await f(); pass++; console.log('ok   ' + n); } catch (e) { failed++; console.log('FAIL ' + n + '\n     ' + (e.stack || e).toString().split('\n').slice(0, 5).join('\n     ')); } };
 const H = { 'x-aos': '1', 'content-type': 'application/json' };
 try {
   const lr = await fetch(B + '/auth/password', { method: 'POST', headers: H, body: JSON.stringify({ password: 'pw' }) });
   const cookie = (lr.headers.getSetCookie() || []).map((c) => c.split(';')[0]).join(';');
+  await t('Real Chrome settings: saved, the owner is given the sign-in address, bad addresses are refused', async () => {
+    assert.equal((await fetch(B + '/api/chrome/open')).status, 401);
+    let r = await fetch(B + '/api/settings', { method: 'PUT', headers: { ...H, cookie }, body: JSON.stringify({ chrome: { url: 'http://evil.example.com' } }) }); assert.equal(r.status, 400);
+    r = await fetch(B + '/api/settings', { method: 'PUT', headers: { ...H, cookie }, body: JSON.stringify({ chrome: { url: NK, user: 'anand', pass: 'secret pw' } }) }); assert.equal(r.status, 200); const s = await r.json(); assert.equal(s.chrome.passSet, true); assert.equal(JSON.stringify(s).includes('secret pw'), false);
+    const j = await (await fetch(B + '/api/chrome/open', { headers: { cookie } })).json(); assert.equal(j.ok, true); assert.equal(j.src, NK + '/?embed=1&usr=anand&pwd=secret%20pw');
+  });
   await t('the open call needs a signed-in owner and hands back a tokened address', async () => {
     assert.equal((await fetch(B + '/api/sj/open')).status, 401);
     const j = await (await fetch(B + '/api/sj/open', { headers: { cookie } })).json(); assert.equal(j.ok, true); assert.match(j.src, /^\/sj\/\?t=/);
@@ -58,6 +66,16 @@ try {
         const inner = d.frameLocator('.dkw[aria-label="Browser"] iframe.dk-rbf'); await inner.locator('#url').fill(SITE); await d.keyboard.press('Enter');
         await inner.frameLocator('#stage iframe').locator('#hi').waitFor({ timeout: 30000 }); await c2.close();
       });
+      await t('Real Chrome mode: switch, frame fills the window, switch back', async () => {
+        const c3 = await br.newContext({ viewport: { width: 1440, height: 860 } }); await c3.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
+        const d = await c3.newPage(); await d.goto(B + '/'); await d.waitForSelector('#rail .nav'); await d.click('#top .deskbtn'); await d.waitForSelector('#desk:not([hidden])');
+        await d.click('.dk-ic[data-w="browser"]'); const w = d.locator('.dkw[aria-label="Browser"]'); await w.locator('iframe.dk-rbf').waitFor({ timeout: 8000 });
+        await w.locator('[data-dk="bmode"][data-m="chrome"]').click(); const f = w.locator('iframe.dk-nkf'); await f.waitFor({ timeout: 8000 });
+        assert.ok((await f.getAttribute('src')).startsWith(NK + '/?embed=1&usr=anand&pwd='));
+        await d.frameLocator('.dkw[aria-label="Browser"] iframe.dk-nkf').locator('#nk').waitFor(); const box = await f.boundingBox(), win = await w.boundingBox(); assert.ok(box.width > win.width * 0.95 && box.height > win.height * 0.7, JSON.stringify([box, win]));
+        assert.equal(await w.locator('iframe.dk-rbf').isHidden(), true);
+        await w.locator('[data-dk="bmode"][data-m="sj"]').click(); assert.equal(await f.isHidden(), true); assert.equal(await w.locator('iframe.dk-rbf').isVisible(), true); await c3.close();
+      });
       await t('new tabs and closing work', async () => {
         await p.click('#newtab'); assert.equal(await p.locator('.tab').count(), 2); assert.ok(await p.locator('#home').isVisible());
         await p.locator('.tab b').last().click(); assert.equal(await p.locator('.tab').count(), 1);
@@ -65,4 +83,4 @@ try {
       await t('no page errors', async () => { assert.deepEqual(errs, []); });
     } finally { await br.close(); }
   }
-} finally { srv.kill(); site.close(); fs.rmSync(data, { recursive: true, force: true }); console.log(`\n${pass} passed, ${failed} failed`); process.exit(failed ? 1 : 0); }
+} finally { srv.kill(); site.close(); nk.close(); fs.rmSync(data, { recursive: true, force: true }); console.log(`\n${pass} passed, ${failed} failed`); process.exit(failed ? 1 : 0); }

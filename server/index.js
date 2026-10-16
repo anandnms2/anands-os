@@ -18,7 +18,7 @@ import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
 import { handleProfile } from './profile.js';
 import { handleBrowse, clearCookies as browseClear } from './browse.js';
-import { handleSj, handleSjUpgrade, openInfo as sjOpen, selfCheck as sjCheck, SJ_HOST } from './webproxy.js';
+import { handleSj, handleSjUpgrade, openInfo as sjOpen, chromeInfo, chromeOrigin, selfCheck as sjCheck, SJ_HOST } from './webproxy.js';
 import { handleMailboxes, syncAll } from './mailbox.js';
 import { handleGdrive, googleCallback, gConnected, gConfigured } from './gdrive.js';
 import { ping as davPing } from './webdav.js';
@@ -43,7 +43,7 @@ const CONNECT_EXTRA = (env.CONNECT_SRC_EXTRA || '').trim();
 const BASE_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'permissions-policy': 'camera=(self), microphone=(self), display-capture=(self), geolocation=()' };
 const UI_CSP_PARTS = ["default-src 'self'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self' blob:", "connect-src 'self'"];
 const pulseOrigin = () => { try { const u = effective().pulse.url; return u ? new URL(u).origin : ''; } catch { return ''; } };
-const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self'" + (SJ_HOST ? ' https://' + SJ_HOST : ''), "manifest-src 'self'", "worker-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'self'"].join('; ');
+const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self'" + (SJ_HOST ? ' https://' + SJ_HOST : '') + (chromeOrigin() ? ' ' + chromeOrigin() : ''), "manifest-src 'self'", "worker-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'self'"].join('; ');
 /* Apps can only talk to this server. puter.com is not reachable from them: nothing else is in connect-src. */
 const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
 
@@ -83,6 +83,7 @@ async function api(req, res, url) {
   if (p.startsWith('/api/photos')) return handlePhotos(req, res, url);
   if (p === '/api/mailboxes' || p.startsWith('/api/mailboxes/')) return handleMailboxes(req, res, url);
   if (p === '/api/sj/open') return json(res, 200, sjOpen());
+  if (p === '/api/chrome/open') return json(res, 200, chromeInfo());
   if (p === '/api/browse/clear' && req.method === 'POST') { browseClear(req); return json(res, 200, { ok: true }); }
   if (p === '/api/browse' && (req.method === 'GET' || req.method === 'POST')) return handleBrowse(req, res, url);
   if (p === '/api/gdrive' || p.startsWith('/api/gdrive/')) return handleGdrive(req, res, url);

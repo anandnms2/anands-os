@@ -1,0 +1,23 @@
+# Anands Chrome: a real Chrome streamed over WebRTC (Neko), shown inside Anands OS Desktop > Browser.
+# Paste into Coolify as a Docker Compose service. Open the UDP range below in the server firewall.
+services:
+  neko:
+    image: ghcr.io/m1k1o/neko/chromium:latest
+    restart: unless-stopped
+    shm_size: 2gb
+    cap_add:
+      - SYS_ADMIN
+    ports:
+      - "52000-52100:52000-52100/udp"   # WebRTC media (video, audio). Must be reachable from the internet.
+    environment:
+      - SERVICE_FQDN_NEKO_8080          # Coolify gives the web page its own address, mapped to port 8080
+      - NEKO_DESKTOP_SCREEN=1920x1080@30
+      - NEKO_MEMBER_MULTIUSER_USER_PASSWORD=${SERVICE_PASSWORD_NEKOUSER}
+      - NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD=${SERVICE_PASSWORD_NEKOADMIN}
+      - NEKO_WEBRTC_EPR=52000-52100
+      - NEKO_WEBRTC_ICELITE=1
+      - NEKO_WEBRTC_NAT1TO1=173.249.55.16   # this server's public IP
+    volumes:
+      - neko-profile:/home/neko/.config/chromium   # keeps your Google sign-in and bookmarks across restarts
+volumes:
+  neko-profile:

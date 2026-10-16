@@ -1201,3 +1201,7 @@ html.guest .deskbtn{display:none}
 .dk-rbmsg{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;padding:24px;background:#17171b;color:#e8e2da}.dk-rbmsg p{margin:0;max-width:420px;color:#a9a199}.dk-rbmsg div{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px}
 
 .dk-br.isfull .dk-bts{display:none}
+.dk-mbar{display:flex;gap:4px;padding:5px 8px;background:var(--surface2);border-bottom:1px solid var(--line);flex:0 0 auto}
+.dk-mbar button{border:0;border-radius:8px;padding:5px 12px;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;cursor:pointer}
+.dk-mbar button:hover{color:var(--fg)}.dk-mbar button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.dk-mbar[hidden]{display:none}
