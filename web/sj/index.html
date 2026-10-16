@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anands Browser</title>
+<link rel="stylesheet" href="/sj/app.css">
+</head><body>
+<div id="app">
+  <div id="tabs" role="tablist" aria-label="Tabs"><button id="newtab" title="New tab" aria-label="New tab">+</button></div>
+  <form id="bar" autocomplete="off">
+    <button type="button" id="back" title="Back" aria-label="Back">&#8592;</button>
+    <button type="button" id="fwd" title="Forward" aria-label="Forward">&#8594;</button>
+    <button type="button" id="reload" title="Reload" aria-label="Reload">&#8635;</button>
+    <input id="url" type="text" spellcheck="false" placeholder="Search or enter an address" aria-label="Address">
+    <button type="button" id="full" title="Open in its own tab" aria-label="Open in its own tab">&#8599;</button>
+  </form>
+  <div id="stage">
+    <div id="home">
+      <h1>Anands Browser</h1>
+      <p>Search the web, or type an address.</p>
+      <div id="quick"></div>
+    </div>
+    <div id="status" hidden></div>
+  </div>
+</div>
+<script src="/sj/baremux/index.js"></script>
+<script src="/sj/scram/scramjet.all.js"></script>
+<script src="/sj/app.js"></script>
+</body></html>

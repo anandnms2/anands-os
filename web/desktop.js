@@ -237,14 +237,14 @@
   function btab(w) { var b = w.b; return b.tabs.filter(function (t) { return t.id === b.cur; })[0]; }
   function loadRb(again) {
     if (D.rbTried && !again) return; D.rbTried = true;
-    fetch('/api/rb/status', { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (c) {
-      if (!c || !c.available) return; D.rb = '/rb/?path=rb/websockify&autoconnect=true&resize=scale'; D.rbUp = !!c.up; D.rbWhy = c.reason || '';
+    fetch('/api/sj/open', { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (c) {
+      if (!c || !c.ok) return; D.rb = c.src; D.rbUp = true; D.rbWhy = '';
       D.wins.forEach(function (w) { if (w.kind === 'browser') { if (w.b.full === undefined) w.b.full = true; paintBrowser(w); } });
     }).catch(function () {});
   }
   function browserWin(url) {
     loadRb();
-    var w = mk('browser', 'Browser', { w: 1000, h: 640 }); w.sd = { t: 'br' }; w.b = { tabs: [], cur: 0, n: 0, full: D.rb ? (url ? false : true) : undefined }; newTab(w, url); return w;
+    var w = mk('browser', 'Browser', { w: 1000, h: 640 }); w.sd = { t: 'br' }; w.b = { tabs: [], cur: 0, n: 0, full: D.rb ? true : undefined, go: url || '' }; newTab(w, url); return w;
   }
   function newTab(w, url) { var t = { id: ++w.b.n, url: '', title: 'New tab', hist: [], i: -1 }; w.b.tabs.push(t); w.b.cur = t.id; paintBrowser(w); if (url) nav(w, t, url); else { var q = w.body.querySelector('.dk-url'); if (q) q.focus(); } return t; }
   function nav(w, t, input, noPush) {
@@ -260,9 +260,10 @@
     var b = w.b, t = btab(w);
     if (!w.body.querySelector('.dk-br')) w.body.innerHTML = '<div class="dk-br"><div class="dk-bts" role="tablist"></div><div class="dk-barw"></div><div class="dk-bv"><div class="dk-sw"></div></div></div>';
     w.body.querySelector('.dk-bts').innerHTML = b.tabs.map(function (x) { return '<div class="dk-bt' + (x.id === b.cur ? ' on' : '') + '" data-dk="btab" data-id="' + w.id + '" data-t="' + x.id + '" role="tab" aria-selected="' + (x.id === b.cur) + '"><span>' + esc(x.title) + '</span>' + (b.tabs.length > 1 ? '<button data-dk="bclose" data-id="' + w.id + '" data-t="' + x.id + '" aria-label="Close tab">&#10005;</button>' : '') + '</div>'; }).join('') + '<button class="dk-bnew" data-dk="bnew" data-id="' + w.id + '" aria-label="New tab">+</button><button class="dk-bnew" data-dk="bset" data-id="' + w.id + '" aria-label="Browser settings" title="Browser settings">' + ic('settings') + '</button>' + (D.rb ? '<button class="btn sm dk-bfull' + (b.full ? ' on' : '') + '" data-dk="bfull" data-id="' + w.id + '" title="A complete remote browser: sign-ins, video, web apps">' + (b.full ? 'Simple tabs' : 'Full browser') + '</button>' : '');
+    w.body.querySelector('.dk-br').classList.toggle('isfull', !!(b.full && D.rb && D.rbUp !== false));
     var rf = w.body.querySelector('.dk-bv iframe.dk-rbf');
-    if (b.full && D.rb) { if (!rf) { rf = document.createElement('iframe'); rf.className = 'dkw-frame dk-rbf'; rf.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock'); rf.setAttribute('allow', 'clipboard-read; clipboard-write; fullscreen; microphone; camera; autoplay'); rf.title = 'Full browser'; rf.src = D.rbUp === false ? 'about:blank' : D.rb; w.body.querySelector('.dk-bv').appendChild(rf); } rf.hidden = D.rbUp === false; if (D.rbUp !== false && rf.getAttribute('src') === 'about:blank') rf.src = D.rb; w.body.querySelector('.dk-barw').hidden = true; } else { if (rf) rf.hidden = true; w.body.querySelector('.dk-barw').hidden = false; }
-    var mg = w.body.querySelector('.dk-rbmsg'); if (b.full && D.rb && D.rbUp === false) { if (!mg) { mg = document.createElement('div'); mg.className = 'dk-rbmsg'; w.body.querySelector('.dk-bv').appendChild(mg); } mg.innerHTML = '<b>The Full browser is not reachable</b><p>' + esc(D.rbWhy || 'Check that its container is running.') + '</p><div><button class="btn primary" data-dk="bretry" data-id="' + w.id + '">Try again</button> <button class="btn" data-dk="bfull" data-id="' + w.id + '">Use Simple tabs</button></div>'; } else if (mg) mg.remove();
+    if (b.full && D.rb) { if (!rf) { rf = document.createElement('iframe'); rf.className = 'dkw-frame dk-rbf'; rf.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock'); rf.setAttribute('allow', 'clipboard-read; clipboard-write; fullscreen; microphone; camera; autoplay'); rf.title = 'Browser'; rf.src = D.rbUp === false ? 'about:blank' : D.rb + (w.b.go ? '&go=' + encodeURIComponent(w.b.go) : ''); w.body.querySelector('.dk-bv').appendChild(rf); } rf.hidden = D.rbUp === false; if (D.rbUp !== false && rf.getAttribute('src') === 'about:blank') rf.src = D.rb + (w.b.go ? '&go=' + encodeURIComponent(w.b.go) : ''); w.body.querySelector('.dk-barw').hidden = true; } else { if (rf) rf.hidden = true; w.body.querySelector('.dk-barw').hidden = false; }
+    var mg = w.body.querySelector('.dk-rbmsg'); if (b.full && D.rb && D.rbUp === false) { if (!mg) { mg = document.createElement('div'); mg.className = 'dk-rbmsg'; w.body.querySelector('.dk-bv').appendChild(mg); } mg.innerHTML = '<b>The browser could not start</b><p>' + esc(D.rbWhy || 'Check that its container is running.') + '</p><div><button class="btn primary" data-dk="bretry" data-id="' + w.id + '">Try again</button> <button class="btn" data-dk="bfull" data-id="' + w.id + '">Use Simple tabs</button></div>'; } else if (mg) mg.remove();
     var keep = (document.activeElement && document.activeElement.classList.contains('dk-url') && w.body.contains(document.activeElement)) ? document.activeElement.value : null;
     w.body.querySelector('.dk-barw').innerHTML = '<form class="dk-bar2" data-dk-form="url" data-id="' + w.id + '"><button type="button" class="btn sm" data-dk="bback" data-id="' + w.id + '"' + (t.i > 0 ? '' : ' disabled') + ' aria-label="Back">' + ic('back') + '</button><button type="button" class="btn sm" data-dk="bfwd" data-id="' + w.id + '"' + (t.i < t.hist.length - 1 ? '' : ' disabled') + ' aria-label="Forward">' + ic('r') + '</button><button type="button" class="btn sm" data-dk="breload" data-id="' + w.id + '" aria-label="Reload"' + (t.url ? '' : ' disabled') + '>&#8635;</button><button type="button" class="btn sm" data-dk="bhome" data-id="' + w.id + '" aria-label="Start page">' + ic('home') + '</button>' +
       '<input class="input dk-url" aria-label="Address or search" placeholder="Search or type a web address" value="' + esc(t.url) + '" autocomplete="off" spellcheck="false"><button type="button" class="btn sm dk-star" data-dk="bmstar" data-id="' + w.id + '" aria-label="Bookmark this page" title="Bookmark this page"' + (t.url ? '' : ' disabled') + '>' + ic('star') + '</button><button type="button" class="btn sm" data-dk="bext" data-id="' + w.id + '"' + (t.url ? '' : ' disabled') + ' title="Open this page in a real browser tab" aria-label="Open in a real tab">' + ic('ext') + '</button></form>';
@@ -301,7 +302,7 @@
     document.body.appendChild(f); f.submit(); f.remove();
   }
 
-  /* ---------- Full browser: a separate Kasm Chrome shown at /rb/ (see server/rbproxy.js) ---------- */
+  /* ---------- Full browser: the built-in engine at /sj/ (see server/webproxy.js and web/sj/) ---------- */
   function openBrowser(url) { return browserWin(url); }
   function rbSettings(w, keep) {
     if (window.AOSBS) return AOSBS.toggle(w);

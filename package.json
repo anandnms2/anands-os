@@ -4,6 +4,18 @@
   "private": true,
   "type": "module",
   "description": "Anands OS: personal OS shell, local Puter apps, Immich photos, Coolify insights and an assistant, in one container.",
-  "engines": { "node": ">=22" },
-  "scripts": { "start": "node server/index.js", "test": "node test/run.mjs" }
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {
+    "@mercuryworkshop/bare-mux": "2.1.9",
+    "@mercuryworkshop/libcurl-transport": "1.5.2",
+    "@mercuryworkshop/scramjet": "1.1.0",
+    "@mercuryworkshop/wisp-js": "0.4.1",
+    "ws": "8.22.0"
+  }
 }

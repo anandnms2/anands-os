@@ -54,7 +54,6 @@ export function effective() {
     dav: { url: clean(s.dav?.url) || clean(env.DAV_URL), user: clean(s.dav?.user) || clean(env.DAV_USER), pass: clean(s.dav?.pass) || clean(env.DAV_PASSWORD) },
     vault: { url: clean(s.vault?.url) || clean(env.VAULT_URL) },
     authentik: { url: clean(s.authentik?.url) || clean(env.AUTHENTIK_URL) || (OIDC ? (() => { try { return new URL(OIDC.issuer).origin; } catch { return ''; } })() : ''), token: clean(s.authentik?.token) || clean(env.AUTHENTIK_TOKEN) },
-    rbrowser: { url: clean(s.rbrowser?.url) || clean(env.REMOTE_BROWSER_URL), user: clean(s.rbrowser?.user) || clean(env.REMOTE_BROWSER_USER) || 'kasm_user', pass: clean(s.rbrowser?.pass) || clean(env.REMOTE_BROWSER_PASSWORD) },
     terminal: { host: clean(s.terminal?.host) || clean(env.TERMINAL_HOST), port: Number(s.terminal?.port || env.TERMINAL_PORT || 0) || 22, user: clean(s.terminal?.user) || clean(env.TERMINAL_USER) || 'root', key: clean(s.terminal?.key) || clean(env.TERMINAL_KEY).replace(/\\n/g, '\n'), auth: s.terminal?.auth === 'password' || (!s.terminal?.key && !env.TERMINAL_KEY && s.terminal?.auth !== 'key' && !!clean(s.terminal?.pass)) ? 'password' : 'key', pass: clean(s.terminal?.pass) || clean(env.TERMINAL_PASS) },
     mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
     links: { ai: clean(s.links?.ai) || clean(env.LINK_AI) || 'https://ai.anands.xyz/oauth/openid', files: clean(s.links?.files) || clean(env.LINK_FILES) || 'https://files.anands.xyz/api/auth/oidc/login', storage: clean(s.links?.storage) || clean(env.LINK_STORAGE) || 'https://s3-admin.anands.xyz', paperless: clean(s.links?.paperless) || clean(env.LINK_PAPERLESS) || 'https://paperless.anands.xyz' },
@@ -78,7 +77,6 @@ export function publicSettings() {
     dav: { url: e.dav.url, user: e.dav.user, passSet: !!e.dav.pass },
     vault: { url: e.vault.url },
     authentik: { url: e.authentik.url, tokenSet: !!e.authentik.token },
-    rbrowser: { url: e.rbrowser.url, user: e.rbrowser.user, passSet: !!e.rbrowser.pass },
     terminal: { host: e.terminal.host, port: e.terminal.port, user: e.terminal.user, keySet: !!e.terminal.key, auth: e.terminal.auth, passSet: !!e.terminal.pass },
     mail: { host: e.mail.host, port: e.mail.port, security: e.mail.security, user: e.mail.user, passSet: !!e.mail.pass, from: e.mail.from, fromName: e.mail.fromName, dailyCap: e.mail.dailyCap },
     links: e.links,
@@ -109,9 +107,6 @@ export function updateSettings(patch) {
   set('paperless', 'token', p.paperless?.token, true);
   set('authentik', 'url', p.authentik?.url); set('authentik', 'token', p.authentik?.token, true);
   for (const f of ['ai', 'files', 'storage', 'paperless']) set('links', f, p.links?.[f]);
-  if (p.rbrowser?.url !== undefined && String(p.rbrowser.url).trim() && !/^https?:\/\/[^\s]+$/i.test(String(p.rbrowser.url).trim())) throw Object.assign(new Error('Enter the full address, starting with https://'), { status: 400 });
-  set('rbrowser', 'user', p.rbrowser?.user); set('rbrowser', 'pass', p.rbrowser?.pass, true);
-  set('rbrowser', 'url', p.rbrowser?.url === undefined ? undefined : String(p.rbrowser.url).trim().replace(/\/+$/, ''));
   if (p.terminal) {
     const t = p.terminal;
     set('terminal', 'host', t.host === undefined ? undefined : String(t.host).replace(/^[a-z]+:\/\//i, '').replace(/[\/\s].*$/, '')); set('terminal', 'user', t.user === undefined ? undefined : String(t.user).replace(/[^A-Za-z0-9._-]/g, ''));

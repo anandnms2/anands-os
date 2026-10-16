@@ -1199,3 +1199,5 @@ html.guest .deskbtn{display:none}
 @media (max-width:760px){.dk-cp{right:6px;left:6px;width:auto}.dk-sn-cs{opacity:1}}
 
 .dk-rbmsg{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;padding:24px;background:#17171b;color:#e8e2da}.dk-rbmsg p{margin:0;max-width:420px;color:#a9a199}.dk-rbmsg div{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+
+.dk-br.isfull .dk-bts{display:none}

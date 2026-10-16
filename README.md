@@ -81,8 +81,12 @@ Limits: calls are a mesh (everyone connects to everyone), so quality drops beyon
 
 `node test/meet.mjs` runs these tests (needs Playwright; set `E2E_SUITE` to include the real Meetings app).
 
-## Browser (Simple and Full)
+## Browser
 
-Desktop Browser has two modes. Simple opens pages through this server in a sandbox (fast, good for plain pages). Full is a complete Chrome with sound that runs in its own container (Kasm Chrome, see `browser/docker-compose.yml`) and is shown inside the window at `/rb/`.
+Desktop Browser is a full browser built into Anands OS, with tabs, an address bar, back, forward and reload. Nothing else has to be installed or run.
 
-The container is never public. Anands OS only lets the owner in, signs in to it for you and relays the page and the screen WebSocket (`server/rbproxy.js`). Put the container on the same Docker network as Anands OS, then in Settings enter its address (for example `https://anands-chrome:6901`), user `kasm_user` and the password you set. Its profile (logins, extensions) lives in the container's volume. It is one shared Chrome, with no camera or microphone.
+It uses [Scramjet](https://github.com/MercuryWorkshop/scramjet), the engine behind Puter's browser.js. Pages are rewritten inside your own browser by a service worker (scope `/sj/`), and the network leg is a Wisp tunnel that ends in this server (`server/webproxy.js`), so sites see this server's address, not yours. The browser page itself is in `web/sj/`.
+
+- The tunnel is a door to the internet, so it only opens for a short-lived token that a signed-in owner is given by `/api/sj/open`. It refuses private and loopback addresses, so sites cannot reach your internal network.
+- For best isolation give the browser its own address, for example `SJ_HOST=browse.anands.xyz` (add that domain to the same app in Coolify). Then the pages you visit run on a different origin from the OS and cannot touch it. Without it the browser runs under `/sj/` on the OS address.
+- Google, YouTube, Reddit and similar sites work. Sites that check for a data-centre address may ask for a CAPTCHA. `SJ_OFF=1` turns the engine off and the Desktop falls back to simple tabs.

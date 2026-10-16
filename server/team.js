@@ -30,7 +30,7 @@ const KEYS = AREAS.map((a) => a[0]);
 export function areaOf(p, method) {
   if (p === '/api/session' || p === '/api/prefs' && method === 'GET') return 'open';
   if (p === '/api/desk' || p === '/api/rates') return 'open';
-  if (p === '/rb' || p.startsWith('/rb/')) return 'owner';
+  if (p === '/api/sj/open') return 'owner';
   if (p === '/api/profile') return method === 'GET' ? 'open' : 'owner';
   if (p === '/api/settings') return method === 'GET' ? 'open' : 'owner';
   if (/^\/api\/(photos|immich)(\/|$)/.test(p)) return 'photos';

@@ -8,12 +8,13 @@ WORKDIR /build
 COPY suite ./suite
 RUN bash suite/build.sh /build/upstream /build/dist
 
-# Stage 2: runtime, no dependencies, non-root.
+# Stage 2: runtime, non-root. The only packages are the built-in browser's engine (Scramjet, Wisp, libcurl).
 FROM node:22-alpine
 ENV NODE_ENV=production PORT=8080 DATA_DIR=/data SUITE_DIR=/srv/suite
 RUN apk add --no-cache ffmpeg libheif-tools font-noto font-noto-emoji ttf-freefont python3 openssh-client bash
 WORKDIR /srv/app
-COPY package.json ./
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 COPY server ./server
 COPY web ./web
 COPY suite/shim ./suite/shim
