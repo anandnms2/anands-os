@@ -36,4 +36,14 @@ T.ic = function (n) {
   return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + (P[n] || '') + '</svg>';
 };
 T.fmtSize = function (n) { n = +n || 0; return n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; };
+/* Desktop shortcuts: window-level keys pressed inside an app window are passed up to the Desktop */
+if (window.parent !== window) {
+  var fwd = function (e) {
+    if (!(e.altKey || e.metaKey || e.key === 'Meta' || e.key === 'Alt' || (e.ctrlKey && e.key === 'Escape') || e.key === 'F1' || (e.ctrlKey && e.key === '/'))) return;
+    var ed = !!(e.getModifierState && e.getModifierState('AltGraph'));
+    try { window.parent.postMessage({ aosKey: { t: e.type, key: e.key, alt: e.altKey, ctrl: e.ctrlKey, shift: e.shiftKey, meta: e.metaKey, edit: ed } }, location.origin); } catch (x) {}
+    if (e.type === 'keydown' && (e.key === 'F1' || (e.altKey && (e.key === 'Tab' || /^F(4|9|10)$/.test(e.key))))) e.preventDefault();
+  };
+  document.addEventListener('keydown', fwd, true); document.addEventListener('keyup', fwd, true);
+}
 })();

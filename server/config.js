@@ -57,6 +57,7 @@ export function effective() {
     terminal: { host: clean(s.terminal?.host) || clean(env.TERMINAL_HOST), port: Number(s.terminal?.port || env.TERMINAL_PORT || 0) || 22, user: clean(s.terminal?.user) || clean(env.TERMINAL_USER) || 'root', key: clean(s.terminal?.key) || clean(env.TERMINAL_KEY).replace(/\\n/g, '\n'), auth: s.terminal?.auth === 'password' || (!s.terminal?.key && !env.TERMINAL_KEY && s.terminal?.auth !== 'key' && !!clean(s.terminal?.pass)) ? 'password' : 'key', pass: clean(s.terminal?.pass) || clean(env.TERMINAL_PASS) },
     mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
     links: { ai: clean(s.links?.ai) || clean(env.LINK_AI) || 'https://ai.anands.xyz/oauth/openid', files: clean(s.links?.files) || clean(env.LINK_FILES) || 'https://files.anands.xyz/api/auth/oidc/login', storage: clean(s.links?.storage) || clean(env.LINK_STORAGE) || 'https://s3-admin.anands.xyz', paperless: clean(s.links?.paperless) || clean(env.LINK_PAPERLESS) || 'https://paperless.anands.xyz' },
+    paperless: { token: clean(s.paperless?.token) || clean(env.PAPERLESS_TOKEN) },
     public: { url: clean(s.public?.url) || PUBLIC_URL },
     turn: { urls: clean(s.turn?.urls) || clean(env.TURN_URLS) || ((s.turn?.secret || env.TURN_SECRET) && PUBLIC_URL ? (() => { try { const h = new URL(PUBLIC_URL).hostname; return 'turn:' + h + ':3478,turn:' + h + ':3478?transport=tcp'; } catch { return ''; } })() : ''), secret: clean(s.turn?.secret) || clean(env.TURN_SECRET), stun: clean(s.turn?.stun) || clean(env.STUN_URLS) },
     llm: { base: clean(s.llm?.base) || clean(env.LLM_BASE_URL), key: clean(s.llm?.key) || clean(env.LLM_API_KEY), model: clean(s.llm?.model) || clean(env.LLM_MODEL) || 'gpt-4o-mini' }
@@ -79,6 +80,7 @@ export function publicSettings() {
     terminal: { host: e.terminal.host, port: e.terminal.port, user: e.terminal.user, keySet: !!e.terminal.key, auth: e.terminal.auth, passSet: !!e.terminal.pass },
     mail: { host: e.mail.host, port: e.mail.port, security: e.mail.security, user: e.mail.user, passSet: !!e.mail.pass, from: e.mail.from, fromName: e.mail.fromName, dailyCap: e.mail.dailyCap },
     links: e.links,
+    paperless: { tokenSet: !!e.paperless.token },
     public: { url: e.public.url },
     turn: { urls: e.turn.urls, secretSet: !!e.turn.secret, stun: e.turn.stun },
     llm: { base: e.llm.base, keySet: !!e.llm.key, model: e.llm.model }
@@ -102,6 +104,7 @@ export function updateSettings(patch) {
   set('pulse', 'url', p.pulse?.url); set('pulse', 'token', p.pulse?.token, true); set('pulse', 'user', p.pulse?.user); set('pulse', 'pass', p.pulse?.pass, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
   set('vault', 'url', p.vault?.url);
+  set('paperless', 'token', p.paperless?.token, true);
   set('authentik', 'url', p.authentik?.url); set('authentik', 'token', p.authentik?.token, true);
   for (const f of ['ai', 'files', 'storage', 'paperless']) set('links', f, p.links?.[f]);
   if (p.rbrowser?.url !== undefined && String(p.rbrowser.url).trim() && !/^https?:\/\/[^\s]+$/i.test(String(p.rbrowser.url).trim())) throw Object.assign(new Error('Enter the full address, starting with https://'), { status: 400 });

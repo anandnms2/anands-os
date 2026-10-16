@@ -69,7 +69,7 @@
     return h + '</div>';
   }
   var GROUPS = [
-    ['Everyday', [['Pulse', 'pulse', '#pulse', 'Anands Control Center'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Cards', 'card', '#cards', 'Anands Cards'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password'], ['Files', 'folder', 'https://files.anands.xyz/api/auth/oidc/login', 'Anands Filemanager', 'files'], ['Paperless', 'folder', 'https://paperless.anands.xyz', 'Anands Paperless', 'paperless']]],
+    ['Everyday', [['Pulse', 'pulse', '#pulse', 'Anands Control Center'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Cards', 'card', '#cards', 'Anands Cards'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password'], ['Files', 'folder', 'https://files.anands.xyz/api/auth/oidc/login', 'Anands Filemanager', 'files']]],
     ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'folder', 'https://s3-admin.anands.xyz', 'Anands S3 Storage', 'storage']]]
   ];
   function tile(s, state) {
@@ -79,7 +79,7 @@
     return '<a class="svc" href="' + esc(href) + '" target="_blank" rel="noopener">' + inner + '</a>';
   }
   function services(state) {
-    var own = window.AOS && AOS.isOwner && AOS.isOwner(), G = own ? GROUPS.concat([['Money', [['Money', 'card', '#money', ''], ['Subscriptions', 'pulse', '#subs', ''], ['Investments', 'pulse', '#invest', ''], ['Belongings', 'folder', '#belong', ''], ['Household', 'folder', '#house', '']]]]) : GROUPS;
+    var own = window.AOS && AOS.isOwner && AOS.isOwner(), G = own ? GROUPS.concat([['Money', [['Money', 'card', '#money', ''], ['Subscriptions', 'pulse', '#subs', ''], ['Investments', 'pulse', '#invest', ''], ['Belongings', 'folder', '#belong', ''], ['Household', 'folder', '#house', ''], ['Paperless', 'folder', '#paperless', '']]]]) : GROUPS;
     return G.map(function (g) { return '<div class="sech"><h2>' + g[0] + '</h2></div><div class="svcs">' + g[1].map(function (s) { return tile(s, state); }).join('') + '</div>'; }).join('');
   }
   window.AOSHome = { right: right, today: today, services: services, onGo: onGo, load: load, state: H };

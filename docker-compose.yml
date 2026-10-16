@@ -29,6 +29,7 @@ services:
       TURN_URLS: ${TURN_URLS:-}
       TURN_SECRET: ${TURN_SECRET:-}
       STUN_URLS: ${STUN_URLS:-}
+      PAPERLESS_TOKEN: ${PAPERLESS_TOKEN:-}
       VAULT_URL: ${VAULT_URL:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}

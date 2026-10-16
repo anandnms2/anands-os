@@ -4,7 +4,7 @@
   'use strict';
   var PAGES = {
     money: ['Money', 'money.html#overview'], subs: ['Subscriptions', 'money.html#subs'], invest: ['Investments', 'money.html#invest'],
-    belong: ['Belongings', 'home.html#belong'], house: ['Household', 'home.html#house'],
+    belong: ['Belongings', 'home.html#belong'], paperless: ['Paperless', 'paperless.html'], house: ['Household', 'home.html#house'],
     editor: ['Editor', 'editor.html'], player: ['Player', 'player.html'], recorder: ['Recorder', 'recorder.html'], terminal: ['Terminal', 'terminal.html']
   };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
