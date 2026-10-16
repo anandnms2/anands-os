@@ -19,18 +19,26 @@ rm -rf "$OUT"; mkdir -p "$OUT/apps" "$OUT/_icons"
 python3 "$HERE/tools/gen-registry.py" "$UP" "$OUT/apps.json"
 
 ok=(); failed=()
+build_app() {
+  local slug="$1" dir="$UP/src/$1"
+  echo "=== $slug"
+  if (cd "$dir" && { npm ci --no-audit --no-fund --loglevel=error || { sleep 5; npm ci --no-audit --no-fund --loglevel=error; } || { sleep 15; npm ci --no-audit --no-fund --loglevel=error; }; } \
+        && npm run build -- --base=./ --outDir "$OUT/apps/$slug" --emptyOutDir); then
+    rm -rf "$dir/node_modules"; return 0
+  fi
+  rm -rf "$OUT/apps/$slug" "$dir/node_modules"; return 1
+}
 for slug in $(python3 -c "import json;print(' '.join(a['slug'] for a in json.load(open('$OUT/apps.json')) if a['hasSource']))"); do
   [ "$slug" = "assets" ] && continue   # upstream landing page, not an app
   if [ -n "${ONLY:-}" ] && ! [[ " $ONLY " == *" $slug "* ]]; then continue; fi
-  echo "=== $slug"
-  dir="$UP/src/$slug"
-  if (cd "$dir" && { npm ci --no-audit --no-fund --loglevel=error || { sleep 5; npm ci --no-audit --no-fund --loglevel=error; } || { sleep 15; npm ci --no-audit --no-fund --loglevel=error; }; } \
-        && npm run build -- --base=./ --outDir "$OUT/apps/$slug" --emptyOutDir); then
-    ok+=("$slug")
-  else
-    failed+=("$slug"); rm -rf "$OUT/apps/$slug"
-  fi
-  rm -rf "$dir/node_modules"
+  if build_app "$slug"; then ok+=("$slug"); else failed+=("$slug"); fi
+done
+# A failed app is usually a network hiccup, not a real error: try each one again, up to three more times, so it does not show as "Soon".
+for pass in 1 2 3; do
+  [ ${#failed[@]} -eq 0 ] && break
+  echo "--- retry pass $pass: ${failed[*]}"; sleep 30
+  again=(); for slug in "${failed[@]}"; do if build_app "$slug"; then ok+=("$slug"); else again+=("$slug"); fi; done
+  failed=("${again[@]}")
 done
 
 for icon in "$UP"/src/*/icon-128.png; do
