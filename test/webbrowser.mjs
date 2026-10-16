@@ -47,6 +47,7 @@ try {
         await p.goto(B + j.src); await p.locator('#url').fill(SITE); await p.keyboard.press('Enter');
         const fr = p.frameLocator('#stage iframe'); await fr.locator('#hi').waitFor({ timeout: 30000 });
         assert.equal(await fr.locator('#hi').textContent(), 'Hello from the fixture'); assert.equal(await fr.locator('#hi').getAttribute('data-js'), 'ran');
+        assert.equal(await p.evaluate(() => { const r = document.querySelector('#stage iframe').getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2).tagName; }), 'IFRAME', 'nothing may cover the page');
         await p.waitForFunction(() => /Fixture Site/.test(document.querySelector('.tab.on span')?.textContent || ''), null, { timeout: 8000 });
       });
       await t('the Desktop Browser window shows the whole browser, full size, and opens a link in it', async () => {
