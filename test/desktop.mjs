@@ -231,6 +231,56 @@ try {
     await win.locator('.bsnav button', { hasText: 'Advanced' }).click(); await win.locator('[data-bs="reset"]').click(); assert.equal(await p.evaluate(() => localStorage.getItem('aos.brsearch')), '"ddg"');
     await win.locator('[data-bs="close"]').click();
   });
+  await t('desktop apps: sticky notes are created, typed into, moved, coloured and saved on the server', async () => {
+    await p.evaluate(() => { document.querySelectorAll('.dkw').forEach((w) => w.querySelector('.dk-wc [data-dk="wclose"]') && w.querySelector('.dk-wc [data-dk="wclose"]').click()); });
+    await p.keyboard.press('Control+Alt+n'); await p.waitForSelector('.dk-sn');
+    const body = p.locator('.dk-sn .dk-sn-b').first(); await body.click(); await p.keyboard.type('Call Lusaka depot about T412');
+    const bar = await p.locator('.dk-sn .dk-sn-t').first().boundingBox(); await p.mouse.move(bar.x + bar.width - 50, bar.y + 8); await p.mouse.down(); await p.mouse.move(bar.x + 280, bar.y + 160, { steps: 6 }); await p.mouse.up();
+    await p.locator('.dk-sn .dk-sn-cs button[data-c="g"]').first().evaluate((b) => b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+    await p.waitForTimeout(1100); const j = await (await ctx.request.get(B + '/api/desk')).json();
+    assert.equal(j.notes.length, 1); assert.match(j.notes[0].t, /T412/); assert.equal(j.notes[0].c, 'g'); assert.ok(j.notes[0].x > 150, 'note moved: ' + j.notes[0].x);
+    await shot(p, 'desktop-sticky');
+    const x = p.locator('.dk-sn .dk-sn-x').first(); await x.dispatchEvent('pointerdown'); assert.match(await x.innerText(), /Delete/); await x.dispatchEvent('pointerdown'); await p.waitForTimeout(1000);
+    assert.equal((await (await ctx.request.get(B + '/api/desk')).json()).notes.length, 0);
+  });
+  await t('desktop apps: clock popover shows world clocks, saves alarms, runs timer and stopwatch', async () => {
+    await p.click('#dkclock'); await p.waitForSelector('#dkclockpop');
+    const txt = await p.locator('#dkclockpop').innerText(); for (const c of ['Dar es Salaam', 'Lusaka', 'Kinshasa', 'Kampala', 'Nairobi', 'Johannesburg', 'Dubai', 'Kochi']) assert.ok(txt.includes(c), c);
+    await shot(p, 'desktop-clock');
+    await p.click('#dkclockpop [data-t="alarm"]'); await p.fill('#dkclockpop input[name="l"]', 'Border call'); await p.click('#dkclockpop button[type="submit"]'); await p.waitForTimeout(1000);
+    assert.equal((await (await ctx.request.get(B + '/api/desk')).json()).alarms.length, 1); assert.ok((await p.locator('#dkclockpop').innerText()).includes('Border call'));
+    await p.click('#dkclockpop [data-cp="adel"]'); await p.waitForTimeout(1000); assert.equal((await (await ctx.request.get(B + '/api/desk')).json()).alarms.length, 0);
+    await p.click('#dkclockpop [data-t="timer"]'); await p.click('#dkclockpop [data-s="60"]'); assert.match(await p.locator('#dkcpt').innerText(), /^1:00$/); await p.click('#dkclockpop [data-cp="tgo"]'); await p.waitForTimeout(1300); assert.match(await p.locator('#dkcpt').innerText(), /^0:5\d$/); await p.click('#dkclockpop [data-cp="tgo"]');
+    await p.click('#dkclockpop [data-t="sw"]'); await p.click('#dkclockpop [data-cp="sgo"]'); await p.waitForTimeout(700); await p.click('#dkclockpop [data-cp="slap"]'); await p.click('#dkclockpop [data-cp="sgo"]'); assert.equal(await p.locator('.dk-cp-laps li').count(), 1);
+    await p.click('#dkclockpop [data-t="pf"]'); assert.match(await p.locator('#dkcpp').innerText(), /^25:00$/);
+    await p.keyboard.press('Escape'); assert.equal(await p.locator('#dkclockpop').count(), 0);
+  });
+  await t('desktop apps: converter handles truck units and currencies', async () => {
+    await p.route('**/api/rates', (r) => r.fulfill({ json: { base: 'USD', rates: { USD: 1, TZS: 2600, EUR: 0.9 }, updated: Date.now(), stale: false } }));
+    await p.evaluate(() => window.AOSDeskX.open('conv')); const w = p.locator('.dkw[aria-label="Converter"]'); await w.waitFor();
+    assert.equal((await w.locator('.dk-cv-r').innerText()).replace(/\s/g, ''), '1,000'); await w.locator('.dk-cv-v').fill('2.5'); assert.equal((await w.locator('.dk-cv-r').innerText()).replace(/\s/g, ''), '2,500');
+    await w.locator('[data-c="Fuel and volume"]').click(); await w.locator('.dk-cv-f').selectOption('barrel'); await w.locator('.dk-cv-t').selectOption('litre'); assert.match(await w.locator('.dk-cv-r').innerText(), /397/);
+    await w.locator('[data-c="Currency"]').click(); await w.locator('.dk-cv-v').fill('10'); await p.waitForFunction(() => /26,000/.test(document.querySelector('.dkw[aria-label="Converter"] .dk-cv-r').textContent)); await shot(p, 'desktop-converter');
+    await w.locator('.dk-wc [data-dk="wclose"]').evaluate((b) => b.click());
+  });
+  await t('desktop apps: quick launcher finds apps, calculates, converts, makes notes and timers', async () => {
+    await p.keyboard.press('Control+Space'); await p.waitForSelector('#dkql input'); const q = p.locator('#dkql input');
+    await q.fill('calc'); assert.ok((await p.locator('.dk-ql-x', { hasText: 'Calculator' }).count()) >= 1);
+    await q.fill('12*7+3'); assert.match(await p.locator('.dk-ql-x').first().innerText(), /87/);
+    await q.fill('5 t to kg'); assert.match(await p.locator('.dk-ql-x').first().innerText(), /5,000/);
+    await q.fill('100 usd to tzs'); await p.waitForTimeout(300); assert.match(await p.locator('.dk-ql-x').first().innerText(), /260,000/);
+    await shot(p, 'desktop-launcher');
+    await q.fill('note buy tyres'); await p.keyboard.press('Enter'); await p.waitForSelector('.dk-sn'); assert.equal(await p.locator('#dkql').count(), 0); assert.match(await p.locator('.dk-sn-b').last().innerText(), /buy tyres/, await p.locator('.dk-sn-b').allInnerTexts().then((a) => JSON.stringify(a)));
+    await p.keyboard.press('Control+Space'); await p.locator('#dkql input').fill('timer 5'); assert.match(await p.locator('.dk-ql-x').first().innerText(), /5:00/); await p.keyboard.press('Escape'); assert.equal(await p.locator('#dkql').count(), 0);
+    await p.evaluate(() => { const n = document.querySelector('.dk-sn .dk-sn-x'); n.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); n.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); });
+  });
+  await t('desktop apps: snip bar captures the desktop and saves to Drive and as a download', async () => {
+    await p.click('.dk-tray[data-dk="snip"]'); await p.waitForSelector('#dksp'); assert.ok((await p.locator('#dksp').innerText()).includes('Region')); await shot(p, 'desktop-snip');
+    const saved = await p.evaluate(async () => { const c = document.createElement('canvas'); c.width = 8; c.height = 8; const b = await new Promise((r) => c.toBlob(r, 'image/png')); return window.AOSDeskX.saveShot(b, 'drive'); });
+    assert.match(saved, /^Screenshot .*\.png$/); assert.ok([...tree.keys()].some((k) => /^\/Screenshots\/Screenshot .*\.png$/.test(k)), [...tree.keys()].join(','));
+    await p.selectOption('#dksp [data-sp="dest"]', 'dl'); const dl = p.waitForEvent('download', { timeout: 8000 }); await p.click('#dksp [data-sp="go"]'); const d = await dl; assert.match(d.suggestedFilename(), /^Screenshot .*\.png$/);
+    await p.waitForSelector('#dksp', { state: 'detached' });
+  });
   await t('launcher and Suite list Email and Meeting by plain names', async () => {
     const L = await (await ctx.request.get(B + '/apps.json')).json(); const nm = (x) => (L.find((a) => a.slug === x) || {}).name;
     if (nm('email') !== undefined) assert.equal(nm('email'), 'Email'); if (nm('meetings') !== undefined) assert.equal(nm('meetings'), 'Meeting');

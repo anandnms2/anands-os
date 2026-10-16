@@ -25,7 +25,7 @@
 
   /* ---------- shell ---------- */
   var root = document.createElement('div'); root.id = 'desk'; root.hidden = true; document.body.appendChild(root);
-  root.innerHTML = '<div class="dk-wall" id="dkwall"></div><div class="dk-icons" id="dkicons"></div><div class="dk-wins" id="dkwins"></div><div class="dk-menu" id="dkmenu" hidden></div><div class="dk-ctx" id="dkctx" hidden></div><button class="dk-fab" id="dkfab" data-dk="aifab" aria-label="Ask the assistant" title="Ask the assistant"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg></button>' +
+  root.innerHTML = '<div class="dk-wall" id="dkwall"></div><div class="dk-stick" id="dkstick"></div><div class="dk-icons" id="dkicons"></div><div class="dk-wins" id="dkwins"></div><div class="dk-menu" id="dkmenu" hidden></div><div class="dk-ctx" id="dkctx" hidden></div><button class="dk-fab" id="dkfab" data-dk="aifab" aria-label="Ask the assistant" title="Ask the assistant"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg></button>' +
     '<div class="dk-task" id="dktask"></div>';
   function wallImg() { try { return localStorage.getItem('aos.deskwallimg'); } catch (e) { return null; } }
   function wallStyle() { var el = $('#dkwall'), img = D.wall === 'custom' ? wallImg() : null;
@@ -46,9 +46,9 @@
 
   /* ---------- launcher: catalog, desktop icons, taskbar pins, Start menu, icon chooser ---------- */
   var TOOLS = [['editor', 'Editor', '/tools/editor.html', 1000, 640, 'file'], ['player', 'Player', '/tools/player.html', 920, 600, 'play'], ['recorder', 'Recorder', '/tools/recorder.html', 820, 640, 'mic'], ['terminal', 'Terminal', '/tools/terminal.html', 900, 580, 'terminal'], ['money', 'Money', '/tools/money.html#overview', 1040, 660, 'card'], ['subs', 'Subscriptions', '/tools/money.html#subs', 940, 640, 'card'], ['invest', 'Investments', '/tools/money.html#invest', 980, 640, 'card'], ['belong', 'Belongings', '/tools/home.html#belong', 980, 640, 'folder'], ['house', 'Household', '/tools/home.html#house', 940, 640, 'folder'], ['paperless', 'Paperless', '/tools/paperless.html', 1100, 680, 'file']];
-  var SYS = [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat'], ['calc', 'Calculator', 'card']].concat(TOOLS.map(function (o) { return ['tool:' + o[0], o[1], o[5]]; })).concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; }));
-  var DEF_ICONS = ['browser', 'files', 'ai'].concat(OSAPPS.map(function (o) { return 'os:' + o[0]; })).concat(['google']).concat(TOOLS.map(function (o) { return 'tool:' + o[0]; })), DEF_PINS = ['browser', 'files', 'ai', 'calc'];
-  var NCAT = { calc: 'Productivity', 'tool:paperless': 'Productivity', 'tool:editor': 'Developer Tools', 'tool:terminal': 'Developer Tools', 'tool:player': 'Creative Tools', 'tool:recorder': 'Creative Tools', 'tool:money': 'Finance', 'tool:subs': 'Finance', 'tool:invest': 'Finance', 'tool:belong': 'Productivity', 'tool:house': 'Productivity', 'os:photos': 'Creative Tools', 'os:pulse': 'Productivity', 'os:cards': 'Business', 'os:vault': 'Productivity', 'os:insights': 'Engineering', 'os:servers': 'Engineering', 'os:vpn': 'Engineering' };
+  var SYS = [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat'], ['calc', 'Calculator', 'card'], ['sticky', 'Sticky Notes', 'file'], ['clock', 'Clock', 'photos'], ['conv', 'Converter', 'card'], ['snip', 'Screenshot and Snip', 'photos']].concat(TOOLS.map(function (o) { return ['tool:' + o[0], o[1], o[5]]; })).concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; }));
+  var DEF_ICONS = ['browser', 'files', 'ai'].concat(OSAPPS.map(function (o) { return 'os:' + o[0]; })).concat(['google']).concat(TOOLS.map(function (o) { return 'tool:' + o[0]; })).concat(['conv']), DEF_PINS = ['browser', 'files', 'ai', 'calc'];
+  var NCAT = { calc: 'Productivity', sticky: 'Productivity', clock: 'Productivity', conv: 'Productivity', snip: 'Creative Tools', 'tool:paperless': 'Productivity', 'tool:editor': 'Developer Tools', 'tool:terminal': 'Developer Tools', 'tool:player': 'Creative Tools', 'tool:recorder': 'Creative Tools', 'tool:money': 'Finance', 'tool:subs': 'Finance', 'tool:invest': 'Finance', 'tool:belong': 'Productivity', 'tool:house': 'Productivity', 'os:photos': 'Creative Tools', 'os:pulse': 'Productivity', 'os:cards': 'Business', 'os:vault': 'Productivity', 'os:insights': 'Engineering', 'os:servers': 'Engineering', 'os:vpn': 'Engineering' };
   function catalog() {
     var l = SYS.map(function (i) { return { id: i[0], name: i[1], ic: i[2], cat: NCAT[i[0]] || 'System', hay: i[1] + ' system' + (i[0] === 'google' ? ' drive cloud' : '') + (i[0] === 'browser' ? ' web internet' : '') }; });
     apps().forEach(function (a) { l.push({ id: 'app:' + a.slug, name: a.name, img: '/_icons/' + a.slug + '.png', slug: a.slug, cat: CATS.indexOf(a.category) >= 0 ? a.category : 'Other', hay: a.name + ' ' + (a.category || '') + ' ' + (a.alternativeTo || '') }); });
@@ -56,7 +56,7 @@
   }
   function itemBy(id) { return catalog().filter(function (i) { return i.id === id; })[0]; }
   function itAttr(it) { return (it.slug ? 'data-dk="app" data-s="' + esc(it.slug) + '"' : 'data-dk="launch" data-w="' + esc(it.id) + '"') + ' data-k="' + esc(it.id) + '"'; }
-  var OI = { calc: 'calc', 'tool:paperless': 'paperless', 'tool:editor': 'editor', 'tool:player': 'player', 'tool:recorder': 'recorder', 'tool:terminal': 'terminal', 'tool:money': 'money', 'tool:subs': 'subs', 'tool:invest': 'invest', 'tool:belong': 'belong', 'tool:house': 'house', browser: 'browser', files: 'files', google: 'drive', ai: 'ai', 'os:photos': 'photos', 'os:pulse': 'pulse', 'os:cards': 'cards', 'os:vault': 'vault', 'os:insights': 'insights', 'os:vpn': 'vpn', 'os:servers': 'servers' };
+  var OI = { calc: 'calc', sticky: 'sticky', clock: 'clock', conv: 'conv', snip: 'snip', 'tool:paperless': 'paperless', 'tool:editor': 'editor', 'tool:player': 'player', 'tool:recorder': 'recorder', 'tool:terminal': 'terminal', 'tool:money': 'money', 'tool:subs': 'subs', 'tool:invest': 'invest', 'tool:belong': 'belong', 'tool:house': 'house', browser: 'browser', files: 'files', google: 'drive', ai: 'ai', 'os:photos': 'photos', 'os:pulse': 'pulse', 'os:cards': 'cards', 'os:vault': 'vault', 'os:insights': 'insights', 'os:vpn': 'vpn', 'os:servers': 'servers' };
   function wIcon(w) { if (w.icon) return w.icon; var k = w.kind === 'rbrowser' || w.kind === 'browser' ? 'browser' : w.kind === 'ai' || w.kind === 'files' ? w.kind : w.tool ? 'tool:' + w.tool : w.view ? 'os:' + w.view : ''; return OI[k] ? '/oicons/' + OI[k] + '.svg' : ''; }
   function itGlyph(it, cls) { if (!it.img && OI[it.id]) it.img = '/oicons/' + OI[it.id] + '.svg'; return it.img ? '<img src="' + esc(it.img) + '" alt="">' : '<span class="dk-icg' + (cls ? ' ' + cls : '') + '">' + ic(it.ic) + '</span>'; }
   function lsList(k, d) { var v = LS.get(k, null); return Array.isArray(v) ? v : d.slice(); }
@@ -112,9 +112,9 @@
   function pinBtn(it) { return '<button class="dk-pin" ' + itAttr(it) + ' title="' + esc(it.name) + '">' + (it.img ? '<img src="' + esc(it.img) + '" alt="">' : ic(it.ic)) + '</button>'; }
   function task() {
     var cat = catalog(), pins = pinIds().map(function (id) { return cat.filter(function (i) { return i.id === id; })[0]; }).filter(Boolean);
-    var h = '<button class="dk-start' + (D.menu ? ' on' : '') + '" data-dk="menu" aria-label="Start"><img src="/logo-orange.png" alt=""></button><div class="dk-pins">' + pins.map(pinBtn).join('') + '</div><div class="dk-run">';
+    var h = '<button class="dk-start' + (D.menu ? ' on' : '') + '" data-dk="menu" aria-label="Start"><img src="/logo-orange.png" alt=""></button><button class="dk-pin dk-qs" data-dk="qs" title="Quick Launcher (Ctrl + Space)" aria-label="Quick Launcher">' + ic('search') + '</button><div class="dk-pins">' + pins.map(pinBtn).join('') + '</div><div class="dk-run">';
     D.wins.forEach(function (w) { if (w.kind === 'ai') return; h += '<button class="dk-rb' + (w.min ? ' min' : '') + (w.id === D.top && !w.min ? ' on' : '') + '" data-dk="tb" data-id="' + w.id + '" title="' + esc(w.title) + '">' + (wIcon(w) ? '<img src="' + esc(wIcon(w)) + '" alt="">' : '<span class="dk-rg">' + ic(KIND_IC[w.kind] || (w.view && OSICON[w.view]) || 'folder') + '</span>') + '<span>' + esc(w.title) + '</span></button>'; });
-    h += '</div><span class="sp"></span><button class="dk-tray" data-dk="fs" title="Full screen, so Alt + Tab and the Windows key work here" aria-label="Full screen">' + ic('ext') + '</button><button class="dk-tray" data-dk="wall" title="Wallpaper">' + ic('photos') + '</button><span class="dk-clock" id="dkclock">' + esc(clock()) + '</span><button class="dk-exit" data-dk="exit" title="Back to Anands OS">' + ic('out') + 'Exit</button>';
+    h += '</div><span class="sp"></span><button class="dk-tray" data-dk="snip" title="Screenshot and Snip (Ctrl + Alt + S)" aria-label="Screenshot and Snip"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></button><button class="dk-tray" data-dk="fs" title="Full screen, so Alt + Tab and the Windows key work here" aria-label="Full screen">' + ic('ext') + '</button><button class="dk-tray" data-dk="wall" title="Wallpaper">' + ic('photos') + '</button><button class="dk-clock" id="dkclock" data-dk="clockpop" title="Clock, timer and stopwatch" aria-label="Clock">' + esc(clock()) + '</button><button class="dk-exit" data-dk="exit" title="Back to Anands OS">' + ic('out') + 'Exit</button>';
     $('#dktask').innerHTML = h;
   }
   function menu() {
@@ -179,7 +179,7 @@
       var sd = r && r.sd, w = null; if (!sd) return;
       try {
         if (sd.t === 'app') w = openApp(sd.slug, sd.file); else if (sd.t === 'os') w = osWin(sd.view); else if (sd.t === 'tool') w = toolWin(sd.id, sd.path); else if (sd.t === 'files') w = filesWin(sd.src); else if (sd.t === 'viewer') w = viewer(sd.path, sd.remote);
-        else if (sd.t === 'ai') w = aiWin(); else if (sd.t === 'calc') w = calcWin(); else if (sd.t === 'rb') w = rbWin(); else if (sd.t === 'br') { w = browserWin(sd.urls && sd.urls[0]); (sd.urls || []).slice(1).forEach(function (u) { newTab(w, u); }); }
+        else if (sd.t === 'ext' && window.AOSDeskX) w = window.AOSDeskX.open(sd.id); else if (sd.t === 'ai') w = aiWin(); else if (sd.t === 'calc') w = calcWin(); else if (sd.t === 'rb') w = rbWin(); else if (sd.t === 'br') { w = browserWin(sd.urls && sd.urls[0]); (sd.urls || []).slice(1).forEach(function (u) { newTab(w, u); }); }
       } catch (e) { w = null; }
       if (!w) return;
       if (typeof r.x === 'number') { w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h; } w.max = !!r.max; w.min = !!r.min; place(w); if (r.act) act = w;
@@ -534,7 +534,7 @@
   function show() {
     if (!S.user) return; D.open = true; root.hidden = false; document.body.classList.add('dk-on'); wallStyle(); icons(); task(); D.wins.forEach(place);
     if (location.hash !== '#desktop') { try { history.pushState({ v: 'desktop' }, '', '#desktop'); } catch (e) {} }
-    fitView(); restoreSess();
+    fitView(); restoreSess(); if (window.AOSDeskX) window.AOSDeskX.show();
   }
   function hide(back) { D.open = false; D.menu = false; menu(); root.hidden = true; document.body.classList.remove('dk-on'); if (location.hash === '#desktop') { try { history.replaceState(null, '', '#home'); } catch (e) {} } if (back) A.go('home'); }
 
@@ -544,6 +544,7 @@
     if (!b) { if (D.menu && !t.closest('#dkmenu')) { D.menu = false; menu(); task(); } if (!t.closest('#dkctx') && !$('#dkctx').hidden) $('#dkctx').hidden = true; var inWin = t.closest && t.closest('.dkw'); if (inWin) { var w0 = byId(inWin.getAttribute('data-id')); if (w0 && D.top !== w0.id) focus(w0); } return; }
     if (b.classList.contains('cm')) $('#dkctx').hidden = true;
     var a = b.getAttribute('data-dk'), id = b.getAttribute('data-id'), w = id ? byId(id) : null;
+    if (a === 'qs' || a === 'snip' || a === 'clockpop' || a === 'snew') { var X0 = window.AOSDeskX; if (X0 && X0[a]) X0[a](b, ev); return; }
     if (a === 'open') return void show();
     if (a === 'exit') return void hide(true);
     if (a === 'menu') { D.menu = !D.menu; D.q = ''; menu(); task(); var q = $('#dkq'); if (q) q.focus(); return; }
@@ -563,7 +564,7 @@
     if (a === 'deskadd' || a === 'deskrm') { var dk = b.getAttribute('data-k'); setIcons(toggle(deskIds(), dk, a === 'deskadd')); return void chRepaint(); }
     if (a === 'pinadd' || a === 'pinrm') { setPins(toggle(pinIds(), b.getAttribute('data-k'), a === 'pinadd')); return void chRepaint(); }
     if (a === 'aifab') { var aw = D.ai.win; if (aw && !aw.min && D.top === aw.id) { aw.min = true; place(aw); task(); } else aiWin(); return; }
-    if (a === 'launch') { var k = b.getAttribute('data-w'); if (k === 'ai') { var aw2 = D.ai.win; if (aw2 && !aw2.min && D.top === aw2.id) { aw2.min = true; place(aw2); task(); return; } return void aiWin(); } if (k === 'calc') return void calcWin(); if (k === 'browser') return void openBrowser(); if (k.indexOf('link:') === 0) { var lu = (window.AOS && AOS.link(k.slice(5))) || ''; if (!/^https?:\/\//.test(lu)) return void toast('Set this address in Settings, Direct sign-in links.'); window.open(lu, '_blank', 'noopener'); return; } if (k.indexOf('os:') === 0) return void osWin(k.slice(3)); if (k.indexOf('tool:') === 0) return void toolWin(k.slice(5)); return void filesWin(k === 'google' ? 'google' : 'cloud'); }
+    if (a === 'launch') { var k = b.getAttribute('data-w'); if (window.AOSDeskX && window.AOSDeskX.ids[k]) return void window.AOSDeskX.open(k); if (k === 'ai') { var aw2 = D.ai.win; if (aw2 && !aw2.min && D.top === aw2.id) { aw2.min = true; place(aw2); task(); return; } return void aiWin(); } if (k === 'calc') return void calcWin(); if (k === 'browser') return void openBrowser(); if (k.indexOf('link:') === 0) { var lu = (window.AOS && AOS.link(k.slice(5))) || ''; if (!/^https?:\/\//.test(lu)) return void toast('Set this address in Settings, Direct sign-in links.'); window.open(lu, '_blank', 'noopener'); return; } if (k.indexOf('os:') === 0) return void osWin(k.slice(3)); if (k.indexOf('tool:') === 0) return void toolWin(k.slice(5)); return void filesWin(k === 'google' ? 'google' : 'cloud'); }
     if (a === 'app') return void openApp(b.getAttribute('data-s'));
     if (a === 'settings') { hide(); return void A.go('settings'); }
     if (a === 'tb') { if (!w) return; if (!w.min && D.top === w.id) { w.min = true; place(w); task(); } else focus(w); return; }
@@ -607,7 +608,7 @@
   document.addEventListener('contextmenu', function (ev) {
     if (!D.open) return; var t = ev.target; if (!t.closest || t.closest('#dkctx')) return ev.preventDefault();
     if (t.closest('input, textarea, [contenteditable], canvas, iframe')) return;
-    var deskItems = [['Arrange icons by name', 'isort'], ['Arrange icons by type', 'itype'], ['Line icons up in the grid', 'iauto'], ['Choose desktop icons...', 'chooser'], ['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], ['Keyboard shortcuts', 'keys'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
+    D.ctxAt = { x: ev.clientX, y: ev.clientY }; var deskItems = [['New sticky note', 'snew'], '-', ['Arrange icons by name', 'isort'], ['Arrange icons by type', 'itype'], ['Line icons up in the grid', 'iauto'], ['Choose desktop icons...', 'chooser'], ['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], ['Keyboard shortcuts', 'keys'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
     var el;
     if ((el = t.closest('.dkw-bar'))) { var w = byId(el.closest('.dkw').getAttribute('data-id')); if (!w) return; ev.preventDefault(); return ctx(ev, winItems(w).concat([['Close all windows', 'closeall']])); }
     if ((el = t.closest('.dk-rb'))) { var w2 = byId(el.getAttribute('data-id')); if (!w2) return; ev.preventDefault(); return ctx(ev, winItems(w2)); }
@@ -622,8 +623,8 @@
      so every action also has a Ctrl+Alt twin. Keys pressed inside an app window are forwarded here by the window. */
   var SHORTCUTS = [
     ['Windows', [['Alt + Tab', 'Switch window (hold Alt, press Tab again to go on, Shift to go back)'], ['Alt + F4', 'Close the window'], ['Alt + F9', 'Minimise the window'], ['Alt + F10', 'Maximise or restore'], ['Win + Up / Down', 'Maximise, restore or minimise'], ['Win + Left / Right', 'Snap to the left or right half'], ['Ctrl + Alt + Arrows', 'The same, if Win keys are taken by your computer']]],
-    ['Desktop', [['Win (tap)  or  Ctrl + Esc', 'Open or close the Start menu'], ['Win + S', 'Start menu, searching'], ['Win + D  or  Ctrl + Alt + D', 'Show the desktop, again to bring windows back'], ['Win + 1 to 9  or  Ctrl + Alt + 1 to 9', 'Go to the 1st to 9th window on the taskbar'], ['Ctrl + K', 'Search everything'], ['F1  or  Ctrl + /', 'This list']]],
-    ['Open an app', [['Win + E  or  Ctrl + Alt + E', 'Files'], ['Ctrl + Alt + T', 'Terminal'], ['Ctrl + Alt + B', 'Browser'], ['Ctrl + Alt + A', 'Assistant'], ['Ctrl + Alt + P', 'Paperless'], ['Ctrl + Alt + C', 'Calculator']]]
+    ['Desktop', [['Win (tap)  or  Ctrl + Esc', 'Open or close the Start menu'], ['Win + S', 'Start menu, searching'], ['Win + D  or  Ctrl + Alt + D', 'Show the desktop, again to bring windows back'], ['Win + 1 to 9  or  Ctrl + Alt + 1 to 9', 'Go to the 1st to 9th window on the taskbar'], ['Ctrl + Space  or  Ctrl + K', 'Quick Launcher: search apps, files, documents, or type calc 12*45'], ['F1  or  Ctrl + /', 'This list']]],
+    ['Open an app', [['Win + E  or  Ctrl + Alt + E', 'Files'], ['Ctrl + Alt + T', 'Terminal'], ['Ctrl + Alt + B', 'Browser'], ['Ctrl + Alt + A', 'Assistant'], ['Ctrl + Alt + P', 'Paperless'], ['Ctrl + Alt + C', 'Calculator'], ['Ctrl + Alt + N', 'New sticky note'], ['Ctrl + Alt + S', 'Screenshot and Snip']]]
   ];
   /* Full screen plus the Keyboard Lock API (Chrome and Edge): while locked, Alt + Tab, the Windows key, Esc and friends come to this page instead of the computer. */
   function fullKeys() {
@@ -640,7 +641,7 @@
   document.addEventListener('fullscreenchange', function () { if (document.fullscreenElement) lockKeys(false); else { try { navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); } catch (e) {} } });
   function topWin() { var w = byId(D.top); return w && !w.min ? w : null; }
   function toggleMenu(force) { D.menu = force === undefined ? !D.menu : force; D.q = ''; menu(); task(); var q = $('#dkq'); if (D.menu && q) q.focus(); }
-  function launchKey(k) { if (k === 'ai') return aiWin(); if (k === 'calc') return calcWin(); if (k === 'browser') return openBrowser(); if (k.indexOf('os:') === 0) return osWin(k.slice(3)); if (k.indexOf('tool:') === 0) { var id = k.slice(5); if (/^(terminal|money|subs|invest|belong|house|paperless)$/.test(id) && !(window.AOS && AOS.isOwner && AOS.isOwner())) return toast('Only the owner can open this.'); return toolWin(id); } return filesWin(k === 'google' ? 'google' : 'cloud'); }
+  function launchKey(k) { if (window.AOSDeskX && window.AOSDeskX.ids[k]) return window.AOSDeskX.open(k); if (k === 'ai') return aiWin(); if (k === 'calc') return calcWin(); if (k === 'browser') return openBrowser(); if (k.indexOf('os:') === 0) return osWin(k.slice(3)); if (k.indexOf('tool:') === 0) { var id = k.slice(5); if (/^(terminal|money|subs|invest|belong|house|paperless)$/.test(id) && !(window.AOS && AOS.isOwner && AOS.isOwner())) return toast('Only the owner can open this.'); return toolWin(id); } return filesWin(k === 'google' ? 'google' : 'cloud'); }
   function snap(w, side) { var ar = area(); w.max = false; w.w = Math.max(320, Math.floor(ar.w / 2)); w.h = ar.h; w.y = 0; w.x = side < 0 ? 0 : ar.w - w.w; place(w); focus(w); }
   function winUp(w) { if (!w.max) { w.max = true; place(w); } }
   function winDown(w) { if (w.max) { w.max = false; place(w); } else { w.min = true; place(w); task(); var n = D.wins.filter(function (x) { return !x.min; }).sort(function (a, b) { return b.z - a.z; })[0]; if (n) focus(n); } }
@@ -668,6 +669,7 @@
     if (key === 'Meta') { D.metaTap = true; return false; } if (win) D.metaTap = false;
     if (D.sw) { if (key === 'Tab') { switcher(k.shift ? -1 : 1); return true; } if (key === 'Escape') { switcherEnd(false); return true; } if (key === 'ArrowRight' || key === 'ArrowDown') { switcher(1); return true; } if (key === 'ArrowLeft' || key === 'ArrowUp') { switcher(-1); return true; } }
     if (key === 'Tab' && k.alt && !k.ctrl && !win) { switcher(k.shift ? -1 : 1); return true; }
+    if (k.ctrl && !k.alt && !win && !k.edit && (key === ' ' || (low === 'k' && !k.fr))) { if (window.AOSDeskX) window.AOSDeskX.qs(); return true; }
     if (key === 'F1' || (k.ctrl && !k.alt && !win && key === '/')) { helpPanel($('#dkhelp') ? $('#dkhelp').hidden : true); return true; }
     if (key === 'Escape' && $('#dkhelp') && !$('#dkhelp').hidden) { helpPanel(false); return true; }
     if (k.ctrl && !k.alt && !win && key === 'Escape') { toggleMenu(); return true; }
@@ -680,7 +682,7 @@
       if (low === 'd') { showDesk(); return true; }
       if (/^[1-9]$/.test(key)) { nthWin(+key); return true; }
       if (win && !k.alt && !k.ctrl && low === 's') { toggleMenu(true); return true; }
-      var app = { e: 'files', t: 'tool:terminal', b: 'browser', a: 'ai', p: 'tool:paperless', c: 'calc' }[low]; if (app && (cA || (win && low === 'e'))) { launchKey(app); return true; }
+      var app = { e: 'files', t: 'tool:terminal', b: 'browser', a: 'ai', p: 'tool:paperless', c: 'calc', n: 'sticky', s: 'snip' }[low]; if (app && (cA || (win && low === 'e'))) { launchKey(app); return true; }
     }
     return false;
   }
@@ -693,7 +695,7 @@
   function hookFrame(f) {
     try {
       var cw = f.contentWindow, d = cw && cw.document; if (!d || d.__aosk || cw.AOS) return; d.__aosk = 1;
-      var h = function (e) { if (!D.open) return; if (shortcut({ t: e.type === 'keyup' ? 'keyup' : 'keydown', key: e.key, alt: e.altKey, ctrl: e.ctrlKey, shift: e.shiftKey, meta: e.metaKey, edit: !!(e.getModifierState && e.getModifierState('AltGraph')) })) { e.preventDefault(); e.stopPropagation(); } };
+      var h = function (e) { if (!D.open) return; if (shortcut({ t: e.type === 'keyup' ? 'keyup' : 'keydown', key: e.key, alt: e.altKey, ctrl: e.ctrlKey, shift: e.shiftKey, meta: e.metaKey, fr: 1, edit: !!(e.getModifierState && e.getModifierState('AltGraph')) })) { e.preventDefault(); e.stopPropagation(); } };
       d.addEventListener('keydown', h, true); d.addEventListener('keyup', h, true);
     } catch (e) {}
   }
@@ -731,5 +733,5 @@
   (function wait(n) { if (S.user) { if (location.hash === '#desktop') show(); return; } if (n < 80) setTimeout(function () { wait(n + 1); }, 150); })(0);
 
   window.AOSBR = { ENGINES: ENGINES, QLAB: QLAB, rbPost: rbPost, rbTab: rbTab, btab: btab, nav: nav, normUrl: normUrl, newTab: newTab };
-  window.AOSDesk = { tool: toolWin, show: show, hide: hide, state: D, openApp: openApp, walls: WALLS, light: LIGHT, setWall: function (k) { D.wall = k; LS.set('deskwall', k); wallStyle(); }, wallImg: wallImg };
+  window.AOSDesk = { x: { mk: mk, focus: focus, place: place, closeWin: closeWin, task: task, area: area, root: root, catalog: catalog, launchKey: launchKey, calcEval: calcEval, byId: byId, saveSess: saveSess, openFile: openFileInApp }, tool: toolWin, show: show, hide: hide, state: D, openApp: openApp, walls: WALLS, light: LIGHT, setWall: function (k) { D.wall = k; LS.set('deskwall', k); wallStyle(); }, wallImg: wallImg };
 })();

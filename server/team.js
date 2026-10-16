@@ -29,6 +29,7 @@ const KEYS = AREAS.map((a) => a[0]);
 /* which area a request belongs to: a key, 'owner' (owner only), or 'open' (any signed-in person) */
 export function areaOf(p, method) {
   if (p === '/api/session' || p === '/api/prefs' && method === 'GET') return 'open';
+  if (p === '/api/desk' || p === '/api/rates') return 'open';
   if (p === '/api/profile') return method === 'GET' ? 'open' : 'owner';
   if (p === '/api/settings') return method === 'GET' ? 'open' : 'owner';
   if (/^\/api\/(photos|immich)(\/|$)/.test(p)) return 'photos';

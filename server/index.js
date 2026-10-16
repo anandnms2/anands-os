@@ -31,6 +31,7 @@ import { handleHousehold } from './household.js';
 import { handleMoney } from './money.js';
 import { handlePaperless, paperlessTest } from './paperless.js';
 import { handlePrefs } from './prefs.js';
+import { handleDesk } from './deskapps.js';
 import { handleTeam, areaOf, allowed, isOwner, suiteOk } from './team.js';
 import { isWorkerPath, handleWorkerRequest, isGuestPage, serveGuestPage } from './workers.js';
 import { noteOrigin, publicOrigin } from './origin.js';
@@ -101,6 +102,7 @@ async function api(req, res, url) {
   if (p === '/api/house' || p.startsWith('/api/house/')) return handleHousehold(req, res, url, sessionOf(req));
   if (p === '/api/term' || p.startsWith('/api/term/')) return handleTerminal(req, res, url, sessionOf(req));
   if (p === '/api/prefs') return handlePrefs(req, res);
+  if (p === '/api/desk' || p === '/api/rates') return handleDesk(req, res, url, sessionOf(req));
   if (p === '/api/search/files') return handleSearch(req, res, url);
   if (p === '/api/chat' || p === '/api/chat/test') return handleChat(req, res, url, sessionOf(req));
   throw httpError(404, 'Unknown API route');
