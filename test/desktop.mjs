@@ -144,6 +144,15 @@ try {
     assert.ok((await w.locator('[data-calc-v]').evaluate((e) => parseFloat(getComputedStyle(e).fontSize))) > big, 'text grows with the window'); assert.ok(await w.locator('.dk-csci').isVisible()); await shot(p, 'calc-wide');
     await w.locator('.dk-wc [data-dk="wclose"]').evaluate((b) => b.click());
   });
+  await t('Calculator: digits stay readable in the light theme, and long numbers show their last digits', async () => {
+    const w = p.locator('.dkw[aria-label="Calculator"]'); if (!(await w.count())) { await p.keyboard.press('Control+Alt+c'); await w.waitFor(); }
+    await p.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
+    const lum = async (sel) => w.locator(sel).first().evaluate((e) => { const m = getComputedStyle(e).color.match(/\d+/g).map(Number); return (m[0] + m[1] + m[2]) / 3; });
+    assert.ok(await lum('.dk-ck button.num') < 110, 'digit keys dark on light'); assert.ok(await lum('[data-calc-v]') < 110, 'display dark on light');
+    await p.evaluate(() => document.documentElement.removeAttribute('data-theme'));
+    await w.locator('[data-calc="C"]').click(); for (let i = 0; i < 30; i++) await w.locator('[data-calc="7"]').first().click();
+    assert.ok(await w.locator('[data-calc-v]').evaluate((e) => e.scrollLeft + e.clientWidth >= e.scrollWidth - 2), 'shows the end of the number'); await w.locator('[data-calc="C"]').click();
+  });
   await t('Shortcuts work while focus is inside an app window', async () => {
     await p.fill('#dkq', '').catch(() => {}); await p.evaluate(() => document.querySelector('[data-dk="launch"][data-w="ai"]') && 0);
     const nf = p.locator('.dkw iframe[src^="/apps/notes/"]').first(); if (!(await nf.count())) return; const fr = nf.contentFrame(); await fr.locator('body').click({ position: { x: 20, y: 20 } }).catch(() => {});

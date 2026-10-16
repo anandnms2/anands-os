@@ -1129,12 +1129,12 @@ html.guest .deskbtn{display:none}
 @media (max-width:860px){.cl-cols{grid-template-columns:minmax(0,1fr)}.cl-strip{grid-template-columns:1fr}}
 
 /* desktop calculator: sizes follow the window (container units), scientific keys appear when it is wide or chosen */
-.dk-calc{height:100%;display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--surface,#1a1714);outline:none;container-type:size;box-sizing:border-box;color:var(--text,#f0ebe3)}
+.dk-calc{height:100%;display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--surface,#1a1714);outline:none;container-type:size;box-sizing:border-box;color:var(--fg,#f0ebe3)}
 .dk-calc button{font:inherit;color:inherit;border:0;cursor:pointer}
 .dk-cbar{display:flex;align-items:center;gap:8px;flex:none}.dk-cbar .sp{flex:1}
-.dk-cseg{display:flex;border-radius:9px;background:rgba(255,255,255,.08);padding:2px}.dk-cseg button,.dk-cdeg,.dk-chb{background:none;padding:5px 11px;border-radius:7px;font-size:12.5px;color:var(--muted,#b9b0a4)}
-.dk-cseg button.on,.dk-chb.on{background:var(--accent);color:#1a1209;font-weight:600}.dk-cdeg{background:rgba(255,255,255,.08);color:var(--accent);font-weight:600}.dk-chb{background:rgba(255,255,255,.08)}
-.dk-cmem{display:flex;gap:6px;align-items:center;flex:none}.dk-cmem button{background:none;padding:3px 9px;border-radius:7px;font-size:12px;color:var(--muted,#b9b0a4)}.dk-cmem button:hover:not(:disabled){background:rgba(255,255,255,.12);color:inherit}.dk-cmem button:disabled{opacity:.35;cursor:default}
+.dk-cseg{display:flex;border-radius:9px;background:color-mix(in srgb,var(--fg,#fff) 8%,transparent);padding:2px}.dk-cseg button,.dk-cdeg,.dk-chb{background:none;padding:5px 11px;border-radius:7px;font-size:12.5px;color:var(--muted,#b9b0a4)}
+.dk-cseg button.on,.dk-chb.on{background:var(--accent);color:#1a1209;font-weight:600}.dk-cdeg{background:color-mix(in srgb,var(--fg,#fff) 8%,transparent);color:var(--accent);font-weight:600}.dk-chb{background:color-mix(in srgb,var(--fg,#fff) 8%,transparent)}
+.dk-cmem{display:flex;gap:6px;align-items:center;flex:none}.dk-cmem button{background:none;padding:3px 9px;border-radius:7px;font-size:12px;color:var(--muted,#b9b0a4)}.dk-cmem button:hover:not(:disabled){background:color-mix(in srgb,var(--fg,#fff) 12%,transparent);color:inherit}.dk-cmem button:disabled{opacity:.35;cursor:default}
 .dk-cmi{margin-left:auto;font-size:12px;color:var(--accent);font-family:var(--mono,ui-monospace,monospace);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dk-cmain{flex:1;min-height:0;display:flex;gap:10px;position:relative}.dk-calcl{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
 .dk-cx{flex:none;min-height:clamp(64px,17cqh,170px);border-radius:12px;background:rgba(0,0,0,.28);padding:8px 14px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;gap:2px;overflow:hidden;box-sizing:border-box}
@@ -1143,14 +1143,14 @@ html.guest .deskbtn{display:none}
 .dk-cpad{flex:1;min-height:0;display:flex;gap:8px}
 .dk-csci{display:none;flex:1.2;min-width:0;grid-template-columns:repeat(5,1fr);grid-auto-rows:1fr;gap:6px}.sci .dk-csci{display:grid}
 .dk-ck{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:6px}
-.dk-calc .dk-ck button,.dk-calc .dk-csci button{border-radius:11px;font-size:clamp(14px,3.3cqmin,28px);background:rgba(255,255,255,.09);min-height:0;min-width:0;padding:0}
-.dk-calc .dk-ck button:hover,.dk-calc .dk-csci button:hover{background:rgba(255,255,255,.17)}.dk-calc .dk-ck button:active,.dk-calc .dk-csci button:active{transform:scale(.97)}
-.dk-calc .dk-ck .op,.dk-calc .dk-ck .fn{color:var(--accent);background:rgba(255,255,255,.05)}.dk-calc .dk-csci .f{color:var(--accent);background:rgba(255,255,255,.05);font-size:clamp(12px,2.6cqmin,22px)}
+.dk-calc .dk-ck button,.dk-calc .dk-csci button{border-radius:11px;font-size:clamp(14px,3.3cqmin,28px);background:color-mix(in srgb,var(--fg,#fff) 9%,transparent);min-height:0;min-width:0;padding:0}
+.dk-calc .dk-ck button:hover,.dk-calc .dk-csci button:hover{background:color-mix(in srgb,var(--fg,#fff) 17%,transparent)}.dk-calc .dk-ck button:active,.dk-calc .dk-csci button:active{transform:scale(.97)}
+.dk-calc .dk-ck .op,.dk-calc .dk-ck .fn{color:var(--accent);background:color-mix(in srgb,var(--fg,#fff) 5%,transparent)}.dk-calc .dk-csci .f{color:var(--accent);background:color-mix(in srgb,var(--fg,#fff) 5%,transparent);font-size:clamp(12px,2.6cqmin,22px)}
 .dk-calc .dk-ck .eq{background:var(--accent);color:#1a1209;font-weight:700}.dk-calc .dk-ck .eq:hover{filter:brightness(1.08)}
 .dk-chist{display:none;width:clamp(150px,28cqw,260px);flex:none;overflow:auto;border-radius:12px;background:rgba(0,0,0,.22);padding:8px;box-sizing:border-box}.showh .dk-chist{display:block}
 .dk-hh2{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13px}.dk-hh2 button{background:none;color:var(--accent);font-size:12px}.dk-hh2 button:disabled{opacity:.35;cursor:default}
 .dk-hi{display:flex;flex-direction:column;align-items:flex-end;width:100%;background:none;padding:6px 8px;border-radius:8px;gap:1px;text-align:right}.dk-hi:hover{background:rgba(255,255,255,.1)}.dk-hi span{font-size:12px;color:var(--muted,#b9b0a4);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dk-hi b{font-size:16px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-@container (max-width:619px){.sci .dk-cpad{flex-direction:column}.sci .dk-csci{flex:.9}.sci .dk-ck{flex:1.5}.showh .dk-chist{position:absolute;right:0;top:0;bottom:0;z-index:2;background:#1c1916;box-shadow:-8px 0 24px rgba(0,0,0,.45)}}
+@container (max-width:619px){.sci .dk-cpad{flex-direction:column}.sci .dk-csci{flex:.9}.sci .dk-ck{flex:1.5}.showh .dk-chist{position:absolute;right:0;top:0;bottom:0;z-index:2;background:var(--surface2,#1c1916);box-shadow:-8px 0 24px rgba(0,0,0,.45)}}
 
 /* ---- desktop-only apps: sticky notes, clock, converter, snip, launcher ---- */
 .dk-stick{position:absolute;left:0;right:0;top:0;bottom:52px;pointer-events:none;z-index:1}
@@ -1179,10 +1179,10 @@ html.guest .deskbtn{display:none}
 .dk-sw{position:relative;width:38px;height:22px;flex:none}.dk-sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}.dk-sw i{position:absolute;inset:0;border-radius:99px;background:rgba(255,255,255,.2);transition:background .15s}.dk-sw i:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}.dk-sw input:checked+i{background:#f68712}.dk-sw input:checked+i:after{transform:translateX(16px)}
 .dk-cp-f{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1)}.dk-cp-f input[type=time],.dk-cp-f input[name=l]{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;border-radius:8px;padding:7px 9px;font:14px system-ui;color-scheme:dark}.dk-cp-f input[name=l]{flex:1;min-width:100px}
 .dk-cp-d{display:flex;gap:4px;width:100%}.dk-cp-d label{flex:1}.dk-cp-d input{position:absolute;opacity:0;pointer-events:none}.dk-cp-d span{display:block;text-align:center;padding:6px 0;border-radius:7px;background:rgba(255,255,255,.08);font:600 12px system-ui;cursor:pointer}.dk-cp-d input:checked+span{background:#f68712;color:#1a1005}
-.dk-cv{height:100%;display:flex;flex-direction:column;gap:10px;padding:14px;background:#17171b;color:#f1ece6;overflow:auto;outline:none;container-type:inline-size}
+.dk-conv{height:100%;display:flex;flex-direction:column;gap:10px;padding:14px;background:#17171b;color:#f1ece6;overflow:auto;outline:none;container-type:inline-size}
 .dk-cv-c{display:flex;gap:4px;flex-wrap:wrap}.dk-cv-c button{border:1px solid rgba(255,255,255,.15);background:none;color:#cfc8c0;border-radius:99px;padding:6px 12px;font:600 12.5px system-ui;cursor:pointer}.dk-cv-c button.on{background:#f68712;border-color:#f68712;color:#1a1005}
 .dk-cv-row{display:flex;gap:8px;align-items:stretch}.dk-cv-v,.dk-cv-r{flex:1;min-width:0;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px 12px;font:600 clamp(20px,8cqw,30px)/1.2 ui-monospace,Consolas,monospace;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dk-cv-r{background:rgba(246,135,18,.12);border-color:rgba(246,135,18,.4);cursor:copy}
-.dk-cv select{width:42%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;border-radius:10px;padding:0 8px;font:14px system-ui;color-scheme:dark}
+.dk-conv select{width:42%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;border-radius:10px;padding:0 8px;font:14px system-ui;color-scheme:dark}
 .dk-cv-sw{align-self:center;border:1px solid rgba(255,255,255,.15);background:none;color:#f68712;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer}
 .dk-cv-n{color:#a9a199;font-size:12px;min-height:16px}.dk-cv-all{display:grid;grid-template-columns:1fr 1fr;gap:6px}.dk-cv-all div{display:flex;flex-direction:column;background:rgba(255,255,255,.05);border-radius:8px;padding:7px 10px;min-width:0}.dk-cv-all span{color:#a9a199;font-size:11.5px}.dk-cv-all em{font:600 14px ui-monospace,Consolas,monospace;font-style:normal;overflow:hidden;text-overflow:ellipsis}
 .dk-sp{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:70;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 20px);background:rgba(22,22,26,.97);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:8px 10px;color:#f1ece6;box-shadow:0 14px 40px rgba(0,0,0,.5);font:13px system-ui}

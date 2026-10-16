@@ -404,7 +404,7 @@
     var box = w.body.querySelector('.dk-calc'), V = box.querySelector('[data-calc-v]'), H = box.querySelector('[data-calc-h]'), MI = box.querySelector('[data-mi]'), HL = box.querySelector('[data-hist]');
     function save() { LS.set('calcprefs', { mode: S.mode, deg: S.deg, hist: S.showH }); }
     function sci() { return S.mode === 'sci' || (S.mode === 'auto' && S.wide); }
-    function fit() { V.style.fontSize = ''; var fs = parseFloat(getComputedStyle(V).fontSize), n = 0; while (V.scrollWidth > V.parentNode.clientWidth - 4 && fs > 14 && n++ < 40) { fs *= 0.92; V.style.fontSize = fs + 'px'; } }
+    function fit() { V.style.fontSize = ''; var fs = parseFloat(getComputedStyle(V).fontSize), n = 0; while (V.scrollWidth > V.parentNode.clientWidth - 4 && fs > 12 && n++ < 60) { fs *= 0.92; V.style.fontSize = fs + 'px'; } V.scrollLeft = V.scrollWidth; }
     function paint() {
       box.classList.toggle('sci', sci()); box.classList.toggle('showh', S.showH);
       box.querySelectorAll('[data-cm="std"]').forEach(function (b) { b.classList.toggle('on', !sci()); }); box.querySelectorAll('[data-cm="sci"]').forEach(function (b) { b.classList.toggle('on', sci()); });
@@ -412,6 +412,7 @@
       MI.textContent = S.mem ? 'M = ' + calcFmt(S.mem) : ''; box.querySelector('[data-calc="MC"]').disabled = box.querySelector('[data-calc="MR"]').disabled = !S.mem;
       HL.innerHTML = '<div class="dk-hh2"><b>History</b><button data-cm="hclr"' + (S.hist.length ? '' : ' disabled') + '>Clear</button></div>' + (S.hist.length ? S.hist.map(function (h, n) { return '<button class="dk-hi" data-hi="' + n + '"><span>' + esc(h[0]) + ' =</span><b>' + esc(h[1]) + '</b></button>'; }).join('') : '<p class="note">Your calculations will show here.</p>');
     }
+    try { if (window.ResizeObserver) new ResizeObserver(function () { fit(); }).observe(box); } catch (e) {}
     function show(err) { V.textContent = err ? 'Error' : (S.cur === '' ? '0' : S.cur); V.classList.toggle('bad', !!err); fit(); }
     function curVal() { if (S.cur === '') return 0; return calcEval(S.cur, S.deg, S.last); }
     function add(s) { if (S.done) { if (/^[+−×÷^!%]/.test(s)) S.done = false; else { S.cur = ''; S.done = false; H.textContent = ''; } } S.cur += s; if (S.cur.length > 120) S.cur = S.cur.slice(0, 120); show(); }
