@@ -73,9 +73,9 @@ try {
     await cb('app:notes').check(); assert.equal(await p.locator('#dkicons [data-s="notes"]').count(), 1);
     await p.click('[data-dk="chnone"]'); assert.equal(await p.locator('#dkicons .dk-ic').count(), 0); await p.click('[data-dk="chsuggest"]'); assert.ok(await p.locator('#dkicons [data-w="browser"]').count() === 1 && await p.locator('#dkicons [data-s="photos"], #dkicons [data-w="os:photos"]').count() === 1, 'suggest keeps defaults + most used');
     await p.click('[data-dk="chall"]'); assert.ok(await p.locator('#dkicons .dk-ic').count() > 10); await p.click('[data-dk="chreset"]'); assert.equal(await p.locator('#dkicons [data-s="notes"]').count(), 0);
-    await cb('os:cards').uncheck(); await p.click('.dkw[aria-label="Desktop icons"] [data-dk="chdone"]'); assert.equal(await p.locator('.dkw[aria-label="Desktop icons"]').count(), 0);
-    await p.reload(); await p.waitForSelector('#desk:not([hidden])'); assert.equal(await p.locator('#dkicons [data-w="os:cards"]').count(), 0); assert.equal(await p.locator('#dkicons [data-w="os:vault"]').count(), 1);
-    await p.click('.dk-start'); await p.click('#dkmenu .dk-mi[data-k="os:cards"]', { button: 'right' }); await p.click('#dkctx [data-dk="deskadd"]'); assert.equal(await p.locator('#dkicons [data-w="os:cards"]').count(), 1);
+    await cb('os:vpn').uncheck(); await p.click('.dkw[aria-label="Desktop icons"] [data-dk="chdone"]'); assert.equal(await p.locator('.dkw[aria-label="Desktop icons"]').count(), 0);
+    await p.reload(); await p.waitForSelector('#desk:not([hidden])'); assert.equal(await p.locator('#dkicons [data-w="os:vpn"]').count(), 0); assert.equal(await p.locator('#dkicons [data-w="os:vault"]').count(), 1);
+    await p.click('.dk-start'); await p.click('#dkmenu .dk-mi[data-k="os:vpn"]', { button: 'right' }); await p.click('#dkctx [data-dk="deskadd"]'); assert.equal(await p.locator('#dkicons [data-w="os:vpn"]').count(), 1);
     await p.fill('#dkq', 'notes'); await p.click('#dkmenu [data-dk="app"][data-s="notes"]'); await p.waitForSelector('.dkw iframe[src^="/apps/notes/"]');
   });
   await t('right-click an icon or Start tile: remove, add to desktop, pin to taskbar', async () => {
@@ -177,8 +177,8 @@ try {
     await p.mouse.click(700, 760, { button: 'right' }); await p.locator('#dkctx button', { hasText: 'Arrange icons by name' }).click(); const n1 = await names(); assert.deepEqual(n1, [...n1].sort((x, y) => x.toLowerCase().localeCompare(y.toLowerCase())));
     await p.mouse.click(700, 760, { button: 'right' }); await p.locator('#dkctx button', { hasText: 'Arrange icons by type' }).click(); const n2 = await names(); assert.equal(n2.length, n1.length); assert.notDeepEqual(n2, n1);
   });
-  await t('Desktop has Photos, Cards, Vault, Insights, VPN and Browser as apps', async () => {
-    for (const v of ['browser', 'os:photos', 'os:vault', 'os:cards', 'os:vault', 'os:insights', 'os:vpn']) assert.equal(await p.locator('#dkicons [data-dk="launch"][data-w="' + v + '"]').count(), 1, v);
+  await t('Desktop has Photos, Vault, Insights, VPN and Browser as apps', async () => {
+    for (const v of ['browser', 'os:photos', 'os:vault', 'os:vault', 'os:insights', 'os:vpn']) assert.equal(await p.locator('#dkicons [data-dk="launch"][data-w="' + v + '"]').count(), 1, v);
     await p.click('.dk-start'); await p.waitForSelector('#dkmenu:not([hidden])'); for (const v of ['browser', 'os:photos', 'os:vault']) assert.equal(await p.locator('#dkmenu [data-w="' + v + '"]').count(), 1, v); await p.click('.dk-start');
   });
   await t('Photos opens in windows without the OS frame', async () => {

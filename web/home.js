@@ -38,7 +38,7 @@
     return '<div class="lives">' + out.join('') + '</div>';
   }
   var GROUPS = [
-    ['Everyday', [['Pulse', 'pulse', 'https://control.anands.xyz', 'Anands Control Center', 'pulse'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Cards', 'card', '#cards', 'Anands Cards'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password'], ['Files', 'folder', 'https://files.anands.xyz/api/auth/oidc/login', 'Anands Filemanager', 'files']]],
+    ['Everyday', [['Pulse', 'pulse', 'https://control.anands.xyz', 'Anands Control Center', 'pulse'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password'], ['Files', 'folder', 'https://files.anands.xyz/api/auth/oidc/login', 'Anands Filemanager', 'files']]],
     ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'folder', 'https://s3-admin.anands.xyz', 'Anands S3 Storage', 'storage']]]
   ];
   function tile(s, state) {

@@ -101,7 +101,7 @@ function boot() {
 }
 
 /* ---------- shell ---------- */
-var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['vpn', 'VPN', 'vpn'], ['cards', 'Contacts', 'cards'], ['apps', 'Suite', 'apps']];
+var NAV = [['home', 'Home', 'home'], ['photos', 'Photos', 'photos'], ['drive', 'Drive', 'cloud'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['vpn', 'VPN', 'vpn'], ['apps', 'Suite', 'apps']];
 function cur(v) { if (v === 'apps' && ['money', 'subs', 'invest', 'belong', 'house', 'paperless', 'editor', 'player', 'recorder', 'terminal'].indexOf(S.view) >= 0) return true; if (S.view === 'dedit' || (S.view === 'app' && S.openFile)) return v === 'drive'; if (v === 'insights' && (S.view === 'servers' || S.view === 'ai')) return true; return S.view === v || (v === 'apps' && S.view === 'app'); }
 function buildNav() {
   var h = '<button class="logo" data-act="nav" data-v="home" aria-label="Home"><img src="/logo-white.png" alt=""></button><div class="rsep"></div>';

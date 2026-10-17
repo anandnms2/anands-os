@@ -22,9 +22,9 @@ try {
   await ctx.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
   const p = await ctx.newPage(); p.setDefaultTimeout(5000); p.on('pageerror', (e) => errs.push(e.message));
   await p.goto(B + '/'); await p.waitForSelector('#rail .nav');
-  const nav = (v) => p.click(`#rail [data-v="${v}"]`);
+  const nav = (v) => v === 'cards' ? p.evaluate(() => { location.hash = '#cards'; }) : p.click(`#rail [data-v="${v}"]`);
 
-  await t('rail has VPN and Cards', async () => { assert.equal(await p.locator('#rail [data-v="vpn"]').count(), 1); assert.equal(await p.locator('#rail [data-v="servers"]').count(), 0); assert.equal(await p.locator('#rail [data-v="cards"]').count(), 1); });
+  await t('rail has VPN and no Cards (it moved into Contacts)', async () => { assert.equal(await p.locator('#rail [data-v="vpn"]').count(), 1); assert.equal(await p.locator('#rail [data-v="servers"]').count(), 0); assert.equal(await p.locator('#rail [data-v="cards"]').count(), 0); });
   await t('Insights shows servers with usage and a down server', async () => {
     await nav('insights'); await p.click('#view [data-act="nav"][data-v="servers"]'); await p.waitForSelector('tr[data-sa="open"]'); assert.equal(await p.locator('tr[data-sa="open"]').count(), 2); assert.equal(await p.locator('#rail [data-v="servers"]').count(), 0);
     const txt = await p.locator('#view').innerText(); assert.match(txt, /oracle-1/); assert.match(txt, /home-nas/); assert.match(txt, /46%/); assert.match(txt, /Down/);
@@ -103,7 +103,7 @@ try {
   });
   await t('mobile: bottom tabs scroll and VPN page fits', async () => {
     const m = await browser.newContext({ viewport: { width: 390, height: 800 }, colorScheme: 'dark' }); await m.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } });
-    const q = await m.newPage(); await q.goto(B + '/'); await q.waitForSelector('#tabs button'); await q.click('#tabs [data-v="cards"]'); await q.waitForSelector('.icard');
+    const q = await m.newPage(); await q.goto(B + '/'); await q.waitForSelector('#tabs button'); await q.evaluate(() => { location.hash = '#cards'; }); await q.waitForSelector('.icard');
     assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal page scroll'); await shot(q, 'cards-mobile');
     await q.click('#tabs [data-v="insights"]'); await q.click('#view [data-v="servers"]'); await q.waitForSelector('tr[data-sa="open"]'); assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)); await shot(q, 'insights-mobile'); await m.close();
   });
