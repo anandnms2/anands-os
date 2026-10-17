@@ -292,3 +292,14 @@ export async function handleMoney(req, res, url, sess) {
   throw httpError(404, 'Unknown money route');
 }
 export const _money = { holdingStats, addCycle };
+
+/* read-only views for Life (net worth, Daily Brief, Life Search) */
+export function lifeView() {
+  load(); tick(); const v = stateView();
+  return { base: v.settings.base, netWorth: v.netWorth, goals: v.goals, subs: v.subs.filter((s) => s.active), accounts: v.accounts.filter((a) => !a.archived).length, convert: (amount, cur) => { const r = rate(cur); return r == null ? null : amount * r; } };
+}
+export function lifeSearch(q) {
+  load(); const w = String(q || '').toLowerCase().split(/\s+/).filter(Boolean); if (!w.length) return [];
+  return [...S.tx].sort((a, b) => b.date.localeCompare(a.date)).filter((t) => { const h = ((t.payee || '') + ' ' + (t.note || '')).toLowerCase(); return w.every((x) => h.includes(x)); }).slice(0, 6)
+    .map((t) => ({ id: t.id, date: t.date, type: t.type, amount: d(t.amt), currency: (acctBy(t.acct) || {}).currency || S.settings.base, payee: t.payee || '', note: t.note || '' }));
+}

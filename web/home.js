@@ -3,7 +3,17 @@
   'use strict';
   var A = window.AOS; if (!A) return;
   var S = A.S, esc = A.esc, api = A.api, ic = A.ic;
-  var H = { pulse: null, cards: null, rem: null, vpn: null, st: null, at: 0, busy: false };
+  var H = { pulse: null, cards: null, rem: null, vpn: null, st: null, brief: null, at: 0, busy: false };
+  function localDay() { var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+  /* the Daily Brief card: the few things that need you today, from documents, home, money, journal and Pulse */
+  var GO = { docs: 'docs', journal: 'journal', pulse: 'pulse', belong: 'belong', house: 'house', subs: 'subs', money: 'money' };
+  function brief() {
+    if (!A.isOwner()) return '';
+    var b = H.brief; if (!b) return H.busy || !H.at ? '<section class="dbrief" aria-label="Daily Brief"><div class="eyebrow">Daily Brief</div><p class="dbn">Loading your day...</p></section>' : '';
+    var items = []; b.sections.forEach(function (s) { if (s.key === 'goals' || s.key === 'past') return; s.items.forEach(function (i) { items.push({ s: s.title, i: i }); }); });
+    var j = b.journal || {}, body = items.slice(0, 5).map(function (x) { return '<button class="dbr ' + (x.i.tone || '') + '" data-act="nav" data-v="' + (GO[x.i.go] || 'brief') + '"><span><b>' + esc(x.i.text) + '</b>' + (x.i.sub ? '<small>' + esc(x.i.sub) + '</small>' : '') + '</span><em>' + esc(x.s) + '</em></button>'; }).join('');
+    return '<section class="dbrief" aria-label="Daily Brief"><div class="eyebrow" style="display:flex;justify-content:space-between;gap:10px"><span>Daily Brief</span><button class="link" data-act="nav" data-v="brief">Open &rarr;</button></div>' + (body || '<p class="dbn">Nothing needs you today.</p>') + (items.length > 5 ? '<button class="link" style="text-align:left;margin-top:6px" data-act="nav" data-v="brief">+' + (items.length - 5) + ' more</button>' : '') + '<button class="btn dbj" data-act="nav" data-v="journal">' + (j.today ? 'Open today\'s journal' : 'Write today\'s journal') + (j.streak ? ' · ' + j.streak + '-day streak' : '') + '</button></section>';
+  }
   function cfg(k) { var c = (S.settings || {})[k]; return !!(c && c.url); }
   function pulseOn() { var c = (S.settings || {}).pulse; return !!(c && c.url && c.user && c.passSet); }
   function ok(p) { return p.then(function (d) { return d; }, function () { return null; }); }
@@ -15,8 +25,9 @@
         cfg('cards') ? ok(api('/api/cards/stats')) : Promise.resolve(null),
         cfg('cards') ? ok(api('/api/cs/reminders')) : Promise.resolve(null),
         cfg('vpn') ? ok(api('/api/vpn')) : Promise.resolve(null),
-        cfg('status') ? ok(api('/api/status')) : Promise.resolve(null)
-      ]).then(function (r) { H.pulse = r[0]; H.cards = r[1]; H.rem = r[2]; H.vpn = r[3]; H.st = r[4]; H.at = Date.now(); });
+        cfg('status') ? ok(api('/api/status')) : Promise.resolve(null),
+        A.isOwner() ? ok(api('/api/life/brief?d=' + localDay())) : Promise.resolve(null)
+      ]).then(function (r) { H.pulse = r[0]; H.cards = r[1]; H.rem = r[2]; H.vpn = r[3]; H.st = r[4]; H.brief = r[5]; H.at = Date.now(); });
     };
     (S.settings ? Promise.resolve() : api('/api/settings').then(function (s) { S.settings = s; }, function () {})).then(go).then(function () { H.busy = false; if (S.view === 'home') A.redraw(); }, function () { H.busy = false; });
   }
@@ -73,15 +84,15 @@
     ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'folder', 'https://s3-admin.anands.xyz', 'Anands S3 Storage', 'storage']]]
   ];
   function tile(s, state) {
-    var st = state(s[3]), OIM = { Pulse: 'pulse', Photos: 'photos', Cards: 'cards', Drive: 'drive', Vault: 'vault', 'AI Chat': 'ai', Files: 'files', 'Cloud Insights': 'insights', Servers: 'servers', VPN: 'vpn', Status: 'status', Storage: 'storage', Money: 'money', Paperless: 'paperless', Subscriptions: 'subs', Investments: 'invest', Belongings: 'belong', Household: 'house' }, inner = '<span class="ic' + (OIM[s[0]] ? ' img' : '') + '">' + (OIM[s[0]] ? '<img src="/oicons/' + OIM[s[0]] + '.svg" alt="">' : ic(s[1])) + '</span><span class="tx"><b>' + s[0] + '</b></span><i class="dot ' + st[0] + '" title="' + st[1] + '" role="img" aria-label="' + st[1] + '"></i>';
+    var st = state(s[3]), OIM = { Pulse: 'pulse', Photos: 'photos', Cards: 'cards', Drive: 'drive', Vault: 'vault', 'AI Chat': 'ai', Files: 'files', 'Cloud Insights': 'insights', Servers: 'servers', VPN: 'vpn', Status: 'status', Storage: 'storage', Money: 'money', Paperless: 'paperless', Subscriptions: 'subs', Investments: 'invest', Belongings: 'belong', Household: 'house', 'Daily Brief': 'brief', Journal: 'journal', Documents: 'docs', 'Net worth': 'worth', 'Life Search': 'lsearch' }, inner = '<span class="ic' + (OIM[s[0]] ? ' img' : '') + '">' + (OIM[s[0]] ? '<img src="/oicons/' + OIM[s[0]] + '.svg" alt="">' : ic(s[1])) + '</span><span class="tx"><b>' + s[0] + '</b></span><i class="dot ' + st[0] + '" title="' + st[1] + '" role="img" aria-label="' + st[1] + '"></i>';
     if (s[2].charAt(0) === '#') return '<button class="svc" data-act="nav" data-v="' + s[2].slice(1) + '">' + inner + '</button>';
     var L = (S.settings || {}).links || {}, href = (s[4] && L[s[4]]) || s[2];
     return '<a class="svc" href="' + esc(href) + '" target="_blank" rel="noopener">' + inner + '</a>';
   }
   function services(state) {
-    var own = window.AOS && AOS.isOwner && AOS.isOwner(), G = own ? GROUPS.concat([['Money', [['Money', 'card', '#money', ''], ['Subscriptions', 'pulse', '#subs', ''], ['Investments', 'pulse', '#invest', ''], ['Belongings', 'folder', '#belong', ''], ['Household', 'folder', '#house', ''], ['Paperless', 'folder', '#paperless', '']]]]) : GROUPS;
+    var own = window.AOS && AOS.isOwner && AOS.isOwner(), G = own ? GROUPS.concat([['Money', [['Money', 'card', '#money', ''], ['Subscriptions', 'pulse', '#subs', ''], ['Investments', 'pulse', '#invest', ''], ['Belongings', 'folder', '#belong', ''], ['Household', 'folder', '#house', ''], ['Paperless', 'folder', '#paperless', '']]], ['Life', [['Daily Brief', 'folder', '#brief', ''], ['Journal', 'folder', '#journal', ''], ['Documents', 'folder', '#docs', ''], ['Net worth', 'card', '#worth', ''], ['Life Search', 'search', '#lsearch', '']]]]) : GROUPS;
     return G.map(function (g) { return '<div class="sech"><h2>' + g[0] + '</h2></div><div class="svcs">' + g[1].map(function (s) { return tile(s, state); }).join('') + '</div>'; }).join('');
   }
-  window.AOSHome = { right: right, today: today, services: services, onGo: onGo, load: load, state: H };
+  window.AOSHome = { brief: brief, right: right, today: today, services: services, onGo: onGo, load: load, state: H };
   A.homeLoad = load;
 })();

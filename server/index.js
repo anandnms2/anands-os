@@ -28,6 +28,7 @@ import { handleSearch } from './search.js';
 import { handleSecurity } from './security.js';
 import { handleTerminal } from './terminal.js';
 import { handleHousehold } from './household.js';
+import { handleLife } from './life.js';
 import { handleMoney } from './money.js';
 import { handlePaperless, paperlessTest } from './paperless.js';
 import { handlePrefs } from './prefs.js';
@@ -100,6 +101,7 @@ async function api(req, res, url) {
   if (p === '/api/security' || p.startsWith('/api/security/')) return handleSecurity(req, res, url, sessionOf(req));
   if (p === '/api/money' || p.startsWith('/api/money/')) return handleMoney(req, res, url, sessionOf(req));
   if (p === '/api/paperless' || p.startsWith('/api/paperless/')) return handlePaperless(req, res, url, sessionOf(req));
+  if (p === '/api/life' || p.startsWith('/api/life/')) return handleLife(req, res, url, sessionOf(req));
   if (p === '/api/house' || p.startsWith('/api/house/')) return handleHousehold(req, res, url, sessionOf(req));
   if (p === '/api/term' || p.startsWith('/api/term/')) return handleTerminal(req, res, url, sessionOf(req));
   if (p === '/api/prefs') return handlePrefs(req, res);

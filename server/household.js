@@ -79,3 +79,12 @@ export async function handleHousehold(req, res, url, sess) {
   }
   throw httpError(404, 'Unknown household route');
 }
+
+/* read-only views for Life (Daily Brief, Life Search) */
+export function lifeBrief() { load(); const v = view(); return { warranty: v.items.filter((i) => i.warrantyDays != null && i.warrantyDays >= 0 && i.warrantyDays <= 30).map((i) => ({ name: i.name, days: i.warrantyDays, date: i.warranty })), low: v.products.filter((p) => p.low).map((p) => p.name), expiring: v.products.filter((p) => p.expiresDays != null && p.expiresDays <= 7 && p.stock > 0).map((p) => ({ name: p.name, days: p.expiresDays })), toBuy: v.summary.toBuy }; }
+export function lifeSearch(q) {
+  load(); const w = String(q || '').toLowerCase().split(/\s+/).filter(Boolean); if (!w.length) return [];
+  const hit = (s) => w.every((x) => s.toLowerCase().includes(x));
+  return [...S.items.filter((i) => hit([i.name, i.category, i.serial, i.store, i.notes].join(' '))).map((i) => ({ kind: 'item', id: i.id, name: i.name, sub: [i.category, i.store, i.warranty ? 'warranty to ' + i.warranty : ''].filter(Boolean).join(' · ') })),
+    ...S.products.filter((p) => hit(p.name + ' ' + (p.note || ''))).map((p) => ({ kind: 'product', id: p.id, name: p.name, sub: 'Pantry · ' + stockOf(p) + ' ' + (p.unit || 'pcs') }))].slice(0, 8);
+}

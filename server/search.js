@@ -35,6 +35,10 @@ async function index() {
   if (idx) return idx;
   return Promise.race([building, new Promise((r) => setTimeout(() => r(idx || { t: 0, list: [], partial: true }), 7000))]);
 }
+export async function findFiles(q) {
+  const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean); if (!words.length) return [];
+  const ix = await index(); return ix.list.filter((x) => { const n = x.n.toLowerCase(); return words.every((w) => n.includes(w)); }).sort((a, b) => (a.dir ? 1 : 0) - (b.dir ? 1 : 0) || a.n.length - b.n.length).slice(0, 12);
+}
 export const clearFileIndex = () => { idx = null; };
 export async function handleSearch(req, res, url) {
   const q = String(url.searchParams.get('q') || '').toLowerCase().trim().slice(0, 80);
