@@ -47,6 +47,7 @@ export function effective() {
     coolify: { url: clean(s.coolify?.url) || clean(env.COOLIFY_URL), token: clean(s.coolify?.token) || clean(env.COOLIFY_TOKEN) },
     status: { url: clean(s.status?.url) || clean(env.STATUS_URL), user: clean(s.status?.user) || clean(env.STATUS_USER), pass: clean(s.status?.pass) || clean(env.STATUS_PASSWORD) },
     aiusage: { url: clean(s.aiusage?.url) || clean(env.FREELLM_URL), user: clean(s.aiusage?.user) || clean(env.FREELLM_USER), pass: clean(s.aiusage?.pass) || clean(env.FREELLM_PASSWORD) },
+    apple: { url: '', user: clean(s.apple?.user) || clean(env.APPLE_ID), pass: clean(s.apple?.pass) || clean(env.APPLE_APP_PASSWORD) },
     vpn: { url: clean(s.vpn?.url) || clean(env.VPN_URL), user: clean(s.vpn?.user) || clean(env.VPN_USER), pass: clean(s.vpn?.pass) || clean(env.VPN_PASSWORD) },
     cards: { url: clean(s.cards?.url) || clean(env.CARDS_URL), user: clean(s.cards?.user) || clean(env.CARDS_USER), pass: clean(s.cards?.pass) || clean(env.CARDS_PASSWORD), contacts: s.cards?.contacts !== false && env.CARDS_AS_CONTACTS !== '0' },
     google: { clientId: clean(s.google?.clientId) || clean(env.GOOGLE_CLIENT_ID), clientSecret: clean(s.google?.clientSecret) || clean(env.GOOGLE_CLIENT_SECRET) },
@@ -70,6 +71,7 @@ export function publicSettings() {
     coolify: { url: e.coolify.url, tokenSet: !!e.coolify.token },
     status: { url: e.status.url, user: e.status.user, passSet: !!e.status.pass },
     aiusage: { url: e.aiusage.url, user: e.aiusage.user, passSet: !!e.aiusage.pass },
+    apple: { user: e.apple.user, passSet: !!e.apple.pass },
     vpn: { url: e.vpn.url, user: e.vpn.user, passSet: !!e.vpn.pass },
     cards: { url: e.cards.url, user: e.cards.user, passSet: !!e.cards.pass, contacts: e.cards.contacts },
     google: { clientId: e.google.clientId, secretSet: !!e.google.clientSecret },
@@ -99,7 +101,7 @@ export function updateSettings(patch) {
   const p = patch || {};
   set('immich', 'url', p.immich?.url); set('immich', 'key', p.immich?.key, true);
   set('coolify', 'url', p.coolify?.url); set('coolify', 'token', p.coolify?.token, true);
-  for (const g of ['status', 'vpn', 'cards', 'aiusage']) { set(g, 'url', p[g]?.url); set(g, 'user', p[g]?.user); set(g, 'pass', p[g]?.pass, true); }
+  for (const g of ['status', 'vpn', 'cards', 'aiusage', 'apple']) { set(g, 'url', p[g]?.url); set(g, 'user', p[g]?.user); set(g, 'pass', p[g]?.pass, true); }
   if (typeof p.cards?.contacts === 'boolean') { next.cards = next.cards || {}; next.cards.contacts = p.cards.contacts; }
   set('google', 'clientId', p.google?.clientId); set('google', 'clientSecret', p.google?.clientSecret, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);

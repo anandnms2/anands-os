@@ -33,7 +33,7 @@ function open(cfg) {
     sock.setTimeout(TIMEOUT, () => { fail(new Error('timed out')); }); sock.once('error', fail);
   });
 }
-async function imap(cfg, fn) {
+export async function imap(cfg, fn) {
   let sock = await open(cfg), buf = Buffer.alloc(0), waiter = null, n = 0;
   const onData = (d) => { buf = Buffer.concat([buf, d]); waiter?.(); };
   sock.on('data', onData); sock.on('error', () => waiter?.()); sock.on('close', () => waiter?.());

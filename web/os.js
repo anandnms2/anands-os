@@ -358,6 +358,7 @@ function saveGroup(k, after) {
   if (k === 'paperless') body.paperless = { token: v('s_pt') };
   if (k === 'links') body.links = { ai: v('s_la'), files: v('s_lf'), storage: v('s_ls'), paperless: v('s_lp'), pulse: v('s_lpu') };
   if (k === 'status' || k === 'vpn' || k === 'cards' || k === 'aiusage') body[k] = { url: v('s_' + k + 'u'), user: v('s_' + k + 'n'), pass: v('s_' + k + 'p') };
+  if (k === 'apple') body.apple = { user: v('s_apn'), pass: v('s_app') };
   if (k === 'cards') { var cc = document.getElementById('s_ccon'); if (cc) body.cards.contacts = cc.checked; }
   if (k === 'google') body.google = { clientId: v('s_gid'), clientSecret: v('s_gsec') };
   if (k === 'dav') body.dav = { url: v('s_du'), user: v('s_dn'), pass: v('s_dp') };
