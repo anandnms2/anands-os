@@ -91,6 +91,23 @@ try {
     const e = await api('GET', '/api/cards/export?groupId=' + csState.groups[0].id); assert.match(e.data, /^Name,Company/);
     const n = csState.cards.length; r = await api('POST', '/api/cards/bulk-delete', { ids: [csState.cards[csState.cards.length - 1].id] }); assert.equal(csState.cards.length, n - 1);
   });
+  await t('contacts share the Card Scan database', async () => {
+    const kv = async (b) => { const r = await fetch(B + '/_local/kv', { method: 'POST', headers: { cookie, 'x-aos': '1', 'x-app': 'contacts', 'content-type': 'application/json' }, body: JSON.stringify(b) }); return (await r.json()).result; };
+    resetCards(); await api('PUT', '/api/settings', { cards: { pass: 'cspw' } });
+    const rows = await kv({ op: 'list', pattern: 'contact:*', values: true });
+    const amina = rows.find((r) => r.value.firstName === 'Amina'); assert.ok(amina, 'cards appear as contacts'); assert.equal(amina.value.lastName, 'Wanjiru'); assert.equal(amina.value.company, 'Kilimo Logistics'); assert.equal(amina.value.phones[0].value, '+254700111222');
+    const id = amina.key.slice(8); const one = await kv({ op: 'get', key: amina.key }); assert.equal(one.emails[0].value, 'amina@kilimo.co.ke');
+    await kv({ op: 'set', key: amina.key, value: { ...one, jobTitle: 'Head of Fleet', nickname: 'Mina', favorite: true } });
+    assert.equal(csState.lastPatch.designation, 'Head of Fleet');
+    const back = await kv({ op: 'get', key: amina.key }); assert.equal(back.nickname, 'Mina'); assert.equal(back.favorite, true);
+    const n = csState.cards.length;
+    await kv({ op: 'set', key: 'contact:new1', value: { id: 'new1', firstName: 'Zed', lastName: 'Kamau', company: 'Zed Co', phones: [{ label: 'Mobile', value: '+254711' }], emails: [], urls: [], addresses: [], tags: [] } });
+    assert.equal(csState.cards.length, n + 1); assert.equal(csState.lastCreate.name, 'Zed Kamau');
+    await kv({ op: 'del', key: 'contact:' + id }); assert.ok(!csState.cards.some((c) => 'cs-' + c.id === id));
+    await api('PUT', '/api/settings', { cards: { contacts: false } });
+    const off = await kv({ op: 'list', pattern: 'contact:*', values: true }); assert.ok(!off.some((r) => r.key.startsWith('contact:cs-')));
+    await api('PUT', '/api/settings', { cards: { contacts: true, pass: 'cspw' } });
+  });
   await t('Pulse is not part of the OS: no API route, no settings group', async () => { assert.equal((await api('GET', '/api/pulse/today')).status, 404); assert.equal((await api('POST', '/api/settings/test', { target: 'pulse' })).status === 200 && false, false); });
   await t('cards wrong password reads clearly', async () => { await api('PUT', '/api/settings', { cards: { pass: 'bad' } }); const r = await api('GET', '/api/cards'); assert.equal(r.status, 502); assert.match(r.data.error, /rejected/); });
   await t('needs sign-in and the x-aos header', async () => { assert.equal((await fetch(B + '/api/vpn')).status, 401); const r = await fetch(B + '/api/vpn/1', { method: 'DELETE', headers: { cookie } }); assert.equal(r.status, 403); });

@@ -27,7 +27,7 @@ async function csRaw(path, init = {}) {
   if (r.status === 401) r = await go(sess && sess.cookie !== used ? sess.cookie : await login(c));
   return r;
 }
-async function cs(path, init = {}) {
+export async function cs(path, init = {}) {
   const r = await csRaw(path, init);
   if (!r.ok) throw httpError([400, 403, 404, 409, 413, 429, 503].includes(r.status) ? r.status : 502, r.data?.error || 'Card Scan answered ' + r.status, r.data?.code || 'upstream_' + r.status);
   return r.data;

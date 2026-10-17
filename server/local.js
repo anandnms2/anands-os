@@ -9,6 +9,7 @@ import { DATA, effective } from './config.js';
 import { createWorker, getWorker, deleteWorker, listWorkers } from './workers.js';
 import { handleMailService } from './calmail.js';
 import * as mail from './mail.js';
+import { contactsKv, enabled as contactsEnabled } from './contactsync.js';
 import * as mailbox from './mailbox.js';
 import { sessionOf, userFromSession } from './session.js';
 import { allowed } from './team.js';
@@ -183,7 +184,14 @@ export async function handleLocal(req, res, url) {
   if (req.method !== 'POST') throw httpError(405, 'Method not allowed');
   const app = slug(req.headers['x-app']);
   const kvApp = user.home ? ('m' + user.mid + '-' + app).slice(0, 60) : app;
-  if (p === '/kv') { const b = await readJson(req, 9 * 1024 * 1024); return json(res, 200, { result: kvOp(kvApp, b) }); }
+  if (p === '/kv') {
+    const b = await readJson(req, 9 * 1024 * 1024);
+    if (kvApp === 'contacts' && !user.home && contactsEnabled()) {
+      const kv = { get: (k) => kvOp(kvApp, { op: 'get', key: k }), set: (k, v) => kvOp(kvApp, { op: 'set', key: k, value: v }), del: (k) => kvOp(kvApp, { op: 'del', key: k }), list: (pat, values) => kvOp(kvApp, { op: 'list', pattern: pat, values }) };
+      const r = await contactsKv(kv, b); if (r) return json(res, 200, { result: r.result });
+    }
+    return json(res, 200, { result: kvOp(kvApp, b) });
+  }
   if (p === '/ai/chat') {
     if (user.home && !allowed(s, 'chat')) throw httpError(403, 'The assistant is not shared with you', 'forbidden'); const b = await readJson(req, 2 * 1024 * 1024); return json(res, 200, await llmChat(b.messages, { model: b.model, temperature: b.temperature })); }
   if (p === '/fs/write') {
