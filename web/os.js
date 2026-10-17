@@ -163,7 +163,7 @@ function svcState(n) {
   var r = d.resources.filter(function (x) { return x.n === n; })[0]; if (!r) return ['na', 'Not tracked in Coolify'];
   return r.s === 'ok' ? ['', 'Healthy'] : r.s === 'nohc' ? ['warn', 'Running, no health check'] : ['bad', 'Not healthy'];
 }
-var ICONROW = ['spreadsheet', 'documents', 'presentation', 'whiteboard', 'pdf', 'email', 'calendar', 'notes', 'photo-studio', 'video-studio', 'chess'];
+var ICONROW = ['spreadsheet', 'documents', 'presentation', 'pdf', 'email', 'calendar', 'photo-studio', 'video-studio', 'chess'];
 function homeV() {
   if (!isOwnerU()) return guestHomeV();
   var hr = Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(new Date())), g = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
@@ -328,7 +328,7 @@ function settingsV() {
 S.drive = { path: '/', items: [], loading: false, error: null, code: null, sel: [], status: null };
 function loadDrive(p, quiet) { return window.AOSDrive ? window.AOSDrive.load(p, quiet) : Promise.resolve(); }
 function driveV() { return window.AOSDrive ? window.AOSDrive.view() : '<div class="wrap"><div class="empty">Loading Drive...</div></div>'; }
-var OPENWITH = { csv: ['spreadsheet'], xlsx: ['spreadsheet'], xls: ['spreadsheet'], docx: ['documents'], doc: ['documents'], pdf: ['pdf'], pptx: ['presentation'], ppt: ['presentation'], jpg: ['photo-studio'], jpeg: ['photo-studio'], png: ['photo-studio'], webp: ['photo-studio'], gif: ['photo-studio'], mp4: ['video-studio'], mov: ['video-studio'], mp3: ['audio-studio'], wav: ['audio-studio'], svg: ['vector-studio'], drawio: ['whiteboard'] };
+var OPENWITH = { csv: ['spreadsheet'], xlsx: ['spreadsheet'], xls: ['spreadsheet'], docx: ['documents'], doc: ['documents'], pdf: ['pdf'], pptx: ['presentation'], ppt: ['presentation'], jpg: ['photo-studio'], jpeg: ['photo-studio'], png: ['photo-studio'], webp: ['photo-studio'], gif: ['photo-studio'], mp4: ['video-studio'], mov: ['video-studio'], mp3: ['audio-studio'], wav: ['audio-studio'], svg: ['vector-studio'] };
 /* Apps verified to read a file handed to them at launch (puter.ui.onLaunchedWithItems). The rest open normally and use their own Open dialog, which lists /Drive. */
 var LAUNCHES = ['audio-studio', 'cad', 'circuits', 'documents', 'parametric', 'pdf', 'photo-studio', 'presentation', 'spreadsheet', 'vector-studio', 'video-studio'];
 var TEXTEXT = /^(txt|md|csv|tsv|json|html|htm|xml|yml|yaml|log|ini|conf|js|css|py|sh)$/;

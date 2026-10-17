@@ -42,7 +42,9 @@ for pass in 1 2 3; do
 done
 
 for icon in "$UP"/src/*/icon-128.png; do
-  s="$(basename "$(dirname "$icon")")"; cp "$icon" "$OUT/_icons/$s.png"
+  s="$(basename "$(dirname "$icon")")"
+  python3 -c "import json,sys;sys.exit(0 if '$s' in [a['slug'] for a in json.load(open('$OUT/apps.json'))] else 1)" || continue
+  cp "$icon" "$OUT/_icons/$s.png"
 done
 
 python3 "$HERE/tools/postprocess.py" "$OUT/apps"

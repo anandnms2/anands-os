@@ -4,6 +4,9 @@ usage: gen-registry.py <upstream-checkout> <out.json>"""
 import json, re, sys, os
 
 up, out = sys.argv[1], sys.argv[2]
+# Upstream apps this OS does not ship at all: not built, not listed, no icon.
+REMOVED = {"notes", "records", "whiteboard", "tasks", "wiki", "assets", "childcare", "contracts", "crm", "field-service", "fleet",
+           "help-desk", "hiring", "inventory", "legal", "pos", "property-management", "shifts", "accounting", "cap-table", "expense", "invoicing"}
 readme = open(os.path.join(up, "README.md"), encoding="utf-8").read()
 cat = None
 apps = []
@@ -21,6 +24,8 @@ for line in readme.splitlines():
     if not (slug and name and len(tds) >= 2):
         continue
     slug = slug.group(1)
+    if slug in REMOVED:
+        continue
     src = os.path.join(up, "src", slug)
     apps.append({
         "slug": slug,
