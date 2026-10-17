@@ -1,15 +1,15 @@
 // Servers (Insights), VPN and Cards screens in a real Chromium against the mock services. SHOTS=<dir> saves screenshots.
 import { spawn } from 'node:child_process'; import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import assert from 'node:assert/strict'; import { createRequire } from 'node:module'; import { fileURLToPath } from 'node:url';
-import { startBeszel, startWg, wgState, startCards, csState, startPulse, resetCards } from './integrations-mock.mjs';
+import { startBeszel, startWg, wgState, startCards, csState, resetCards } from './integrations-mock.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let chromium = null; for (const base of [root + '/', '/opt/npm-tools/node_modules/']) { try { chromium = createRequire(base)('playwright').chromium; break; } catch {} }
 if (!chromium) { console.log('skip  Playwright not installed'); process.exit(0); }
 const SHOTS = process.env.SHOTS || '';
-const [bz, wg, cs, pu] = [await startBeszel(), await startWg(), await startCards(), await startPulse()];
+const [bz, wg, cs] = [await startBeszel(), await startWg(), await startCards()];
 const addr = (s) => `http://127.0.0.1:${s.address().port}`;
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-iu-')); const port = 20000 + Math.floor(Math.random() * 20000);
-const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: process.env.E2E_SUITE || path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'pw', SESSION_SECRET: 'x'.repeat(40), STATUS_URL: addr(bz), STATUS_USER: 'ro@x.io', STATUS_PASSWORD: 'pw', VPN_URL: addr(wg), VPN_USER: 'admin', VPN_PASSWORD: 'wgpw', CARDS_URL: addr(cs), CARDS_USER: 'anand@x.io', CARDS_PASSWORD: 'cspw', PULSE_URL: addr(pu), PULSE_TOKEN: 'pulse_testtokentesttokentest' } });
+const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: process.env.E2E_SUITE || path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'pw', SESSION_SECRET: 'x'.repeat(40), STATUS_URL: addr(bz), STATUS_USER: 'ro@x.io', STATUS_PASSWORD: 'pw', VPN_URL: addr(wg), VPN_USER: 'admin', VPN_PASSWORD: 'wgpw', CARDS_URL: addr(cs), CARDS_USER: 'anand@x.io', CARDS_PASSWORD: 'cspw' } });
 let log = ''; srv.stdout.on('data', (d) => (log += d)); srv.stderr.on('data', (d) => (log += d));
 const B = `http://127.0.0.1:${port}`;
 for (let i = 0; i < 50; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
@@ -72,16 +72,7 @@ try {
     await p.click('[data-ia="cdelask"]'); await p.waitForSelector('[data-ia="cdelyes"]'); assert.equal(csState.cards.length, 2); await shot(p, 'card-delete');
     await p.click('[data-ia="cdelyes"]'); await p.waitForFunction(() => document.querySelector('#modal').hidden); assert.equal(csState.cards.length, 1);
   });
-  await t('Pulse page: today, chats with messages, tasks, tracked, search', async () => {
-    await nav('pulse'); await p.waitForFunction(() => /unread items/.test(document.querySelector('#view').innerText)); let tx = await p.locator('#view').innerText(); assert.match(tx, /Truck T482DKP/); await shot(p, 'pulse-today');
-    await p.click('[data-pa="tab"][data-t="chats"]'); await p.waitForSelector('[data-pa="chat"]'); await p.click('[data-pa="chat"]'); await p.waitForFunction(() => /Truck stuck at border/.test(document.querySelector('#view').innerText)); await shot(p, 'pulse-chat');
-    await p.click('[data-pa="chatback"]'); await p.click('[data-pa="tab"][data-t="tasks"]'); await p.waitForFunction(() => /Approve fuel advance/.test(document.querySelector('#view').innerText));
-    await p.click('[data-pa="tab"][data-t="waiting"]'); await p.waitForFunction(() => /POD for T482/.test(document.querySelector('#view').innerText));
-    await p.click('[data-pa="tab"][data-t="tracked"]'); await p.waitForSelector('[data-pa="tracked"]'); await p.click('[data-pa="tracked"]'); await p.waitForFunction(() => /Joseph/.test(document.querySelector('#view').innerText));
-    await p.click('[data-pa="trback"]'); await p.click('[data-pa="tab"][data-t="search"]'); await p.fill('[data-pin="sq"]', 'invoice'); await p.press('[data-pin="sq"]', 'Enter'); await p.waitForFunction(() => /Invoice/.test(document.querySelector('#view').innerText));
-    assert.ok(pu.calls === undefined || true);
-  });
-  await t('Pulse and Cards have no embedded app frames', async () => { assert.equal(await p.locator('iframe').count(), 0); assert.equal(await p.locator('[data-pa="tab"][data-t="app"]').count(), 0); });
+  await t('Pulse is only a link: a tile on Home, no page, no frames', async () => { await nav('home'); const a = p.locator('a.svc', { hasText: 'Pulse' }); assert.equal(await a.getAttribute('href'), 'https://control.anands.xyz'); assert.equal(await a.getAttribute('target'), '_blank'); assert.equal(await p.locator('iframe').count(), 0); });
   await t('Cards: scan a card with a photo, AI read, save', async () => {
     resetCards(); await nav('vpn'); await nav('cards'); await p.waitForSelector('.icard'); await p.click('[data-ca="new"]'); await p.waitForSelector('#nf_name');
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');

@@ -20,7 +20,6 @@ export const AREAS = [
   ['photos', 'Photos', 'Your Immich library.', 'yours'],
   ['drive', 'Drive and Files', 'Your Cloudreve and Google Drive.', 'yours'],
   ['cards', 'Cards', 'Your business-card contacts.', 'yours'],
-  ['pulse', 'Pulse', 'Your inbox, WhatsApp, tasks and calendar.', 'yours'],
   ['insights', 'Insights, Servers and AI', 'Coolify, server health and AI usage.', 'yours'],
   ['vpn', 'VPN', 'Your WireGuard clients.', 'yours']
 ];
@@ -37,7 +36,6 @@ export function areaOf(p, method) {
   if (/^\/api\/(photos|immich)(\/|$)/.test(p)) return 'photos';
   if (/^\/api\/(drive|gdrive)(\/|$)/.test(p) || p === '/api/search/files') return 'drive';
   if (p.startsWith('/api/vault/')) return 'vault';
-  if (p === '/api/pulse' || p.startsWith('/api/pulse/')) return 'pulse';
   if (p === '/api/cards' || p === '/api/my-cards' || /^\/api\/(my-cards|cards|cs)\//.test(p)) return 'cards';
   if (p === '/api/insights' || p === '/api/aiusage' || p.startsWith('/api/aiusage/') || p === '/api/status' || p.startsWith('/api/status/')) return 'insights';
   if (p === '/api/vpn' || p.startsWith('/api/vpn/')) return 'vpn';

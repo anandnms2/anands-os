@@ -10,7 +10,7 @@
   var CATS = ['Office', 'Productivity', 'Collaboration', 'Business', 'Finance', 'Creative Tools', 'Engineering', 'Developer Tools', 'Games'];
   var D = { open: false, wins: [], z: 10, n: 0, menu: false, wall: LS.get('deskwall', 'dusk'), g: null, ai: { msgs: [], busy: false, file: null, win: null }, ctxm: null, q: '' };
 
-  var OSAPPS = [['photos', 'Photos', 'photos'], ['pulse', 'Pulse', 'pulse'], ['cards', 'Cards', 'card'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['vpn', 'VPN', 'vpn'], ['servers', 'Servers', 'monitor']];
+  var OSAPPS = [['photos', 'Photos', 'photos'], ['cards', 'Cards', 'card'], ['vault', 'Vault', 'lock'], ['insights', 'Insights', 'insights'], ['vpn', 'VPN', 'vpn'], ['servers', 'Servers', 'monitor']];
   var OSICON = {}; OSAPPS.forEach(function (o) { OSICON[o[0]] = o[2]; });
   var KIND_IC = { ai: 'chat', browser: 'globe', rbrowser: 'globe', files: 'folder' };
   function ext(n) { var m = /\.([a-z0-9]+)$/i.exec(n || ''); return m ? m[1].toLowerCase() : ''; }
@@ -48,7 +48,7 @@
   var TOOLS = [['editor', 'Editor', '/tools/editor.html', 1000, 640, 'file'], ['player', 'Player', '/tools/player.html', 920, 600, 'play'], ['recorder', 'Recorder', '/tools/recorder.html', 820, 640, 'mic'], ['terminal', 'Terminal', '/tools/terminal.html', 900, 580, 'terminal'], ['money', 'Money', '/tools/money.html#overview', 1040, 660, 'card'], ['subs', 'Subscriptions', '/tools/money.html#subs', 940, 640, 'card'], ['invest', 'Investments', '/tools/money.html#invest', 980, 640, 'card'], ['belong', 'Belongings', '/tools/home.html#belong', 980, 640, 'folder'], ['house', 'Household', '/tools/home.html#house', 940, 640, 'folder'], ['paperless', 'Paperless', '/tools/paperless.html', 1100, 680, 'file']];
   var SYS = [['browser', 'Browser', 'globe'], ['files', 'Files', 'folder'], ['google', 'Google Drive', 'cloud'], ['ai', 'Assistant', 'chat'], ['calc', 'Calculator', 'card'], ['sticky', 'Sticky Notes', 'file'], ['clock', 'Clock', 'photos'], ['conv', 'Converter', 'card'], ['snip', 'Screenshot and Snip', 'photos']].concat(TOOLS.map(function (o) { return ['tool:' + o[0], o[1], o[5]]; })).concat(OSAPPS.map(function (o) { return ['os:' + o[0], o[1], o[2]]; }));
   var DEF_ICONS = ['browser', 'files', 'ai'].concat(OSAPPS.map(function (o) { return 'os:' + o[0]; })).concat(['google']).concat(TOOLS.map(function (o) { return 'tool:' + o[0]; })).concat(['conv']), DEF_PINS = ['browser', 'files', 'ai', 'calc'];
-  var NCAT = { calc: 'Productivity', sticky: 'Productivity', clock: 'Productivity', conv: 'Productivity', snip: 'Creative Tools', 'tool:paperless': 'Productivity', 'tool:editor': 'Developer Tools', 'tool:terminal': 'Developer Tools', 'tool:player': 'Creative Tools', 'tool:recorder': 'Creative Tools', 'tool:money': 'Finance', 'tool:subs': 'Finance', 'tool:invest': 'Finance', 'tool:belong': 'Productivity', 'tool:house': 'Productivity', 'os:photos': 'Creative Tools', 'os:pulse': 'Productivity', 'os:cards': 'Business', 'os:vault': 'Productivity', 'os:insights': 'Engineering', 'os:servers': 'Engineering', 'os:vpn': 'Engineering' };
+  var NCAT = { calc: 'Productivity', sticky: 'Productivity', clock: 'Productivity', conv: 'Productivity', snip: 'Creative Tools', 'tool:paperless': 'Productivity', 'tool:editor': 'Developer Tools', 'tool:terminal': 'Developer Tools', 'tool:player': 'Creative Tools', 'tool:recorder': 'Creative Tools', 'tool:money': 'Finance', 'tool:subs': 'Finance', 'tool:invest': 'Finance', 'tool:belong': 'Productivity', 'tool:house': 'Productivity', 'os:photos': 'Creative Tools', 'os:cards': 'Business', 'os:vault': 'Productivity', 'os:insights': 'Engineering', 'os:servers': 'Engineering', 'os:vpn': 'Engineering' };
   function catalog() {
     var l = SYS.map(function (i) { return { id: i[0], name: i[1], ic: i[2], cat: NCAT[i[0]] || 'System', hay: i[1] + ' system' + (i[0] === 'google' ? ' drive cloud' : '') + (i[0] === 'browser' ? ' web internet' : '') }; });
     apps().forEach(function (a) { l.push({ id: 'app:' + a.slug, name: a.name, img: '/_icons/' + a.slug + '.png', slug: a.slug, cat: CATS.indexOf(a.category) >= 0 ? a.category : 'Other', hay: a.name + ' ' + (a.category || '') + ' ' + (a.alternativeTo || '') }); });
@@ -56,7 +56,7 @@
   }
   function itemBy(id) { return catalog().filter(function (i) { return i.id === id; })[0]; }
   function itAttr(it) { return (it.slug ? 'data-dk="app" data-s="' + esc(it.slug) + '"' : 'data-dk="launch" data-w="' + esc(it.id) + '"') + ' data-k="' + esc(it.id) + '"'; }
-  var OI = { calc: 'calc', sticky: 'sticky', clock: 'clock', conv: 'conv', snip: 'snip', 'tool:paperless': 'paperless', 'tool:editor': 'editor', 'tool:player': 'player', 'tool:recorder': 'recorder', 'tool:terminal': 'terminal', 'tool:money': 'money', 'tool:subs': 'subs', 'tool:invest': 'invest', 'tool:belong': 'belong', 'tool:house': 'house', browser: 'browser', files: 'files', google: 'drive', ai: 'ai', 'os:photos': 'photos', 'os:pulse': 'pulse', 'os:cards': 'cards', 'os:vault': 'vault', 'os:insights': 'insights', 'os:vpn': 'vpn', 'os:servers': 'servers' };
+  var OI = { calc: 'calc', sticky: 'sticky', clock: 'clock', conv: 'conv', snip: 'snip', 'tool:paperless': 'paperless', 'tool:editor': 'editor', 'tool:player': 'player', 'tool:recorder': 'recorder', 'tool:terminal': 'terminal', 'tool:money': 'money', 'tool:subs': 'subs', 'tool:invest': 'invest', 'tool:belong': 'belong', 'tool:house': 'house', browser: 'browser', files: 'files', google: 'drive', ai: 'ai', 'os:photos': 'photos', 'os:cards': 'cards', 'os:vault': 'vault', 'os:insights': 'insights', 'os:vpn': 'vpn', 'os:servers': 'servers' };
   function wIcon(w) { if (w.icon) return w.icon; var k = w.kind === 'rbrowser' || w.kind === 'browser' ? 'browser' : w.kind === 'ai' || w.kind === 'files' ? w.kind : w.tool ? 'tool:' + w.tool : w.view ? 'os:' + w.view : ''; return OI[k] ? '/oicons/' + OI[k] + '.svg' : ''; }
   function itGlyph(it, cls) { if (!it.img && OI[it.id]) it.img = '/oicons/' + OI[it.id] + '.svg'; return it.img ? '<img src="' + esc(it.img) + '" alt="">' : '<span class="dk-icg' + (cls ? ' ' + cls : '') + '">' + ic(it.ic) + '</span>'; }
   function lsList(k, d) { var v = LS.get(k, null); return Array.isArray(v) ? v : d.slice(); }
@@ -211,7 +211,7 @@
     return viewer(path);
   }
 
-  /* ---------- Anands OS pages as windows (Photos, Pulse, Cards...) ---------- */
+  /* ---------- Anands OS pages as windows (Photos, Cards...) ---------- */
   function toolWin(id, path) {
     var o = TOOLS.filter(function (x) { return x[0] === id; })[0]; if (!o) return;
     var ex = D.wins.filter(function (x) { return x.kind === 'tool' && x.tool === id; })[0];
@@ -493,7 +493,7 @@
   function aiSend(text) {
     var ai = D.ai; if (!text.trim() || ai.busy) return; ai.msgs.push({ role: 'user', content: text.trim() }); ai.busy = true; paintAi();
     var fw = D.wins.filter(function (x) { return x.kind === 'files'; })[0];
-    api('/api/chat', { method: 'POST', json: { messages: ai.msgs.slice(-12), ctx: { photos: false, insights: false, cards: false, pulse: false, files: true, apps: true }, desktop: { windows: D.wins.map(function (x) { return x.title; }), folder: fw ? (fw.src === 'google' ? 'Google Drive' : 'Files') : '', file: ai.file } } }).then(function (r) {
+    api('/api/chat', { method: 'POST', json: { messages: ai.msgs.slice(-12), ctx: { photos: false, insights: false, cards: false, files: true, apps: true }, desktop: { windows: D.wins.map(function (x) { return x.title; }), folder: fw ? (fw.src === 'google' ? 'Google Drive' : 'Files') : '', file: ai.file } } }).then(function (r) {
       var t = String(r.text || ''), act = null; t = t.replace(/^\s*ACTION:\s*(open|openfile)\s+(.+?)\s*$/gim, function (_, k, v) { act = { k: k, v: v.trim() }; return ''; }).trim();
       ai.msgs.push({ role: 'assistant', content: t || 'Done.' }); ai.busy = false; paintAi();
       if (act && act.k === 'open' && (act.v.toLowerCase() === 'browser' || OSICON[act.v.toLowerCase()])) { if (act.v.toLowerCase() === 'browser') openBrowser(); else osWin(act.v.toLowerCase()); act = null; }

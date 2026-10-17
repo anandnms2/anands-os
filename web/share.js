@@ -67,7 +67,7 @@ function card() {
   var standalone = window.matchMedia && matchMedia('(display-mode: standalone)').matches, ios = /iPhone|iPad/.test(navigator.userAgent);
   return '<div class="card apc"><h2>Phone app</h2><p class="note" style="margin:0">' + (standalone ? 'You are using the installed app.' : 'Install Anands OS to get its own icon, full screen, offline mode, and a place in your phone\'s Share menu.') + '</p><div class="aprow">' +
     (!standalone && SH.install ? '<button class="btn primary" data-sh="install">Install the app</button>' : '') + (!standalone && !SH.install ? '<span class="note">' + (ios ? 'On iPhone: tap Share, then Add to Home Screen.' : 'In Chrome: menu, then Install app or Add to Home screen.') + '</span>' : '') + '<button class="btn sm" data-sh="testshare">How sharing works</button></div>' +
-    '<label class="apchk"><input type="checkbox" data-sh="offline"' + (offlineOn() ? ' checked' : '') + '> Keep a copy of my last views on this device so the app opens without signal (your Pulse inbox summary is included). Cleared when you sign out.</label><div class="aprow"><button class="btn sm" data-sh="clearoffline">Remove saved copies now</button></div></div>';
+    '<label class="apchk"><input type="checkbox" data-sh="offline"' + (offlineOn() ? ' checked' : '') + '> Keep a copy of my last views on this device so the app opens without signal. Cleared when you sign out.</label><div class="aprow"><button class="btn sm" data-sh="clearoffline">Remove saved copies now</button></div></div>';
 }
 
 /* ---------- shortcuts from the home screen icon ---------- */

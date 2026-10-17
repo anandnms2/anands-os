@@ -5,7 +5,6 @@ var A = window.AOS; if (!A) return;
 var S = A.S, $ = A.$, esc = A.esc, api = A.api, ic = A.ic, toast = A.toast, LS = A.LS;
 var C = { tab: 'note', rec: null, chunks: [], t0: 0, tick: null, stream: null, blob: null, busy: false };
 var TABS = [['note', 'Note', 'doc'], ['task', 'Task', 'check'], ['voice', 'Voice', 'camera'], ['photo', 'Photo', 'image']];
-function pulseOn() { var c = (S.settings || {}).pulse; return !!(c && c.url && c.user && c.passSet); }
 function pad(n) { return (n < 10 ? '0' : '') + n; }
 function stamp(d) { d = d || new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()); }
 function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -37,8 +36,7 @@ function flush() {
   q.reduce(function (p, it) { return p.then(function () { return it.k === 'task' ? sendTask(it.o, true) : sendNote(it.text, it.at, true); }).catch(function () {}); }, Promise.resolve()).then(function () { toast(q.length + ' saved while offline are now filed'); });
 }
 function sendTask(o, quiet) {
-  if (!pulseOn()) return sendNote('Task: ' + o.title + (o.due_date ? ' (due ' + o.due_date + ')' : ''), null, quiet);
-  return api('/api/pulse/s/task', { method: 'POST', json: o }).then(function () { if (!quiet) toast('Task added to Pulse'); if (window.AOSPulse2) { var P = AOSPulse2.state; if (P.boot) AOSPulse2.load(true); } return true; }, function (e) { if (offline(e)) { queue({ k: 'task', o: o }); if (!quiet) toast('Offline. The task is saved and will be added when you are back online.'); return true; } throw e; });
+  return sendNote('Task: ' + o.title + (o.due_date ? ' (due ' + o.due_date + ')' : ''), null, quiet);
 }
 function sendNote(text, at, quiet) {
   var d = at ? new Date(at) : new Date(), first = String(text).split('\n')[0].replace(/[^\w ]+/g, ' ').trim().slice(0, 40);
@@ -49,7 +47,7 @@ function sendNote(text, at, quiet) {
 function head() { return '<div class="cptabs" role="tablist">' + TABS.map(function (t) { return '<button type="button" role="tab" aria-selected="' + (C.tab === t[0]) + '" data-cap="tab" data-t="' + t[0] + '">' + ic(t[2]) + t[1] + '</button>'; }).join('') + '</div>'; }
 function body() {
   if (C.tab === 'note') return '<textarea id="cpt" class="input" rows="6" placeholder="Write a note..." aria-label="Note"></textarea><p class="note">Saved as a text file in ' + (driveOn() ? 'Drive / Captures' : 'Files / Captures') + '.</p><div class="cpact"><button class="btn primary" data-cap="savenote">Save note</button></div>';
-  if (C.tab === 'task') return '<input id="cpk" class="input" autocomplete="off" placeholder="buy tyres tomorrow !high @personal" aria-label="Task"><p class="note">' + (pulseOn() ? 'Goes to your Pulse tasks.' : 'Pulse is not connected, so it is saved as a note.') + ' Add <b>today</b>, <b>tomorrow</b> or a weekday for the due date, <b>!high</b> for priority, <b>@personal</b> for the area.</p><div class="cpact"><button class="btn primary" data-cap="savetask">Add task</button></div>';
+  if (C.tab === 'task') return '<input id="cpk" class="input" autocomplete="off" placeholder="buy tyres tomorrow !high @personal" aria-label="Task"><p class="note">' + 'Saved as a note in your Captures folder.' + ' Add <b>today</b>, <b>tomorrow</b> or a weekday for the due date, <b>!high</b> for priority, <b>@personal</b> for the area.</p><div class="cpact"><button class="btn primary" data-cap="savetask">Add task</button></div>';
   if (C.tab === 'voice') {
     if (!navigator.mediaDevices || !window.MediaRecorder) return '<p class="note">This browser cannot record audio.</p>';
     var rec = !!C.rec;

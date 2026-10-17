@@ -50,14 +50,13 @@ export function effective() {
     vpn: { url: clean(s.vpn?.url) || clean(env.VPN_URL), user: clean(s.vpn?.user) || clean(env.VPN_USER), pass: clean(s.vpn?.pass) || clean(env.VPN_PASSWORD) },
     cards: { url: clean(s.cards?.url) || clean(env.CARDS_URL), user: clean(s.cards?.user) || clean(env.CARDS_USER), pass: clean(s.cards?.pass) || clean(env.CARDS_PASSWORD) },
     google: { clientId: clean(s.google?.clientId) || clean(env.GOOGLE_CLIENT_ID), clientSecret: clean(s.google?.clientSecret) || clean(env.GOOGLE_CLIENT_SECRET) },
-    pulse: { url: clean(s.pulse?.url) || clean(env.PULSE_URL), token: clean(s.pulse?.token) || clean(env.PULSE_TOKEN), user: clean(s.pulse?.user) || clean(env.PULSE_USER), pass: clean(s.pulse?.pass) || clean(env.PULSE_PASSWORD) },
     dav: { url: clean(s.dav?.url) || clean(env.DAV_URL), user: clean(s.dav?.user) || clean(env.DAV_USER), pass: clean(s.dav?.pass) || clean(env.DAV_PASSWORD) },
     vault: { url: clean(s.vault?.url) || clean(env.VAULT_URL) },
     chrome: { url: clean(s.chrome?.url) || clean(env.CHROME_URL), user: clean(s.chrome?.user) || clean(env.CHROME_USER) || 'anand', pass: clean(s.chrome?.pass) || clean(env.CHROME_PASSWORD), admin: clean(s.chrome?.admin) || clean(env.CHROME_ADMIN_PASSWORD) },
     authentik: { url: clean(s.authentik?.url) || clean(env.AUTHENTIK_URL) || (OIDC ? (() => { try { return new URL(OIDC.issuer).origin; } catch { return ''; } })() : ''), token: clean(s.authentik?.token) || clean(env.AUTHENTIK_TOKEN) },
     terminal: { host: clean(s.terminal?.host) || clean(env.TERMINAL_HOST), port: Number(s.terminal?.port || env.TERMINAL_PORT || 0) || 22, user: clean(s.terminal?.user) || clean(env.TERMINAL_USER) || 'root', key: clean(s.terminal?.key) || clean(env.TERMINAL_KEY).replace(/\\n/g, '\n'), auth: s.terminal?.auth === 'password' || (!s.terminal?.key && !env.TERMINAL_KEY && s.terminal?.auth !== 'key' && !!clean(s.terminal?.pass)) ? 'password' : 'key', pass: clean(s.terminal?.pass) || clean(env.TERMINAL_PASS) },
     mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
-    links: { ai: clean(s.links?.ai) || clean(env.LINK_AI) || 'https://ai.anands.xyz/oauth/openid', files: clean(s.links?.files) || clean(env.LINK_FILES) || 'https://files.anands.xyz/api/auth/oidc/login', storage: clean(s.links?.storage) || clean(env.LINK_STORAGE) || 'https://s3-admin.anands.xyz', paperless: clean(s.links?.paperless) || clean(env.LINK_PAPERLESS) || 'https://paperless.anands.xyz' },
+    links: { ai: clean(s.links?.ai) || clean(env.LINK_AI) || 'https://ai.anands.xyz/oauth/openid', files: clean(s.links?.files) || clean(env.LINK_FILES) || 'https://files.anands.xyz/api/auth/oidc/login', storage: clean(s.links?.storage) || clean(env.LINK_STORAGE) || 'https://s3-admin.anands.xyz', paperless: clean(s.links?.paperless) || clean(env.LINK_PAPERLESS) || 'https://paperless.anands.xyz', pulse: clean(s.links?.pulse) || clean(env.LINK_PULSE) || 'https://control.anands.xyz' },
     paperless: { token: clean(s.paperless?.token) || clean(env.PAPERLESS_TOKEN) },
     public: { url: clean(s.public?.url) || PUBLIC_URL },
     turn: { urls: clean(s.turn?.urls) || clean(env.TURN_URLS) || ((s.turn?.secret || env.TURN_SECRET) && PUBLIC_URL ? (() => { try { const h = new URL(PUBLIC_URL).hostname; return 'turn:' + h + ':3478,turn:' + h + ':3478?transport=tcp'; } catch { return ''; } })() : ''), secret: clean(s.turn?.secret) || clean(env.TURN_SECRET), stun: clean(s.turn?.stun) || clean(env.STUN_URLS) },
@@ -74,7 +73,6 @@ export function publicSettings() {
     vpn: { url: e.vpn.url, user: e.vpn.user, passSet: !!e.vpn.pass },
     cards: { url: e.cards.url, user: e.cards.user, passSet: !!e.cards.pass },
     google: { clientId: e.google.clientId, secretSet: !!e.google.clientSecret },
-    pulse: { url: e.pulse.url, tokenSet: !!e.pulse.token, user: e.pulse.user, passSet: !!e.pulse.pass },
     dav: { url: e.dav.url, user: e.dav.user, passSet: !!e.dav.pass },
     vault: { url: e.vault.url },
     chrome: { url: e.chrome.url, user: e.chrome.user, passSet: !!e.chrome.pass, adminSet: !!e.chrome.admin },
@@ -103,14 +101,13 @@ export function updateSettings(patch) {
   set('coolify', 'url', p.coolify?.url); set('coolify', 'token', p.coolify?.token, true);
   for (const g of ['status', 'vpn', 'cards', 'aiusage']) { set(g, 'url', p[g]?.url); set(g, 'user', p[g]?.user); set(g, 'pass', p[g]?.pass, true); }
   set('google', 'clientId', p.google?.clientId); set('google', 'clientSecret', p.google?.clientSecret, true);
-  set('pulse', 'url', p.pulse?.url); set('pulse', 'token', p.pulse?.token, true); set('pulse', 'user', p.pulse?.user); set('pulse', 'pass', p.pulse?.pass, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
   set('vault', 'url', p.vault?.url);
   if (p.chrome?.url !== undefined && String(p.chrome.url).trim() && !/^(https:\/\/[^\s\/]+|http:\/\/(127\.0\.0\.1|localhost)(:\d+)?)$/i.test(String(p.chrome.url).trim().replace(/\/+$/, ''))) throw Object.assign(new Error('Enter the address like https://browser.anands.xyz'), { status: 400 });
   set('chrome', 'user', p.chrome?.user); set('chrome', 'pass', p.chrome?.pass, true); set('chrome', 'admin', p.chrome?.admin, true); set('chrome', 'url', p.chrome?.url === undefined ? undefined : String(p.chrome.url).trim().replace(/\/+$/, ''));
   set('paperless', 'token', p.paperless?.token, true);
   set('authentik', 'url', p.authentik?.url); set('authentik', 'token', p.authentik?.token, true);
-  for (const f of ['ai', 'files', 'storage', 'paperless']) set('links', f, p.links?.[f]);
+  for (const f of ['ai', 'files', 'storage', 'paperless', 'pulse']) set('links', f, p.links?.[f]);
   if (p.terminal) {
     const t = p.terminal;
     set('terminal', 'host', t.host === undefined ? undefined : String(t.host).replace(/^[a-z]+:\/\//i, '').replace(/[\/\s].*$/, '')); set('terminal', 'user', t.user === undefined ? undefined : String(t.user).replace(/[^A-Za-z0-9._-]/g, ''));
@@ -141,5 +138,5 @@ export function updateSettings(patch) {
 }
 export function clearSecret(group, field) { if (stored[group]) { delete stored[group][field]; fs.writeFileSync(sfile, JSON.stringify(stored, null, 2), { mode: 0o600 }); } }
 
-/* Origins that may be shown inside the OS in a frame: the full Pulse and Card Scan apps. */
-export function frameOrigins() { const e = effective(); const o = []; for (const u of [e.pulse.url, e.cards.url]) { try { o.push(new URL(u).origin); } catch {} } return o; }
+/* Origins that may be shown inside the OS in a frame: the full Card Scan app. */
+export function frameOrigins() { const e = effective(); const o = []; for (const u of [e.cards.url]) { try { o.push(new URL(u).origin); } catch {} } return o; }

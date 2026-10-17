@@ -49,7 +49,7 @@ try {
     assert.equal(r[0].title, 'buy tyres'); assert.equal(r[0].pri, 'high'); assert.equal(r[0].dom, 'Personal'); assert.match(r[0].due_date, /^\d{4}-\d\d-\d\d$/);
     assert.equal(r[1].due_date, '2026-11-02'); assert.equal(r[1].title, 'call Zambia agent'); assert.equal(r[2].due_date, undefined);
   });
-  await t('without Pulse a task becomes a note instead of being lost', async () => {
+  await t('a task typed in search becomes a note', async () => {
     await open(); await p.fill('#oi', 'task renew road licence friday'); await p.keyboard.press('Enter'); for (let i = 0; i < 30 && !fs.readdirSync(path.join(data, 'fs', 'Captures')).some((x) => /Task.*renew/.test(x)); i++) await p.waitForTimeout(100);
     assert.ok(fs.readdirSync(path.join(data, 'fs', 'Captures')).some((x) => /Task.*renew road licence/.test(x)), fs.readdirSync(path.join(data, 'fs', 'Captures')).join(' | '));
   });

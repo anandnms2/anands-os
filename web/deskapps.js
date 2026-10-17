@@ -238,7 +238,7 @@
 
   /* ---------- Quick Launcher ---------- */
   var Q = { el: null, items: [], sel: 0, seq: 0, tm: 0 };
-  var SETS = [['Settings', 'settings'], ['Servers', 'servers'], ['Pulse', 'pulse'], ['Photos', 'photos'], ['Cards', 'cards'], ['Insights', 'insights']];
+  var SETS = [['Settings', 'settings'], ['Servers', 'servers'], ['Photos', 'photos'], ['Cards', 'cards'], ['Insights', 'insights']];
   function isMath(s) { return /^[\d\s+\-*/().,%^x×÷√]+$|^(sqrt|sin|cos|tan|ln|log|pi)\b/i.test(s) && /[\d)]/.test(s) && /[+\-*/^x×÷%(]|sqrt|sin|cos|tan|ln|log/i.test(s); }
   function cmdItems(s) {
     var out = [], m, ce = dx() && dx().calcEval;

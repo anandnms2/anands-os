@@ -122,7 +122,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .suitep .icons img{width:54px;height:54px;border-radius:13px;display:block}
 .suitep .more{width:54px;height:54px;border-radius:13px;border:1px dashed var(--line);background:none;color:var(--muted);font-size:13px;font-weight:600}
 .today{grid-column:span 7;padding:24px;border-radius:20px;border:1px dashed var(--line)}
-.recent{grid-column:span 5;padding:24px;border-radius:20px;background:var(--surface);border:1px solid var(--line)}
+.recent{grid-column:span 12;padding:24px;border-radius:20px;background:var(--surface);border:1px solid var(--line)}
 .recent .rr{display:flex;align-items:center;gap:12px;width:100%;padding:0;border:0;background:none;text-align:left;margin-top:12px}
 .recent .rr img{width:34px;height:34px;border-radius:9px;object-fit:cover}
 .recent .rr small{margin-left:auto;color:var(--muted)}

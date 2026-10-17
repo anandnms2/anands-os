@@ -6,7 +6,7 @@ var S = A.S, $ = A.$, esc = A.esc, api = A.api, ic = A.ic, toast = A.toast, LS =
 var DEF = { mode: 'system', accent: 'default', oswall: false, fs: 15, keys: true, widgets: {}, t: 0 };
 var L = Object.assign({}, DEF, LS.get('look', {}));
 var ACC = [['default', 'Orange', '#f68712'], ['#3b82f6', 'Blue', '#3b82f6'], ['#14b8a6', 'Teal', '#14b8a6'], ['#22c55e', 'Green', '#22c55e'], ['#8b5cf6', 'Violet', '#8b5cf6'], ['#f43f5e', 'Rose', '#f43f5e'], ['#eab308', 'Gold', '#eab308']];
-var WD = [['clock', 'Clock', 'Dar es Salaam and Kochi', 230, 128], ['tasks', 'Tasks', 'Open tasks from Pulse', 280, 230], ['agenda', 'Today', 'Meetings and events today', 280, 200], ['servers', 'Servers', 'Health of your apps', 230, 130], ['note', 'Sticky note', 'Jot something down', 250, 190]];
+var WD = [['clock', 'Clock', 'Dar es Salaam and Kochi', 230, 128], ['servers', 'Servers', 'Health of your apps', 230, 130], ['note', 'Sticky note', 'Jot something down', 250, 190]];
 var saveT = null;
 
 /* ---------- colour ---------- */
@@ -51,7 +51,7 @@ function pull() {
 /* ---------- widgets ---------- */
 var desk, layer, WS = { ins: null, insAt: 0 };
 function wdef(id) { return WD.filter(function (w) { return w[0] === id; })[0]; }
-function wstate(id) { var s = L.widgets[id]; if (!s) { var i = WD.map(function (w) { return w[0]; }).indexOf(id); s = L.widgets[id] = { on: id === 'clock' || id === 'tasks', x: -1, y: -1 }; s._i = i; } return s; }
+function wstate(id) { var s = L.widgets[id]; if (!s) { var i = WD.map(function (w) { return w[0]; }).indexOf(id); s = L.widgets[id] = { on: id === 'clock', x: -1, y: -1 }; s._i = i; } return s; }
 function place(id, el) {
   var s = wstate(id), d = wdef(id), W = desk.clientWidth, H = desk.clientHeight - 60, x = s.x, y = s.y;
   if (x < 0 || y < 0) { var i = WD.map(function (w) { return w[0]; }).indexOf(id), col = Math.floor(i / 3); x = W - d[3] - 24 - col * (d[3] + 16); y = 20 + (i % 3) * 190; }
@@ -59,19 +59,7 @@ function place(id, el) {
 }
 function tz(z, o) { try { return new Intl.DateTimeFormat('en-GB', Object.assign({ timeZone: z, hourCycle: 'h23' }, o)).format(new Date()); } catch (e) { return ''; } }
 function body(id) {
-  var P = window.AOSPulse2 && AOSPulse2.state, b = P && P.boot, on = window.AOSPulse2 && AOSPulse2.on();
   if (id === 'clock') return '<div class="wd-time">' + tz('Africa/Dar_es_Salaam', { hour: '2-digit', minute: '2-digit' }) + '</div><div class="wd-sub">Dar es Salaam · ' + tz('Africa/Dar_es_Salaam', { weekday: 'short', day: 'numeric', month: 'short' }) + '</div><div class="wd-row"><span>Kochi</span><b>' + tz('Asia/Kolkata', { hour: '2-digit', minute: '2-digit' }) + '</b></div>';
-  if (id === 'tasks') {
-    if (!on) return '<p class="wd-none">Connect Pulse in Settings to see your tasks.</p>'; if (!b) return '<p class="wd-none">Loading...</p>';
-    var t = (b.tasks || []).filter(function (x) { return x.status !== 'done'; }).sort(function (x, y) { return String(x.due || '9999').localeCompare(String(y.due || '9999')); }).slice(0, 6);
-    return (t.length ? t.map(function (x) { return '<button class="wd-li" data-wd="task" data-id="' + esc(x.id) + '"><i></i><span>' + esc(x.title) + '</span>' + (x.due ? '<small>' + esc(String(x.due).slice(5)) + '</small>' : '') + '</button>'; }).join('') : '<p class="wd-none">Nothing open. Nice.</p>') + '<button class="wd-add" data-wd="newtask">+ New task</button>';
-  }
-  if (id === 'agenda') {
-    if (!on) return '<p class="wd-none">Connect Pulse in Settings to see today.</p>'; if (!b) return '<p class="wd-none">Loading...</p>';
-    var td = b.now && b.now.today, ev = (b.events || []).filter(function (e) { return e.d === td; }).sort(function (x, y) { return x.s - y.s; }).slice(0, 6);
-    var hh = function (h) { var x = Math.floor(h), m = Math.round((h - x) * 60); return ('0' + x).slice(-2) + ':' + ('0' + m).slice(-2); };
-    return ev.length ? ev.map(function (e) { return '<div class="wd-li"><small>' + (e.allDay ? 'All day' : hh(e.s)) + '</small><span>' + esc(e.title) + '</span></div>'; }).join('') : '<p class="wd-none">No meetings today.</p>';
-  }
   if (id === 'servers') {
     var d = S.ins && S.ins.data || WS.ins; if (!d) return '<p class="wd-none">Loading...</p>'; var R = d.resources, bad = R.filter(function (r) { return r.s === 'bad'; }), ok = R.filter(function (r) { return r.s === 'ok'; }).length;
     return '<div class="wd-time" style="color:' + (bad.length ? 'var(--bad)' : 'var(--ok)') + '">' + (bad.length ? bad.length + ' down' : 'All good') + '</div><div class="wd-sub">' + ok + ' healthy of ' + R.length + '</div>' + (bad.length ? '<div class="wd-sub">' + esc(bad.slice(0, 2).map(function (r) { return r.n; }).join(', ')) + '</div>' : '');
@@ -97,7 +85,6 @@ function initDesk() {
   setInterval(function () { if (!desk.hidden) { refreshData(); drawWidgets(); } }, 60000);
 }
 function refreshData() {
-  if (window.AOSPulse2 && AOSPulse2.on() && (wstate('tasks').on || wstate('agenda').on)) { var P = AOSPulse2.state; if (!P.boot && !P.loading) AOSPulse2.load(true).then(drawWidgets); else if (P.boot && !P.loading) AOSPulse2.load(true).then(drawWidgets); }
   if (wstate('servers').on && !(S.ins && S.ins.data) && Date.now() - WS.insAt > 120000) { WS.insAt = Date.now(); api('/api/insights').then(function (d) { WS.ins = d; drawWidgets(); }).catch(function () {}); }
 }
 var drag = null;
@@ -115,8 +102,6 @@ document.addEventListener('input', function (e) { if (e.target.getAttribute && e
 document.addEventListener('click', function (e) {
   var b = e.target.closest && e.target.closest('[data-wd]'); if (!b || b.tagName === 'TEXTAREA') return; var a = b.getAttribute('data-wd');
   if (a === 'off') { var id = b.closest('.wd').getAttribute('data-w'); wstate(id).on = false; save(); drawWidgets(true); if (S.view === 'appearance') A.redraw(); }
-  if (a === 'newtask' && window.AOSCapture) { AOSCapture.open('task'); }
-  if (a === 'task' && window.AOSPulse2) { if (window.AOSDesk) AOSDesk.hide(false); AOSPulse2.openTask(b.getAttribute('data-id')); }
 });
 
 /* ---------- keyboard ---------- */

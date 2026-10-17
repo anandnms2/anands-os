@@ -74,15 +74,15 @@ try {
     await p.click('[data-dk="chnone"]'); assert.equal(await p.locator('#dkicons .dk-ic').count(), 0); await p.click('[data-dk="chsuggest"]'); assert.ok(await p.locator('#dkicons [data-w="browser"]').count() === 1 && await p.locator('#dkicons [data-s="photos"], #dkicons [data-w="os:photos"]').count() === 1, 'suggest keeps defaults + most used');
     await p.click('[data-dk="chall"]'); assert.ok(await p.locator('#dkicons .dk-ic').count() > 10); await p.click('[data-dk="chreset"]'); assert.equal(await p.locator('#dkicons [data-s="notes"]').count(), 0);
     await cb('os:cards').uncheck(); await p.click('.dkw[aria-label="Desktop icons"] [data-dk="chdone"]'); assert.equal(await p.locator('.dkw[aria-label="Desktop icons"]').count(), 0);
-    await p.reload(); await p.waitForSelector('#desk:not([hidden])'); assert.equal(await p.locator('#dkicons [data-w="os:cards"]').count(), 0); assert.equal(await p.locator('#dkicons [data-w="os:pulse"]').count(), 1);
+    await p.reload(); await p.waitForSelector('#desk:not([hidden])'); assert.equal(await p.locator('#dkicons [data-w="os:cards"]').count(), 0); assert.equal(await p.locator('#dkicons [data-w="os:vault"]').count(), 1);
     await p.click('.dk-start'); await p.click('#dkmenu .dk-mi[data-k="os:cards"]', { button: 'right' }); await p.click('#dkctx [data-dk="deskadd"]'); assert.equal(await p.locator('#dkicons [data-w="os:cards"]').count(), 1);
     await p.fill('#dkq', 'notes'); await p.click('#dkmenu [data-dk="app"][data-s="notes"]'); await p.waitForSelector('.dkw iframe[src^="/apps/notes/"]');
   });
   await t('right-click an icon or Start tile: remove, add to desktop, pin to taskbar', async () => {
-    await p.click('#dkicons [data-w="os:pulse"]', { button: 'right' }); await p.click('#dkctx [data-dk="deskrm"]'); assert.equal(await p.locator('#dkicons [data-w="os:pulse"]').count(), 0);
-    await p.click('.dk-start'); await p.click('#dkmenu .dk-mi[data-k="os:pulse"]', { button: 'right' }); await p.click('#dkctx [data-dk="deskadd"]'); assert.equal(await p.locator('#dkicons [data-w="os:pulse"]').count(), 1);
-    await p.click('#dkmenu .dk-mi[data-k="os:pulse"]', { button: 'right' }); await p.click('#dkctx [data-dk="pinadd"]'); assert.equal(await p.locator('.dk-pin[data-w="os:pulse"]').count(), 1);
-    await p.click('.dk-pin[data-w="os:pulse"]', { button: 'right' }); await p.click('#dkctx [data-dk="pinrm"]'); assert.equal(await p.locator('.dk-pin[data-w="os:pulse"]').count(), 0);
+    await p.click('#dkicons [data-w="os:vault"]', { button: 'right' }); await p.click('#dkctx [data-dk="deskrm"]'); assert.equal(await p.locator('#dkicons [data-w="os:vault"]').count(), 0);
+    await p.click('.dk-start'); await p.click('#dkmenu .dk-mi[data-k="os:vault"]', { button: 'right' }); await p.click('#dkctx [data-dk="deskadd"]'); assert.equal(await p.locator('#dkicons [data-w="os:vault"]').count(), 1);
+    await p.click('#dkmenu .dk-mi[data-k="os:vault"]', { button: 'right' }); await p.click('#dkctx [data-dk="pinadd"]'); assert.equal(await p.locator('.dk-pin[data-w="os:vault"]').count(), 1);
+    await p.click('.dk-pin[data-w="os:vault"]', { button: 'right' }); await p.click('#dkctx [data-dk="pinrm"]'); assert.equal(await p.locator('.dk-pin[data-w="os:vault"]').count(), 0);
   });
   await t('windows drag, resize, maximise, minimise and restore from the taskbar', async () => {
     const w = p.locator('.dkw').first(); const before = await w.boundingBox(); const bar = await p.locator('.dkw-bar').first().boundingBox();
@@ -177,16 +177,14 @@ try {
     await p.mouse.click(700, 760, { button: 'right' }); await p.locator('#dkctx button', { hasText: 'Arrange icons by name' }).click(); const n1 = await names(); assert.deepEqual(n1, [...n1].sort((x, y) => x.toLowerCase().localeCompare(y.toLowerCase())));
     await p.mouse.click(700, 760, { button: 'right' }); await p.locator('#dkctx button', { hasText: 'Arrange icons by type' }).click(); const n2 = await names(); assert.equal(n2.length, n1.length); assert.notDeepEqual(n2, n1);
   });
-  await t('Desktop has Photos, Pulse, Cards, Vault, Insights, VPN and Browser as apps', async () => {
-    for (const v of ['browser', 'os:photos', 'os:pulse', 'os:cards', 'os:vault', 'os:insights', 'os:vpn']) assert.equal(await p.locator('#dkicons [data-dk="launch"][data-w="' + v + '"]').count(), 1, v);
-    await p.click('.dk-start'); await p.waitForSelector('#dkmenu:not([hidden])'); for (const v of ['browser', 'os:photos', 'os:pulse']) assert.equal(await p.locator('#dkmenu [data-w="' + v + '"]').count(), 1, v); await p.click('.dk-start');
+  await t('Desktop has Photos, Cards, Vault, Insights, VPN and Browser as apps', async () => {
+    for (const v of ['browser', 'os:photos', 'os:vault', 'os:cards', 'os:vault', 'os:insights', 'os:vpn']) assert.equal(await p.locator('#dkicons [data-dk="launch"][data-w="' + v + '"]').count(), 1, v);
+    await p.click('.dk-start'); await p.waitForSelector('#dkmenu:not([hidden])'); for (const v of ['browser', 'os:photos', 'os:vault']) assert.equal(await p.locator('#dkmenu [data-w="' + v + '"]').count(), 1, v); await p.click('.dk-start');
   });
-  await t('Photos and Pulse open in windows without the OS frame', async () => {
+  await t('Photos opens in windows without the OS frame', async () => {
     if (!(await p.locator('.dkw[aria-label="Photos"]').count())) await p.locator('#dkicons [data-w="os:photos"]').evaluate((b) => b.click());
     await p.waitForSelector('.dkw[aria-label="Photos"] iframe'); const fr = p.frameLocator('.dkw[aria-label="Photos"] iframe'); await fr.locator('#view h1').first().waitFor(); assert.equal(await fr.locator('#view h1').first().innerText(), 'Photos');
     assert.equal(await fr.locator('#rail').isVisible(), false); assert.equal(await fr.locator('#top').isVisible(), false); await shot(p, 'desktop-photos');
-    await p.locator('#dkicons [data-w="os:pulse"]').evaluate((b) => b.click()); await p.waitForSelector('.dkw[aria-label="Pulse"] iframe'); await p.frameLocator('.dkw[aria-label="Pulse"] iframe').locator('#view h1').first().waitFor();
-    assert.equal(await p.locator('.dkw[aria-label="Pulse"]').count(), 1); await p.locator('#dkicons [data-w="os:pulse"]').evaluate((b) => b.click()); assert.equal(await p.locator('.dkw[aria-label="Pulse"]').count(), 1, 'reuses the open window');
   });
   await t('Browser: start page, address bar, links, forms, back and forward', async () => {
     await p.click('#dkicons [data-w="browser"]'); await p.waitForSelector('.dkw[aria-label="Browser"] .dk-start2'); await shot(p, 'desktop-browser-start');

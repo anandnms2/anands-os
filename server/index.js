@@ -14,7 +14,6 @@ import { handleAiUsage, test as aiTest, clearAiUsageCache } from './aiusage.js';
 import { handleStatus, test as statusTest, clearStatusCache } from './status.js';
 import { handleVpn, test as vpnTest } from './vpn.js';
 import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
-import { handlePulse, test as pulseTest, clearPulseCache } from './pulse.js';
 import { handleChat } from './chat.js';
 import { handleProfile } from './profile.js';
 import { handleBrowse, clearCookies as browseClear } from './browse.js';
@@ -42,7 +41,6 @@ import { serveStatic } from './static.js';
 const CONNECT_EXTRA = (env.CONNECT_SRC_EXTRA || '').trim();
 const BASE_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'permissions-policy': 'camera=(self), microphone=(self), display-capture=(self), geolocation=()' };
 const UI_CSP_PARTS = ["default-src 'self'", "script-src 'self' 'wasm-unsafe-eval'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", "font-src https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self' blob:", "connect-src 'self'"];
-const pulseOrigin = () => { try { const u = effective().pulse.url; return u ? new URL(u).origin : ''; } catch { return ''; } };
 const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self'" + (SJ_HOST ? ' https://' + SJ_HOST : '') + (chromeOrigin() ? ' ' + chromeOrigin() : ''), "manifest-src 'self'", "worker-src 'self'", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'self'"].join('; ');
 /* Apps can only talk to this server. puter.com is not reachable from them: nothing else is in connect-src. */
 const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
@@ -52,7 +50,7 @@ function redact(o) { const out = {}; for (const [g, v] of Object.entries(o)) { i
 async function api(req, res, url) {
   const p = url.pathname;
   if (p === '/api/settings' && req.method === 'GET') return json(res, 200, isOwner(sessionOf(req)) ? publicSettings() : redact(publicSettings()));
-  if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); clearStatusCache(); clearAiUsageCache(); clearCardsCache(); clearPulseCache(); return json(res, 200, publicSettings()); }
+  if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); clearStatusCache(); clearAiUsageCache(); clearCardsCache(); return json(res, 200, publicSettings()); }
   if (p === '/api/settings/test' && req.method === 'POST') {
     const { target } = await readJson(req, 1024);
     if (target === 'immich') return json(res, 200, await immichStatus());
@@ -61,7 +59,6 @@ async function api(req, res, url) {
     if (target === 'vault') return json(res, 200, await vaultStatus());
     if (target === 'mail') return json(res, 200, await mail.verify());
     if (target === 'google') return json(res, 200, { configured: gConfigured(), connected: gConnected(), reason: gConfigured() ? (gConnected() ? '' : 'Not connected yet. Use Connect Google Drive.') : 'Add the client ID and secret.' });
-    if (target === 'pulse') return json(res, 200, await pulseTest());
     if (target === 'aiusage') return json(res, 200, await aiTest());
     if (target === 'status') return json(res, 200, await statusTest());
     if (target === 'vpn') return json(res, 200, await vpnTest());
@@ -88,7 +85,6 @@ async function api(req, res, url) {
   if (p === '/api/browse/clear' && req.method === 'POST') { browseClear(req); return json(res, 200, { ok: true }); }
   if (p === '/api/browse' && (req.method === 'GET' || req.method === 'POST')) return handleBrowse(req, res, url);
   if (p === '/api/gdrive' || p.startsWith('/api/gdrive/')) return handleGdrive(req, res, url);
-  if (p === '/api/pulse' || p.startsWith('/api/pulse/')) return handlePulse(req, res, url);
   if (p === '/api/aiusage' || p.startsWith('/api/aiusage/')) return handleAiUsage(req, res, url);
   if (p === '/api/status' || p.startsWith('/api/status/')) return handleStatus(req, res, url);
   if (p === '/api/vpn' || p.startsWith('/api/vpn/')) return handleVpn(req, res, url);

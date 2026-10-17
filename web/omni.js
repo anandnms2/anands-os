@@ -5,10 +5,7 @@ var A = window.AOS; if (!A) return;
 var S = A.S, $ = A.$, esc = A.esc, api = A.api, ic = A.ic, toast = A.toast;
 var O = { q: '', res: [], sel: 0, tok: 0, timer: null, groups: {}, off: {} };
 
-function pulseOn() { var c = (S.settings || {}).pulse; return !!(c && c.url && c.user && c.passSet); }
-function px() { return window.AOSPulse2 && window.AOSPulse2.state; }
 function nav(v) { return function () { S.openApp = null; A.go(v); }; }
-function pulseView(v) { return function () { var P = px(); if (P) { P.view = v; A.LS.set('pxview', v); } A.go('pulse'); }; }
 
 /* ---------- commands ---------- */
 function commands() {
@@ -16,13 +13,12 @@ function commands() {
   var add = function (n, s, i, run, kw, area) { if (area && !A.can(area)) return; c.push({ g: 'Go to', n: n, s: s, ic: i, run: run, kw: kw || '' }); };
   add('Home', 'Overview', 'home', nav('home')); add('Photos', 'Immich library', 'photos', nav('photos'), '', 'photos'); add('Drive', 'Files', 'cloud', nav('drive'), 'files storage', 'drive');
   add('Vault', 'Passwords', 'lock', nav('vault'), 'passwords', 'vault'); add('Cloud Insights', 'Servers and deployments', 'insights', nav('insights'), 'coolify', 'insights'); add('Servers', 'Server health', 'monitor', nav('servers'), '', 'insights'); add('AI Insights', 'FreeLLMAPI usage, models and keys', 'insights', nav('ai'), 'freellmapi llm tokens', 'insights');
-  add('Pulse', 'Mail, WhatsApp, tasks', 'pulse', nav('pulse'), 'inbox', 'pulse'); add('VPN', 'WireGuard', 'vpn', nav('vpn'), 'wireguard', 'vpn'); add('Cards', 'Business cards and contacts', 'cards', nav('cards'), 'contacts', 'cards');
+  if (A.isOwner()) add('Pulse', 'Opens Pulse in a new tab', 'pulse', function () { window.open(((S.settings || {}).links || {}).pulse || 'https://control.anands.xyz', '_blank', 'noopener'); }, 'mail inbox whatsapp tasks calendar control'); add('VPN', 'WireGuard', 'vpn', nav('vpn'), 'wireguard', 'vpn'); add('Cards', 'Business cards and contacts', 'cards', nav('cards'), 'contacts', 'cards');
   add('Suite', 'All apps', 'apps', nav('apps'), '', 'suite'); add('Settings', 'Connections and preferences', 'settings', nav('settings'), 'connections');
   if (window.AOSSec) add('Security center', 'Sessions, sign-in history, password health', 'shield', nav('security'), 'sessions logins passwords');
   if (window.AOSAppearance) add('Appearance', 'Theme, wallpaper, widgets', 'image', nav('appearance'), 'theme wallpaper colour widgets');
   if (window.AOSTeam) add('Team and guests', 'Invite people and set what they can open', 'cards', nav('team'), 'guest invite members share access');
   if (window.AOSDesk && AOSDesk.tool && A.isOwner()) [['editor', 'Editor', 'Edit text, code and config files'], ['player', 'Player', 'Music and video from your files'], ['recorder', 'Recorder', 'Record your screen or voice'], ['terminal', 'Terminal', 'Command line on your server'], ['money', 'Money', 'Accounts, budgets and spending'], ['subs', 'Subscriptions', 'What renews, and when'], ['invest', 'Investments', 'Holdings and net worth'], ['belong', 'Belongings', 'What you own and warranties'], ['paperless', 'Paperless', 'Search, tag and upload your documents'], ['house', 'Household', 'Pantry and shopping lists']].forEach(function (t) { c.push({ g: 'Apps', n: t[1], s: t[2], img: '/oicons/' + t[0] + '.svg', run: function () { AOSDesk.show(); AOSDesk.tool(t[0]); }, kw: t[0] }); });
-  [['Inbox', 'inbox'], ['WhatsApp', 'chats'], ['Tasks', 'tasks'], ['Calendar', 'calendar']].forEach(function (x) { if (pulseOn()) add('Pulse: ' + x[0], 'Pulse', 'pulse', pulseView(x[1])); });
   S.apps.forEach(function (a) { if (a.hasSource) c.push({ g: 'Apps', n: a.name, s: 'Suite app', img: '/_icons/' + a.slug + '.png', run: function () { A.launch(a.slug); }, kw: a.slug + ' ' + (a.alternativeTo || '') }); });
   var act = function (n, s, i, run, kw) { c.push({ g: 'Actions', n: n, s: s, ic: i, run: run, kw: kw || '' }); };
   if (window.AOSCapture) {
@@ -36,7 +32,6 @@ function commands() {
   act('Open Desktop', 'Windows and apps side by side', 'desk', function () { if (window.AOSDesk) AOSDesk.show(); }, 'windows');
   act('Switch light or dark', 'Appearance', 'image', function () { if (window.AOSAppearance) AOSAppearance.toggleMode(); }, 'theme dark light mode');
   act('Keyboard shortcuts', 'Show all shortcuts', 'info', function () { if (window.AOSAppearance) AOSAppearance.help(); }, 'keys help ?');
-  if (pulseOn()) act('Refresh Pulse', 'Fetch mail and WhatsApp now', 'pulse', function () { if (window.AOSPulse2) AOSPulse2.load(true).then(function () { toast('Pulse refreshed'); }); });
   act('Sign out', 'Leave Anands OS', 'out', function () { location.href = '/auth/logout'; }, 'logout');
   return c;
 }
@@ -46,16 +41,7 @@ function rank(x, ws) { var n = x.n.toLowerCase(); return (n === ws.join(' ') ? 0
 
 /* ---------- sources ---------- */
 function localSources(q, ws) {
-  var out = [], P = px(), b = P && P.boot;
-  if (b) {
-    (b.items || []).filter(function (i) { return hit({ n: (i.subj || '') + ' ' + (i.from || ''), s: (i.snip || '') + ' ' + (i.sum || '') }, ws); }).slice(0, 5).forEach(function (i) {
-      var mail = String(i.id)[0] === 'e';
-      out.push({ g: mail ? 'Mail' : 'WhatsApp', n: mail ? (i.subj || '(no subject)') : (i.from || 'WhatsApp'), s: mail ? (i.from || '') : String(i.snip || i.sum || '').slice(0, 80), ic: mail ? 'doc' : 'chat', run: function () { AOSPulse2.openRef(i); } });
-    });
-    (b.tasks || []).filter(function (t) { return hit({ n: t.title || '' }, ws); }).slice(0, 5).forEach(function (t) {
-      out.push({ g: 'Tasks', n: t.title, s: (t.status === 'done' ? 'Done' : 'Open') + (t.due ? ' · due ' + t.due : ''), ic: 'check', run: function () { AOSPulse2.openTask(t.id); } });
-    });
-  }
+  var out = [];
   var V = S.vault; if (V && V.items) V.items.filter(function (i) { return hit({ n: i.name || '', s: (i.user || '') + ' ' + (i.url || '') }, ws); }).slice(0, 5).forEach(function (i) {
     out.push({ g: 'Vault', n: i.name, s: i.user || i.url || 'Vault entry', ic: 'lock', run: function () { V.sel = i.id; V.q = ''; A.go('vault'); } });
   });
@@ -67,10 +53,6 @@ function remote(q, tok) {
   var set = function (g, list) { if (tok !== O.tok) return; O.groups[g] = list; draw(); };
   var ok = function (g, fn) { return function (e) { if (e && (e.code === 'not_configured' || /^(409|501)$/.test(String(e.status)))) O.off[g] = 1; set(g, []); }; };
   if (q.length < 2) return;
-  if (pulseOn() && !O.off.pulse) api('/api/pulse/s/items?q=' + encodeURIComponent(q) + '&limit=6').then(function (d) {
-    var P = px(), have = {}; ((P && P.boot && P.boot.items) || []).forEach(function (i) { have[i.id] = 1; });
-    set('Mail', ((d.items || d || []).filter ? (d.items || d) : []).filter(function (i) { return !have[i.id]; }).slice(0, 5).map(function (i) { var mail = String(i.id)[0] === 'e'; return { g: mail ? 'Mail' : 'WhatsApp', n: mail ? (i.subj || '(no subject)') : (i.from || 'WhatsApp'), s: mail ? (i.from || '') : String(i.snip || i.sum || '').slice(0, 80), ic: mail ? 'doc' : 'chat', run: function () { AOSPulse2.openRef(i); } }; }));
-  }).catch(ok('pulse'));
   if (((S.settings || {}).cards || {}).url && !O.off.cards) api('/api/cards?q=' + encodeURIComponent(q) + '&limit=5').then(function (d) {
     set('Contacts', (d.cards || []).slice(0, 5).map(function (c) { return { g: 'Contacts', n: c.name || c.company || 'Card', s: [c.title, c.company, c.phone || c.email].filter(Boolean).join(' · '), ic: 'cards', run: function () { A.go('cards'); setTimeout(function () { if (window.AOSInt) AOSInt.reopen(c.id); }, 120); } }; }));
   }).catch(ok('cards'));
@@ -96,7 +78,7 @@ function openFile(f) {
 function dynamic(q) {
   var out = [], m, v;
   if (window.AOSCapture) {
-    if ((m = /^(?:new\s+)?task[:\s]+(.{2,})$/i.exec(q))) { v = m[1]; out.push({ g: 'Create', n: 'Create task: ' + v, s: pulseOn() ? 'Adds it to Pulse' : 'Pulse is not connected, it will be saved as a note', ic: 'check', run: function () { AOSCapture.addTask(v); } }); }
+    if ((m = /^(?:new\s+)?task[:\s]+(.{2,})$/i.exec(q))) { v = m[1]; out.push({ g: 'Create', n: 'Create task: ' + v, s: 'Saved as a note in your Captures folder', ic: 'check', run: function () { AOSCapture.addTask(v); } }); }
     if ((m = /^(?:new\s+)?note[:\s]+(.{2,})$/i.exec(q))) { v = m[1]; out.push({ g: 'Create', n: 'Save note: ' + v.slice(0, 60), s: 'Saved to your Captures folder', ic: 'doc', run: function () { AOSCapture.addNote(v); } }); }
   }
   if ((m = /^(?:ask|\?)\s*(.{3,})$/i.exec(q))) { v = m[1]; out.push({ g: 'Create', n: 'Ask the assistant: ' + v.slice(0, 60), s: 'Opens the assistant', ic: 'chat', run: function () { document.getElementById('fab').click(); setTimeout(function () { var i = $('#ci'); if (i) { i.value = v; i.focus(); } }, 150); } }); }
@@ -132,7 +114,6 @@ function open() {
   var m = $('#modal'); m.hidden = false;
   m.innerHTML = '<div class="modal" data-act="mx"><div class="card pal omni" role="dialog" aria-modal="true" aria-label="Search and commands"><div class="omin">' + ic('search') + '<input id="oi" role="combobox" aria-expanded="true" aria-controls="omres" autocomplete="off" spellcheck="false" placeholder="Search everything, or type a command" aria-label="Search and commands"><kbd>Esc</kbd></div><div class="res" id="omres" role="listbox"></div><div class="omfoot"><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> move</span><span><kbd>Enter</kbd> open</span><span>task <i>text</i> · note <i>text</i> · ask <i>question</i></span></div></div></div>';
   draw(); var i = $('#oi'); if (i) i.focus();
-  var P = px(); if (pulseOn() && window.AOSPulse2 && P && !P.boot && !P.loading) AOSPulse2.load(true).then(function () { if ($('#oi')) draw(); });
   if (A.loadAlbums) A.loadAlbums().then(function () { if ($('#oi')) draw(); });
 }
 document.addEventListener('input', function (ev) {

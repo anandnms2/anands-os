@@ -1,10 +1,10 @@
 /* Anands OS service worker: app shell offline, a small saved copy of your last views, and the phone share target.
  * Photos, files and everything else always go to the network. */
-const V = 'aos-shell-74';
+const V = 'aos-shell-75';
 const API = 'aos-api-1', SHARE = 'aos-share', FLAGS = 'aos-flags';
-const SHELL = ['/', '/os.css', '/os.js', '/drive.js', '/integrations.js', '/cards.js', '/qrcode.js', '/mycards.js', '/servers.js', '/ai.js', '/cloud.js', '/pulse.js', '/pulse2.js', '/profile.js', '/home.js', '/omni.js', '/capture.js', '/security.js', '/appearance.js', '/share.js', '/team.js', '/money-os.js', '/desktop.js', '/deskapps.js', '/browser-settings.js', '/vault-crypto.js', '/logo-white.png', '/logo-orange.png', '/manifest.webmanifest', '/icon-192.png'];
+const SHELL = ['/', '/os.css', '/os.js', '/drive.js', '/integrations.js', '/cards.js', '/qrcode.js', '/mycards.js', '/servers.js', '/ai.js', '/cloud.js', '/profile.js', '/home.js', '/omni.js', '/capture.js', '/security.js', '/appearance.js', '/share.js', '/team.js', '/money-os.js', '/desktop.js', '/deskapps.js', '/browser-settings.js', '/vault-crypto.js', '/logo-white.png', '/logo-orange.png', '/manifest.webmanifest', '/icon-192.png'];
 /* Read-only views worth showing when there is no signal. Cleared when you sign out or turn the option off. */
-const OFFLINE_API = ['/api/session', '/api/settings', '/api/prefs', '/api/profile', '/apps.json', '/api/pulse/s/bootstrap'];
+const OFFLINE_API = ['/api/session', '/api/settings', '/api/prefs', '/api/profile', '/apps.json'];
 
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(V).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => {})))).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((k) => Promise.all(k.filter((x) => ![V, API, SHARE, FLAGS].includes(x)).map((x) => caches.delete(x)))).then(() => self.clients.claim())); });
