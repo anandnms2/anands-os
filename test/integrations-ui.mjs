@@ -9,7 +9,7 @@ const SHOTS = process.env.SHOTS || '';
 const [bz, wg, cs] = [await startBeszel(), await startWg(), await startCards()];
 const addr = (s) => `http://127.0.0.1:${s.address().port}`;
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-iu-')); const port = 20000 + Math.floor(Math.random() * 20000);
-const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: process.env.E2E_SUITE || path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'pw', SESSION_SECRET: 'x'.repeat(40), STATUS_URL: addr(bz), STATUS_USER: 'ro@x.io', STATUS_PASSWORD: 'pw', VPN_URL: addr(wg), VPN_USER: 'admin', VPN_PASSWORD: 'wgpw', CARDS_URL: addr(cs), CARDS_USER: 'anand@x.io', CARDS_PASSWORD: 'cspw' } });
+const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: process.env.E2E_SUITE || path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'pw', CARDS_AS_CONTACTS: '0', SESSION_SECRET: 'x'.repeat(40), STATUS_URL: addr(bz), STATUS_USER: 'ro@x.io', STATUS_PASSWORD: 'pw', VPN_URL: addr(wg), VPN_USER: 'admin', VPN_PASSWORD: 'wgpw', CARDS_URL: addr(cs), CARDS_USER: 'anand@x.io', CARDS_PASSWORD: 'cspw' } });
 let log = ''; srv.stdout.on('data', (d) => (log += d)); srv.stderr.on('data', (d) => (log += d));
 const B = `http://127.0.0.1:${port}`;
 for (let i = 0; i < 50; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }

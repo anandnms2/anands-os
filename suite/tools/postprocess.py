@@ -88,6 +88,18 @@ for rel, pairs in (("meetings/index.html", [("<title>Puter Meetings</title>", "<
         for x, y in pairs: t = t.replace(x, y)
         open(q, "w", encoding="utf-8", errors="surrogateescape").write(t)
 
+# Contacts: Card Scan features (scan a card, card photos, notes, reminders, sharing) added by an overlay script
+ov = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "overlays", "contacts-cards.js")
+ci = os.path.join(root, "contacts", "index.html")
+if os.path.exists(ov) and os.path.exists(ci):
+    import shutil
+    shutil.copy(ov, os.path.join(root, "contacts", "cards-overlay.js"))
+    t = open(ci, encoding="utf-8", errors="surrogateescape").read()
+    if "cards-overlay.js" not in t:
+        t = t.replace("</body>", '<script src="./cards-overlay.js" defer></script></body>', 1)
+        open(ci, "w", encoding="utf-8", errors="surrogateescape").write(t)
+    print("postprocess: Card Scan overlay added to Contacts")
+
 # verify: nothing that loads or calls the SDK from puter.com remains
 left = 0
 for dp, _, files in os.walk(root):
