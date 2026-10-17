@@ -4,12 +4,10 @@
   'use strict';
   var PAGES = {
     money: ['Money', 'money.html#overview'], subs: ['Subscriptions', 'money.html#subs'], invest: ['Investments', 'money.html#invest'],
-    belong: ['Belongings', 'home.html#belong'], paperless: ['Paperless', 'paperless.html'], brief: ['Daily Brief', 'life.html#today'], journal: ['Journal and notes', 'life.html#journal'], docs: ['Documents', 'life.html#docs'], worth: ['Net worth', 'life.html#worth'], lsearch: ['Life Search', 'life.html#search'], house: ['Household', 'home.html#house'],
+    belong: ['Belongings', 'home.html#belong'], paperless: ['Paperless', 'paperless.html'], house: ['Household', 'home.html#house'],
     editor: ['Editor', 'editor.html'], player: ['Player', 'player.html'], recorder: ['Recorder', 'recorder.html'], terminal: ['Terminal', 'terminal.html']
   };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
-  /* a tool asks to open another app (the Daily Brief links to Money, Household and so on) */
-  window.addEventListener('message', function (e) { var d = e.data; if (e.origin === location.origin && d && d.aosTool === 'app' && typeof d.id === 'string' && window.AOS && AOS.go && (PAGES[d.id] || d.id === 'pulse')) AOS.go(d.id); });
   Object.keys(PAGES).forEach(function (v) {
     var p = PAGES[v], url = '/tools/' + p[1], src = url + (url.indexOf('#') < 0 ? '?embed=1' : '');
     window.AOSViews[v] = function () {
