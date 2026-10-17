@@ -13,7 +13,7 @@ import { handleInsights, insights, clearInsightsCache } from './coolify.js';
 import { handleAiUsage, test as aiTest, clearAiUsageCache } from './aiusage.js';
 import { handleStatus, test as statusTest, clearStatusCache } from './status.js';
 import { handleVpn, test as vpnTest } from './vpn.js';
-import { handleApple, test as appleTest } from './apple.js';
+import { handleApple } from './apple.js';
 import { invalidate as invalidateContacts } from './contactsync.js';
 import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
 import { handleChat } from './chat.js';
@@ -65,7 +65,6 @@ async function api(req, res, url) {
     if (target === 'status') return json(res, 200, await statusTest());
     if (target === 'vpn') return json(res, 200, await vpnTest());
     if (target === 'cards') return json(res, 200, await cardsTest());
-    if (target === 'apple') return json(res, 200, await appleTest());
     if (target === 'coolify') { try { const d = await insights(true); return json(res, 200, { configured: true, connected: true, resources: d.resources.length }); } catch (e) { return json(res, 200, { configured: e.code !== 'not_configured', connected: false, reason: e.message }); } }
     throw httpError(400, 'Unknown target');
   }
