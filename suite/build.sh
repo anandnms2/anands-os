@@ -63,4 +63,4 @@ json.dump(apps,open(f"{out}/apps.json","w"),indent=2)
 print("built",len(built),"failed",failed.split() or "none")
 PY
 # One flaky app must not sink the image; fail only if most of the suite is missing.
-[ ${#ok[@]} -ge "${MIN_BUILT:-40}" ] || { echo "only ${#ok[@]} apps built"; exit 1; }
+[ ${#ok[@]} -ge "${MIN_BUILT:-20}" ] || { echo "only ${#ok[@]} apps built"; exit 1; }

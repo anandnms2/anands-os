@@ -97,7 +97,7 @@ try {
   });
   await t('Cards: alerts, no frame tab', async () => { await p.click('[data-ca="tab"][data-t="alerts"]'); await p.waitForFunction(() => /Reminder due/.test(document.querySelector('#view').innerText));  assert.equal(await p.locator('[data-ca="tab"][data-t="app"]').count(), 0); await p.click('[data-ca="tab"][data-t="cards"]'); });
   await t('Settings has the three cards and saves', async () => {
-    await p.click('#rail [data-v="settings"]'); for (const k of ['status', 'vpn', 'cards']) assert.equal(await p.locator('#s_' + k + 'u').count(), 1); assert.ok(await p.locator('text=Apple Notes and Reminders (iPhone Shortcut)').count());
+    await p.click('#rail [data-v="settings"]'); for (const k of ['status', 'vpn', 'cards']) assert.equal(await p.locator('#s_' + k + 'u').count(), 1);
     await p.click('[data-act="save"][data-k="vpn"]'); await p.waitForFunction(() => /Connected/.test(document.querySelector('#r_vpn')?.textContent || '')); assert.match(await p.locator('#r_vpn').innerText(), /devices/);
     await p.click('[data-act="save"][data-k="status"]'); await p.waitForFunction(() => /Connected/.test(document.querySelector('#r_status')?.textContent || '')); assert.match(await p.locator('#r_status').innerText(), /systems/);
   });

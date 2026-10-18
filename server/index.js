@@ -13,7 +13,6 @@ import { handleInsights, insights, clearInsightsCache } from './coolify.js';
 import { handleAiUsage, test as aiTest, clearAiUsageCache } from './aiusage.js';
 import { handleStatus, test as statusTest, clearStatusCache } from './status.js';
 import { handleVpn, test as vpnTest } from './vpn.js';
-import { handleApple } from './apple.js';
 import { invalidate as invalidateContacts } from './contactsync.js';
 import { handleCards, test as cardsTest, clearCardsCache } from './cardscan.js';
 import { handleChat } from './chat.js';
@@ -89,7 +88,6 @@ async function api(req, res, url) {
   if (p === '/api/gdrive' || p.startsWith('/api/gdrive/')) return handleGdrive(req, res, url);
   if (p === '/api/aiusage' || p.startsWith('/api/aiusage/')) return handleAiUsage(req, res, url);
   if (p === '/api/status' || p.startsWith('/api/status/')) return handleStatus(req, res, url);
-  if (p === '/api/apple' || p.startsWith('/api/apple/')) return handleApple(req, res, url);
   if (p === '/api/vpn' || p.startsWith('/api/vpn/')) return handleVpn(req, res, url);
   if (p === '/api/cards' || p === '/api/my-cards' || p.startsWith('/api/my-cards/') || p.startsWith('/api/cards/') || p.startsWith('/api/cs/')) { if (req.method !== 'GET') invalidateContacts(); return handleCards(req, res, url); }
   if (p === '/api/insights') return handleInsights(req, res, url);

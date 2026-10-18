@@ -8,7 +8,7 @@ import { DATA } from './config.js';
 const F = path.join(DATA, 'tokens.json'); let T; try { T = JSON.parse(fs.readFileSync(F, 'utf8')); } catch { T = {}; }
 const save = () => { try { fs.mkdirSync(DATA, { recursive: true }); const t = F + '.tmp'; fs.writeFileSync(t, JSON.stringify(T), { mode: 0o600 }); fs.renameSync(t, F); } catch {} };
 const hash = (t) => crypto.createHash('sha256').update(t).digest('hex');
-export const SCOPES = { money: ['/api/money'], house: ['/api/house'], both: ['/api/money', '/api/house'], apple: ['/api/apple'] };
+export const SCOPES = { money: ['/api/money'], house: ['/api/house'], both: ['/api/money', '/api/house'] };
 export function addToken(sid, name, scope) { const tok = 'aos_' + crypto.randomBytes(24).toString('base64url'); T[hash(tok)] = { sid, name, scope, created: Date.now() }; save(); return tok; }
 export function lookup(tok) { const r = T[hash(String(tok))]; return r || null; }
 export function allowsPath(r, p) { return (SCOPES[r.scope] || []).some((x) => p === x || p.startsWith(x + '/')); }
