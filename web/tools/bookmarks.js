@@ -13,18 +13,30 @@ $('#mmodal').addEventListener('mousedown', function (e) { if (e.target === this)
 function title(t) { try { if (parent !== window) parent.postMessage({ aosTool: 'title', title: t }, location.origin); } catch (e) {} }
 function dot(c) { return '<i style="background:' + (c && /^#[0-9a-f]{6}$/i.test(c) ? c : '#f68712') + '"></i>'; }
 
+function ordered(cols) {
+  var out = [], ids = {}; cols.forEach(function (c) { ids[c.id] = 1; });
+  (function add(parent, depth) { cols.forEach(function (c) { if ((c.parent || null) === parent || (parent === null && c.parent && !ids[c.parent])) { out.push(Object.assign({ depth: depth }, c)); add(c.id, depth + 1); } }); })(null, 0);
+  return out;
+}
 function nav() {
   var m = P.meta || { collections: [], tags: [] };
   $('#mnav').innerHTML = '<div class="brand"><img src="/oicons/bookmarks.svg" alt="">Links</div>' +
     '<button data-tab="all"' + (P.tab === 'all' && !P.col && !P.tag ? ' aria-current="page"' : '') + '>' + T.ic('list') + 'All links</button>' +
     '<button data-tab="pinned"' + (P.tab === 'pinned' ? ' aria-current="page"' : '') + '>' + T.ic('up') + 'Pinned</button>' +
     '<button data-a="add">' + T.ic('plus') + 'Add link</button>' +
-    (m.collections.length ? '<div class="pl-side"><div class="hd">Collections</div>' + m.collections.map(function (c) { return '<button class="pl-t" data-a="col" data-id="' + c.id + '" aria-pressed="' + (P.col === c.id) + '">' + dot(c.color) + '<span>' + esc(c.name) + '</span></button>'; }).join('') + '</div>' : '') +
-    (m.tags.length ? '<div class="pl-side"><div class="hd">Tags</div>' + m.tags.slice(0, 40).map(function (t) { return '<button class="pl-t" data-a="tag" data-id="' + t.id + '" aria-pressed="' + (P.tag === t.id) + '">' + dot('') + '<span>' + esc(t.name) + '</span></button>'; }).join('') + '</div>' : '') +
+    '<button data-tab="collections"' + (P.tab === 'collections' ? ' aria-current="page"' : '') + '>' + T.ic('folder') + 'Collections</button>' +
+    '<button data-tab="tags"' + (P.tab === 'tags' ? ' aria-current="page"' : '') + '><b style="width:18px;text-align:center">#</b>Tags</button>' +
+    (m.collections.length ? '<div class="pl-side"><div class="hd">Collections</div>' + ordered(m.collections).map(function (c) { return '<button class="pl-t" data-a="col" data-id="' + c.id + '" aria-pressed="' + (P.col === c.id) + '" style="padding-left:' + (10 + c.depth * 14) + 'px">' + dot(c.color) + '<span>' + esc(c.name) + '</span><small class="tmuted">' + c.count + '</small></button>'; }).join('') + '</div>' : '') +
+    (m.tags.length ? '<div class="pl-side"><div class="hd">Tags</div>' + m.tags.slice(0, 60).map(function (t) { return '<button class="pl-t" data-a="tag" data-id="' + t.id + '" aria-pressed="' + (P.tag === t.id) + '"><b class="tmuted" style="width:10px;text-align:center">#</b><span>' + esc(t.name) + '</span><small class="tmuted">' + t.count + '</small></button>'; }).join('') + '</div>' : '') +
     '<a class="mbtn" style="margin-top:auto;justify-content:center" href="' + esc((P.st && P.st.url) || '#') + '" target="_blank" rel="noopener">Open full Links</a>';
 }
+function heading() {
+  var m = P.meta || { collections: [], tags: [] }, c = P.col ? lookup(m.collections, P.col) : null, t = P.tag ? lookup(m.tags, P.tag) : null;
+  if (c || t) return (c ? dot(c.color).replace('<i ', '<i class="hdot" ') + esc(c.name) : '') + (c && t ? ' ' : '') + (t ? '#' + esc(t.name) : '');
+  return P.tab === 'pinned' ? 'Pinned' : 'Links';
+}
 function head() {
-  return '<div class="mhead"><div><h1>' + (P.tab === 'pinned' ? 'Pinned' : 'Links') + '</h1><p id="lksub"></p></div><span class="sp"></span><button class="mbtn pri" data-a="add">' + T.ic('plus') + 'Add link</button></div>' +
+  return '<div class="mhead"><div><h1>' + heading() + '</h1><p id="lksub"></p></div><span class="sp"></span><button class="mbtn pri" data-a="add">' + T.ic('plus') + 'Add link</button></div>' +
     '<div class="pl-bar"><label class="pl-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="tin" id="lkq" type="search" placeholder="Search names, addresses, tags and page text" value="' + esc(P.q) + '" aria-label="Search links"></label>' +
     '<select class="tin" id="lks" aria-label="Sort"><option value="new"' + (P.sort === 'new' ? ' selected' : '') + '>Newest first</option><option value="old"' + (P.sort === 'old' ? ' selected' : '') + '>Oldest first</option></select></div><div id="lkres"></div>';
 }
@@ -44,8 +56,16 @@ function load(more) {
   api('GET', '/links?' + qs.join('&')).then(function (d) { if (seq !== P.seq) return; P.list = more ? P.list.concat(d.results) : d.results; P.next = d.next; render(); }).catch(function (e) {
     if (seq !== P.seq) return; if (e.status === 409) { P.st.connected = false; return setup(e.message); } var r = $('#lkres'); if (r) r.innerHTML = '<div class="mc mempty"><b>Could not load links</b><span>' + esc(e.message) + '</span></div>'; });
 }
+function overview() {
+  var m = P.meta || { collections: [], tags: [] }, isC = P.tab === 'collections';
+  $('#mmain').innerHTML = '<div class="mhead"><div><h1>' + (isC ? 'Collections' : 'Tags') + '</h1><p>' + (isC ? m.collections.length + ' collections' : m.tags.length + ' tags') + '</p></div><span class="sp"></span><button class="mbtn pri" data-a="add">' + T.ic('plus') + 'Add link</button></div>' +
+    (isC ? '<div class="lk-grid">' + ordered(m.collections).map(function (c) { return '<button class="mc lk-card" data-a="col" data-id="' + c.id + '"><span class="lk-bar" style="background:' + (/^#[0-9a-f]{6}$/i.test(c.color) ? c.color : '#f68712') + '"></span><b>' + esc(c.name) + '</b><small>' + c.count + (c.count === 1 ? ' link' : ' links') + (c.depth ? ' &middot; sub-collection' : '') + '</small></button>'; }).join('') + '</div>'
+      : '<div class="lk-tags">' + m.tags.map(function (t) { return '<button class="mchip" data-a="tag" data-id="' + t.id + '"># ' + esc(t.name) + ' <small class="tmuted">' + t.count + '</small></button>'; }).join('') + '</div>');
+  if (!(isC ? m.collections : m.tags).length) $('#mmain').insertAdjacentHTML('beforeend', '<div class="mc mempty"><b>' + (isC ? 'No collections yet' : 'No tags yet') + '</b><span>They appear here once you add them in Links.</span></div>');
+  title('Links');
+}
 function draw() {
-  nav(); var had = document.activeElement && document.activeElement.id === 'lkq', pos = had ? document.activeElement.selectionStart : 0;
+  nav(); if (P.tab === 'collections' || P.tab === 'tags') { $('#mfab').hidden = false; return overview(); } var had = document.activeElement && document.activeElement.id === 'lkq', pos = had ? document.activeElement.selectionStart : 0;
   $('#mmain').innerHTML = head(); $('#mfab').hidden = false;
   if (had) { $('#lkq').focus(); $('#lkq').setSelectionRange(pos, pos); }
   var tm; $('#lkq').oninput = function () { var v = this.value; clearTimeout(tm); tm = setTimeout(function () { P.q = v.trim(); load(); }, 280); };
@@ -78,8 +98,8 @@ function refreshMeta() { return Promise.all([api('GET', '/status'), api('GET', '
 function home() { P.tab = 'all'; P.col = 0; P.tag = 0; draw(); }
 var A = { close: close, add: add };
 A.go = function (b) { var u = b.dataset.u; if (/^https?:\/\//i.test(u)) window.open(u, '_blank', 'noopener'); };
-A.col = function (b) { var id = +b.dataset.id; P.col = P.col === id ? 0 : id; P.tab = 'all'; draw(); };
-A.tag = function (b) { var id = +b.dataset.id; P.tag = P.tag === id ? 0 : id; P.tab = 'all'; draw(); };
+A.col = function (b) { var id = +b.dataset.id; P.col = P.col === id && P.tab === 'all' ? 0 : id; P.tag = 0; P.tab = 'all'; draw(); };
+A.tag = function (b) { var id = +b.dataset.id; P.tag = P.tag === id && P.tab === 'all' ? 0 : id; P.col = 0; P.tab = 'all'; draw(); };
 A.more = function () { load(true); }; A.retry = function () { init(); };
 A.del = function (b) {
   var id = +b.dataset.id, l = lookup(P.list, id); if (!l) return;

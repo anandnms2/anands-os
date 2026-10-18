@@ -47,7 +47,7 @@ export async function handleBookmarks(req, res, url, sess) {
   if (p === '/meta' && m === 'GET') {
     const [cols, tags] = await Promise.all([lw('/collections'), lw('/tags')]);
     return json(res, 200, {
-      collections: (cols || []).map((c) => ({ id: c.id, name: c.name, color: c.color || '', count: c._count?.links ?? 0 })),
+      collections: (cols || []).map((c) => ({ id: c.id, name: c.name, color: c.color || '', parent: c.parentId || null, count: c._count?.links ?? 0 })),
       tags: (tags || []).map((t) => ({ id: t.id, name: t.name, count: t._count?.links ?? 0 }))
     });
   }

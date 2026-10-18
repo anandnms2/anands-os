@@ -51,6 +51,13 @@ try {
     await fr.locator('.pl-t', { hasText: 'Reading' }).click(); await page.waitForTimeout(300);
     await fr.locator('#mfab').click(); await fr.locator('#au').fill('https://example.org/new'); await fr.locator('#aok').click(); await page.waitForTimeout(600); assert.equal(links.length, 4);
   });
+  await t('Collections and Tags pages like Linkwarden', async () => {
+    await page.goto(B + '/#bookmarks'); await page.waitForSelector('.appframe'); const fr = page.frameLocator('.appframe');
+    await fr.locator('[data-tab="collections"]').click(); await fr.locator('.lk-card').first().waitFor(); assert.equal(await fr.locator('.lk-card').count(), 2);
+    await fr.locator('.lk-card', { hasText: 'Dev tools' }).click(); await fr.locator('.pl-doc').first().waitFor(); assert.equal(await fr.locator('.pl-doc').count(), 2); assert.match(await fr.locator('h1').innerText(), /Dev tools/);
+    await fr.locator('[data-tab="tags"]').click(); await fr.locator('.lk-tags .mchip').first().waitFor();
+    await fr.locator('.lk-tags .mchip', { hasText: 'api' }).click(); await fr.locator('.pl-doc').first().waitFor(); assert.equal(await fr.locator('.pl-doc').count(), 1); assert.match(await fr.locator('h1').innerText(), /#api/);
+  });
   await t('Suite tile, Home tile and Desktop icon exist', async () => {
     await page.goto(B + '/#apps'); await page.waitForSelector('.appcat'); assert.equal(await page.locator('.app', { hasText: 'Links' }).count(), 1);
     await page.goto(B + '/'); await page.waitForSelector('.svc'); assert.ok(await page.locator('.svc', { hasText: 'Links' }).count() >= 1);
