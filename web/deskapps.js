@@ -298,6 +298,9 @@
       if (A.isOwner && A.isOwner()) jobs.push(api('/api/paperless/documents?q=' + enc(s)).then(function (j) {
         (j.results || []).slice(0, 4).forEach(function (r) { more.push({ g: 'Paperless', t: r.title || ('Document ' + r.id), s: r.correspondent || r.created || '', run: function () { window.AOSDesk.tool('paperless'); } }); });
       }, function () {}));
+      if (A.isOwner && A.isOwner()) jobs.push(api('/api/bookmarks/links?q=' + enc(s)).then(function (j) {
+        (j.results || []).slice(0, 4).forEach(function (r) { more.push({ g: 'Links', t: r.name, s: r.host || '', run: function () { window.open(r.url, '_blank', 'noopener'); } }); });
+      }, function () {}));
       Promise.all(jobs).then(function () { if (seq !== Q.seq || !Q.el) return; var keep = Q.items; Q.items = keep.concat(more); paintQ(); });
     }, 250);
   }
