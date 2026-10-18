@@ -15,6 +15,28 @@
   function persist() {
     LS.set('deskx', { notes: N.notes, alarms: N.alarms });
     clearTimeout(N.t); N.t = setTimeout(function () { api('/api/desk', { method: 'PUT', json: { notes: N.notes, alarms: N.alarms } }).catch(function () {}); }, 700);
+    clearTimeout(JM.t); JM.t = setTimeout(mirror, 2000);
+  }
+  /* Every sticky note is also a note in the "Sticky Notes" notebook of Notes (Joplin). Quietly skipped when Notes is not connected. */
+  var JM = { t: 0, busy: false, off: false, folder: '' };
+  function jmap() { return LS.get('snj', {}) || {}; }
+  function jf(path, o) { return api('/api/joplin' + path, o); }
+  function jfolder() {
+    if (JM.folder) return Promise.resolve(JM.folder);
+    return jf('/meta').then(function (m) { var f = (m.folders || []).filter(function (x) { return x.title === 'Sticky Notes' && !x.parent; })[0]; return f || jf('/folders', { method: 'POST', json: { title: 'Sticky Notes' } }); }).then(function (f) { JM.folder = f.id; return f.id; });
+  }
+  function mirror() {
+    if (JM.off) return; if (JM.busy) { JM.t = setTimeout(mirror, 1500); return; } var J = jmap(), live = {}, todo = [];
+    N.notes.forEach(function (n) { live[n.id] = 1; var e = J[n.id]; if (n.t && (!e || e.t !== n.t)) todo.push(n); });
+    var gone = Object.keys(J).filter(function (k) { return !live[k]; }); if (!todo.length && !gone.length) return; JM.busy = true;
+    var chain = jfolder();
+    todo.forEach(function (n) { chain = chain.then(function (fid) {
+      var e = J[n.id], title = (n.t.split('\n')[0] || 'Sticky note').trim().slice(0, 60) || 'Sticky note', txt = n.t;
+      var rq = e && e.id ? jf('/notes/' + e.id, { method: 'PUT', json: { title: title, body: txt, base: e.rev } }) : jf('/notes', { method: 'POST', json: { title: title, body: txt, folder: fid } });
+      return rq.then(function (r) { J[n.id] = { id: r.id, rev: r.rev, t: txt }; LS.set('snj', J); return fid; }, function (er) { if (er && er.status === 409 && e) { return jf('/notes/' + e.id).then(function (r) { J[n.id] = { id: r.id, rev: r.rev, t: e.t }; LS.set('snj', J); JM.t = setTimeout(mirror, 500); return fid; }); } throw er; });
+    }); });
+    gone.forEach(function (k) { chain = chain.then(function (fid) { var e = J[k]; delete J[k]; LS.set('snj', J); return e && e.id ? jf('/notes/' + e.id + '/trash', { method: 'POST', json: {} }).then(function () { return fid; }, function () { return fid; }) : fid; }); });
+    chain.then(function () { JM.busy = false; }, function (er) { JM.busy = false; if (er && (er.status === 404 || er.status === 403 || er.status === 401 || er.status === 502 || er.status === 503)) JM.off = true; });
   }
   function load() {
     if (N.loaded) return Promise.resolve();
@@ -245,6 +267,8 @@
     if ((m = s.match(/^(?:convert\s+)?(-?[\d.,]+)\s*([a-z³0-9 ]+?)\s+(?:to|in|into)\s+([a-z³0-9 ]+)$/i))) {
       var r2 = conv(parseFloat(m[1].replace(/,/g, '')), m[2], m[3]); if (r2 != null) { var tu = unitOf(m[3]); out.push({ g: 'Convert', t: m[1] + ' ' + m[2].trim() + ' = ' + numFmt(r2) + ' ' + tu.name, s: 'Press Enter to copy the number', run: function () { try { navigator.clipboard.writeText(String(+r2.toPrecision(12))); } catch (e) {} toast('Copied ' + numFmt(r2)); } }); }
     }
+    if ((m = s.match(/^note\s+(.+)$/i))) { var ntx = m[1]; out.push({ g: 'Sticky note', t: 'New note: ' + ntx.slice(0, 60), s: 'Press Enter to pin it to the desktop (also saved in Notes)', run: function () { newNote(ntx); } }); }
+    else if (/^note$/i.test(s)) out.push({ g: 'Sticky note', t: 'New sticky note', s: 'Press Enter', run: function () { newNote(); } });
     if ((m = s.match(/^timer\s+(\d+(?:\.\d+)?)\s*(s|sec|m|min|h)?$/i))) { var secs = parseFloat(m[1]) * ({ s: 1, sec: 1, m: 60, min: 60, h: 3600 }[(m[2] || 'm').toLowerCase()] || 60); out.push({ g: 'Timer', t: 'Start a timer for ' + fmtHMS(secs * 1000), s: 'Press Enter to start. It rings here when done', run: function () { C.tm.total = C.tm.left = Math.round(secs); C.tm.end = Date.now() + secs * 1000; C.tm.run = true; beep(0); toast('Timer started'); } }); }
     return out;
   }

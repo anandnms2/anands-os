@@ -245,9 +245,22 @@ try {
     await win.locator('.bsnav button', { hasText: 'Advanced' }).click(); await win.locator('[data-bs="reset"]').click(); assert.equal(await p.evaluate(() => localStorage.getItem('aos.brsearch')), '"ddg"');
     await win.locator('[data-bs="close"]').click();
   });
-  await t('desktop apps: Sticky Notes is not an app icon any more (it is a widget saved in Notes)', async () => {
-    await p.keyboard.press('Control+Alt+n'); await p.waitForTimeout(300); assert.equal(await p.locator('.dk-sn').count(), 0);
-    assert.equal(await p.locator('.dk-icon[data-w="sticky"], [data-w="sticky"]').count(), 0);
+  await t('desktop apps: sticky notes are created, typed into, moved, coloured and saved on the server', async () => {
+    await p.evaluate(() => { document.querySelectorAll('.dkw').forEach((w) => w.querySelector('.dk-wc [data-dk="wclose"]') && w.querySelector('.dk-wc [data-dk="wclose"]').click()); });
+    await p.keyboard.press('Control+Alt+n'); await p.waitForSelector('.dk-sn');
+    const body = p.locator('.dk-sn .dk-sn-b').first(); await body.click(); await p.keyboard.type('Call Lusaka depot about T412');
+    const bar = await p.locator('.dk-sn .dk-sn-t').first().boundingBox(); await p.mouse.move(bar.x + bar.width - 50, bar.y + 8); await p.mouse.down(); await p.mouse.move(bar.x + 280, bar.y + 160, { steps: 6 }); await p.mouse.up();
+    await p.locator('.dk-sn .dk-sn-cs button[data-c="g"]').first().evaluate((b) => b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+    await p.waitForTimeout(1100); const j = await (await ctx.request.get(B + '/api/desk')).json();
+    assert.equal(j.notes.length, 1); assert.match(j.notes[0].t, /T412/); assert.equal(j.notes[0].c, 'g'); assert.ok(j.notes[0].x > 150, 'note moved: ' + j.notes[0].x);
+    await shot(p, 'desktop-sticky');
+    const x = p.locator('.dk-sn .dk-sn-x').first(); await x.dispatchEvent('pointerdown'); assert.match(await x.innerText(), /Delete/); await x.dispatchEvent('pointerdown'); await p.waitForTimeout(1000);
+    assert.equal((await (await ctx.request.get(B + '/api/desk')).json()).notes.length, 0);
+  });
+  await t('desktop apps: Sticky Notes has no app icon, notes come from the right-click menu', async () => {
+    assert.equal(await p.locator('[data-w="sticky"]').count(), 0);
+    await p.mouse.click(600, 400, { button: 'right' }); await p.waitForSelector('.dk-ctx, [role=menu]'); await p.locator('text=New sticky note').first().click(); await p.waitForSelector('.dk-sn');
+    await p.locator('.dk-sn .dk-sn-x').first().dispatchEvent('pointerdown'); await p.waitForTimeout(800);
   });
   await t('desktop apps: clock popover shows world clocks, saves alarms, runs timer and stopwatch', async () => {
     await p.click('#dkclock'); await p.waitForSelector('#dkclockpop');
@@ -276,8 +289,9 @@ try {
     await q.fill('5 t to kg'); assert.match(await p.locator('.dk-ql-x').first().innerText(), /5,000/);
     await q.fill('100 usd to tzs'); await p.waitForTimeout(300); assert.match(await p.locator('.dk-ql-x').first().innerText(), /260,000/);
     await shot(p, 'desktop-launcher');
-    await q.fill('note buy tyres'); await p.waitForTimeout(200); assert.equal(await p.locator('.dk-ql-x', { hasText: /sticky/i }).count(), 0); await p.keyboard.press('Escape');
+    await q.fill('note buy tyres'); await p.keyboard.press('Enter'); await p.waitForSelector('.dk-sn'); assert.equal(await p.locator('#dkql').count(), 0); assert.match(await p.locator('.dk-sn-b').last().innerText(), /buy tyres/, await p.locator('.dk-sn-b').allInnerTexts().then((a) => JSON.stringify(a)));
     await p.keyboard.press('Control+Space'); await p.locator('#dkql input').fill('timer 5'); assert.match(await p.locator('.dk-ql-x').first().innerText(), /5:00/); await p.keyboard.press('Escape'); assert.equal(await p.locator('#dkql').count(), 0);
+    await p.evaluate(() => { const n = document.querySelector('.dk-sn .dk-sn-x'); n.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); n.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); });
   });
   await t('desktop apps: snip bar captures the desktop and saves to Drive and as a download', async () => {
     await p.click('.dk-tray[data-dk="snip"]'); await p.waitForSelector('#dksp'); assert.ok((await p.locator('#dksp').innerText()).includes('Region')); await shot(p, 'desktop-snip');

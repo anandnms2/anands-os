@@ -6,7 +6,7 @@ var S = A.S, $ = A.$, esc = A.esc, api = A.api, ic = A.ic, toast = A.toast, LS =
 var DEF = { mode: 'system', accent: 'default', oswall: false, fs: 15, keys: true, widgets: {}, t: 0 };
 var L = Object.assign({}, DEF, LS.get('look', {}));
 var ACC = [['default', 'Orange', '#f68712'], ['#3b82f6', 'Blue', '#3b82f6'], ['#14b8a6', 'Teal', '#14b8a6'], ['#22c55e', 'Green', '#22c55e'], ['#8b5cf6', 'Violet', '#8b5cf6'], ['#f43f5e', 'Rose', '#f43f5e'], ['#eab308', 'Gold', '#eab308']];
-var WD = [['clock', 'Clock', 'Dar es Salaam and Kochi', 230, 128], ['servers', 'Servers', 'Health of your apps', 230, 130], ['note', 'Sticky note', 'Jot something down', 250, 190]];
+var WD = [['clock', 'Clock', 'Dar es Salaam and Kochi', 230, 128], ['servers', 'Servers', 'Health of your apps', 230, 130]];
 var saveT = null;
 
 /* ---------- colour ---------- */
@@ -78,7 +78,6 @@ function body(id) {
     var d = S.ins && S.ins.data || WS.ins; if (!d) return '<p class="wd-none">Loading...</p>'; var R = d.resources, bad = R.filter(function (r) { return r.s === 'bad'; }), ok = R.filter(function (r) { return r.s === 'ok'; }).length;
     return '<div class="wd-time" style="color:' + (bad.length ? 'var(--bad)' : 'var(--ok)') + '">' + (bad.length ? bad.length + ' down' : 'All good') + '</div><div class="wd-sub">' + ok + ' healthy of ' + R.length + '</div>' + (bad.length ? '<div class="wd-sub">' + esc(bad.slice(0, 2).map(function (r) { return r.n; }).join(', ')) + '</div>' : '');
   }
-  if (id === 'note') return '<textarea class="wd-note" data-wd="note" placeholder="Type here..." aria-label="Sticky note">' + esc(SN.text != null ? SN.text : LS.get('widnote', '')) + '</textarea><div class="wd-sub wd-sn" data-wd="notes" role="link" tabindex="0">' + (SN.state === 'on' ? 'Saved in Notes &rsaquo; Sticky Notes' : SN.state === 'off' ? 'Saved on this device. Connect Notes in Settings to sync' : 'Connecting to Notes...') + '</div>';
   return '';
 }
 function drawWidgets(force) {
@@ -93,38 +92,13 @@ function drawWidgets(force) {
 function initDesk() {
   desk = document.getElementById('desk'); if (!desk) return setTimeout(initDesk, 300);
   layer = document.createElement('div'); layer.id = 'dkwid'; var icons = document.getElementById('dkicons'); desk.insertBefore(layer, icons ? icons.nextSibling : null);
-  new MutationObserver(function () { if (!desk.hidden) { drawWidgets(true); refreshData(); if (wstate('note').on) snInit(); } }).observe(desk, { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(function () { if (!desk.hidden) { drawWidgets(true); refreshData();  } }).observe(desk, { attributes: true, attributeFilter: ['hidden'] });
   window.addEventListener('resize', function () { drawWidgets(); });
   setInterval(function () { if (!desk.hidden) { var c = layer.querySelector('[data-w="clock"] .wd-b'); if (c && !WS.edit) c.innerHTML = body('clock'); } }, 15000);
   setInterval(function () { if (!desk.hidden) { refreshData(); drawWidgets(); } }, 60000);
 }
 function refreshData() {
-  if (wstate('note').on) snInit();
   if (wstate('servers').on && !(S.ins && S.ins.data) && Date.now() - WS.insAt > 120000) { WS.insAt = Date.now(); api('/api/insights').then(function (d) { WS.ins = d; drawWidgets(); }).catch(function () {}); }
-}
-/* Sticky note widget: lives in the "Sticky Notes" notebook of Notes (Joplin). Falls back to this device when Notes is not connected. */
-var SN = { state: 'init', folder: '', id: '', rev: '', text: null, busy: false, t: null };
-function snApi(path, o) { return api('/api/joplin' + path, o); }
-function snInit() {
-  if (SN.state !== 'init' || SN.busy) return; SN.busy = true;
-  snApi('/meta').then(function (m) {
-    var f = (m.folders || []).filter(function (x) { return x.title === 'Sticky Notes' && !x.parent; })[0];
-    return f ? f : snApi('/folders', { method: 'POST', json: { title: 'Sticky Notes' } });
-  }).then(function (f) {
-    SN.folder = f.id; return snApi('/notes?folder=' + encodeURIComponent(f.id));
-  }).then(function (r) {
-    var n = (r.results || []).filter(function (x) { return x.title === 'Desktop sticky note'; })[0];
-    return n ? snApi('/notes/' + n.id) : null;
-  }).then(function (n) {
-    var local = LS.get('widnote', '');
-    if (n) { SN.id = n.id; SN.rev = n.rev; SN.text = n.body || ''; } else { SN.text = local || ''; if (local) snSave(local); }
-    SN.state = 'on'; SN.busy = false; drawWidgets(true);
-  }).catch(function () { SN.state = 'off'; SN.busy = false; SN.text = null; drawWidgets(); });
-}
-function snSave(v) {
-  LS.set('widnote', v); if (SN.state !== 'on') return; SN.text = v;
-  var req = SN.id ? snApi('/notes/' + SN.id, { method: 'PUT', json: { body: v, base: SN.rev } }) : snApi('/notes', { method: 'POST', json: { title: 'Desktop sticky note', body: v, folder: SN.folder } });
-  req.then(function (n) { SN.id = n.id; SN.rev = n.rev; }).catch(function (e) { toast(e && e.status === 409 ? 'Sticky note changed in Notes. Reload to see it' : 'Could not save to Notes. Kept on this device'); });
 }
 var drag = null;
 document.addEventListener('pointerdown', function (e) {
@@ -141,7 +115,6 @@ document.addEventListener('input', function (e) { if (e.target.getAttribute && e
 document.addEventListener('click', function (e) {
   var b = e.target.closest && e.target.closest('[data-wd]'); if (!b || b.tagName === 'TEXTAREA') return; var a = b.getAttribute('data-wd');
   var wid = b.closest('.wd'), cz = wstate('clock');
-  if (a === 'notes') { if (window.AOSDesk && AOSDesk.x && AOSDesk.x.launchKey) AOSDesk.x.launchKey('tool:notes'); return; }
   if (a === 'go') { if (window.AOSDesk && AOSDesk.x && AOSDesk.x.launchKey) AOSDesk.x.launchKey('os:insights'); return; }
   if (a === 'edit') { WS.edit = !WS.edit; drawWidgets(true); return; }
   if (a === 'zdone') { WS.edit = false; drawWidgets(true); return; }
@@ -227,5 +200,5 @@ initDesk();
 document.addEventListener('keydown', function (e) {
   var t = e.target; if (!t || !t.getAttribute) return; var a = t.getAttribute('data-wd');
   if (a === 'zin' && e.key === 'Enter') { e.preventDefault(); var b = t.closest('.wd').querySelector('[data-wd="zadd"]'); if (b) b.click(); }
-  if ((a === 'go' || a === 'notes') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); t.click(); }
+  if (a === 'go' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); t.click(); }
 });

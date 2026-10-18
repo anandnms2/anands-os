@@ -1,6 +1,7 @@
-.nt{padding:0!important;display:block}
-.nt-wrap{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);height:100%;min-height:0}
-.nt-list{display:flex;flex-direction:column;border-right:1px solid var(--line);min-height:0;min-width:0}
+.nt{padding:0!important;display:flex!important;flex-direction:column;align-self:stretch;min-height:min(640px,calc(100vh - 170px))}
+.nt-wrap{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);flex:1;min-height:0;height:100%}
+.nt-wrap>*{min-height:0}
+.nt-list{height:100%;display:flex;flex-direction:column;border-right:1px solid var(--line);min-height:0;min-width:0}
 .nt-top{padding:12px;display:grid;gap:8px;border-bottom:1px solid var(--line)}
 .nt-top .row{display:flex;gap:8px;align-items:center}.nt-top h1{font-size:18px;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nt-items{overflow:auto;flex:1;min-height:0;padding:6px}
@@ -10,7 +11,7 @@
 .nt-item small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nt-item .ck{width:18px;height:18px;flex:none;margin-top:2px;accent-color:var(--accent)}
 .nt-item.done b{text-decoration:line-through;color:var(--muted)}
-.nt-ed{display:flex;flex-direction:column;min-width:0;min-height:0}
+.nt-ed{height:100%;display:flex;flex-direction:column;min-width:0;min-height:0}
 .nt-bar{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .nt-bar .sp{flex:1}.nt-bar select{max-width:200px}
 .nt-title{font:600 22px var(--display,inherit);border:0;background:none;color:var(--fg);padding:14px 16px 4px;width:100%;outline:0}
@@ -32,3 +33,10 @@
 .nt-sktools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
 .nt-sw{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);padding:0}.nt-sw.on{border-color:var(--fg);box-shadow:0 0 0 2px var(--accent)}
 .nt-prev img{max-width:100%;border-radius:8px;border:1px solid var(--line);background:#fff}
+
+.nt-bar{gap:10px}.nt-bar .tin{height:36px;padding:0 10px;font-size:13.5px;border-radius:10px;background:var(--surface2)}
+.nt-bar .mbtn{height:36px;padding:0 13px}.nt-bar .mbtn svg{width:16px;height:16px;flex:none}
+.nt-bar label.nt-st{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--fg);cursor:pointer}
+.nt-bar label.nt-st input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.nt-body{font:15px/1.65 var(--sans,system-ui,sans-serif)}
+.nt-top .mbtn,.nt-top .btn{height:38px}

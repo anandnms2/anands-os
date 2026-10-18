@@ -581,7 +581,7 @@
   document.addEventListener('contextmenu', function (ev) {
     if (!D.open) return; var t = ev.target; if (!t.closest || t.closest('#dkctx')) return ev.preventDefault();
     if (t.closest('input, textarea, [contenteditable], canvas, iframe')) return;
-    D.ctxAt = { x: ev.clientX, y: ev.clientY }; var deskItems = [['Arrange icons by name', 'isort'], ['Arrange icons by type', 'itype'], ['Line icons up in the grid', 'iauto'], ['Choose desktop icons...', 'chooser'], ['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], ['Keyboard shortcuts', 'keys'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
+    D.ctxAt = { x: ev.clientX, y: ev.clientY }; var deskItems = [['New sticky note', 'snew'], '-', ['Arrange icons by name', 'isort'], ['Arrange icons by type', 'itype'], ['Line icons up in the grid', 'iauto'], ['Choose desktop icons...', 'chooser'], ['Wallpaper...', 'wall'], '-', ['Open Files', 'launch', ' data-w="files"'], ['Open Browser', 'launch', ' data-w="browser"'], ['Open Assistant', 'launch', ' data-w="ai"'], ['Show desktop', 'showdesk'], ['Keyboard shortcuts', 'keys'], '-', ['Settings', 'settings'], ['Exit to Anands OS', 'exit']];
     var el;
     if ((el = t.closest('.dkw-bar'))) { var w = byId(el.closest('.dkw').getAttribute('data-id')); if (!w) return; ev.preventDefault(); return ctx(ev, winItems(w).concat([['Close all windows', 'closeall']])); }
     if ((el = t.closest('.dk-rb'))) { var w2 = byId(el.getAttribute('data-id')); if (!w2) return; ev.preventDefault(); return ctx(ev, winItems(w2)); }
@@ -597,7 +597,7 @@
   var SHORTCUTS = [
     ['Windows', [['Alt + Tab', 'Switch window (hold Alt, press Tab again to go on, Shift to go back)'], ['Alt + F4', 'Close the window'], ['Alt + F9', 'Minimise the window'], ['Alt + F10', 'Maximise or restore'], ['Win + Up / Down', 'Maximise, restore or minimise'], ['Win + Left / Right', 'Snap to the left or right half'], ['Ctrl + Alt + Arrows', 'The same, if Win keys are taken by your computer']]],
     ['Desktop', [['Win (tap)  or  Ctrl + Esc', 'Open or close the Start menu'], ['Win + S', 'Start menu, searching'], ['Win + D  or  Ctrl + Alt + D', 'Show the desktop, again to bring windows back'], ['Win + 1 to 9  or  Ctrl + Alt + 1 to 9', 'Go to the 1st to 9th window on the taskbar'], ['Ctrl + Space  or  Ctrl + K', 'Quick Launcher: search apps, files, documents, or type calc 12*45'], ['F1  or  Ctrl + /', 'This list']]],
-    ['Open an app', [['Win + E  or  Ctrl + Alt + E', 'Files'], ['Ctrl + Alt + T', 'Terminal'], ['Ctrl + Alt + B', 'Browser'], ['Ctrl + Alt + A', 'Assistant'], ['Ctrl + Alt + P', 'Paperless'], ['Ctrl + Alt + C', 'Calculator'], ['Ctrl + Alt + S', 'Screenshot and Snip']]]
+    ['Open an app', [['Win + E  or  Ctrl + Alt + E', 'Files'], ['Ctrl + Alt + T', 'Terminal'], ['Ctrl + Alt + B', 'Browser'], ['Ctrl + Alt + A', 'Assistant'], ['Ctrl + Alt + P', 'Paperless'], ['Ctrl + Alt + C', 'Calculator'], ['Ctrl + Alt + N', 'New sticky note'], ['Ctrl + Alt + S', 'Screenshot and Snip']]]
   ];
   /* Full screen plus the Keyboard Lock API (Chrome and Edge): while locked, Alt + Tab, the Windows key, Esc and friends come to this page instead of the computer. */
   function fullKeys() {
@@ -655,7 +655,7 @@
       if (low === 'd') { showDesk(); return true; }
       if (/^[1-9]$/.test(key)) { nthWin(+key); return true; }
       if (win && !k.alt && !k.ctrl && low === 's') { toggleMenu(true); return true; }
-      var app = { e: 'files', t: 'tool:terminal', b: 'browser', a: 'ai', p: 'tool:paperless', c: 'calc', s: 'snip' }[low]; if (app && (cA || (win && low === 'e'))) { launchKey(app); return true; }
+      if (low === 'n' && cA) { var XN = window.AOSDeskX; if (XN && XN.snew) XN.snew(); return true; } var app = { e: 'files', t: 'tool:terminal', b: 'browser', a: 'ai', p: 'tool:paperless', c: 'calc', s: 'snip' }[low]; if (app && (cA || (win && low === 'e'))) { launchKey(app); return true; }
     }
     return false;
   }

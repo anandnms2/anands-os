@@ -90,18 +90,14 @@ try {
   await t('settings card saves the login and connects', async () => {
     await page.goto(B + '/#settings'); await page.waitForSelector('#s_jp'); await page.locator('#s_jp').fill(PASSWORD); await page.locator('[data-k="joplin"]').click(); await page.locator('#r_joplin', { hasText: 'Connected' }).waitFor();
   });
-  await t('desktop sticky note widget saves into a Sticky Notes notebook in Notes', async () => {
-    const dp = await ctx.newPage(); dp.on('pageerror', (e) => errs.push(e.message)); await dp.goto(B + '/'); await dp.waitForSelector('#avatar');
-    await dp.evaluate(() => { const l = JSON.parse(localStorage.getItem('aos.look') || '{}'); l.widgets = Object.assign(l.widgets || {}, { note: { on: true, x: -1, y: -1 } }); localStorage.setItem('aos.look', JSON.stringify(l)); });
-    await dp.reload(); await dp.waitForSelector('#avatar'); await dp.evaluate(() => AOSDesk.show()); await dp.waitForSelector('.wd[data-w="note"] textarea');
-    await dp.waitForFunction(() => /Saved in Notes/.test(document.querySelector('.wd[data-w="note"]').innerText));
+  await t('desktop sticky notes are mirrored into a Sticky Notes notebook in Notes', async () => {
+    const dp = await ctx.newPage(); dp.on('pageerror', (e) => errs.push(e.message)); await dp.goto(B + '/'); await dp.waitForSelector('#avatar'); await dp.evaluate(() => AOSDesk.show()); await dp.waitForSelector('#dkstick', { state: 'attached' });
+    await dp.evaluate(() => AOSDeskX.snew()); await dp.waitForSelector('.dk-sn'); await dp.locator('.dk-sn .dk-sn-b').first().click(); await dp.keyboard.type('park the trucks at Kapiri'); await dp.waitForTimeout(3500);
     const f = (await get('/meta')).j.folders.find((x) => x.title === 'Sticky Notes'); assert.ok(f, 'notebook created');
-    await dp.fill('.wd-note', 'park the trucks at Kapiri'); await dp.waitForTimeout(1500);
-    const l = (await get('/notes?folder=' + f.id)).j; assert.equal(l.total, 1); assert.equal(l.results[0].title, 'Desktop sticky note');
-    const n = (await get('/notes/' + l.results[0].id)).j; assert.match(n.body, /Kapiri/);
-    await dp.fill('.wd-note', 'park the trucks at Kapiri and Kasumbalesa'); await dp.waitForTimeout(1500);
-    assert.equal((await get('/notes?folder=' + f.id)).j.total, 1); assert.match((await get('/notes/' + l.results[0].id)).j.body, /Kasumbalesa/);
-    await dp.close();
+    let l = (await get('/notes?folder=' + f.id)).j; assert.equal(l.total, 1); assert.match((await get('/notes/' + l.results[0].id)).j.body, /Kapiri/);
+    await dp.keyboard.type(' now'); await dp.waitForTimeout(3500); l = (await get('/notes?folder=' + f.id)).j; assert.equal(l.total, 1); assert.match((await get('/notes/' + l.results[0].id)).j.body, /Kapiri now/);
+    const x = dp.locator('.dk-sn .dk-sn-x').first(); await x.dispatchEvent('pointerdown'); await x.dispatchEvent('pointerdown'); await dp.waitForTimeout(3500);
+    assert.equal((await get('/notes?folder=' + f.id)).j.total, 0); await dp.close();
   });
   await t('no page errors', async () => { assert.deepEqual(errs, []); });
 } finally { await browser.close(); srv.kill(); fake.close(); }

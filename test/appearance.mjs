@@ -44,9 +44,8 @@ try {
     await p.reload(); await p.waitForSelector('#avatar'); await p.evaluate(() => AOSDesk.show()); await p.waitForSelector('.wd[data-w="clock"]'); const kept = await p.locator('.wd[data-w="clock"]').boundingBox(); assert.ok(Math.abs(kept.x - after.x) < 3 && Math.abs(kept.y - after.y) < 3, 'position kept');
     assert.match(await p.locator('.wd[data-w="clock"]').innerText(), /Kochi/);
   });
-  await t('widgets can be added, hidden and typed into', async () => {
-    await p.evaluate(() => AOSDesk.hide(false)); await p.evaluate(() => AOS.go('appearance')); await p.waitForSelector('.apc'); await p.check('[data-ap="widget"][data-v="note"]'); await p.evaluate(() => AOSDesk.show()); await p.waitForSelector('.wd[data-w="note"] textarea');
-    await p.fill('.wd-note', 'check the Chirundu border queue'); await p.waitForTimeout(1000); assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('aos.widnote'))), 'check the Chirundu border queue');
+  await t('widgets can be added and hidden', async () => {
+    await p.evaluate(() => AOSDesk.hide(false)); await p.evaluate(() => AOS.go('appearance')); await p.waitForSelector('.apc'); await p.check('[data-ap="widget"][data-v="servers"]'); await p.evaluate(() => AOSDesk.show()); await p.waitForSelector('.wd[data-w="servers"]');
     await p.dispatchEvent('.wd[data-w="clock"] [data-wd="off"]', 'click'); assert.equal(await p.locator('.wd[data-w="clock"]').count(), 0);
   });
   await t('clock widget: time zones can be added and removed, and the health widget opens Insights', async () => {
@@ -68,9 +67,9 @@ try {
     await p.evaluate(() => AOS.go('appearance')); await p.uncheck('[data-ap="keys"]'); await p.evaluate(() => AOS.go('home')); await p.keyboard.press('g'); await p.keyboard.press('v'); await p.waitForTimeout(250); assert.equal(await p.evaluate(() => location.hash), '#home');
   });
   await t('preferences follow you to another device', async () => {
-    for (let i = 0; i < 20; i++) { const j = await (await ctx.request.get(B + '/api/prefs')).json(); if (j.keys === false && j.widgets && j.widgets.note) break; await p.waitForTimeout(150); }
+    for (let i = 0; i < 20; i++) { const j = await (await ctx.request.get(B + '/api/prefs')).json(); if (j.keys === false && j.widgets && j.widgets.servers) break; await p.waitForTimeout(150); }
     const c2 = await mk(); const q = await c2.newPage(); await q.goto(B + '/'); await q.waitForSelector('#avatar'); await q.waitForFunction(() => window.AOSAppearance && AOSAppearance.state().keys === false); const st = await q.evaluate(() => AOSAppearance.state());
-    assert.equal(st.keys, false); assert.equal(st.mode, 'system'); assert.equal(st.widgets.note.on, true);
+    assert.equal(st.keys, false); assert.equal(st.mode, 'system'); assert.equal(st.widgets.servers.on, true);
   });
   await t('no page errors', async () => assert.deepEqual(errs, []));
 } finally { await browser.close(); srv.kill(); }
