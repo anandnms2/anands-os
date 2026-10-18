@@ -3,13 +3,14 @@
    so the Joplin desktop and phone apps keep syncing the same notes. The password stays on the server. Owner only.
    Notes locked by Joplin's end-to-end encryption cannot be read here and are shown as locked. */
 import { effective } from './config.js';
-import { json, readJson, httpError } from './util.js';
+import { json, readJson, readBody, httpError } from './util.js';
 import crypto from 'node:crypto';
 
 const base = () => String(effective().joplin?.url || '').replace(/\/+$/, '');
 const email = () => effective().joplin?.email || '';
 const pass = () => effective().joplin?.pass || '';
-const TYPE = { note: 1, folder: 2, tag: 5, noteTag: 6 };
+const TYPE = { note: 1, folder: 2, resource: 4, tag: 5, noteTag: 6 };
+const IMG = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
 const NAME = /^[0-9a-f]{32}\.md$/;
 const ID = /^[0-9a-f]{32}$/;
 const PAGE = 40;
@@ -43,13 +44,18 @@ async function jp(path, init = {}, timeout) {
   if (r.status === 403 || r.status === 401) { await login(); r = await raw(path, { ...init, headers: { 'x-api-auth': sid, accept: 'application/json', ...(init.headers || {}) } }, timeout); if (r.status === 403 || r.status === 401) throw httpError(409, 'Notes refused the login', 'bad_login'); }
   return r;
 }
-const enc = (name) => '/api/items/root:/' + encodeURIComponent(name) + ':';
+const enc = (name) => '/api/items/root:/' + String(name).split('/').map(encodeURIComponent).join('/') + ':';
 async function getText(name) { const r = await jp(enc(name) + '/content'); if (r.status === 404) return null; if (!r.ok) throw httpError(502, 'Notes returned ' + r.status, 'upstream'); return r.text(); }
 async function putText(name, text) {
   const fd = new FormData(); fd.append('file', new Blob([text], { type: 'text/plain' }), name);
   const r = await jp(enc(name) + '/content', { method: 'PUT', body: fd });
   if (!r.ok) throw httpError(502, 'Notes did not accept the change (' + r.status + ')', 'upstream');
   const d = await r.json().catch(() => ({})); return d && d.updated_time ? Number(d.updated_time) : Date.now();
+}
+async function putBuf(name, buf, type) {
+  const fd = new FormData(); fd.append('file', new Blob([buf], { type: type || 'application/octet-stream' }), name.split('/').pop());
+  const r = await jp(enc(name) + '/content', { method: 'PUT', body: fd }, 60000);
+  if (!r.ok) throw httpError(502, 'Notes did not accept the file (' + r.status + ')', 'upstream');
 }
 async function delItem(name) { const r = await jp(enc(name), { method: 'DELETE' }); if (!r.ok && r.status !== 404) throw httpError(502, 'Notes returned ' + r.status, 'upstream'); }
 
@@ -78,8 +84,10 @@ function blank(type, title, extra, now) {
       ? [['created_time', t], ['updated_time', t], ['user_created_time', t], ['user_updated_time', t], ['encryption_cipher_text', ''], ['encryption_applied', '0'], ['is_shared', '0'], ['share_id', ''], ['master_key_id', ''], ['icon', ''], ['user_data', ''], ['deleted_time', '0'], ['type_', '2']]
       : type === TYPE.tag
         ? [['created_time', t], ['updated_time', t], ['user_created_time', t], ['user_updated_time', t], ['encryption_cipher_text', ''], ['encryption_applied', '0'], ['is_shared', '0'], ['parent_id', ''], ['user_data', ''], ['type_', '5']]
-        : [['note_id', extra.note_id], ['tag_id', extra.tag_id], ['created_time', t], ['updated_time', t], ['user_created_time', t], ['user_updated_time', t], ['encryption_cipher_text', ''], ['encryption_applied', '0'], ['is_shared', '0'], ['type_', '6']];
-  const props = type === TYPE.noteTag ? [['id', extra.id], ...rest] : type === TYPE.tag ? [['id', extra.id], ...rest] : type === TYPE.folder ? [['id', extra.id], ['parent_id', extra.parent_id || ''], ...rest] : [...p, ...rest];
+        : type === TYPE.resource
+          ? [['mime', extra.mime], ['filename', ''], ['created_time', t], ['updated_time', t], ['user_created_time', t], ['user_updated_time', t], ['file_extension', extra.ext], ['encryption_cipher_text', ''], ['encryption_applied', '0'], ['encryption_blob_encrypted', '0'], ['size', String(extra.size)], ['is_shared', '0'], ['share_id', ''], ['master_key_id', ''], ['user_data', ''], ['blob_updated_time', String(now)], ['type_', '4']]
+          : [['note_id', extra.note_id], ['tag_id', extra.tag_id], ['created_time', t], ['updated_time', t], ['user_created_time', t], ['user_updated_time', t], ['encryption_cipher_text', ''], ['encryption_applied', '0'], ['is_shared', '0'], ['type_', '6']];
+  const props = type === TYPE.noteTag || type === TYPE.resource ? [['id', extra.id], ...rest] : type === TYPE.tag ? [['id', extra.id], ...rest] : type === TYPE.folder ? [['id', extra.id], ['parent_id', extra.parent_id || ''], ...rest] : [...p, ...rest];
   const o = {}; props.forEach(([k, v]) => { o[k] = v; });
   return { type, props, p: o, title: title || '', body: '' };
 }
@@ -186,6 +194,21 @@ export async function handleJoplin(req, res, url, sess) {
   if ((x = p.match(/^\/notes\/([0-9a-f]{32})\/(trash|restore)$/)) && m === 'POST') {
     const c = findNote(x[1]), now = Date.now(); if (locked(c.rec)) throw httpError(409, 'This note is locked by end-to-end encryption', 'locked');
     setProp(c.rec, 'deleted_time', x[2] === 'trash' ? String(now) : '0'); stamp(c.rec, now); await save(x[1] + '.md', c.rec); return json(res, 200, { ok: true });
+  }
+  if ((x = p.match(/^\/res\/([0-9a-f]{32})$/)) && m === 'GET') {
+    const c = cache.items.get(x[1] + '.md'); if (!c || c.rec.type !== TYPE.resource) throw httpError(404, 'Attachment not found');
+    if (c.rec.p.encryption_applied === '1' || c.rec.p.encryption_blob_encrypted === '1') throw httpError(409, 'This attachment is locked by end-to-end encryption', 'locked');
+    const r = await jp(enc('.resource/' + x[1]) + '/content', {}, 60000); if (!r.ok) throw httpError(r.status === 404 ? 404 : 502, 'Could not open that attachment');
+    const mime = String(c.rec.p.mime || 'application/octet-stream').toLowerCase(), isImg = !!IMG[mime] || mime === 'image/svg+xml', buf = Buffer.from(await r.arrayBuffer());
+    const fn = String(c.rec.title || 'attachment').replace(/[^\w.\- ]+/g, '_').slice(0, 120);
+    res.writeHead(200, { 'content-type': isImg ? mime : 'application/octet-stream', 'content-length': buf.length, 'cache-control': 'private, max-age=300', 'x-content-type-options': 'nosniff', 'content-security-policy': "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:", 'content-disposition': (isImg ? 'inline' : 'attachment') + '; filename="' + fn + '"' }); return res.end(buf);
+  }
+  if (p === '/resources' && m === 'POST') {
+    const type = String(req.headers['content-type'] || '').split(';')[0].toLowerCase(), ext = IMG[type]; if (!ext) throw httpError(400, 'Only PNG, JPEG, WebP and GIF images can be added', 'bad_request');
+    const buf = await readBody(req, 12 * 1024 * 1024); if (!buf.length) throw httpError(400, 'That image is empty', 'bad_request');
+    const id = hex(), now = Date.now(), name = String(q.get('name') || 'sketch').replace(/[^\w\- ]+/g, '').slice(0, 60) || 'sketch', rec = blank(TYPE.resource, name + '.' + ext, { id, mime: type, ext, size: buf.length }, now);
+    await putBuf('.resource/' + id, buf, type); await save(id + '.md', rec);
+    return json(res, 201, { id, markdown: '![' + name + '](:/' + id + ')' });
   }
   if (p === '/folders' && m === 'POST') {
     const b = await readJson(req, 4096), title = String(b.title || '').trim().slice(0, 200); if (!title) throw httpError(400, 'Give the notebook a name', 'bad_request');

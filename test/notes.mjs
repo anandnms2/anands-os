@@ -10,7 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let chromium = null; for (const base of [root + '/', '/opt/npm-tools/node_modules/']) { try { chromium = createRequire(base)('playwright').chromium; break; } catch {} }
 if (!chromium) { console.log('skip  Playwright not installed'); process.exit(0); }
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-nt-')), port = 20000 + Math.floor(Math.random() * 20000), B = `http://127.0.0.1:${port}`;
-import { start as fakeJoplin, EMAIL, PASSWORD, files, log } from './fixtures/fake-joplin.mjs';
+import { start as fakeJoplin, EMAIL, PASSWORD, files, log, blobs } from './fixtures/fake-joplin.mjs';
 const fport = port + 1, fake = await fakeJoplin(fport);
 const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'pw' } });
 for (let i = 0; i < 50; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
@@ -69,6 +69,18 @@ try {
     await fr.locator('#ntq').fill(''); await page.waitForTimeout(600);
     await fr.locator('.pl-t', { hasText: 'Work' }).click(); await fr.locator('.nt-item').first().waitFor(); assert.match(await fr.locator('#nth').innerText(), /Work/);
     await fr.locator('[data-tab="todo"]').click(); await page.waitForTimeout(500);
+  });
+  await t('sketch pad saves a picture into the note as a Joplin attachment, and the preview shows it', async () => {
+    await page.goto(B + '/#notes'); await page.waitForSelector('.appframe'); const fr = page.frameLocator('.appframe');
+    await fr.locator('.nt-item', { hasText: 'Recipe: dosa' }).click(); await fr.locator('#ntb').waitFor(); await fr.locator('[data-a="sketch"]').click(); const cv = fr.locator('#skv'); await cv.waitFor();
+    const bb = await cv.boundingBox(); await page.mouse.move(bb.x + 60, bb.y + 60); await page.mouse.down(); await page.mouse.move(bb.x + 200, bb.y + 160, { steps: 8 }); await page.mouse.move(bb.x + 320, bb.y + 90, { steps: 8 }); await page.mouse.up();
+    await fr.locator('#sksv').click(); await fr.locator('#ntb').waitFor(); await page.waitForFunction(() => document.querySelector('.appframe').contentDocument.querySelector('#ntb').value.includes('](:/'), null, { timeout: 8000 });
+    await fr.locator('#nts', { hasText: 'Saved' }).waitFor({ timeout: 8000 });
+    const note = files.get(id(12) + '.md'); const m = note.match(/!\[sketch\]\(:\/([0-9a-f]{32})\)/); assert.ok(m, note);
+    assert.ok(blobs.get('.resource/' + m[1]).subarray(1, 4).toString() === 'PNG'); assert.match(files.get(m[1] + '.md'), /^sketch\.png\n\nid: [0-9a-f]{32}\nmime: image\/png\n[\s\S]*file_extension: png\n[\s\S]*type_: 4$/);
+    await fr.locator('[data-a="preview"]').click(); const img = fr.locator('#ntp img'); await img.waitFor(); await page.waitForTimeout(500); assert.ok(await img.evaluate((e) => e.complete && e.naturalWidth > 0));
+    const r = await ctx.request.get(B + '/api/joplin/res/' + m[1]); assert.equal(r.status(), 200); assert.equal(r.headers()['content-type'], 'image/png'); assert.match(r.headers()['content-security-policy'], /sandbox/);
+    assert.equal((await ctx.request.post(B + '/api/joplin/resources', { data: 'x', headers: { ...H, 'content-type': 'text/html' } })).status(), 400);
   });
   await t('Suite tile, Home tile and Desktop icon exist', async () => {
     await page.goto(B + '/#apps'); await page.waitForSelector('.appcat'); assert.equal(await page.locator('.app', { hasText: 'notebooks, tags and to-dos' }).count(), 1);

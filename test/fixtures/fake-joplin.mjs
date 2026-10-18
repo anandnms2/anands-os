@@ -9,6 +9,7 @@ const tag = (i, title) => `${title}\n\nid: ${id(i)}\ncreated_time: ${t0}\nupdate
 const link = (i, note, tg) => `id: ${id(i)}\nnote_id: ${id(note)}\ntag_id: ${id(tg)}\ncreated_time: ${t0}\nupdated_time: ${t0}\nencryption_applied: 0\ntype_: 6`;
 export const files = new Map(), updated = new Map(); let clock = 1790000000000;
 const put = (name, text) => { files.set(name, text); updated.set(name, ++clock); };
+export const blobs = new Map();
 put(id(1) + '.md', folder(1, 'Work')); put(id(2) + '.md', folder(2, 'Home')); put(id(3) + '.md', folder(3, 'Trips', 1));
 put(id(10) + '.md', `Trip checklist\n\n- [ ] passport\n- [x] tickets\n\n${propsNote(10, 1, { todo: 1 })}`);
 put(id(11) + '.md', `Meeting notes\n\n# Agenda\n\nDiscuss **fleet** budget\nLine two\n\n${propsNote(11, 1)}`);
@@ -27,9 +28,10 @@ export function start(port) {
       const m = p.match(/^\/api\/items\/root:\/([^:]+):(\/content)?$/);
       if (m) {
         const name = m[1];
+        if (req.method === 'GET' && m[2] && blobs.has(name)) { res.writeHead(200, { 'content-type': 'application/octet-stream' }); return res.end(blobs.get(name)); }
         if (req.method === 'GET' && m[2]) { if (!files.has(name)) return j(404, {}); res.writeHead(200, { 'content-type': 'application/octet-stream' }); return res.end(files.get(name)); }
         if (req.method === 'GET') { if (!files.has(name)) return j(404, {}); return j(200, { name, updated_time: updated.get(name) }); }
-        if (req.method === 'PUT' && m[2]) { const ch = []; req.on('data', (d) => ch.push(d)); req.on('end', () => { const body = Buffer.concat(ch).toString(); const a = body.indexOf('\r\n\r\n'), b = body.lastIndexOf('\r\n--'); put(name, body.slice(a + 4, b)); log.push('PUT ' + name); j(200, { name, updated_time: updated.get(name) }); }); return; }
+        if (req.method === 'PUT' && m[2]) { const ch = []; req.on('data', (d) => ch.push(d)); req.on('end', () => { const body = Buffer.concat(ch); const a = body.indexOf('\r\n\r\n'), b = body.lastIndexOf('\r\n--'); if (name.startsWith('.resource/')) blobs.set(name, body.subarray(a + 4, b)); else put(name, body.subarray(a + 4, b).toString()); log.push('PUT ' + name); j(200, { name, updated_time: updated.get(name) }); }); return; }
         if (req.method === 'DELETE') { files.delete(name); updated.delete(name); log.push('DELETE ' + name); return j(200, {}); }
       }
       j(404, { error: 'Not found' });

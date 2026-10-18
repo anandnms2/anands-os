@@ -16,7 +16,7 @@ function ago(ms) { var d = Math.round((Date.now() - ms) / 60000); if (d < 1) ret
 /* small safe markdown */
 function md(src) {
   var lines = String(src).split('\n'), out = [], inCode = false, code = [], list = false;
-  function inl(s) { s = esc(s); s = s.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>').replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>'); return s; }
+  function inl(s) { s = esc(s); s = s.replace(/!\[([^\]]*)\]\(:\/([0-9a-f]{32})\)/g, '<img src="/api/joplin/res/$2" alt="$1" loading="lazy" style="max-width:100%">').replace(/\[([^\]]+)\]\(:\/([0-9a-f]{32})\)/g, '<a href="/api/joplin/res/$2" target="_blank" rel="noopener">$1</a>').replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>').replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>'); return s; }
   function endList() { if (list) { out.push('</ul>'); list = false; } }
   lines.forEach(function (l) {
     if (/^```/.test(l)) { if (inCode) { out.push('<pre>' + esc(code.join('\n')) + '</pre>'); code = []; inCode = false; } else { endList(); inCode = true; } return; }
@@ -79,7 +79,7 @@ function paintEditor() {
   if (n.locked) { e.innerHTML = '<div class="nt-bar"><button class="mbtn nt-back" data-a="back">Back</button></div><div class="nt-lock"><b>This note is locked.</b><p>It is protected by end-to-end encryption in Joplin, so it cannot be read here. Open it in the Joplin app.</p></div>'; return; }
   e.innerHTML = '<div class="nt-bar"><button class="mbtn nt-back" data-a="back">Back</button><select class="tin" id="ntf" aria-label="Notebook">' + tree(m.folders).map(function (f) { return '<option value="' + f.id + '"' + (f.id === n.folder ? ' selected' : '') + '>' + '  '.repeat(f.depth) + esc(f.title) + '</option>'; }).join('') + '</select>' +
     '<label class="nt-st"><input type="checkbox" id="ntt"' + (n.todo ? ' checked' : '') + '> To-do</label><span class="sp"></span><span class="nt-st" id="nts"></span>' +
-    '<button class="mbtn" data-a="preview">' + (P.prev ? 'Edit' : 'Preview') + '</button>' + (n.trashed ? '<button class="mbtn pri" data-a="restore">Restore</button>' : '<button class="mbtn" data-a="trash" title="Move to trash">' + T.ic('trash') + '</button>') + '</div>' +
+    (n.trashed ? '' : '<button class="mbtn" data-a="sketch" title="Draw a sketch and add it to this note">' + T.ic('rec') + 'Sketch</button>') + '<button class="mbtn" data-a="preview">' + (P.prev ? 'Edit' : 'Preview') + '</button>' + (n.trashed ? '<button class="mbtn pri" data-a="restore">Restore</button>' : '<button class="mbtn" data-a="trash" title="Move to trash">' + T.ic('trash') + '</button>') + '</div>' +
     '<input class="nt-title" id="ntti" maxlength="300" placeholder="Title" value="' + esc(n.title) + '" aria-label="Title"' + (n.trashed ? ' disabled' : '') + '>' +
     '<div class="nt-tags"><input id="ntg" placeholder="# tags, separated by commas" value="' + esc(n.tags.map(function (t) { return t.title; }).join(', ')) + '" aria-label="Tags"' + (n.trashed ? ' disabled' : '') + '></div>' +
     (P.prev ? '<div class="nt-prev" id="ntp">' + md(n.body) + '</div>' : '<textarea class="nt-body" id="ntb" aria-label="Note text" placeholder="Write here. Markdown works."' + (n.trashed ? ' disabled' : '') + '>' + esc(n.body) + '</textarea>');
@@ -127,6 +127,34 @@ A.tag = function (b) { P.tag = P.tag === b.dataset.id ? '' : b.dataset.id; P.fol
 A.tick = function (b, e) { e.stopPropagation(); var id = b.dataset.id, on = b.checked; api('PUT', '/notes/' + id, { done: on }).then(function () { var i = lookup(P.list, id); if (i) i.done = on; if (P.cur && P.cur.id === id) P.cur.done = on; refreshMeta(); if (P.view === 'todo') loadList(); else paintList(); }).catch(function (x) { b.checked = !on; err(x); }); };
 A.trash = function () { var n = P.cur; if (!n) return; P.dirty = false; api('POST', '/notes/' + n.id + '/trash').then(function () { T.toast('Moved to trash'); P.cur = null; refreshMeta(); loadList(); paintEditor(); var w = $('#ntw'); if (w) w.classList.remove('open'); }).catch(err); };
 A.restore = function () { var n = P.cur; if (!n) return; api('POST', '/notes/' + n.id + '/restore').then(function () { T.toast('Restored'); P.cur = null; refreshMeta(); loadList(); paintEditor(); }).catch(err); };
+A.sketch = function () {
+  var n = P.cur; if (!n || n.trashed || n.locked) return;
+  var W = 960, H = 600, col = '#111111', size = 4, erase = false, snaps = [], drawing = false, last = null, COLORS = ['#111111', '#f68712', '#2563eb', '#dc2626', '#16a34a'];
+  modal('<h2>Sketch</h2><div class="nt-sktools" id="skt">' + COLORS.map(function (c, i) { return '<button type="button" class="nt-sw' + (i === 0 ? ' on' : '') + '" data-c="' + c + '" style="background:' + c + '" aria-label="Colour ' + (i + 1) + '"></button>'; }).join('') +
+    '<select id="sks" class="tin" aria-label="Pen size"><option value="2">Fine</option><option value="4" selected>Medium</option><option value="9">Thick</option></select><button type="button" class="mbtn" id="ske">Eraser</button><button type="button" class="mbtn" id="sku">Undo</button><button type="button" class="mbtn" id="skc">Clear</button></div>' +
+    '<canvas id="skv" width="' + W + '" height="' + H + '" aria-label="Drawing area"></canvas><div class="err" id="ske2" role="alert"></div><div class="acts"><button class="mbtn" data-a="close">Cancel</button><button class="mbtn pri" id="sksv">Add to note</button></div>', function () {
+      var box = document.querySelector('#mmodal .mbox'); box.classList.add('nt-sk');
+      var cv = $('#skv'), cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, W, H); cx.lineCap = 'round'; cx.lineJoin = 'round';
+      function snap() { snaps.push(cx.getImageData(0, 0, W, H)); if (snaps.length > 25) snaps.shift(); }
+      function pt(e) { var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height, p: e.pointerType === 'pen' && e.pressure > 0 ? e.pressure : 0.5 }; }
+      cv.addEventListener('pointerdown', function (e) { e.preventDefault(); cv.setPointerCapture(e.pointerId); snap(); drawing = true; last = pt(e); seg(last, last, e); });
+      cv.addEventListener('pointermove', function (e) { if (!drawing) return; var p = pt(e); seg(last, p, e); last = p; });
+      function seg(a, b, e) { cx.strokeStyle = erase ? '#fff' : col; var w = erase ? size * 3 : e.pointerType === 'pen' ? size * (0.4 + b.p * 1.4) : size; cx.lineWidth = w; cx.beginPath(); cx.moveTo(a.x, a.y); cx.lineTo(b.x + 0.01, b.y); cx.stroke(); }
+      ['pointerup', 'pointercancel'].forEach(function (t) { cv.addEventListener(t, function () { drawing = false; }); });
+      $('#skt').addEventListener('click', function (e) { var b = e.target.closest('[data-c]'); if (!b) return; col = b.dataset.c; erase = false; $('#ske').classList.remove('pri'); Array.prototype.forEach.call(document.querySelectorAll('#skt .nt-sw'), function (x) { x.classList.toggle('on', x === b); }); });
+      $('#sks').onchange = function () { size = +this.value; }; $('#ske').onclick = function () { erase = !erase; this.classList.toggle('pri', erase); };
+      $('#sku').onclick = function () { var s = snaps.pop(); if (s) cx.putImageData(s, 0, 0); }; $('#skc').onclick = function () { snap(); cx.fillStyle = '#fff'; cx.fillRect(0, 0, W, H); };
+      $('#sksv').onclick = function () {
+        var b = $('#sksv'); b.disabled = true; $('#ske2').textContent = '';
+        cv.toBlob(function (blob) {
+          fetch('/api/joplin/resources?name=sketch', { method: 'POST', credentials: 'same-origin', headers: { 'x-aos': '1', 'content-type': 'image/png' }, body: blob }).then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.message || d.error || 'Could not save the sketch'); return d; }); }).then(function (d) {
+            close(); if (P.prev) { P.prev = false; paintEditor(); } var ta = $('#ntb'); if (!ta) return; var a = ta.selectionStart || ta.value.length, ins = (a > 0 && ta.value[a - 1] !== '\n' ? '\n\n' : '') + d.markdown + '\n\n';
+            ta.value = ta.value.slice(0, a) + ins + ta.value.slice(ta.selectionEnd || a); ta.selectionStart = ta.selectionEnd = a + ins.length; ta.dispatchEvent(new Event('input')); T.toast('Sketch added');
+          }).catch(function (e) { b.disabled = false; $('#ske2').textContent = e.message; });
+        }, 'image/png');
+      };
+    });
+};
 A.newfolder = function () {
   var m = P.meta || { folders: [] };
   modal('<h2>New notebook</h2><label>Name<input class="tin" id="fn" maxlength="200"></label><label>Inside<select id="fp" class="tin"><option value="">Top level</option>' + tree(m.folders).map(function (f) { return '<option value="' + f.id + '">' + '  '.repeat(f.depth) + esc(f.title) + '</option>'; }).join('') + '</select></label><div class="err" id="fe" role="alert"></div><div class="acts"><button class="mbtn" data-a="close">Cancel</button><button class="mbtn pri" id="fok">Create</button></div>', function () {
