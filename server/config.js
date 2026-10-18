@@ -58,6 +58,7 @@ export function effective() {
     mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
     links: { ai: clean(s.links?.ai) || clean(env.LINK_AI) || 'https://ai.anands.xyz/oauth/openid', files: clean(s.links?.files) || clean(env.LINK_FILES) || 'https://files.anands.xyz/api/auth/oidc/login', storage: clean(s.links?.storage) || clean(env.LINK_STORAGE) || 'https://s3-admin.anands.xyz', paperless: clean(s.links?.paperless) || clean(env.LINK_PAPERLESS) || 'https://paperless.anands.xyz', pulse: clean(s.links?.pulse) || clean(env.LINK_PULSE) || 'https://control.anands.xyz' },
     paperless: { token: clean(s.paperless?.token) || clean(env.PAPERLESS_TOKEN) },
+    joplin: { url: (clean(s.joplin?.url) || clean(env.JOPLIN_URL) || 'https://notes.anands.xyz').replace(/\/+$/, ''), email: clean(s.joplin?.email) || clean(env.JOPLIN_EMAIL), pass: clean(s.joplin?.pass) || clean(env.JOPLIN_PASSWORD) },
     bookmarks: { url: (clean(s.bookmarks?.url) || clean(env.LINKS_URL) || 'https://links.anands.xyz').replace(/\/+$/, ''), token: clean(s.bookmarks?.token) || clean(env.LINKS_TOKEN) },
     public: { url: clean(s.public?.url) || PUBLIC_URL },
     turn: { urls: clean(s.turn?.urls) || clean(env.TURN_URLS) || ((s.turn?.secret || env.TURN_SECRET) && PUBLIC_URL ? (() => { try { const h = new URL(PUBLIC_URL).hostname; return 'turn:' + h + ':3478,turn:' + h + ':3478?transport=tcp'; } catch { return ''; } })() : ''), secret: clean(s.turn?.secret) || clean(env.TURN_SECRET), stun: clean(s.turn?.stun) || clean(env.STUN_URLS) },
@@ -82,6 +83,7 @@ export function publicSettings() {
     mail: { host: e.mail.host, port: e.mail.port, security: e.mail.security, user: e.mail.user, passSet: !!e.mail.pass, from: e.mail.from, fromName: e.mail.fromName, dailyCap: e.mail.dailyCap },
     links: e.links,
     paperless: { tokenSet: !!e.paperless.token },
+    joplin: { url: e.joplin.url, email: e.joplin.email, passSet: !!e.joplin.pass },
     bookmarks: { url: e.bookmarks.url, tokenSet: !!e.bookmarks.token },
     public: { url: e.public.url },
     turn: { urls: e.turn.urls, secretSet: !!e.turn.secret, stun: e.turn.stun },
@@ -95,7 +97,7 @@ export function updateSettings(patch) {
     if (v === undefined) return;
     v = clean(v);
     if (secret && v === '') return;
-    if (!secret && v && !['model', 'user', 'host', 'fromName', 'clientId'].includes(field) && !urlOk(v)) throw Object.assign(new Error(`${group} address must start with http:// or https://`), { status: 400 });
+    if (!secret && v && !['model', 'user', 'host', 'fromName', 'clientId', 'email'].includes(field) && !urlOk(v)) throw Object.assign(new Error(`${group} address must start with http:// or https://`), { status: 400 });
     next[group] = next[group] || {}; next[group][field] = v;
   };
   const p = patch || {};
@@ -109,6 +111,7 @@ export function updateSettings(patch) {
   if (p.chrome?.url !== undefined && String(p.chrome.url).trim() && !/^(https:\/\/[^\s\/]+|http:\/\/(127\.0\.0\.1|localhost)(:\d+)?)$/i.test(String(p.chrome.url).trim().replace(/\/+$/, ''))) throw Object.assign(new Error('Enter the address like https://browser.anands.xyz'), { status: 400 });
   set('chrome', 'user', p.chrome?.user); set('chrome', 'pass', p.chrome?.pass, true); set('chrome', 'admin', p.chrome?.admin, true); set('chrome', 'url', p.chrome?.url === undefined ? undefined : String(p.chrome.url).trim().replace(/\/+$/, ''));
   set('paperless', 'token', p.paperless?.token, true);
+  set('joplin', 'url', p.joplin?.url); set('joplin', 'email', p.joplin?.email); set('joplin', 'pass', p.joplin?.pass, true);
   set('bookmarks', 'url', p.bookmarks?.url); set('bookmarks', 'token', p.bookmarks?.token, true);
   set('authentik', 'url', p.authentik?.url); set('authentik', 'token', p.authentik?.token, true);
   for (const f of ['ai', 'files', 'storage', 'paperless', 'pulse']) set('links', f, p.links?.[f]);

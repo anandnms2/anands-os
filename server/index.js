@@ -31,6 +31,7 @@ import { handleHousehold } from './household.js';
 import { handleMoney } from './money.js';
 import { handlePaperless, paperlessTest } from './paperless.js';
 import { handleBookmarks, bookmarksTest } from './bookmarks.js';
+import { handleJoplin, joplinTest } from './joplin.js';
 import { handlePrefs } from './prefs.js';
 import { handleDesk } from './deskapps.js';
 import { handleTeam, areaOf, allowed, isOwner, suiteOk } from './team.js';
@@ -59,6 +60,7 @@ async function api(req, res, url) {
     if (target === 'dav') return json(res, 200, await davPing());
     if (target === 'paperless') return json(res, 200, await paperlessTest());
     if (target === 'bookmarks') return json(res, 200, await bookmarksTest());
+    if (target === 'joplin') return json(res, 200, await joplinTest());
     if (target === 'vault') return json(res, 200, await vaultStatus());
     if (target === 'mail') return json(res, 200, await mail.verify());
     if (target === 'google') return json(res, 200, { configured: gConfigured(), connected: gConnected(), reason: gConfigured() ? (gConnected() ? '' : 'Not connected yet. Use Connect Google Drive.') : 'Add the client ID and secret.' });
@@ -99,6 +101,7 @@ async function api(req, res, url) {
   if (p === '/api/security' || p.startsWith('/api/security/')) return handleSecurity(req, res, url, sessionOf(req));
   if (p === '/api/money' || p.startsWith('/api/money/')) return handleMoney(req, res, url, sessionOf(req));
   if (p === '/api/paperless' || p.startsWith('/api/paperless/')) return handlePaperless(req, res, url, sessionOf(req));
+  if (p === '/api/joplin' || p.startsWith('/api/joplin/')) return handleJoplin(req, res, url, sessionOf(req));
   if (p === '/api/bookmarks' || p.startsWith('/api/bookmarks/')) return handleBookmarks(req, res, url, sessionOf(req));
   if (p === '/api/house' || p.startsWith('/api/house/')) return handleHousehold(req, res, url, sessionOf(req));
   if (p === '/api/term' || p.startsWith('/api/term/')) return handleTerminal(req, res, url, sessionOf(req));
