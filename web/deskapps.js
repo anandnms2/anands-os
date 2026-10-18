@@ -4,7 +4,7 @@
   'use strict';
   var A = window.AOS; if (!A) return;
   var $ = A.$, esc = A.esc, api = A.api, toast = A.toast, LS = A.LS, enc = encodeURIComponent;
-  var X = { ids: { sticky: 1, clock: 1, conv: 1, snip: 1 } };
+  var X = { ids: { clock: 1, conv: 1, snip: 1 } };
   var N = { notes: [], alarms: [], loaded: false, t: 0, z: 1 };
   var COLS = { y: '#ffd966', o: '#ffb066', p: '#ff9fb2', g: '#a8e6a1', b: '#9fd0ff' };
   function dx() { return window.AOSDesk && window.AOSDesk.x; }
@@ -135,7 +135,6 @@
     });
   };
   X.open = function (id) {
-    if (id === 'sticky') { newNote(); return null; }
     if (id === 'clock') { if (!document.getElementById('dkclockpop')) X.clockpop(); return null; }
     if (id === 'snip') { X.snip(); return null; }
     if (id === 'conv') return convWin();
@@ -246,8 +245,6 @@
     if ((m = s.match(/^(?:convert\s+)?(-?[\d.,]+)\s*([a-z³0-9 ]+?)\s+(?:to|in|into)\s+([a-z³0-9 ]+)$/i))) {
       var r2 = conv(parseFloat(m[1].replace(/,/g, '')), m[2], m[3]); if (r2 != null) { var tu = unitOf(m[3]); out.push({ g: 'Convert', t: m[1] + ' ' + m[2].trim() + ' = ' + numFmt(r2) + ' ' + tu.name, s: 'Press Enter to copy the number', run: function () { try { navigator.clipboard.writeText(String(+r2.toPrecision(12))); } catch (e) {} toast('Copied ' + numFmt(r2)); } }); }
     }
-    if ((m = s.match(/^note\s+(.+)$/i))) { var ntx = m[1]; out.push({ g: 'Sticky note', t: 'New note: ' + ntx.slice(0, 60), s: 'Press Enter to pin it to the desktop', run: function () { newNote(ntx); } }); }
-    else if (/^note$/i.test(s)) out.push({ g: 'Sticky note', t: 'New sticky note', s: 'Press Enter', run: function () { newNote(); } });
     if ((m = s.match(/^timer\s+(\d+(?:\.\d+)?)\s*(s|sec|m|min|h)?$/i))) { var secs = parseFloat(m[1]) * ({ s: 1, sec: 1, m: 60, min: 60, h: 3600 }[(m[2] || 'm').toLowerCase()] || 60); out.push({ g: 'Timer', t: 'Start a timer for ' + fmtHMS(secs * 1000), s: 'Press Enter to start. It rings here when done', run: function () { C.tm.total = C.tm.left = Math.round(secs); C.tm.end = Date.now() + secs * 1000; C.tm.run = true; beep(0); toast('Timer started'); } }); }
     return out;
   }

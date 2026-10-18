@@ -58,13 +58,27 @@ function place(id, el) {
   x = Math.max(4, Math.min(W - d[3] - 4, x)); y = Math.max(4, Math.min(H - 80, y)); el.style.left = x + 'px'; el.style.top = y + 'px';
 }
 function tz(z, o) { try { return new Intl.DateTimeFormat('en-GB', Object.assign({ timeZone: z, hourCycle: 'h23' }, o)).format(new Date()); } catch (e) { return ''; } }
+var DEFZ = [{ n: 'Dar es Salaam', z: 'Africa/Dar_es_Salaam' }, { n: 'Kochi', z: 'Asia/Kolkata' }];
+function zname(z) { return String(z).split('/').pop().replace(/_/g, ' '); }
+function validZone(z) { try { new Intl.DateTimeFormat('en-GB', { timeZone: z }); return /^[A-Za-z_]+(\/[A-Za-z_+\-0-9]+){0,2}$|^UTC$/.test(z); } catch (e) { return false; } }
+function clockZones() { var c = wstate('clock'); var z = Array.isArray(c.zones) ? c.zones.filter(function (x) { return x && validZone(x.z); }) : []; return z.length ? z.slice(0, 6) : DEFZ; }
+function allZones() { try { return Intl.supportedValuesOf('timeZone'); } catch (e) { return ['Africa/Dar_es_Salaam', 'Africa/Nairobi', 'Africa/Lusaka', 'Africa/Johannesburg', 'Asia/Kolkata', 'Asia/Dubai', 'Europe/London', 'America/New_York', 'Asia/Singapore', 'Australia/Sydney']; } }
+function clockEditor(zs) {
+  return '<div class="wd-zl">' + zs.map(function (c, i) { return '<div class="wd-row"><span>' + esc(c.n) + '</span><b>' + tz(c.z, { hour: '2-digit', minute: '2-digit' }) + '</b>' + (zs.length > 1 ? '<button type="button" class="wd-x" data-wd="zdel" data-i="' + i + '" aria-label="Remove ' + esc(c.n) + '">&#10005;</button>' : '') + '</div>'; }).join('') + '</div>' +
+    (zs.length < 6 ? '<input class="wd-zi" list="wd-zones" placeholder="Add a time zone, e.g. London" aria-label="Add a time zone" data-wd="zin"><datalist id="wd-zones">' + allZones().map(function (z) { return '<option value="' + esc(z) + '">'; }).join('') + '</datalist><button type="button" class="wd-zb" data-wd="zadd">Add</button>' : '<div class="wd-sub">Up to 6 time zones</div>') +
+    '<button type="button" class="wd-zb" data-wd="zdone">Done</button>';
+}
 function body(id) {
-  if (id === 'clock') return '<div class="wd-time">' + tz('Africa/Dar_es_Salaam', { hour: '2-digit', minute: '2-digit' }) + '</div><div class="wd-sub">Dar es Salaam · ' + tz('Africa/Dar_es_Salaam', { weekday: 'short', day: 'numeric', month: 'short' }) + '</div><div class="wd-row"><span>Kochi</span><b>' + tz('Asia/Kolkata', { hour: '2-digit', minute: '2-digit' }) + '</b></div>';
+  if (id === 'clock') {
+    var zs = clockZones(), a = zs[0];
+    if (WS.edit) return clockEditor(zs);
+    return '<div class="wd-time">' + tz(a.z, { hour: '2-digit', minute: '2-digit' }) + '</div><div class="wd-sub">' + esc(a.n) + ' · ' + tz(a.z, { weekday: 'short', day: 'numeric', month: 'short' }) + '</div>' + zs.slice(1).map(function (c) { return '<div class="wd-row"><span>' + esc(c.n) + '</span><b>' + tz(c.z, { hour: '2-digit', minute: '2-digit' }) + '</b></div>'; }).join('');
+  }
   if (id === 'servers') {
     var d = S.ins && S.ins.data || WS.ins; if (!d) return '<p class="wd-none">Loading...</p>'; var R = d.resources, bad = R.filter(function (r) { return r.s === 'bad'; }), ok = R.filter(function (r) { return r.s === 'ok'; }).length;
     return '<div class="wd-time" style="color:' + (bad.length ? 'var(--bad)' : 'var(--ok)') + '">' + (bad.length ? bad.length + ' down' : 'All good') + '</div><div class="wd-sub">' + ok + ' healthy of ' + R.length + '</div>' + (bad.length ? '<div class="wd-sub">' + esc(bad.slice(0, 2).map(function (r) { return r.n; }).join(', ')) + '</div>' : '');
   }
-  if (id === 'note') return '<textarea class="wd-note" data-wd="note" placeholder="Type here..." aria-label="Sticky note">' + esc(LS.get('widnote', '')) + '</textarea>';
+  if (id === 'note') return '<textarea class="wd-note" data-wd="note" placeholder="Type here..." aria-label="Sticky note">' + esc(SN.text != null ? SN.text : LS.get('widnote', '')) + '</textarea><div class="wd-sub wd-sn" data-wd="notes" role="link" tabindex="0">' + (SN.state === 'on' ? 'Saved in Notes &rsaquo; Sticky Notes' : SN.state === 'off' ? 'Saved on this device. Connect Notes in Settings to sync' : 'Connecting to Notes...') + '</div>';
   return '';
 }
 function drawWidgets(force) {
@@ -73,19 +87,44 @@ function drawWidgets(force) {
   layer.innerHTML = '';
   WD.forEach(function (d) {
     var s = wstate(d[0]); if (!s.on) return; var el = document.createElement('section'); el.className = 'wd'; el.setAttribute('data-w', d[0]); el.style.width = d[3] + 'px';
-    el.innerHTML = '<header class="wd-h"><b>' + esc(d[1]) + '</b><button type="button" data-wd="off" aria-label="Hide ' + esc(d[1]) + '">&#10005;</button></header><div class="wd-b">' + body(d[0]) + '</div>'; layer.appendChild(el); place(d[0], el);
+    el.innerHTML = '<header class="wd-h"><b>' + esc(d[1]) + '</b>' + (d[0] === 'clock' ? '<button type="button" data-wd="edit" aria-label="Edit time zones" title="Edit time zones">&#9998;</button>' : '') + '<button type="button" data-wd="off" aria-label="Hide ' + esc(d[1]) + '">&#10005;</button></header><div class="wd-b"' + (d[0] === 'servers' ? ' data-wd="go" role="link" tabindex="0" title="Open Insights" aria-label="Open Insights"' : '') + '>' + body(d[0]) + '</div>'; layer.appendChild(el); place(d[0], el);
   });
 }
 function initDesk() {
   desk = document.getElementById('desk'); if (!desk) return setTimeout(initDesk, 300);
   layer = document.createElement('div'); layer.id = 'dkwid'; var icons = document.getElementById('dkicons'); desk.insertBefore(layer, icons ? icons.nextSibling : null);
-  new MutationObserver(function () { if (!desk.hidden) { drawWidgets(true); refreshData(); } }).observe(desk, { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(function () { if (!desk.hidden) { drawWidgets(true); refreshData(); if (wstate('note').on) snInit(); } }).observe(desk, { attributes: true, attributeFilter: ['hidden'] });
   window.addEventListener('resize', function () { drawWidgets(); });
-  setInterval(function () { if (!desk.hidden) { var c = layer.querySelector('[data-w="clock"] .wd-b'); if (c) c.innerHTML = body('clock'); } }, 15000);
+  setInterval(function () { if (!desk.hidden) { var c = layer.querySelector('[data-w="clock"] .wd-b'); if (c && !WS.edit) c.innerHTML = body('clock'); } }, 15000);
   setInterval(function () { if (!desk.hidden) { refreshData(); drawWidgets(); } }, 60000);
 }
 function refreshData() {
+  if (wstate('note').on) snInit();
   if (wstate('servers').on && !(S.ins && S.ins.data) && Date.now() - WS.insAt > 120000) { WS.insAt = Date.now(); api('/api/insights').then(function (d) { WS.ins = d; drawWidgets(); }).catch(function () {}); }
+}
+/* Sticky note widget: lives in the "Sticky Notes" notebook of Notes (Joplin). Falls back to this device when Notes is not connected. */
+var SN = { state: 'init', folder: '', id: '', rev: '', text: null, busy: false, t: null };
+function snApi(path, o) { return api('/api/joplin' + path, o); }
+function snInit() {
+  if (SN.state !== 'init' || SN.busy) return; SN.busy = true;
+  snApi('/meta').then(function (m) {
+    var f = (m.folders || []).filter(function (x) { return x.title === 'Sticky Notes' && !x.parent; })[0];
+    return f ? f : snApi('/folders', { method: 'POST', json: { title: 'Sticky Notes' } });
+  }).then(function (f) {
+    SN.folder = f.id; return snApi('/notes?folder=' + encodeURIComponent(f.id));
+  }).then(function (r) {
+    var n = (r.results || []).filter(function (x) { return x.title === 'Desktop sticky note'; })[0];
+    return n ? snApi('/notes/' + n.id) : null;
+  }).then(function (n) {
+    var local = LS.get('widnote', '');
+    if (n) { SN.id = n.id; SN.rev = n.rev; SN.text = n.body || ''; } else { SN.text = local || ''; if (local) snSave(local); }
+    SN.state = 'on'; SN.busy = false; drawWidgets(true);
+  }).catch(function () { SN.state = 'off'; SN.busy = false; SN.text = null; drawWidgets(); });
+}
+function snSave(v) {
+  LS.set('widnote', v); if (SN.state !== 'on') return; SN.text = v;
+  var req = SN.id ? snApi('/notes/' + SN.id, { method: 'PUT', json: { body: v, base: SN.rev } }) : snApi('/notes', { method: 'POST', json: { title: 'Desktop sticky note', body: v, folder: SN.folder } });
+  req.then(function (n) { SN.id = n.id; SN.rev = n.rev; }).catch(function (e) { toast(e && e.status === 409 ? 'Sticky note changed in Notes. Reload to see it' : 'Could not save to Notes. Kept on this device'); });
 }
 var drag = null;
 document.addEventListener('pointerdown', function (e) {
@@ -98,9 +137,16 @@ document.addEventListener('pointermove', function (e) {
 });
 document.addEventListener('pointerup', function () { if (!drag) return; drag.w.classList.remove('drag'); if (drag.x != null) { var s = wstate(drag.id); s.x = Math.round(drag.x); s.y = Math.round(drag.y); save(); } drag = null; });
 var noteT = null;
-document.addEventListener('input', function (e) { if (e.target.getAttribute && e.target.getAttribute('data-wd') === 'note') { var v = e.target.value; clearTimeout(noteT); noteT = setTimeout(function () { LS.set('widnote', v); }, 300); } });
+document.addEventListener('input', function (e) { if (e.target.getAttribute && e.target.getAttribute('data-wd') === 'note') { var v = e.target.value; clearTimeout(noteT); noteT = setTimeout(function () { snSave(v); }, 600); } });
 document.addEventListener('click', function (e) {
   var b = e.target.closest && e.target.closest('[data-wd]'); if (!b || b.tagName === 'TEXTAREA') return; var a = b.getAttribute('data-wd');
+  var wid = b.closest('.wd'), cz = wstate('clock');
+  if (a === 'notes') { if (window.AOSDesk && AOSDesk.x && AOSDesk.x.launchKey) AOSDesk.x.launchKey('tool:notes'); return; }
+  if (a === 'go') { if (window.AOSDesk && AOSDesk.x && AOSDesk.x.launchKey) AOSDesk.x.launchKey('os:insights'); return; }
+  if (a === 'edit') { WS.edit = !WS.edit; drawWidgets(true); return; }
+  if (a === 'zdone') { WS.edit = false; drawWidgets(true); return; }
+  if (a === 'zdel') { var zs = clockZones().slice(); zs.splice(+b.getAttribute('data-i'), 1); cz.zones = zs; save(); drawWidgets(true); return; }
+  if (a === 'zadd') { var inp = wid.querySelector('.wd-zi'), v = inp && inp.value.trim(); if (!v) return; var zz = allZones().filter(function (z) { return z.toLowerCase() === v.toLowerCase().replace(/ /g, '_') || zname(z).toLowerCase() === v.toLowerCase(); })[0]; if (!zz) return toast('Pick a time zone from the list'); var cur = clockZones().slice(); if (cur.some(function (c) { return c.z === zz; })) return toast('Already added'); cur.push({ n: zname(zz), z: zz }); cz.zones = cur; save(); drawWidgets(true); return; }
   if (a === 'off') { var id = b.closest('.wd').getAttribute('data-w'); wstate(id).on = false; save(); drawWidgets(true); if (S.view === 'appearance') A.redraw(); }
 });
 
@@ -177,3 +223,9 @@ if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListen
 (function wait(n) { if (S.user) { pull(); apply(); return; } if (n < 80) setTimeout(function () { wait(n + 1); }, 200); })(0);
 initDesk();
 })();
+
+document.addEventListener('keydown', function (e) {
+  var t = e.target; if (!t || !t.getAttribute) return; var a = t.getAttribute('data-wd');
+  if (a === 'zin' && e.key === 'Enter') { e.preventDefault(); var b = t.closest('.wd').querySelector('[data-wd="zadd"]'); if (b) b.click(); }
+  if ((a === 'go' || a === 'notes') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); t.click(); }
+});

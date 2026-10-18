@@ -1227,3 +1227,10 @@ html.guest .deskbtn{display:none}
   .srv{padding:14px}
   #tabs button{font-size:11px}
 }
+.wd-h button[data-wd=edit]{margin-left:auto;margin-right:4px}
+.wd-b[data-wd=go]{cursor:pointer}.wd-b[data-wd=go]:hover .wd-time{text-decoration:underline}
+.wd-sn{cursor:pointer;font-size:11px;margin-top:6px}.wd-sn:hover{color:var(--accent-text)}
+.wd-zl .wd-row{align-items:center;gap:8px}.wd-zl .wd-row span{flex:1}
+.wd-x{background:none;border:0;color:inherit;opacity:.7;cursor:pointer;padding:0 2px}.wd-x:hover{opacity:1;color:var(--bad)}
+.wd-zi{width:100%;margin-top:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:inherit;border-radius:8px;padding:6px 8px;font:inherit}
+.wd-zb{margin-top:8px;margin-right:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:inherit;border-radius:8px;padding:4px 12px;cursor:pointer}.wd-zb:hover{background:var(--accent);color:#111}

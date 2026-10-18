@@ -46,8 +46,17 @@ try {
   });
   await t('widgets can be added, hidden and typed into', async () => {
     await p.evaluate(() => AOSDesk.hide(false)); await p.evaluate(() => AOS.go('appearance')); await p.waitForSelector('.apc'); await p.check('[data-ap="widget"][data-v="note"]'); await p.evaluate(() => AOSDesk.show()); await p.waitForSelector('.wd[data-w="note"] textarea');
-    await p.fill('.wd-note', 'check the Chirundu border queue'); await p.waitForTimeout(500); assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('aos.widnote'))), 'check the Chirundu border queue');
+    await p.fill('.wd-note', 'check the Chirundu border queue'); await p.waitForTimeout(1000); assert.equal(await p.evaluate(() => JSON.parse(localStorage.getItem('aos.widnote'))), 'check the Chirundu border queue');
     await p.dispatchEvent('.wd[data-w="clock"] [data-wd="off"]', 'click'); assert.equal(await p.locator('.wd[data-w="clock"]').count(), 0);
+  });
+  await t('clock widget: time zones can be added and removed, and the health widget opens Insights', async () => {
+    await p.evaluate(() => AOSDesk.hide(false)); await p.evaluate(() => AOS.go('appearance')); await p.waitForSelector('.apc'); await p.check('[data-ap="widget"][data-v="clock"]'); await p.check('[data-ap="widget"][data-v="servers"]'); await p.evaluate(() => AOSDesk.show()); await p.waitForSelector('.wd[data-w="clock"]');
+    await p.dispatchEvent('.wd[data-w="clock"] [data-wd="edit"]', 'click'); await p.fill('.wd-zi', 'London'); await p.dispatchEvent('.wd[data-w="clock"] [data-wd="zadd"]', 'click');
+    assert.match(await p.locator('.wd[data-w="clock"]').innerText(), /London/); await p.dispatchEvent('.wd[data-w="clock"] [data-wd="zdone"]', 'click');
+    assert.match(await p.locator('.wd[data-w="clock"]').innerText(), /London/); assert.match(await p.locator('.wd[data-w="clock"]').innerText(), /Kochi/);
+    await p.dispatchEvent('.wd[data-w="clock"] [data-wd="edit"]', 'click'); await p.dispatchEvent('.wd[data-w="clock"] [data-wd="zdel"][data-i="1"]', 'click'); assert.doesNotMatch(await p.locator('.wd[data-w="clock"]').innerText(), /Kochi/);
+    await p.dispatchEvent('.wd[data-w="clock"] [data-wd="zdone"]', 'click');
+    await p.dispatchEvent('.wd[data-w="servers"] .wd-b', 'click'); await p.waitForSelector('.dkw[aria-label*="Insights" i]');
   });
   await t('single-key shortcuts: g then a letter goes places, ? shows the list', async () => {
     await p.evaluate(() => AOSDesk.hide(false)); await p.evaluate(() => AOS.go('home')); await p.waitForSelector('#view'); await p.keyboard.press('g'); await p.keyboard.press('p'); await p.waitForFunction(() => location.hash === '#photos');
