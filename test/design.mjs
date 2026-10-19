@@ -227,6 +227,46 @@ try {
     const r = await page.evaluate(() => { const n0 = (typeof S !== 'undefined' ? 0 : 0); const before = JSON.stringify(Object.keys(window)).length; const ic = Object.keys(SP).find((k) => k.startsWith('ic_')); return { ic, m: typeof placeMany, f: typeof framesSection, i: typeof iconsSection, mk: typeof mockupsSection }; });
     assert.ok(r.ic && r.m === 'function' && r.f === 'function' && r.i === 'function' && r.mk === 'function', JSON.stringify(r));
   });
+  await t('designs can be put in folders, moved, and deleted from the home screen', async () => {
+    await page.evaluate(async () => { newDesign(800, 800, 'Folder test'); await wait(300); await saveDoc(); showHome(); });
+    await page.waitForTimeout(800);
+    const r = await page.evaluate(async () => {
+      await refreshDocs(); const f = await makeFolder('Clients'); let docs = await listDocs(); const d = docs.find((x) => x.name === 'Folder test'); if (!d) throw new Error('design not listed');
+      await moveDesign(d._file, 'Clients'); docs = await listDocs(); const m = docs.find((x) => x.name === 'Folder test'); const inF = m && m.folder === 'Clients';
+      home.view = 'projects'; home.folder = 'Clients'; await refreshDocs(); const cards = document.querySelectorAll('#hsections .hc b'); const shown = [...cards].some((b) => b.textContent === 'Folder test');
+      const dd = (await listDocs()).find((x) => x.name === 'Folder test'); deleteDesignFile(dd); document.querySelector('#modal .btn.danger').click(); await wait(800); await refreshDocs();
+      const gone = !(await listDocs()).some((x) => x.name === 'Folder test'); await removeFolder('Clients'); const dirs = await listFolders();
+      return { f, inF, shown, gone, dirs };
+    });
+    assert.ok(r.f === 'Clients' && r.inF && r.shown && r.gone && !r.dirs.includes('Clients'), JSON.stringify(r));
+  });
+  await t('right-click menus: rename, move to a folder, drag to folder, delete (designs and folders) and the canvas menu', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof canvasMenu === 'function');
+    await p.evaluate(async () => { newDesign(800, 600, 'Menu test'); await saveDoc(); showHome(); home.view = 'projects'; await refreshDocs(); renderHome(); });
+    await p.waitForSelector('#home .hc .dots');
+    const card = p.locator('#home .hc', { hasText: 'Menu test' }).first();
+    await card.click({ button: 'right' });
+    const items = await p.$$eval('#ctxm > button, #ctxm .ctxs > button', (b) => b.map((x) => x.textContent));
+    for (const w of ['Open', 'Rename', 'Make a copy', 'Move to folder', 'Download', 'Delete']) assert.ok(items.some((x) => x.startsWith(w)), 'missing ' + w + ': ' + items);
+    await p.keyboard.press('Escape'); assert.equal(await p.locator('#ctxm').count(), 0);
+    const r = await p.evaluate(async () => {
+      const d = (await listDocs()).find((x) => x.name === 'Menu test'); await renameDesignFile(d, 'Menu renamed'); await moveDesignTo((await listDocs()).find((x) => x.name === 'Menu renamed'), (await makeFolder('Client A')));
+      const a = (await listDocs()).find((x) => x.name === 'Menu renamed'); const inFolder = a.folder;
+      await moveDesign(a._file, ''); await refreshDocs();
+      const b = (await listDocs()).find((x) => x.name === 'Menu renamed'); const out = b.folder;
+      deleteDesignFile(b); document.querySelector('#modal .btn.danger').click(); await new Promise((r) => setTimeout(r, 600));
+      const gone = !(await listDocs()).some((x) => x.name === 'Menu renamed');
+      removeFolder('Client A'); await new Promise((r) => setTimeout(r, 300));
+      return { inFolder, out, gone, dirs: await listFolders() };
+    });
+    assert.equal(r.inFolder, 'Client A'); assert.equal(r.out, ''); assert.ok(r.gone, 'not deleted'); assert.ok(!r.dirs.includes('Client A'), JSON.stringify(r));
+    await p.keyboard.press('Escape'); await p.evaluate(() => hideHome());
+    await p.evaluate(() => { addObj({ id: uid(), type: 'shape', kind: 'rect', x: 100, y: 100, w: 200, h: 100, fill: '#f00', rot: 0, opacity: 1 }); });
+    const pt = await p.evaluate(() => { const o = objs()[objs().length - 1]; const rc = document.querySelector('#ui,canvas#ui,#stage canvas')?.getBoundingClientRect() || { left: 0, top: 0 }; return { o: o.id }; });
+    await p.evaluate(() => { const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 300 }); uiEl.dispatchEvent(e); });
+    const cm = await p.$$eval('#ctxm button', (b) => b.map((x) => x.textContent)); assert.ok(cm.some((x) => x.startsWith('Copy')) || cm.some((x) => x.startsWith('Paste')), 'canvas menu: ' + cm);
+    await p.close();
+  });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
 } finally { await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }
 console.log(`${pass} passed${failed ? ', ' + failed + ' failed' : ''}`); process.exit(failed ? 1 : 0);

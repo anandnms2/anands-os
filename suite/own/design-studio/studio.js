@@ -692,7 +692,7 @@ uiEl.addEventListener('dblclick',e=>{
   if(hit.type==='text'){drag=null;sel=[hit.id];selChanged();editText(hit)}
   else if(hit.type==='image'){cropMode=cropMode===hit.id?null:hit.id;toast(cropMode?'Crop: drag the image inside its frame. Double-click again to finish.':'Crop finished');renderUI()}
 });
-uiEl.addEventListener('contextmenu',e=>e.preventDefault());
+uiEl.addEventListener('contextmenu',e=>canvasMenu(e));
 window.addEventListener('resize',()=>{render();posTE()});
 if(window.ResizeObserver)new ResizeObserver(()=>{if(!userView&&$('#work').clientWidth)fit();else render()}).observe($('#work'));
 
@@ -2570,6 +2570,74 @@ DECKS.forEach(th=>SLDN.forEach(([k,n])=>add('Slides',`Deck · ${th.n} · ${n}`,[
 /* more one-tap photo looks */
 Object.assign(FILTERS,{golden:{sp:30,s:35,b:6,h:-10},matte:{c:-12,b:8,s:-10},dream:{b:10,c:-8,s:25,h:8},cinema:{c:25,s:-15,h:-12,b:-6},vintage:{sp:45,c:-8,s:-15,b:4},icy:{h:25,s:-5,b:6,c:8},bloom:{b:12,s:30,h:-4,c:-5},moody:{c:20,b:-14,s:-20},retro:{sp:55,s:40,h:-14,c:10},softbw:{gs:100,c:-10,b:10}});
 
+/* ---------- context menus, design/folder actions (Canva-style) ---------- */
+function ctxMenu(x,y,items){
+  closeCtx();const m=el('div',{class:'ctx',role:'menu',id:'ctxm'});
+  const build=(host,list)=>list.forEach(it=>{
+    if(it==='-'){host.append(el('hr'));return}
+    if(it.sub){const w=el('div',{class:'ctxs'});const b=el('button',{role:'menuitem',class:'sub'},it.label,el('span',{},'›'));const s=el('div',{class:'ctx subm'});build(s,it.sub);w.append(b,s);host.append(w);return}
+    const b=el('button',{role:'menuitem',class:it.danger?'danger':'',disabled:!!it.off,onclick:()=>{closeCtx();it.go()}},it.label,it.key?el('em',{},it.key):'');host.append(b)});
+  build(m,items);document.body.append(m);
+  const r=m.getBoundingClientRect();m.style.left=Math.max(6,Math.min(x,innerWidth-r.width-6))+'px';m.style.top=Math.max(6,Math.min(y,innerHeight-r.height-6))+'px';
+  if(x+r.width+190>innerWidth)m.classList.add('flip');
+  setTimeout(()=>{window.addEventListener('pointerdown',ctxAway,true);window.addEventListener('keydown',ctxKey,true);window.addEventListener('blur',closeCtx);window.addEventListener('resize',closeCtx)},0);
+}
+function ctxAway(e){if(!e.target.closest||!e.target.closest('#ctxm'))closeCtx()}
+function ctxKey(e){if(e.key==='Escape'){e.stopPropagation();closeCtx()}}
+function closeCtx(){const m=document.getElementById('ctxm');if(m)m.remove();window.removeEventListener('pointerdown',ctxAway,true);window.removeEventListener('keydown',ctxKey,true);window.removeEventListener('blur',closeCtx);window.removeEventListener('resize',closeCtx)}
+function menuAt(btn,items){const r=btn.getBoundingClientRect();ctxMenu(r.right-170,r.bottom+4,items)}
+
+async function renameDesignFile(r,name){
+  name=String(name||'').trim().slice(0,80);if(!name)return;
+  if(D._file===r._file){D.name=name;$('#title').value=name;dirty=true;await saveDoc()}
+  else{const x=await readDesign(r._file);delete x._file;x.name=name;await PUT().fs.write(r._file,JSON.stringify(x),{overwrite:true});fileCache.delete(r._file)}
+  refreshDocs();toast('Renamed')}
+async function duplicateDesignFile(r){try{commit();await saveDoc();const x=await readDesign(r._file);x.id=uid();x.name=r.name+' copy';x._file=null;loadRec(x);await saveDoc();showHome();toast('Duplicated')}catch(e){toast('Could not duplicate')}}
+function deleteDesignFile(r){askSure('Delete “'+r.name+'”? This removes the file from Files › Designs.','Delete',async()=>{try{await PUT().fs.delete(r._file);fileCache.delete(r._file);if(D._file===r._file)D._file=null}catch(e){toast('Could not delete');return}refreshDocs();toast('Deleted')})}
+async function downloadDesignFile(r){try{const b=await PUT().fs.read(r._file);downloadBlob(safeName(r.name)+'.design',b)}catch(e){toast('Could not download')}}
+async function moveDesignTo(r,f){try{await moveDesign(r._file,f);toast(f?'Moved to '+f:'Moved to Projects');refreshDocs()}catch(e){toast('Could not move')}}
+function newFolderFor(r){askText('New folder','','Create & move',async n=>{try{const f=await makeFolder(n);if(r)await moveDesign(r._file,f);await refreshDocs();toast('Moved to '+f)}catch(e){toast('Could not create that folder')}})}
+function designMenuItems(r){
+  const open=()=>r.id===D.id&&!document.getElementById('home').hidden?hideHome():openDesignFile(r._file);
+  const mv=[...(r.folder?[{label:'Projects (top level)',go:()=>moveDesignTo(r,'')}]:[]),...home.dirs.filter(d=>d!==r.folder).map(d=>({label:'📁 '+d,go:()=>moveDesignTo(r,d)})),{label:'＋ New folder…',go:()=>newFolderFor(r)}];
+  return [{label:'Open',go:open},{label:'Rename',go:()=>askText('Rename design',r.name,'Rename',n=>renameDesignFile(r,n))},{label:'Make a copy',go:()=>duplicateDesignFile(r)},{label:'Move to folder',sub:mv},{label:'Download (.design)',go:()=>downloadDesignFile(r)},'-',{label:'Delete',danger:true,go:()=>deleteDesignFile(r)}]}
+function folderMenuItems(d){return [{label:'Open',go:()=>{home.folder=d;renderHome()}},{label:'Rename',go:()=>askText('Rename folder',d,'Rename',async n=>{try{await renameFolder(d,n);await refreshDocs()}catch(e){toast('Could not rename')}})},'-',{label:'Delete folder',danger:true,go:()=>askSure('Delete the folder “'+d+'”? The designs inside move back to Projects; none are deleted.','Delete folder',async()=>{try{await removeFolder(d);if(home.folder===d)home.folder='';await refreshDocs();toast('Folder deleted')}catch(e){toast('Could not delete the folder')}})}]}
+function wireDesignCard(card,r){
+  const tn=card.querySelector('.tn');const more=el('button',{class:'dots','aria-label':'More actions for '+r.name,title:'More',onclick:e=>{e.stopPropagation();menuAt(more,designMenuItems(r))}},'⋯');card.append(more);
+  card.addEventListener('contextmenu',e=>{e.preventDefault();ctxMenu(e.clientX,e.clientY,designMenuItems(r))});
+  card.draggable=true;card.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/x-design',r._file);e.dataTransfer.effectAllowed='move';card.classList.add('drag')});card.addEventListener('dragend',()=>card.classList.remove('drag'));
+}
+function wireFolderCard(card,d){
+  const more=el('button',{class:'dots','aria-label':'More actions for folder '+d,onclick:e=>{e.stopPropagation();menuAt(more,folderMenuItems(d))}},'⋯');card.append(more);
+  card.addEventListener('contextmenu',e=>{e.preventDefault();ctxMenu(e.clientX,e.clientY,folderMenuItems(d))});
+  dropTarget(card,d);
+}
+function dropTarget(node,folder){
+  node.addEventListener('dragover',e=>{if([...e.dataTransfer.types].includes('text/x-design')){e.preventDefault();node.classList.add('over')}});
+  node.addEventListener('dragleave',()=>node.classList.remove('over'));
+  node.addEventListener('drop',async e=>{node.classList.remove('over');const f=e.dataTransfer.getData('text/x-design');if(!f)return;e.preventDefault();try{await moveDesign(f,folder);toast(folder?'Moved to '+folder:'Moved to Projects');refreshDocs()}catch(x){toast('Could not move')}});
+}
+
+/* right-click on the canvas */
+function canvasMenu(e){
+  e.preventDefault();if(typeof tool!=='undefined'&&tool!=='select')return;
+  const p=toDoc(e.clientX,e.clientY);const hit=pickAt(p.x,p.y);
+  if(hit&&!sel.includes(hit.id)){sel=[hit.id];selChanged()}
+  const so=selObjs();const locked=so.length&&so.every(o=>o.locked);
+  const items=[];
+  if(so.length){
+    items.push({label:'Copy',key:'Ctrl C',go:copySel},{label:'Paste',key:'Ctrl V',off:!clip.length,go:pasteClip},{label:'Duplicate',key:'Ctrl D',off:locked,go:dupSel},{label:'Delete',key:'Del',danger:true,off:locked,go:removeSel},'-');
+    items.push({label:'Arrange',sub:[{label:'Bring to front',go:()=>order('front')},{label:'Bring forward',go:()=>order('fwd')},{label:'Send backward',go:()=>order('bwd')},{label:'Send to back',go:()=>order('back')}]});
+    if(so.length>1)items.push({label:'Group',key:'Ctrl G',go:groupSel});
+    if(so.some(o=>o.type==='group'))items.push({label:'Ungroup',go:ungroupSel});
+    items.push({label:locked?'Unlock':'Lock',go:()=>{const v=!locked;so.forEach(o=>o.locked=v);touch();selChanged()}});
+    if(so.length===1&&so[0].type==='image')items.push('-',{label:'Replace image…',go:()=>{const i=el('input',{type:'file',accept:'image/*'});i.onchange=async()=>{const a=i.files[0]&&await ingestImage(i.files[0]);if(a){so[0].src=a.id;touch();renderInsp()}};i.click()}});
+  }else{
+    items.push({label:'Paste',key:'Ctrl V',off:!clip.length,go:pasteClip},{label:'Add page',go:()=>addPage()},{label:'Duplicate this page',go:()=>dupPage(cur)});
+  }
+  ctxMenu(e.clientX,e.clientY,items);
+}
+
 /* =====================================================================
    Anands OS integration + the studio's advanced features
    (files, background remover, animation, stock photos, SVG/vector, video/GIF, share links)
@@ -2594,7 +2662,8 @@ const baseName=()=>(D.name||'design').replace(/[^\w\- ]+/g,'').trim().replace(/\
 var ready=false;
 const fileCache=new Map();
 const safeName=n=>String(n||'Untitled design').replace(/[\\/:*?"<>|\u0000-\u001f]+/g,'').replace(/\s+/g,' ').trim().slice(0,60)||'Untitled design';
-const fileFor=()=>`${DIR}/${safeName(D.name)} [${D.id.slice(-5)}].design`;
+const fileFor=()=>`${D._folder||((!D._file&&typeof home!=='undefined'&&home.folder)?DIR+'/'+home.folder:DIR)}/${safeName(D.name)} [${D.id.slice(-5)}].design`;
+const folderOf=f=>{const m=String(f||'').match(/^\/Designs\/([^\/]+)\/[^\/]+$/);return m?DIR+'/'+m[1]:''};
 let saveQ=Promise.resolve();
 function setSaveState(s){const e=document.getElementById('saveState');if(e)e.textContent=s}
 function saveDoc(){saveQ=saveQ.then(doSave,doSave);return saveQ}
@@ -2612,15 +2681,28 @@ async function doSave(){
   }catch(e){setSaveState('Not saved')}
 }
 async function readDesign(path){const b=await PUT().fs.read(path);const r=JSON.parse(await b.text());if(!r||!Array.isArray(r.pages)||!r.w||!r.h)throw new Error('Not a design');r._file=path;return r}
-function loadRec(r){D={id:r.id||uid(),name:r.name||'Untitled design',w:r.w,h:r.h,pages:r.pages,assets:r.assets||{}};D._file=r._file||null;cur=0;sel=[];$('#title').value=D.name;resetHistory();fit();renderAll();setSaveState(D._file?'Saved to Files':'');hideHome()}
+function loadRec(r){D={id:r.id||uid(),name:r.name||'Untitled design',w:r.w,h:r.h,pages:r.pages,assets:r.assets||{}};D._file=r._file||null;D._folder=folderOf(D._file);cur=0;sel=[];$('#title').value=D.name;resetHistory();fit();renderAll();setSaveState(D._file?'Saved to Files':'');hideHome()}
+const RESERVED=/^(uploads|\.)/i;
+async function listFolders(){let it=[];try{it=await PUT().fs.readdir(DIR)}catch(e){return []}return it.filter(i=>i.is_dir&&!RESERVED.test(i.name)).map(i=>i.name).sort((a,b)=>a.localeCompare(b))}
 async function listDocs(){
   let items=[];try{items=await PUT().fs.readdir(DIR)}catch(e){return []}
+  const subs=items.filter(i=>i.is_dir&&!RESERVED.test(i.name));
+  for(const s of subs){try{const x=await PUT().fs.readdir(DIR+'/'+s.name);items.push(...x)}catch(e){}}
   items=items.filter(i=>!i.is_dir&&/\.design$/i.test(i.name));const out=[];let k=0;
   await Promise.all(Array.from({length:4},async()=>{while(k<items.length){const it=items[k++];const key=it.path+'|'+(it.modified||0)+'|'+(it.size||0);let c=fileCache.get(it.path);
     if(!c||c.key!==key){try{const r=await readDesign(it.path);c={key,meta:{id:r.id,name:r.name,w:r.w,h:r.h,pages:r.pages.length,updated:r.updated||0,thumb:r.thumb||''}};fileCache.set(it.path,c)}catch(e){continue}}
-    out.push({...c.meta,_file:it.path})}}));
+    out.push({...c.meta,_file:it.path,folder:folderOf(it.path).slice(DIR.length+1)})}}));
   return out.sort((a,b)=>b.updated-a.updated);
 }
+const cleanFolder=n=>String(n||'').replace(/[\\/:*?"<>|\u0000-\u001f]+/g,'').replace(/\s+/g,' ').trim().slice(0,40);
+async function moveDesign(file,folder){
+  const name=file.split('/').pop(),to=(folder?DIR+'/'+folder:DIR)+'/'+name;if(to===file)return file;
+  const b=await PUT().fs.read(file);await PUT().fs.write(to,b,{createMissingParents:true,overwrite:true});await PUT().fs.delete(file);
+  fileCache.delete(file);fileCache.delete(to);if(D._file===file){D._file=to;D._folder=folderOf(to)}return to;
+}
+async function makeFolder(n){n=cleanFolder(n);if(!n||RESERVED.test(n))throw new Error('Bad name');await PUT().fs.mkdir(DIR+'/'+n,{createMissingParents:true});return n}
+async function removeFolder(n){const docs=(await listDocs()).filter(r=>r.folder===n);for(const r of docs)await moveDesign(r._file,'');await PUT().fs.delete(DIR+'/'+n)}
+async function renameFolder(a,b){b=cleanFolder(b);if(!b||b===a||RESERVED.test(b))return a;await makeFolder(b);const docs=(await listDocs()).filter(r=>r.folder===a);for(const r of docs)await moveDesign(r._file,b);try{await PUT().fs.delete(DIR+'/'+a)}catch(e){}return b}
 async function openDesignFile(path){commit();await saveDoc();try{loadRec(await readDesign(path));closeModal()}catch(e){toast('Could not open that design')}}
 function importRec(j,name){if(!j||!Array.isArray(j.pages)||!j.w)throw new Error('bad');commit();saveDoc();loadRec({id:uid(),name:j.name||name||'Imported design',w:j.w,h:j.h,pages:j.pages,assets:j.assets||{}});saveDoc()}
 async function openDesigns(){
@@ -3119,11 +3201,13 @@ async function openLaunchItems(items){
    Home screen — Canva-style: sidebar, search banner, design types, recents, templates
    ===================================================================== */
 const QUICK=[['Presentation','play','#7048e8',1920,1080],['Instagram post','image','#d6336c',1080,1080],['Story','sparkle','#e8590c',1080,1920],['WhatsApp status','chat','#2f9e44',1080,1920],['Video','film','#1098ad',1920,1080],['Poster','text','#2f9e44',1800,2400],['Flyer','grid','#f59f00',874,1240],['Invitation','heart','#c2255c',1050,1470],['Greeting card','sparkle','#ae3ec9',1050,1470],['Resume','text','#364fc7',1240,1754],['Certificate','trophy','#e67700',1754,1240],['Menu','grid','#e8590c',1240,1754],['YouTube thumbnail','play','#e03131',1280,720],['Facebook cover','image','#1971c2',1640,624],['Logo','brand','#ae3ec9',800,800],['Business card','tpl','#0ca678',1050,600],['Brochure','tpl','#5c940d',1754,1240],['Infographic','chart','#1098ad',800,2000],['T-shirt','tpl','#862e9c',2400,2880],['Custom size','plus','#6f685f',0,0]];
-const home={view:'home',q:'',cat:'All',fest:'',docs:null,mine:''};
+const home={folder:'',dirs:[],view:'home',q:'',cat:'All',fest:'',docs:null,mine:''};
 const homeEl=()=>document.getElementById('home');
 function showHome(){commit();saveDoc();home.view='home';home.q='';const h=homeEl();h.hidden=false;home.docs=null;renderHome();refreshDocs()}
 function hideHome(){const h=homeEl();if(h)h.hidden=true;setTimeout(()=>{fit();renderStrip()},60)}
-async function refreshDocs(){try{home.docs=await listDocs()}catch(e){home.docs=[]}if(!homeEl().hidden)renderHome()}
+async function refreshDocs(){try{home.docs=await listDocs();home.dirs=await listFolders()}catch(e){home.docs=[]}if(home.folder&&!home.dirs.includes(home.folder))home.folder='';if(!homeEl().hidden)renderHome()}
+function askText(title,val,ok,go){const i=el('input',{class:'f',value:val||'','aria-label':title,maxlength:40});const run=()=>{const v=i.value.trim();if(!v)return;closeModal();go(v)};i.addEventListener('keydown',e=>{if(e.key==='Enter')run()});openModal(el('div',{style:'display:grid;gap:14px;min-width:280px'},el('h2',{style:'margin:0;font-size:18px'},title),i,el('div',{class:'row',style:'display:flex;gap:8px;justify-content:flex-end'},el('button',{class:'btn',onclick:closeModal},'Cancel'),el('button',{class:'btn primary',onclick:run},ok))),true);setTimeout(()=>{i.focus();i.select()},30)}
+function askSure(msg,ok,go){openModal(el('div',{style:'display:grid;gap:14px;max-width:340px'},el('p',{style:'margin:0'},msg),el('div',{style:'display:flex;gap:8px;justify-content:flex-end'},el('button',{class:'btn',onclick:closeModal},'Cancel'),el('button',{class:'btn danger',onclick:()=>{closeModal();go()}},ok))),true)}
 function startSize(w,h,name){if(!w){openNew();return}newDesign(w,h,name)}
 function startTemplate(t){const [w,h]=tplSize(t);newDesign(w,h,t.n);applyTemplate(t)}
 function fmtDate(ts){try{return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'})}catch(e){return ''}}
@@ -3132,11 +3216,7 @@ function designCard(r,withActions){
   let armed=false;
   const open=()=>r.id===D.id&&!document.getElementById('home').hidden?(hideHome()):openDesignFile(r._file);
   const card=el('div',{class:'hc'},el('button',{class:'tn','aria-label':'Open '+r.name,onclick:open},r.thumb?el('img',{src:r.thumb,alt:''}):null),el('b',{title:r.name},r.name),el('small',{},`${r.w}×${r.h} · ${r.pages} page${r.pages>1?'s':''} · ${fmtDate(r.updated)}`));
-  if(withActions){
-    const del=el('button',{class:'btn sm danger',onclick:async()=>{if(!armed){armed=true;del.textContent='Delete?';setTimeout(()=>{armed=false;del.textContent='Delete'},3000);return}try{await PUT().fs.delete(r._file);fileCache.delete(r._file)}catch(e){}refreshDocs()}},'Delete');
-    const dup=el('button',{class:'btn sm',onclick:async()=>{try{commit();await saveDoc();const x=await readDesign(r._file);x.id=uid();x.name=r.name+' copy';x._file=null;loadRec(x);await saveDoc();showHome();toast('Duplicated')}catch(e){toast('Could not duplicate')}}},'Duplicate');
-    card.append(el('div',{class:'row'},dup,del));
-  }
+  wireDesignCard(card,r);
   return card;
 }
 function templateCard(t){const th=el('button',{class:'tn','aria-label':'Use template '+t.n,onclick:()=>startTemplate(t)},tplThumb(t));const [w,h]=tplSize(t);return el('div',{class:'hc'},th,el('b',{title:t.n},t.n),el('small',{},(t.g||t.c)+' · '+w+'×'+h))}
@@ -3147,10 +3227,16 @@ function homeSections(){
   const q=home.q.trim().toLowerCase(),out=[];
   const docs=home.docs;
   if(home.view==='projects'){
-    const list=(docs||[]).filter(r=>!home.mine||r.name.toLowerCase().includes(home.mine.toLowerCase()));
+    const inF=r=>(r.folder||'')===home.folder,qm=home.mine.toLowerCase();
+    const list=(docs||[]).filter(r=>qm?r.name.toLowerCase().includes(qm):inF(r));
     const s=el('input',{class:'f',type:'search',placeholder:'Search your designs',value:home.mine,'aria-label':'Search your designs',style:'max-width:360px'});
     s.addEventListener('input',()=>{home.mine=s.value;renderHome();const n=document.querySelector('#home input[aria-label="Search your designs"]');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}});
-    out.push(el('div',{class:'hs'},el('h2',{},'Projects'),el('button',{class:'more',onclick:openLinks},'Share links')),s,el('div',{style:'height:16px'}),docs===null?el('p',{class:'note'},'Loading…'):list.length?el('div',{class:'hg big'},[el('div',{class:'hc'},el('button',{class:'tn new',onclick:()=>openNew(),'aria-label':'Create a design',html:ic('plus',34)}),el('b',{},'Create new')),...list.map(r=>designCard(r,true))]):el('div',{class:'hempty'},home.mine?'No designs match that search.':'Nothing here yet. Your designs save automatically to Files › Designs.'));
+    const newF=el('button',{class:'more',onclick:()=>askText('New folder','','Create',async n=>{try{await makeFolder(n);await refreshDocs()}catch(e){toast('Could not create that folder')}})},'+ New folder');
+    out.push(el('div',{class:'hs'},el('h2',{},home.folder?el('span',{},(()=>{const c=el('button',{class:'crumb',title:'Drop a design here to move it out of the folder',onclick:()=>{home.folder='';renderHome()}},'Projects');dropTarget(c,'');return c})(),' / '+home.folder):'Projects'),el('span',{class:'grow'}),home.folder?el('button',{class:'more',onclick:()=>askText('Rename folder',home.folder,'Rename',n=>renameFolder(home.folder,n).then(x=>{home.folder=x;refreshDocs()}).catch(()=>toast('Could not rename')))},'Rename'):null,home.folder?el('button',{class:'more',onclick:()=>askSure('Delete the folder “'+home.folder+'”? Its designs move back to All designs.','Delete folder',async()=>{try{await removeFolder(home.folder);home.folder='';await refreshDocs();toast('Folder deleted')}catch(e){toast('Could not delete')}})},'Delete folder'):null,newF,el('button',{class:'more',onclick:openLinks},'Share links')),s,el('div',{style:'height:16px'}));
+    if(docs===null){out.push(el('p',{class:'note'},'Loading…'));return out}
+    const dirCards=(home.folder||qm)?[]:home.dirs.map(d=>{const n=docs.filter(r=>r.folder===d);const fc=el('div',{class:'hc'},el('button',{class:'tn fold',onclick:()=>{home.folder=d;renderHome()},'aria-label':'Open folder '+d,html:ic('folder',54)}),el('b',{title:d},d),el('small',{},n.length+' design'+(n.length===1?'':'s')));wireFolderCard(fc,d);return fc});
+    out.push(list.length||dirCards.length||!home.folder?el('div',{class:'hg big'},[el('div',{class:'hc'},el('button',{class:'tn new',onclick:()=>openNew(),'aria-label':'Create a design',html:ic('plus',34)}),el('b',{},'Create new')),...dirCards,...list.map(r=>designCard(r,true))]):el('div',{class:'hempty'},'This folder is empty. Drag a design onto the folder, or right-click a design › Move to folder.'));
+    if(!list.length&&!dirCards.length&&!home.folder)out.push(el('div',{class:'hempty'},qm?'No designs match that search.':'Nothing here yet. Your designs save automatically to Files › Designs.'));
     return out;
   }
   if(home.view==='templates'){
@@ -3173,7 +3259,7 @@ function homeSections(){
     return out;
   }
   out.push(el('div',{class:'hs'},el('h2',{},'Recent designs'),(docs&&docs.length>5)?el('button',{class:'more',onclick:()=>{home.view='projects';renderHome()}},'See all'):null),
-    docs===null?el('p',{class:'note'},'Loading…'):el('div',{class:'hg'},[el('div',{class:'hc'},el('button',{class:'tn new',onclick:()=>openNew(),'aria-label':'Create a design',html:ic('plus',34)}),el('b',{},'Create new')),...docs.slice(0,6).map(r=>designCard(r))]));
+    docs===null?el('p',{class:'note'},'Loading…'):el('div',{class:'hg'},[el('div',{class:'hc'},el('button',{class:'tn new',onclick:()=>openNew(),'aria-label':'Create a design',html:ic('plus',34)}),el('b',{},'Create new')),...docs.slice(0,6).map(r=>designCard(r,true))]));
   HOME_ROWS.forEach(([c,label,f])=>{const l=TEMPLATES.filter(t=>t.c===c&&(!f||f(t)));if(!l.length)return;out.push(el('div',{class:'hs'},el('h2',{},label),el('button',{class:'more',onclick:()=>{home.view='templates';home.cat=c;home.fest='';home.tq='';renderHome()}},'See all '+TEMPLATES.filter(t=>t.c===c).length)),el('div',{class:'hg'},l.slice(0,6).map(templateCard)))});
   out.push(el('div',{class:'hs'},el('h2',{},'All sizes')),sizeButtons(SIZES.slice(0,24)),el('button',{class:'more',style:'margin-top:10px',onclick:()=>openNew()},'See all design types'));
   return out;
