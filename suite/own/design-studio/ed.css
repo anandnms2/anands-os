@@ -6,7 +6,7 @@ button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}[h
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[contenteditable]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .bar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--panel);border-bottom:1px solid var(--line);min-width:0}
 .bar .logo{display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;font-weight:700;padding:4px 8px;border-radius:8px}.bar .logo:hover{background:var(--panel2)}
-.bar .logo b{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--accent-fg)}
+.bar .logo b{display:grid;place-items:center;width:28px;height:28px}.bar .logo b img{width:28px;height:28px;object-fit:contain}
 .bar .ttl{flex:1;min-width:80px;max-width:420px;border:1px solid transparent;background:transparent;border-radius:8px;padding:6px 8px;font-weight:600;font-size:15px}.bar .ttl:hover,.bar .ttl:focus{border-color:var(--line);background:var(--field)}
 .bar .st{color:var(--mut);font-size:12px;white-space:nowrap}.grow{flex:1}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 11px;display:inline-flex;align-items:center;gap:6px}.btn:hover{background:var(--panel2)}.btn.pri{background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:600}.btn.sm{padding:3px 8px;font-size:12.5px}.btn.danger{color:var(--danger)}

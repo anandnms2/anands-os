@@ -2661,7 +2661,7 @@ async function listTrash(){
   return out.sort((a,b)=>b.trashed-a.trashed)}
 async function restoreDesign(r){try{await moveDesign(r._file,'');toast('Restored to Projects');renderTrash()}catch(e){toast('Could not restore')}}
 function purgeDesign(r){askSure('Delete “'+r.name+'” forever? This cannot be undone.','Delete forever',async()=>{try{await PUT().fs.delete(r._file);fileCache.delete(r._file)}catch(e){}renderTrash();toast('Deleted forever')})}
-function emptyTrash(list){if(!list.length)return;askSure('Delete all '+list.length+' design'+(list.length>1?'s':'')+' in the trash forever?','Empty trash',async()=>{for(const r of list){try{await PUT().fs.delete(r._file)}catch(e){}}renderTrash();toast('Trash emptied')})}
+function emptyTrash(list){const ed=(typeof edTrashCache!=='undefined'&&edTrashCache)||[];const n=list.length+ed.length;if(!n)return;askSure('Delete all '+n+' item'+(n>1?'s':'')+' in the trash forever?','Empty trash',async()=>{for(const r of list){try{await PUT().fs.delete(r._file)}catch(e){}}for(const r of ed){try{await PUT().fs.delete(r.path)}catch(e){}}edTrashCache=[];renderTrash();toast('Trash emptied')})}
 async function renderTrash(){if(home.view!=='trash')return;home.trash=await listTrash();const b=document.getElementById('hsections');if(b){b.innerHTML='';b.append(...homeSections())}}
 async function setStar(r,v){
   try{if(D._file===r._file){D.starred=v;dirty=true;await saveDoc()}else{const x=await readDesign(r._file);delete x._file;x.starred=v;await PUT().fs.write(r._file,JSON.stringify(x),{overwrite:true});fileCache.delete(r._file)}}catch(e){toast('Could not update');return}
@@ -2672,9 +2672,10 @@ function trashCard(r){
   return c}
 function trashView(){
   const out=[],list=home.trash;
-  out.push(el('div',{class:'hs'},el('h2',{},'Trash'),el('span',{class:'grow'}),list&&list.length?el('button',{class:'more',onclick:()=>emptyTrash(list)},'Empty trash'):null));
+  out.push(el('div',{class:'hs'},el('h2',{},'Trash'),el('span',{class:'grow'}),(list&&list.length)||(typeof edTrashCache!=='undefined'&&edTrashCache&&edTrashCache.length)?el('button',{class:'more',id:'emptyTrash',onclick:()=>emptyTrash(list||[])},'Empty trash'):null));
   if(!list){out.push(el('p',{class:'note'},'Loading…'));renderTrash();return out}
-  out.push(list.length?el('div',{class:'hg big'},list.map(trashCard)):el('div',{class:'hempty'},'Trash is empty. Designs you delete stay here for '+TRASH_DAYS+' days so you can restore them.'));
+  const edT=typeof edTrashCards==='function'?edTrashCards():[];
+  out.push((list.length||edT.length)?el('div',{class:'hg big'},list.map(trashCard).concat(edT)):el('div',{class:'hempty'},'Trash is empty. Designs, docs, whiteboards and websites you delete stay here for '+TRASH_DAYS+' days so you can restore them.'));
   return out}
 function sortDocs(list){const s=home.sort;return list.slice().sort((a,b)=>s==='name'?a.name.localeCompare(b.name):s==='size'?(b.w*b.h)-(a.w*a.h):s==='pages'?b.pages-a.pages:b.updated-a.updated)}
 function projectsToolbar(){
@@ -3001,17 +3002,36 @@ async function edList(k){const K=EDKIND[k];let it=[];try{it=await PUT().fs.readd
     out.push({path,name,updated,pub})}
   return out.sort((a,b)=>b.updated-a.updated)}
 async function edRefresh(k){edCache[k]=await edList(k);if(home.view===k&&!document.getElementById('home').hidden)renderHome()}
-function edMenu(k,r,x,y){ctxMenu(x,y,[{label:'Open',go:()=>edOpen(k,r.path)},{label:'Rename',go:()=>askText('Rename',r.name,'Rename',async v=>{try{const b=await PUT().fs.read(r.path);const j=JSON.parse(typeof b==='string'?b:await b.text());j.name=v;await PUT().fs.write(r.path,JSON.stringify(j),{overwrite:true});edRefresh(k);toast('Renamed')}catch(e){toast('Could not rename')}})},'-',{label:'Delete',go:()=>askSure('Delete “'+r.name+'” for good? '+(r.pub?'Its public link stops working only after you take it offline from the editor.':''),'Delete',async()=>{try{await PUT().fs.delete(r.path);edRefresh(k);toast('Deleted')}catch(e){toast('Could not delete')}})}])}
+function edMenu(k,r,x,y){ctxMenu(x,y,[{label:'Open',go:()=>edOpen(k,r.path)},{label:'Rename',go:()=>askText('Rename',r.name,'Rename',async v=>{try{const b=await PUT().fs.read(r.path);const j=JSON.parse(typeof b==='string'?b:await b.text());j.name=v;await PUT().fs.write(r.path,JSON.stringify(j),{overwrite:true});edRefresh(k);toast('Renamed')}catch(e){toast('Could not rename')}})},'-',{label:'Move to trash',go:()=>askSure('Move “'+r.name+'” to the trash? You can restore it for '+(typeof TRASH_DAYS==='number'?TRASH_DAYS:30)+' days.','Move to trash',async()=>{try{await edTrashMove(k,r);edTrashCache=null;edRefresh(k);toast('Moved to trash')}catch(e){toast('Could not move it')}})}])}
 function edCard(k,r){const K=EDKIND[k];
   const c=el('div',{class:'hc','data-ed':k,tabindex:0,role:'button','aria-label':'Open '+r.name,onclick:e=>{if(!e.target.closest('.dots,.delb'))edOpen(k,r.path)},onkeydown:e=>{if(e.key==='Enter')edOpen(k,r.path)},oncontextmenu:e=>{e.preventDefault();edMenu(k,r,e.clientX,e.clientY)}},
     el('div',{class:'tn',style:'display:grid;place-items:center;background:'+K.color+'18;color:'+K.color,html:ic(K.icon,56)}),el('b',{title:r.name},r.name),el('small',{},(r.pub?'Published · ':'')+'Edited '+fmtDate(r.updated)),
     el('button',{class:'dots','aria-label':'More options for '+r.name,title:'More',onclick:e=>{e.stopPropagation();const b=e.currentTarget.getBoundingClientRect();edMenu(k,r,b.left,b.bottom+4)}},'⋯'),
-    el('button',{class:'delb','aria-label':'Delete '+r.name,title:'Delete',onclick:e=>{e.stopPropagation();askSure('Delete “'+r.name+'” for good?','Delete',async()=>{try{await PUT().fs.delete(r.path);edRefresh(k);toast('Deleted')}catch(e){toast('Could not delete')}})},html:ic('trash',16)}));
+    el('button',{class:'delb','aria-label':'Move '+r.name+' to trash',title:'Move to trash',onclick:e=>{e.stopPropagation();edTrashMove(k,r).then(()=>{edTrashCache=null;edRefresh(k);toast('Moved to trash')}).catch(()=>toast('Could not move it'))},html:ic('trash',16)}));
   return c}
 function edKindView(k){const K=EDKIND[k],list=edCache[k],out=[];
   out.push(el('div',{class:'hs'},el('h2',{},K.many),el('span',{class:'grow'}),el('button',{class:'btn pri',id:'edNew',onclick:()=>edNew(k)},'+ New '+K.one.toLowerCase())));
   if(!list){out.push(el('p',{class:'note'},'Loading…'));edRefresh(k);return out}
   out.push(list.length?el('div',{class:'hg big'},list.map(r=>edCard(k,r))):el('div',{class:'hempty'},K.empty));
+  return out}
+
+/* ---------- Trash for docs, whiteboards and websites (kept 30 days, can be restored) ---------- */
+const ED_TRASH='/Designs/.trash-ed';
+async function edReadJson(path){const b=await PUT().fs.read(path);return JSON.parse(typeof b==='string'?b:await b.text())}
+async function edTrashMove(k,r){const K=EDKIND[k];const j=await edReadJson(r.path);j._trash={kind:k,from:r.path,at:Date.now()};if(j.pub){try{await fetch('/_local/design/unpublish',{method:'POST',credentials:'same-origin',headers:{'x-aos':'1','content-type':'application/json'},body:JSON.stringify({token:j.pub.token})})}catch(e){}delete j.pub}
+  const base=r.path.split('/').pop();await PUT().fs.write(`${ED_TRASH}/${k}__${base}`,JSON.stringify(j),{createMissingParents:true,overwrite:true});await PUT().fs.delete(r.path)}
+async function edTrashList(){let it=[];try{it=await PUT().fs.readdir(ED_TRASH)}catch(e){return[]}
+  const out=[],now=Date.now(),max=(typeof TRASH_DAYS==='number'?TRASH_DAYS:30)*864e5;
+  for(const i of it){if(i.is_dir)continue;const path=ED_TRASH+'/'+i.name;try{const j=await edReadJson(path);const t=j._trash||{};if(t.at&&now-t.at>max){await PUT().fs.delete(path);continue}out.push({path,kind:t.kind||i.name.split('__')[0],from:t.from,name:j.name||i.name,at:t.at||now})}catch(e){}}
+  return out.sort((a,b)=>b.at-a.at)}
+async function edRestore(r){const j=await edReadJson(r.path);const from=r.from||(EDKIND[r.kind].dir+'/'+r.path.split('/').pop().replace(/^[a-z]+__/,''));delete j._trash;
+  let to=from;try{await PUT().fs.stat(to);to=to.replace(/(\.\w+)$/,' (restored)$1')}catch(e){}
+  await PUT().fs.write(to,JSON.stringify(j),{createMissingParents:true,overwrite:false});await PUT().fs.delete(r.path)}
+async function edTrashRefresh(){edTrashCache=await edTrashList();if(home.view==='trash'&&!document.getElementById('home').hidden)renderHome()}
+let edTrashCache=null;
+function edTrashCards(){const out=[];if(edTrashCache===null){edTrashRefresh();return out}
+  edTrashCache.forEach(r=>{const K=EDKIND[r.kind]||EDKIND.docs;out.push(el('div',{class:'hc','data-edtrash':r.kind},el('div',{class:'tn',style:'display:grid;place-items:center;background:'+K.color+'18;color:'+K.color,html:ic(K.icon,56)}),el('b',{title:r.name},r.name),el('small',{},K.one+' · deleted '+fmtDate(r.at)),
+    el('div',{class:'row',style:'display:flex;gap:6px;margin-top:6px'},el('button',{class:'btn sm','data-restore':1,onclick:async()=>{try{await edRestore(r);toast('Restored');edTrashRefresh();edCache[r.kind]=null}catch(e){toast('Could not restore')}}},'Restore'),el('button',{class:'btn sm danger',onclick:()=>askSure('Delete “'+r.name+'” forever?','Delete forever',async()=>{try{await PUT().fs.delete(r.path);edTrashRefresh()}catch(e){toast('Could not delete')}})},'Delete forever'))))});
   return out}
 
 /* Canva-style Crop: a window with the whole picture, a box with handles, ratio presets and rotate. Apply makes a new, smaller picture. */
@@ -3694,8 +3714,8 @@ function homeSections(){
 }
 function renderHome(){
   const h=homeEl();if(!h)return;h.innerHTML='';
-  const nav=el('nav',{class:'hn','aria-label':'Design Studio'},el('div',{class:'hlogo','aria-hidden':'true'},'D'));
-  [['home','Home','home'],['projects','Projects','folder'],['templates','Templates','tpl'],['docs','Docs','doc'],['boards','Whiteboards','board'],['sites','Websites','globe'],['trash','Trash','trash']].forEach(([k,l,i])=>nav.append(el('button',{class:'hi','aria-current':home.view===k,onclick:()=>{home.view=k;home.q='';if(k==='trash')home.trash=null;renderHome();if(k==='projects')refreshDocs()}},el('span',{class:'ib',html:ic(i,20)}),l)));
+  const nav=el('nav',{class:'hn','aria-label':'Design Studio'},el('div',{class:'hlogo',title:'Anands Design Studio'},el('img',{src:'/logo-orange.png',alt:'Anands'})));
+  [['home','Home','home'],['projects','Projects','folder'],['templates','Templates','tpl'],['docs','Docs','doc'],['boards','Whiteboards','board'],['sites','Websites','globe'],['trash','Trash','trash']].forEach(([k,l,i])=>nav.append(el('button',{class:'hi','aria-current':home.view===k,onclick:()=>{home.view=k;home.q='';if(k==='trash'){home.trash=null;edTrashCache=null}renderHome();if(k==='projects')refreshDocs()}},el('span',{class:'ib',html:ic(i,20)}),l)));
   nav.append(el('button',{class:'hi',onclick:()=>{hideHome();openTab('brand')}},el('span',{class:'ib',html:ic('brand',20)}),'Brand'),el('span',{class:'sp'}),
     el('button',{class:'hi',onclick:()=>{hideHome()}},el('span',{class:'ib',html:ic('pen',20)}),'Editor'));
   const hero=el('section',{class:'hero'},el('h1',{},'What will you design today?'));

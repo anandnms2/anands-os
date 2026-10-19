@@ -5,7 +5,8 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DATA, effective } from './config.js';
-import { json, readBody, readJson, httpError } from './util.js';
+import { json, readBody, readJson, httpError, clientIp } from './util.js';
+import * as mail from './mail.js';
 import { isOwner } from './team.js';
 
 /* ---------- background remover files: fetched once, then served from the data folder ---------- */
@@ -171,13 +172,34 @@ export async function publicReview(req, res, p) {
 const WF = path.join(DATA, 'design-sites');
 const wFile = (t) => path.join(WF, RT(t) + '.json');
 const readSite = (t) => { try { return JSON.parse(fs.readFileSync(wFile(t), 'utf8')); } catch { return null; } };
+/* ---------- website contact forms: stored for the site's owner, optionally mailed to them ---------- */
+const FF = path.join(DATA, 'design-forms'); const formHits = new Map(); const mailDay = new Map();
+const fFile = (t) => path.join(FF, RT(t) + '.json');
+const readForms = (t) => { try { return JSON.parse(fs.readFileSync(fFile(t), 'utf8')); } catch { return []; } };
+const escH = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const thanks = (res, code, msg, back) => { res.writeHead(code, { 'content-type': 'text/html; charset=utf-8', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'" }); res.end('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Message</title><body style="font:18px system-ui;display:grid;place-items:center;min-height:90vh;text-align:center;padding:20px"><div><h1 style="margin:0 0 8px">' + escH(msg) + '</h1><p><a href="' + escH(back) + '">Back to the website</a></p></div>'); };
+async function receiveForm(req, res, t) {
+  const j = readSite(t); const back = req.headers.referer && /^https?:\/\//.test(req.headers.referer) ? '.' : '.';
+  if (!j || !j.forms) return thanks(res, 404, 'This form is not available.', back);
+  const ip = clientIp(req), key = ip + '|' + t, now = Date.now(); const a = (formHits.get(key) || []).filter((x) => now - x < 600000); if (a.length >= 5) return thanks(res, 429, 'Too many messages. Please try again in a few minutes.', back); a.push(now); formHits.set(key, a);
+  let body; try { body = (await readBody(req, 16 * 1024)).toString('utf8'); } catch { return thanks(res, 413, 'That message is too long.', back); }
+  const q = new URLSearchParams(body); if (q.get('website')) return thanks(res, 200, 'Thank you. Your message was sent.', back); // honeypot
+  const m = { id: crypto.randomBytes(6).toString('hex'), at: now, name: clip(q.get('name'), 120).trim(), email: clip(q.get('email'), 200).trim(), message: clip(q.get('message'), 4000).trim() };
+  if (!m.message || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m.email)) return thanks(res, 400, 'Please fill in your email and a message.', back);
+  fs.mkdirSync(FF, { recursive: true, mode: 0o700 }); const all = readForms(t); if (all.length >= 500) all.shift(); all.push(m); fs.writeFileSync(fFile(t) + '.tmp', JSON.stringify(all), { mode: 0o600 }); fs.renameSync(fFile(t) + '.tmp', fFile(t));
+  const to = clip(j.formTo, 200); const day = t + '|' + new Date().toISOString().slice(0, 10); const sent = mailDay.get(day) || 0;
+  if (to && /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(to) && sent < 20) { try { if (mail.configured()) { mailDay.set(day, sent + 1); await mail.sendMail({ to: [to], subject: 'New message from your website: ' + clip(j.name, 60), text: 'From: ' + m.name + ' <' + m.email + '>\n\n' + m.message + '\n\n(Sent through your Anands Design Studio website.)', replyTo: m.email }); } } catch {} }
+  return thanks(res, 200, 'Thank you. Your message was sent.', back);
+}
 export async function publicSite(req, res, p) {
-  const parts = p.split('/'), t = RT(parts[2]), slug = String(parts[3] || 'index').toLowerCase().replace(/\.html$/, '').replace(/[^a-z0-9-]/g, '');
+  const parts = p.split('/'), t = RT(parts[2]);
+  if (req.method === 'POST' && parts[3] === '_form' && t && t.length >= 20) return receiveForm(req, res, t);
+  const  slug = String(parts[3] || 'index').toLowerCase().replace(/\.html$/, '').replace(/[^a-z0-9-]/g, '');
   const gone = () => { res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }); return res.end('This page is not published.'); };
   if (!t || t.length < 20 || (req.method !== 'GET' && req.method !== 'HEAD')) return gone();
   const j = readSite(t); if (!j) return gone(); const html = j.pages[slug] || (slug === 'index' ? Object.values(j.pages)[0] : null); if (!html) return gone();
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-cache', 'x-frame-options': 'DENY',
-    'content-security-policy': "default-src 'none'; script-src 'none'; img-src data: https:; media-src data: https:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; form-action https: mailto:; base-uri 'none'; frame-ancestors 'none'" });
+    'content-security-policy': "default-src 'none'; script-src 'none'; img-src data: https:; media-src data: https:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; form-action 'self' https: mailto:; base-uri 'none'; frame-ancestors 'none'" });
   res.end(req.method === 'HEAD' ? undefined : html);
 }
 
@@ -255,10 +277,11 @@ export async function handleDesign(req, res, url, p, s) {
     let t = RT(b.token); const old = t ? readSite(t) : null;
     if (old && old.by !== who(s) && !isOwner(s)) throw httpError(403, 'That page belongs to someone else');
     if (!old) { t = crypto.randomBytes(24).toString('base64url'); fs.mkdirSync(WF, { recursive: true, mode: 0o700 }); const mine = fs.readdirSync(WF).map((f) => { try { return JSON.parse(fs.readFileSync(path.join(WF, f), 'utf8')); } catch { return null; } }).filter((x) => x && x.by === who(s)).length; if (mine >= 30) throw httpError(400, 'Too many published pages. Unpublish some first.'); }
-    const rec = { name: clip(b.name || 'Page', 60), by: old ? old.by : who(s), at: Date.now(), pages }; fs.writeFileSync(wFile(t) + '.tmp', JSON.stringify(rec), { mode: 0o600 }); fs.renameSync(wFile(t) + '.tmp', wFile(t));
+    const rec = { name: clip(b.name || 'Page', 60), by: old ? old.by : who(s), at: Date.now(), pages, forms: !!b.forms, formTo: clip(b.formTo, 200) }; fs.writeFileSync(wFile(t) + '.tmp', JSON.stringify(rec), { mode: 0o600 }); fs.renameSync(wFile(t) + '.tmp', wFile(t));
     return json(res, 200, { token: t, path: '/w/' + t + '/' });
   }
   if (p === '/design/unpublish') { const b = await readJson(req, 1024), t = RT(b.token), j = readSite(t); if (j && (j.by === who(s) || isOwner(s))) { try { await fsp.rm(wFile(t)); } catch {} } return json(res, 200, { ok: true }); }
+  if (p === '/design/forms') { const b = await readJson(req, 2048), t = RT(b.token), j = readSite(t); if (!j || (j.by !== who(s) && !isOwner(s))) throw httpError(404, 'That website is not published'); let all = readForms(t); if (b.del) { all = all.filter((x) => x.id !== String(b.del)); fs.mkdirSync(FF, { recursive: true, mode: 0o700 }); fs.writeFileSync(fFile(t), JSON.stringify(all), { mode: 0o600 }); } if (b.clear) { all = []; try { fs.rmSync(fFile(t)); } catch {} } return json(res, 200, { messages: all.slice().reverse(), mail: mail.configured() }); }
   if (p === '/design/review') {
     const q = url.searchParams, days = Math.max(1, Math.min(60, parseInt(q.get('days'), 10) || 14)), b = await readJson(req, 40 * 1024 * 1024);
     const pages = (Array.isArray(b.pages) ? b.pages : []).slice(0, 40).map((d) => { const m = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.exec(String(d || '')); if (!m) throw httpError(400, 'A page image could not be read'); return m[0]; });

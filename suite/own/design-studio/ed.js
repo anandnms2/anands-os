@@ -19,7 +19,7 @@ function download(name,blob){const a=el('a',{href:URL.createObjectURL(blob),down
 async function fileToDataURL(file,maxSide=1600,q=.86){if(!/^image\//.test(file.type))throw new Error('Not an image');if(file.type==='image/svg+xml'||file.type==='image/gif'){return await new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(file)})}
   const url=URL.createObjectURL(file);try{const im=new Image();im.src=url;await im.decode();const k=Math.min(1,maxSide/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);const x=c.getContext('2d');x.drawImage(im,0,0,c.width,c.height);return c.toDataURL(file.type==='image/png'?'image/png':'image/jpeg',q)}finally{URL.revokeObjectURL(url)}}
 function pickImage(cb,maxSide){const i=el('input',{type:'file',accept:'image/*'});i.onchange=async()=>{if(i.files[0]){try{cb(await fileToDataURL(i.files[0],maxSide))}catch(e){toast('Could not read that picture')}}};i.click()}
-async function publishPages(name,pages,token){const r=await fetch('/_local/design/publish',{method:'POST',credentials:'same-origin',headers:{'x-aos':'1','content-type':'application/json'},body:JSON.stringify({name,pages,token})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Could not publish');return j}
+async function publishPages(name,pages,token,extra){const r=await fetch('/_local/design/publish',{method:'POST',credentials:'same-origin',headers:{'x-aos':'1','content-type':'application/json'},body:JSON.stringify({name,pages,token,...(extra||{})})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Could not publish');return j}
 async function unpublish(token){await fetch('/_local/design/unpublish',{method:'POST',credentials:'same-origin',headers:{'x-aos':'1','content-type':'application/json'},body:JSON.stringify({token})})}
 
 /* A file-backed editor shell: loads ?f=, autosaves, handles the title and status text. */
@@ -39,3 +39,9 @@ function startEditor(kind,{blank,onLoad,collect}){
   $('#btnTheme')&&($('#btnTheme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;const n=dark?'light':'dark';r.dataset.theme=n;try{localStorage.setItem('ds.theme',n)}catch(e){}});
   return {queue,save,get rec(){return rec},get path(){return path}}
 }
+
+/* Move the open file to the shared trash (30 days, restorable from Home) and go back to Home. */
+async function trashEditor(ed,kind){const home={doc:'docs',board:'boards',site:'sites'}[kind];await ed.save();const path=ed.path,rec=ed.rec;if(!path||!rec){location.href='./#'+home;return}
+  const k=home,base=path.split('/').pop();const j=JSON.parse(JSON.stringify(rec));j._trash={kind:k,from:path,at:Date.now()};if(j.pub){try{await unpublish(j.pub.token)}catch(e){}delete j.pub}
+  await PUT().fs.write('/Designs/.trash-ed/'+k+'__'+base,JSON.stringify(j),{createMissingParents:true,overwrite:true});await PUT().fs.delete(path);location.href='./#'+home}
+const askTrash=(ed,kind,name)=>askSure('Move “'+name+'” to the trash? You can restore it from Home for 30 days.','Move to trash',()=>trashEditor(ed,kind).catch(()=>toast('Could not move it')));

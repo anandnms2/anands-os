@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<html lang="en"><head><link rel="icon" href="/logo-orange.png"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Whiteboard · Design Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&family=Caveat:wght@500;700&display=swap">
@@ -21,7 +21,7 @@ body{grid-template-rows:auto minmax(0,1fr)}
 #shapes{position:absolute;left:66px;top:50%;transform:translateY(-50%);display:grid;grid-template-columns:repeat(3,40px);gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:var(--shadow);z-index:6}#shapes button{height:40px;border:0;background:none;border-radius:8px;font-size:20px}#shapes button:hover{background:var(--panel2)}
 @media(max-width:700px){#left{top:auto;bottom:56px;left:50%;transform:translateX(-50%);flex-direction:row}#left hr{display:none}#hintb{display:none}#shapes{left:50%;top:auto;bottom:108px;transform:translateX(-50%)}}
 </style></head><body>
-<header class="bar"><a class="logo" href="./#boards" title="Back to Design Studio"><b>D</b><span>Whiteboard</span></a><input id="title" class="ttl" aria-label="Whiteboard title" placeholder="Untitled whiteboard"><span id="st" class="st" role="status"></span><span class="grow"></span>
+<header class="bar"><a class="logo" href="./#boards" title="Back to Design Studio"><b><img src="/logo-orange.png" alt="" width="26" height="26"></b><span>Whiteboard</span></a><input id="title" class="ttl" aria-label="Whiteboard title" placeholder="Untitled whiteboard"><span id="st" class="st" role="status"></span><span class="grow"></span>
 <button class="btn" id="bUndo" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button><button class="btn" id="bRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button><button class="btn" id="bTpl">Templates</button><button class="btn" id="bDl">Download ▾</button><button class="btn pri" id="bShare">Share</button><button class="btn" id="btnTheme" aria-label="Light or dark">◐</button></header>
 <div id="stage"><canvas id="cv" aria-label="Whiteboard canvas" tabindex="0"></canvas>
 <div id="left" role="toolbar" aria-label="Tools"></div><div id="zoom"><button id="zo" aria-label="Zoom out">−</button><span id="zv">100%</span><button id="zi" aria-label="Zoom in">+</button><button id="zf" title="Fit everything">Fit</button></div><div id="hintb">Double-click to add a sticky note · Space+drag to pan · Ctrl+scroll to zoom</div></div>

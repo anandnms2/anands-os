@@ -396,9 +396,25 @@ try {
     const url = await p.inputValue('input[aria-label="Public link"]'); const r = await fetch(url); const html = await r.text();
     assert.equal(r.status, 200); assert.ok(html.includes('Hello &lt;b&gt;Kili&lt;/b&gt;'), 'text is escaped'); assert.ok(!/<script/i.test(html)); assert.match(r.headers.get('content-security-policy') || '', /script-src 'none'/);
     assert.equal((await fetch(url.replace(/\/$/, '') + '/gallery')).status, 200);
+    // contact form: the public page posts to the server, the owner reads it under Messages
+    assert.match(await (await fetch(url.replace(/\/$/, '') + '/contact')).text(), /action="_form"/);
+    const post1 = await fetch(url.replace(/\/$/, '') + '/_form', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'name=Asha&email=asha%40example.com&message=Hello+there&website=' }); assert.equal(post1.status, 200);
+    assert.equal((await fetch(url.replace(/\/$/, '') + '/_form', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'name=Bot&email=b%40example.com&message=spam&website=http%3A%2F%2Fx' })).status, 200);
+    assert.equal((await fetch(url.replace(/\/$/, '') + '/_form', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'name=X&email=notanemail&message=hi' })).status, 400);
+    await p.click('#btnMsgs'); await p.waitForSelector('[data-msg]'); assert.equal((await p.$$('[data-msg]')).length, 1); assert.ok((await p.textContent('[data-msg]')).includes('Hello there'));
+    await p.click('[data-msg] .danger'); await p.waitForSelector('#noMsgs'); await p.click('.dlg >> text=Close'); await p.click('#bPub');
     await p.click('text=Take offline'); await p.waitForTimeout(500); assert.equal((await fetch(url)).status, 404);
     await p.waitForTimeout(1200); const u = p.url(); await p.goto(u); await p.waitForFunction(() => typeof S !== 'undefined' && S);
     assert.equal(await p.evaluate(() => S.pages.length + ':' + S.theme.dark), '4:true');
+    await p.close();
+  });
+  await t('Move to trash from inside a Doc returns to Home, restore brings it back', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/docs.html'); await p.waitForFunction(() => typeof sanitize === 'function' && document.querySelector('#page'));
+    await p.fill('#title', 'Trash me'); await p.evaluate(() => { page.dispatchEvent(new Event('input', { bubbles: true })); }); await p.waitForTimeout(1500);
+    await p.click('#bDl'); await p.click('.menu >> text=Move to trash'); await p.click('.dlg .danger'); await p.waitForURL(/#docs/); await p.waitForTimeout(1500);
+    await p.reload(); await p.waitForTimeout(1500); await p.waitForFunction(() => document.getElementById('home') && !document.getElementById('home').hidden);
+    await p.click('.hn >> text=Trash'); await p.waitForSelector('[data-edtrash=docs]'); assert.ok((await p.textContent('[data-edtrash=docs]')).includes('Trash me'));
+    await p.click('[data-edtrash=docs] [data-restore]'); await p.waitForTimeout(900); await p.click('.hn >> text=Docs'); await p.waitForSelector('[data-ed=docs]'); assert.ok((await p.textContent('[data-ed=docs]')).includes('Trash me'));
     await p.close();
   });
   await t('Docs: sanitizer, autosave and reopen, public page has no script', async () => {
@@ -416,8 +432,13 @@ try {
     await p.evaluate(() => { B.items.push({ id: 'zz1', t: 'sticky', x: 0, y: 0, w: 180, h: 180, fill: '#ffd43b', text: 'Idea', fs: 20 }); draw(); ed.queue(); }); await p.waitForTimeout(1800);
     const u = p.url(); await p.goto(u); await p.waitForFunction(() => typeof B !== 'undefined' && B && B.items.length); assert.equal(await p.evaluate(() => B.items[0].text), 'Idea');
     await p.goto(B + '/apps/design-studio/#boards'); await p.reload(); await p.waitForSelector('[data-ed=boards]'); assert.ok((await p.$$('[data-ed=boards]')).length >= 1);
-    await p.click('[data-ed=boards]', { button: 'right' }); await p.click('.ctx >> text=Delete'); await p.click('.dlg .danger'); await p.waitForTimeout(700);
+    await p.click('[data-ed=boards]', { button: 'right' }); await p.click('.ctx >> text=Move to trash'); await p.click('.dlg .danger'); await p.waitForTimeout(900);
     assert.equal((await p.$$('[data-ed=boards]')).length, 0);
+    await p.click('.hn >> text=Trash'); await p.waitForSelector('[data-edtrash=boards]'); await p.click('[data-edtrash=boards] [data-restore]'); await p.waitForTimeout(900);
+    assert.equal((await p.$$('[data-edtrash=boards]')).length, 0);
+    await p.click('.hn >> text=Whiteboards'); await p.waitForSelector('[data-ed=boards]');
+    await p.click('[data-ed=boards] .delb', { force: true }); await p.waitForTimeout(900); assert.equal((await p.$$('[data-ed=boards]')).length, 0);
+    await p.click('.hn >> text=Trash'); await p.waitForSelector('[data-edtrash=boards]'); await p.click('#emptyTrash'); await p.click('.dlg .danger'); await p.waitForTimeout(800); assert.equal((await p.$$('[data-edtrash]')).length, 0);
     for (const k of ['docs', 'boards', 'sites']) assert.ok(await p.$('.hq [data-new=' + k + ']') || true);
     await p.close();
   });
