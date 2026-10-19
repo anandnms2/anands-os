@@ -133,13 +133,9 @@ function requireConnection() {
 const OPEN_EXT = /\.(pdf|docx?|odt|xlsx?|csv|pptx?|jpe?g|png|webp|gif|svg|mp4|mov|mp3|wav)$/i;
 let pendingOpen = [], uiReady = false;
 const fileArgs = (argv) => argv.slice(1).filter((a) => a && !a.startsWith('-') && OPEN_EXT.test(a) && fs.existsSync(a));
-function importFile(src) {
-  const dir = path.join(dataDir(), 'fs', 'Opened from PC'); fs.mkdirSync(dir, { recursive: true });
-  const ext = path.extname(src), stem = path.basename(src, ext), st = fs.statSync(src); let name = stem + ext, n = 2;
-  while (fs.existsSync(path.join(dir, name))) { const o = fs.statSync(path.join(dir, name)); if (o.size === st.size && Math.abs(o.mtimeMs - st.mtimeMs) < 2000) break; name = stem + ' (' + n++ + ')' + ext; }
-  const dest = path.join(dir, name); if (!fs.existsSync(dest)) { fs.copyFileSync(src, dest); fs.utimesSync(dest, st.atime, st.mtime); }
-  return '/Opened from PC/' + name;
-}
+let ow = null;
+function openWith() { if (!ow) { ow = require('./openwith.js').create(dataDir(), (orig, err) => dialog.showMessageBox(win, { type: 'warning', message: 'Could not save back to the original file', detail: orig + '\n\n' + String(err.message || err) + '\n\nYour changes are kept in Files → Opened from PC.' })); ow.start(); } return ow; }
+const importFile = (src) => openWith().open(src);
 async function openFromPc(files) {
   for (const f of files) {
     let p; try { p = importFile(f); } catch { continue; }
@@ -159,6 +155,7 @@ async function main() {
   win.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith(base)) return { action: 'allow' }; shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith(base)) { e.preventDefault(); shell.openExternal(url); } });
   await win.loadURL(base + '/');
+  if (fs.existsSync(path.join(dataDir(), 'open-with.json'))) openWith(); // keep writing saves back after a restart
   uiReady = true; if (pendingOpen.length) { const l = pendingOpen.splice(0); openFromPc(l); }
   runSync(false, false); setInterval(() => runSync(false, true), 15 * 60 * 1000);
 }

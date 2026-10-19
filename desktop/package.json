@@ -25,6 +25,7 @@
     "files": [
       "main.js",
       "sync.js",
+      "openwith.js",
       "preload.js",
       "package.json",
       "icon.png"
