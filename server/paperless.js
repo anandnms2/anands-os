@@ -21,7 +21,7 @@ async function pl(path, init = {}, timeout = 20000) {
     return r;
   } catch (e) { throw httpError(502, e.name === 'AbortError' ? 'Paperless did not answer in time' : 'Could not reach Paperless: ' + (e.cause?.code || e.message), 'unreachable'); } finally { clearTimeout(t); }
 }
-async function plJson(path, init, timeout) {
+async function plJson(path, init = {}, timeout) {
   const r = await pl(path, init, timeout);
   if (r.status === 401 || r.status === 403) throw httpError(409, 'Paperless refused the token. Create a new one in Paperless (My Profile) and save it in Settings', 'bad_token');
   const text = await r.text(); let d = null; try { d = text ? JSON.parse(text) : null; } catch { d = null; }
