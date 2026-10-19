@@ -2987,6 +2987,33 @@ Object.assign(IC,{
  heart:'<path d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.700 3.700 4.500 7 4.500c2 0 3.500 1 5 3 1.500-2 3-3 5-3 3.300 0 5.400 3.200 4.200 6.600-1.700 4.800-9.200 9.400-9.200 9.400Z"/>',
  trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8.500 20h7"/>'});
 
+/* Home: Docs, Whiteboards and Websites live beside designs, each in its own editor page. */
+const EDKIND={docs:{dir:'/Designs/Docs',ext:'ddoc',page:'docs.html',one:'Doc',many:'Docs',color:'#2b8a3e',icon:'doc',empty:'No documents yet. Write letters, notes or proposals and export them as Word files.'},
+ boards:{dir:'/Designs/Whiteboards',ext:'dboard',page:'board.html',one:'Whiteboard',many:'Whiteboards',color:'#7048e8',icon:'board',empty:'No whiteboards yet. Plan, brainstorm and map ideas with sticky notes and arrows.'},
+ sites:{dir:'/Designs/Websites',ext:'dsite',page:'site.html',one:'Website',many:'Websites',color:'#e8590c',icon:'globe',empty:'No websites yet. Build a simple site from a template and publish it with a link.'}};
+Object.assign(IC,{doc:'<path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6"/>',board:'<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 22l4-4 4 4M7 9h4v4H7zM14 9h3"/>',globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>'});
+const edCache={};
+const edOpen=(k,path)=>{location.href=EDKIND[k].page+(path?'?f='+encodeURIComponent(path):'')};
+function edNew(k){location.href=EDKIND[k].page}
+async function edList(k){const K=EDKIND[k];let it=[];try{it=await PUT().fs.readdir(K.dir)}catch(e){return[]}
+  const out=[];for(const i of it){if(i.is_dir||!i.name.endsWith('.'+K.ext))continue;const path=K.dir+'/'+i.name;let name=i.name.replace(/\s*\[[^\]]*\]\.\w+$/,'').replace(/\.\w+$/,''),updated=(i.modified||0)*(i.modified<1e12?1000:1),pub=false;
+    try{const b=await PUT().fs.read(path);const t=typeof b==='string'?b:await b.text();const j=JSON.parse(t);name=j.name||name;updated=j.updated||updated;pub=!!j.pub}catch(e){}
+    out.push({path,name,updated,pub})}
+  return out.sort((a,b)=>b.updated-a.updated)}
+async function edRefresh(k){edCache[k]=await edList(k);if(home.view===k&&!document.getElementById('home').hidden)renderHome()}
+function edMenu(k,r,x,y){ctxMenu(x,y,[{label:'Open',go:()=>edOpen(k,r.path)},{label:'Rename',go:()=>askText('Rename',r.name,'Rename',async v=>{try{const b=await PUT().fs.read(r.path);const j=JSON.parse(typeof b==='string'?b:await b.text());j.name=v;await PUT().fs.write(r.path,JSON.stringify(j),{overwrite:true});edRefresh(k);toast('Renamed')}catch(e){toast('Could not rename')}})},'-',{label:'Delete',go:()=>askSure('Delete “'+r.name+'” for good? '+(r.pub?'Its public link stops working only after you take it offline from the editor.':''),'Delete',async()=>{try{await PUT().fs.delete(r.path);edRefresh(k);toast('Deleted')}catch(e){toast('Could not delete')}})}])}
+function edCard(k,r){const K=EDKIND[k];
+  const c=el('div',{class:'hc','data-ed':k,tabindex:0,role:'button','aria-label':'Open '+r.name,onclick:e=>{if(!e.target.closest('.dots,.delb'))edOpen(k,r.path)},onkeydown:e=>{if(e.key==='Enter')edOpen(k,r.path)},oncontextmenu:e=>{e.preventDefault();edMenu(k,r,e.clientX,e.clientY)}},
+    el('div',{class:'tn',style:'display:grid;place-items:center;background:'+K.color+'18;color:'+K.color,html:ic(K.icon,56)}),el('b',{title:r.name},r.name),el('small',{},(r.pub?'Published · ':'')+'Edited '+fmtDate(r.updated)),
+    el('button',{class:'dots','aria-label':'More options for '+r.name,title:'More',onclick:e=>{e.stopPropagation();const b=e.currentTarget.getBoundingClientRect();edMenu(k,r,b.left,b.bottom+4)}},'⋯'),
+    el('button',{class:'delb','aria-label':'Delete '+r.name,title:'Delete',onclick:e=>{e.stopPropagation();askSure('Delete “'+r.name+'” for good?','Delete',async()=>{try{await PUT().fs.delete(r.path);edRefresh(k);toast('Deleted')}catch(e){toast('Could not delete')}})},html:ic('trash',16)}));
+  return c}
+function edKindView(k){const K=EDKIND[k],list=edCache[k],out=[];
+  out.push(el('div',{class:'hs'},el('h2',{},K.many),el('span',{class:'grow'}),el('button',{class:'btn pri',id:'edNew',onclick:()=>edNew(k)},'+ New '+K.one.toLowerCase())));
+  if(!list){out.push(el('p',{class:'note'},'Loading…'));edRefresh(k);return out}
+  out.push(list.length?el('div',{class:'hg big'},list.map(r=>edCard(k,r))):el('div',{class:'hempty'},K.empty));
+  return out}
+
 /* =====================================================================
    Anands OS integration + the studio's advanced features
    (files, background remover, animation, stock photos, SVG/vector, video/GIF, share links)
@@ -3031,7 +3058,7 @@ async function doSave(){
 }
 async function readDesign(path){const b=await PUT().fs.read(path);const r=JSON.parse(await b.text());if(!r||!Array.isArray(r.pages)||!r.w||!r.h)throw new Error('Not a design');r._file=path;return r}
 function loadRec(r){D={id:r.id||uid(),name:r.name||'Untitled design',w:r.w,h:r.h,pages:r.pages,assets:r.assets||{}};D._file=r._file||null;D.starred=!!r.starred;D.comments=r.comments||[];D.review=r.review||null;D._folder=folderOf(D._file);cur=0;sel=[];$('#title').value=D.name;resetHistory();fit();renderAll();setSaveState(D._file?'Saved to Files':'');hideHome()}
-const RESERVED=/^(uploads|\.)/i;
+const RESERVED=/^(uploads|docs|whiteboards|websites|\.)/i;
 async function listFolders(){let it=[];try{it=await PUT().fs.readdir(DIR)}catch(e){return []}return it.filter(i=>i.is_dir&&!RESERVED.test(i.name)).map(i=>i.name).sort((a,b)=>a.localeCompare(b))}
 async function listDocs(){
   let items=[];try{items=await PUT().fs.readdir(DIR)}catch(e){return []}
@@ -3526,7 +3553,7 @@ async function openLaunchItems(items){
     requestAnimationFrame(()=>{fit();renderStrip()});setTimeout(()=>{fit();renderStrip()},600);
     try{if(PUT()&&PUT().ui&&PUT().ui.onLaunchedWithItems)PUT().ui.onLaunchedWithItems(items=>openLaunchItems(items))}catch(e){}
     if(!rec)saveDoc();
-    if(!new URLSearchParams(location.search).has('open'))setTimeout(showHome,0);
+    if(!new URLSearchParams(location.search).has('open'))setTimeout(()=>{showHome();const hv={docs:'docs',boards:'boards',sites:'sites'}[(location.hash||'').slice(1)];if(hv){home.view=hv;renderHome()}},0);
   })();
 })();
 
@@ -3560,6 +3587,7 @@ function homeSections(){
   const q=home.q.trim().toLowerCase(),out=[];
   const docs=home.docs;
   if(home.view==='trash')return trashView();
+  if(EDKIND[home.view])return edKindView(home.view);
   if(home.view==='projects'){
     const inF=r=>(r.folder||'')===home.folder,qm=home.mine.toLowerCase();
     const list=sortDocs((docs||[]).filter(r=>(qm?r.name.toLowerCase().includes(qm):(home.filter==='starred'||inF(r)))&&(home.filter!=='starred'||r.starred)));
@@ -3602,7 +3630,7 @@ function homeSections(){
 function renderHome(){
   const h=homeEl();if(!h)return;h.innerHTML='';
   const nav=el('nav',{class:'hn','aria-label':'Design Studio'},el('div',{class:'hlogo','aria-hidden':'true'},'D'));
-  [['home','Home','home'],['projects','Projects','folder'],['templates','Templates','tpl'],['trash','Trash','trash']].forEach(([k,l,i])=>nav.append(el('button',{class:'hi','aria-current':home.view===k,onclick:()=>{home.view=k;home.q='';if(k==='trash')home.trash=null;renderHome();if(k==='projects')refreshDocs()}},el('span',{class:'ib',html:ic(i,20)}),l)));
+  [['home','Home','home'],['projects','Projects','folder'],['templates','Templates','tpl'],['docs','Docs','doc'],['boards','Whiteboards','board'],['sites','Websites','globe'],['trash','Trash','trash']].forEach(([k,l,i])=>nav.append(el('button',{class:'hi','aria-current':home.view===k,onclick:()=>{home.view=k;home.q='';if(k==='trash')home.trash=null;renderHome();if(k==='projects')refreshDocs()}},el('span',{class:'ib',html:ic(i,20)}),l)));
   nav.append(el('button',{class:'hi',onclick:()=>{hideHome();openTab('brand')}},el('span',{class:'ib',html:ic('brand',20)}),'Brand'),el('span',{class:'sp'}),
     el('button',{class:'hi',onclick:()=>{hideHome()}},el('span',{class:'ib',html:ic('pen',20)}),'Editor'));
   const hero=el('section',{class:'hero'},el('h1',{},'What will you design today?'));
@@ -3613,7 +3641,7 @@ function renderHome(){
   const main=el('div',{class:'hm'},el('header',{class:'hh'},el('span',{class:'grow'}),el('button',{class:'tb',title:'Light / dark','aria-label':'Toggle theme',onclick:()=>{$('#btnTheme').click();renderHome()},html:$('#btnTheme').innerHTML}),el('button',{class:'hcreate',onclick:()=>openNew(),html:ic('plus',18)+' Create a design'})));
   const body=el('div',{class:'hbody'});
   if(home.view==='home'){
-    body.append(hero,el('div',{class:'hq',role:'list'},QUICK.map(([n,i,c,w,hh])=>el('button',{role:'listitem',onclick:()=>startSize(w,hh,n)},el('i',{style:'background:'+c,html:ic(i,26)}),n))));
+    body.append(hero,el('div',{class:'hq',role:'list'},QUICK.map(([n,i,c,w,hh])=>el('button',{role:'listitem',onclick:()=>startSize(w,hh,n)},el('i',{style:'background:'+c,html:ic(i,26)}),n)).concat(Object.entries(EDKIND).map(([k,v])=>el('button',{role:'listitem','data-new':k,onclick:()=>edNew(k)},el('i',{style:'background:'+v.color,html:ic(v.icon,26)}),v.one)))));
   }
   body.append(el('div',{id:'hsections'},...homeSections()));
   main.append(body);h.append(nav,main);

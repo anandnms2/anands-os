@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Whiteboard · Design Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&family=Caveat:wght@500;700&display=swap">
+<link rel="stylesheet" href="ed.css">
+<script src="/_suite/puter.js"></script><script src="vendor/jspdf.umd.min.js"></script>
+<style>
+body{grid-template-rows:auto minmax(0,1fr)}
+#stage{position:relative;min-height:0;overflow:hidden;background:var(--work)}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#left{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:5px;box-shadow:var(--shadow);z-index:5}
+#left button{width:42px;height:40px;border:0;background:transparent;border-radius:9px;font-size:18px;display:grid;place-items:center}#left button:hover{background:var(--panel2)}#left button[aria-pressed=true]{background:var(--accent);color:var(--accent-fg)}#left hr{border:0;border-top:1px solid var(--line);margin:3px 4px;width:calc(100% - 8px)}
+#left small{font-size:9px;display:block;line-height:1}
+#zoom{position:absolute;right:12px;bottom:12px;display:flex;align-items:center;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px;box-shadow:var(--shadow);z-index:5}#zoom button{border:0;background:none;width:30px;height:28px;border-radius:7px}#zoom button:hover{background:var(--panel2)}#zoom span{min-width:46px;text-align:center;font-size:12.5px}
+#ctxbar{position:absolute;z-index:6;display:flex;gap:4px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:4px 6px;box-shadow:var(--shadow);flex-wrap:wrap;max-width:min(560px,92vw)}
+#ctxbar .sw{width:22px;height:22px;border-radius:50%;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);padding:0}#ctxbar .sw[aria-pressed=true]{box-shadow:0 0 0 2px var(--accent)}
+#ctxbar button.t{border:0;background:none;padding:4px 8px;border-radius:7px;font-size:13px}#ctxbar button.t:hover{background:var(--panel2)}#ctxbar .sep{width:1px;height:20px;background:var(--line)}
+#editor{position:absolute;z-index:7;border:2px solid var(--accent);border-radius:6px;resize:none;background:#fffe;color:#1f1c19;padding:6px;font-family:"Instrument Sans",sans-serif;line-height:1.25;outline:none;overflow:hidden}
+#hintb{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);color:var(--mut);font-size:12.5px;pointer-events:none;background:var(--panel);padding:3px 10px;border-radius:999px;border:1px solid var(--line)}
+#shapes{position:absolute;left:66px;top:50%;transform:translateY(-50%);display:grid;grid-template-columns:repeat(3,40px);gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:var(--shadow);z-index:6}#shapes button{height:40px;border:0;background:none;border-radius:8px;font-size:20px}#shapes button:hover{background:var(--panel2)}
+@media(max-width:700px){#left{top:auto;bottom:56px;left:50%;transform:translateX(-50%);flex-direction:row}#left hr{display:none}#hintb{display:none}#shapes{left:50%;top:auto;bottom:108px;transform:translateX(-50%)}}
+</style></head><body>
+<header class="bar"><a class="logo" href="./#boards" title="Back to Design Studio"><b>D</b><span>Whiteboard</span></a><input id="title" class="ttl" aria-label="Whiteboard title" placeholder="Untitled whiteboard"><span id="st" class="st" role="status"></span><span class="grow"></span>
+<button class="btn" id="bUndo" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button><button class="btn" id="bRedo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button><button class="btn" id="bTpl">Templates</button><button class="btn" id="bDl">Download ▾</button><button class="btn pri" id="bShare">Share</button><button class="btn" id="btnTheme" aria-label="Light or dark">◐</button></header>
+<div id="stage"><canvas id="cv" aria-label="Whiteboard canvas" tabindex="0"></canvas>
+<div id="left" role="toolbar" aria-label="Tools"></div><div id="zoom"><button id="zo" aria-label="Zoom out">−</button><span id="zv">100%</span><button id="zi" aria-label="Zoom in">+</button><button id="zf" title="Fit everything">Fit</button></div><div id="hintb">Double-click to add a sticky note · Space+drag to pan · Ctrl+scroll to zoom</div></div>
+<script src="ed.js"></script><script src="board.js"></script>
+</body></html>

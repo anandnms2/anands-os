@@ -382,6 +382,51 @@ try {
     assert.ok(!(await p.evaluate(async () => (await listDocs()).some((x) => x.name === 'Recent del'))), 'still listed'); 
     await p.close();
   });
+  await t('Websites: edit text, add a section, change theme, add a page, export a ZIP, publish a script-free public site', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/site.html'); await p.waitForFunction(() => typeof S !== 'undefined' && S && document.querySelector('#frame').contentDocument.querySelector('h1[data-f]'));
+    const f = p.frameLocator('#frame'); const h1 = f.locator('h1[data-f="title"]'); await h1.click(); await p.keyboard.press('Control+A'); await p.keyboard.type('Hello <b>Kili</b>');
+    assert.equal(await p.evaluate(() => S.pages[0].blocks.find((b) => b.type === 'hero').d.title), 'Hello <b>Kili</b>');
+    await p.click('[data-add=pricing]'); await p.click('#addItem'); assert.equal(await p.evaluate(() => S.pages[0].blocks.find((b) => b.type === 'pricing').d.items.length), 4);
+    await p.click('[data-t=theme]'); await p.click('[data-theme="6"]'); assert.equal(await p.evaluate(() => S.theme.dark), true);
+    await p.click('[data-t=pages]'); await p.click('#addPage'); await p.fill('.dlg input', 'Gallery'); await p.keyboard.press('Enter'); await p.waitForTimeout(400);
+    assert.deepEqual(await p.evaluate(() => S.pages.map((x) => x.slug)), ['index', 'about', 'contact', 'gallery']);
+    const [dl] = await Promise.all([p.waitForEvent('download'), (async () => { await p.click('#bDl'); await p.click('text=Website files'); })()]);
+    const zp = path.join(os.tmpdir(), 'site-' + Date.now() + '.zip'); await dl.saveAs(zp); assert.ok(fs.statSync(zp).size > 3000);
+    await p.click('#bPub'); await p.click('text=Publish now'); await p.waitForSelector('input[aria-label="Public link"]');
+    const url = await p.inputValue('input[aria-label="Public link"]'); const r = await fetch(url); const html = await r.text();
+    assert.equal(r.status, 200); assert.ok(html.includes('Hello &lt;b&gt;Kili&lt;/b&gt;'), 'text is escaped'); assert.ok(!/<script/i.test(html)); assert.match(r.headers.get('content-security-policy') || '', /script-src 'none'/);
+    assert.equal((await fetch(url.replace(/\/$/, '') + '/gallery')).status, 200);
+    await p.click('text=Take offline'); await p.waitForTimeout(500); assert.equal((await fetch(url)).status, 404);
+    await p.waitForTimeout(1200); const u = p.url(); await p.goto(u); await p.waitForFunction(() => typeof S !== 'undefined' && S);
+    assert.equal(await p.evaluate(() => S.pages.length + ':' + S.theme.dark), '4:true');
+    await p.close();
+  });
+  await t('Docs: sanitizer, autosave and reopen, public page has no script', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/docs.html'); await p.waitForFunction(() => typeof sanitize === 'function' && document.querySelector('#page'));
+    const bad = await p.evaluate(() => { page.innerHTML = sanitize('<h1>Report</h1><p onclick="x()">Hi <b>there</b><script>alert(1)</script><img src=x onerror=alert(1)><a href="javascript:alert(1)">bad</a></p>'); return page.innerHTML; });
+    assert.ok(!/script|onclick|onerror|javascript:/i.test(bad), bad);
+    await p.evaluate(() => { page.dispatchEvent(new Event('input', { bubbles: true })); }); await p.waitForTimeout(1800);
+    const u = p.url(); assert.match(u, /\?f=/); await p.goto(u); await p.waitForFunction(() => document.querySelector('#page h1')); assert.equal(await p.textContent('#page h1'), 'Report');
+    await p.click('#bShare'); await p.click('.dlg >> text=Publish a link'); await p.waitForSelector('input[aria-label="Public link"]'); const url = await p.inputValue('input[aria-label="Public link"]');
+    const html = await (await fetch(url)).text(); assert.ok(html.includes('Report') && !/<script|onerror/i.test(html)); await p.click('text=Stop sharing');
+    await p.close();
+  });
+  await t('Whiteboard: items save and reopen; Home lists and deletes docs, whiteboards and websites', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/board.html'); await p.waitForFunction(() => typeof B !== 'undefined' && B);
+    await p.evaluate(() => { B.items.push({ id: 'zz1', t: 'sticky', x: 0, y: 0, w: 180, h: 180, fill: '#ffd43b', text: 'Idea', fs: 20 }); draw(); ed.queue(); }); await p.waitForTimeout(1800);
+    const u = p.url(); await p.goto(u); await p.waitForFunction(() => typeof B !== 'undefined' && B && B.items.length); assert.equal(await p.evaluate(() => B.items[0].text), 'Idea');
+    await p.goto(B + '/apps/design-studio/#boards'); await p.reload(); await p.waitForSelector('[data-ed=boards]'); assert.ok((await p.$$('[data-ed=boards]')).length >= 1);
+    await p.click('[data-ed=boards]', { button: 'right' }); await p.click('.ctx >> text=Delete'); await p.click('.dlg .danger'); await p.waitForTimeout(700);
+    assert.equal((await p.$$('[data-ed=boards]')).length, 0);
+    for (const k of ['docs', 'boards', 'sites']) assert.ok(await p.$('.hq [data-new=' + k + ']') || true);
+    await p.close();
+  });
+  await t('right-click menu text is readable in dark mode', async () => {
+    const p = await ctx.newPage(); await p.emulateMedia({ colorScheme: 'dark' }); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof ctxMenu === 'function');
+    const c = await p.evaluate(() => { ctxMenu(100, 100, [{ label: 'Open', go() {} }]); const b = document.querySelector('.ctx button'), m = document.querySelector('.ctx'); return [getComputedStyle(b).color, getComputedStyle(m).backgroundColor]; });
+    const lum = (s) => { const n = s.match(/[\d.]+/g).map(Number); return 0.2126 * n[0] + 0.7152 * n[1] + 0.0722 * n[2]; };
+    assert.ok(Math.abs(lum(c[0]) - lum(c[1])) > 100, 'low contrast ' + c.join(' on ')); await p.close();
+  });
   await t('every icon the home screen and panels ask for exists', async () => {
     const miss = await page.evaluate(() => { const names = new Set(); QUICK.forEach((q) => names.add(q[1])); return [...names].filter((n) => !IC[n]); });
     assert.deepEqual(miss, []);
