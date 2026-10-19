@@ -79,7 +79,7 @@ export async function startCards() {
 }
 
 /* ---- Card Scan extras ---- */
-csState.mine = [{ id: '88888888-8888-8888-8888-888888888880', name: 'Anand Shah', title: 'Director', company: 'Anands', phone: '+255700000000', whatsapp: '+255700000000', email: 'anand@anands.xyz', theme: 'forest', active: true, view_count: 4, share_token: 'anand', social_links: [], showcase_items: [], custom_fields: [] }];
+csState.mine = [{ id: '88888888-8888-8888-8888-888888888880', name: 'Anand Shah', title: 'Director', company: 'Anands', phone: '+255700000000', whatsapp: '+255700000000', email: 'anand@example.com', theme: 'forest', active: true, view_count: 4, share_token: 'anand', social_links: [], showcase_items: [], custom_fields: [] }];
 csState.notes = []; csState.reminders = []; csState.notifications = [{ id: 'n1', type: 'x', message: 'Reminder due', read: false, created_at: '2026-10-15T00:00:00Z' }]; csState.calls = [];
 export function extendCards(srv) {
   const orig = srv.listeners('request')[0]; srv.removeAllListeners('request');

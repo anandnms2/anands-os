@@ -72,7 +72,7 @@ try {
     await p.click('[data-ia="cdelask"]'); await p.waitForSelector('[data-ia="cdelyes"]'); assert.equal(csState.cards.length, 2); await shot(p, 'card-delete');
     await p.click('[data-ia="cdelyes"]'); await p.waitForFunction(() => document.querySelector('#modal').hidden); assert.equal(csState.cards.length, 1);
   });
-  await t('Pulse is only a link: a tile on Home, no page, no frames', async () => { await nav('home'); const a = p.locator('a.svc', { hasText: 'Pulse' }); assert.equal(await a.getAttribute('href'), 'https://control.anands.xyz'); assert.equal(await a.getAttribute('target'), '_blank'); assert.equal(await p.locator('iframe').count(), 0); });
+  await t('Pulse is only a link: a tile on Home, no page, no frames', async () => { await nav('home'); const a = p.locator('a.svc', { hasText: 'Pulse' }); assert.equal(await a.getAttribute('href'), 'https://control.example.com'); assert.equal(await a.getAttribute('target'), '_blank'); assert.equal(await p.locator('iframe').count(), 0); });
   await t('Cards: scan a card with a photo, AI read, save', async () => {
     resetCards(); await nav('vpn'); await nav('cards'); await p.waitForSelector('.icard'); await p.click('[data-ca="new"]'); await p.waitForSelector('#nf_name');
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');

@@ -1,4 +1,4 @@
-/* Notes: the OS talks to your Joplin Server (notes.anands.xyz) as a signed-in user and shows notes in its own app.
+/* Notes: the OS talks to your Joplin Server (notes.example.com) as a signed-in user and shows notes in its own app.
    Joplin Server stores each note as a text file "<id>.md" (title, body, then "key: value" lines). We read and write that format,
    so the Joplin desktop and phone apps keep syncing the same notes. The password stays on the server. Owner only.
    Notes locked by Joplin's end-to-end encryption cannot be read here and are shown as locked. */

@@ -8,7 +8,7 @@ const appRoot = app.isPackaged ? path.join(process.resourcesPath, 'app') : path.
 const suiteDir = process.env.SUITE_DIR || path.join(appRoot, 'suite', 'dist');
 let child = null, win = null, base = '', port = 0, restarting = false;
 const dataDir = () => path.join(app.getPath('userData'), 'data');
-const DEFAULT_WEB = 'https://os.anands.xyz';
+const DEFAULT_WEB = '';
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
 
@@ -53,13 +53,13 @@ function connectWindow() {
   const cur = readWeb();
   w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`<!doctype html><meta charset=utf-8><style>body{font:14px system-ui;background:#121212;color:#eee;margin:0;padding:22px}h2{margin:0 0 6px}p{color:#aaa;margin:0 0 14px;line-height:1.4}label{display:block;margin:10px 0 4px;color:#bbb}input{width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid #444;background:#1c1c1c;color:#fff}button{margin-top:16px;padding:9px 16px;border:0;border-radius:8px;background:#ff7a1a;color:#111;font-weight:600;cursor:pointer}button.s{background:#333;color:#eee;margin-left:8px}#m{margin-top:12px;color:#ff9a7a;min-height:18px}</style>
 <h2>Connect to Anands Web</h2><p>When this computer is online, your web drives appear in Files under "Anands Web". Use the password you sign in with on the website.</p>
-<label>Address</label><input id=u value="${(cur ? cur.url : DEFAULT_WEB).replace(/"/g, '')}"><label>Password</label><input id=p type=password autofocus>
+<label>Address</label><input id=u placeholder="https://os.example.com" value="${(cur ? cur.url : DEFAULT_WEB).replace(/"/g, '')}"><label>Password</label><input id=p type=password autofocus>
 <button id=go>Connect</button>${cur ? '<button class=s id=off>Disconnect</button>' : ''}<button class=s id=x>Cancel</button><div id=m></div>
 <script>const $=i=>document.getElementById(i);$('go').onclick=async()=>{$('m').textContent='Checking...';const r=await aosDesktop.connectWeb($('u').value.trim(),$('p').value);if(r)$('m').textContent=r};$('x').onclick=()=>aosDesktop.close();if($('off'))$('off').onclick=()=>aosDesktop.disconnectWeb();$('p').onkeydown=e=>{if(e.key==='Enter')$('go').click()}</script>`));
   return w;
 }
 ipcMain.handle('web:connect', async (e, url, password) => {
-  url = String(url || '').trim().replace(/\/+$/, ''); if (!/^https?:\/\/[^\s]+$/.test(url)) return 'Enter the full address, like https://os.anands.xyz';
+  url = String(url || '').trim().replace(/\/+$/, ''); if (!/^https?:\/\/[^\s]+$/.test(url)) return 'Enter the full address, like https://os.example.com';
   if (!password) return 'Enter your password.'; const err = await checkWeb(url, String(password)); if (err) return err;
   saveWeb({ url, password: String(password) }); BrowserWindow.fromWebContents(e.sender).close(); await restartServer(); return '';
 });

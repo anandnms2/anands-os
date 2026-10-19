@@ -11,6 +11,8 @@ export const WEB = path.resolve(env.WEB_DIR || path.join(here, '..', 'web'));
 export const SUITE = path.resolve(env.SUITE_DIR || path.join(here, '..', 'suite', 'dist'));
 export const SHIM = path.resolve(env.SHIM_FILE || path.join(here, '..', 'suite', 'shim', 'puter.js'));
 export const PUBLIC_URL = (env.PUBLIC_URL || '').replace(/\/+$/, '');
+/* Parent domain used for default addresses of the other apps (notes.<domain>, links.<domain> ...). Set BASE_DOMAIN, or it is taken from PUBLIC_URL. */
+export const BASE_DOMAIN = (env.BASE_DOMAIN || '').trim() || (() => { try { const p = new URL(PUBLIC_URL).hostname.split('.'); return p.length > 2 ? p.slice(1).join('.') : p.join('.'); } catch { return ''; } })() || 'example.com';
 fs.mkdirSync(DATA, { recursive: true });
 
 function readOrCreate(file, make) {
@@ -56,10 +58,10 @@ export function effective() {
     authentik: { url: clean(s.authentik?.url) || clean(env.AUTHENTIK_URL) || (OIDC ? (() => { try { return new URL(OIDC.issuer).origin; } catch { return ''; } })() : ''), token: clean(s.authentik?.token) || clean(env.AUTHENTIK_TOKEN) },
     terminal: { host: clean(s.terminal?.host) || clean(env.TERMINAL_HOST), port: Number(s.terminal?.port || env.TERMINAL_PORT || 0) || 22, user: clean(s.terminal?.user) || clean(env.TERMINAL_USER) || 'root', key: clean(s.terminal?.key) || clean(env.TERMINAL_KEY).replace(/\\n/g, '\n'), auth: s.terminal?.auth === 'password' || (!s.terminal?.key && !env.TERMINAL_KEY && s.terminal?.auth !== 'key' && !!clean(s.terminal?.pass)) ? 'password' : 'key', pass: clean(s.terminal?.pass) || clean(env.TERMINAL_PASS) },
     mail: { host: clean(s.mail?.host) || clean(env.SMTP_HOST), port: Number(s.mail?.port || env.SMTP_PORT || 0) || 0, security: clean(s.mail?.security) || clean(env.SMTP_SECURITY) || 'starttls', user: clean(s.mail?.user) || clean(env.SMTP_USER), pass: clean(s.mail?.pass) || clean(env.SMTP_PASSWORD), from: clean(s.mail?.from) || clean(env.SMTP_FROM), fromName: clean(s.mail?.fromName) || clean(env.SMTP_FROM_NAME), dailyCap: Math.min(2000, Math.max(1, Number(s.mail?.dailyCap || env.SMTP_DAILY_CAP || 0) || 200)) },
-    links: { ai: clean(s.links?.ai) || clean(env.LINK_AI) || 'https://ai.anands.xyz/oauth/openid', files: clean(s.links?.files) || clean(env.LINK_FILES) || 'https://files.anands.xyz/api/auth/oidc/login', storage: clean(s.links?.storage) || clean(env.LINK_STORAGE) || 'https://s3-admin.anands.xyz', paperless: clean(s.links?.paperless) || clean(env.LINK_PAPERLESS) || 'https://paperless.anands.xyz', pulse: clean(s.links?.pulse) || clean(env.LINK_PULSE) || 'https://control.anands.xyz' },
+    links: { ai: clean(s.links?.ai) || clean(env.LINK_AI) || `https://ai.${BASE_DOMAIN}/oauth/openid`, files: clean(s.links?.files) || clean(env.LINK_FILES) || `https://files.${BASE_DOMAIN}/api/auth/oidc/login`, storage: clean(s.links?.storage) || clean(env.LINK_STORAGE) || `https://s3-admin.${BASE_DOMAIN}`, paperless: clean(s.links?.paperless) || clean(env.LINK_PAPERLESS) || `https://paperless.${BASE_DOMAIN}`, pulse: clean(s.links?.pulse) || clean(env.LINK_PULSE) || `https://control.${BASE_DOMAIN}` },
     paperless: { token: clean(s.paperless?.token) || clean(env.PAPERLESS_TOKEN) },
-    joplin: { url: (clean(s.joplin?.url) || clean(env.JOPLIN_URL) || 'https://notes.anands.xyz').replace(/\/+$/, ''), email: clean(s.joplin?.email) || clean(env.JOPLIN_EMAIL), pass: clean(s.joplin?.pass) || clean(env.JOPLIN_PASSWORD) },
-    bookmarks: { url: (clean(s.bookmarks?.url) || clean(env.LINKS_URL) || 'https://links.anands.xyz').replace(/\/+$/, ''), token: clean(s.bookmarks?.token) || clean(env.LINKS_TOKEN) },
+    joplin: { url: (clean(s.joplin?.url) || clean(env.JOPLIN_URL) || `https://notes.${BASE_DOMAIN}`).replace(/\/+$/, ''), email: clean(s.joplin?.email) || clean(env.JOPLIN_EMAIL), pass: clean(s.joplin?.pass) || clean(env.JOPLIN_PASSWORD) },
+    bookmarks: { url: (clean(s.bookmarks?.url) || clean(env.LINKS_URL) || `https://links.${BASE_DOMAIN}`).replace(/\/+$/, ''), token: clean(s.bookmarks?.token) || clean(env.LINKS_TOKEN) },
     public: { url: clean(s.public?.url) || PUBLIC_URL },
     turn: { urls: clean(s.turn?.urls) || clean(env.TURN_URLS) || ((s.turn?.secret || env.TURN_SECRET) && PUBLIC_URL ? (() => { try { const h = new URL(PUBLIC_URL).hostname; return 'turn:' + h + ':3478,turn:' + h + ':3478?transport=tcp'; } catch { return ''; } })() : ''), secret: clean(s.turn?.secret) || clean(env.TURN_SECRET), stun: clean(s.turn?.stun) || clean(env.STUN_URLS) },
     llm: { base: clean(s.llm?.base) || clean(env.LLM_BASE_URL), key: clean(s.llm?.key) || clean(env.LLM_API_KEY), model: clean(s.llm?.model) || clean(env.LLM_MODEL) || 'gpt-4o-mini' }
@@ -108,7 +110,7 @@ export function updateSettings(patch) {
   set('google', 'clientId', p.google?.clientId); set('google', 'clientSecret', p.google?.clientSecret, true);
   set('dav', 'url', p.dav?.url); set('dav', 'user', p.dav?.user); set('dav', 'pass', p.dav?.pass, true);
   set('vault', 'url', p.vault?.url);
-  if (p.chrome?.url !== undefined && String(p.chrome.url).trim() && !/^(https:\/\/[^\s\/]+|http:\/\/(127\.0\.0\.1|localhost)(:\d+)?)$/i.test(String(p.chrome.url).trim().replace(/\/+$/, ''))) throw Object.assign(new Error('Enter the address like https://browser.anands.xyz'), { status: 400 });
+  if (p.chrome?.url !== undefined && String(p.chrome.url).trim() && !/^(https:\/\/[^\s\/]+|http:\/\/(127\.0\.0\.1|localhost)(:\d+)?)$/i.test(String(p.chrome.url).trim().replace(/\/+$/, ''))) throw Object.assign(new Error('Enter the address like https://browser.example.com'), { status: 400 });
   set('chrome', 'user', p.chrome?.user); set('chrome', 'pass', p.chrome?.pass, true); set('chrome', 'admin', p.chrome?.admin, true); set('chrome', 'url', p.chrome?.url === undefined ? undefined : String(p.chrome.url).trim().replace(/\/+$/, ''));
   set('paperless', 'token', p.paperless?.token, true);
   set('joplin', 'url', p.joplin?.url); set('joplin', 'email', p.joplin?.email); set('joplin', 'pass', p.joplin?.pass, true);

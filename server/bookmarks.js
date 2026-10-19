@@ -1,4 +1,4 @@
-/* Links: the OS talks to your Linkwarden (links.anands.xyz) with an access token and shows bookmarks in its own app.
+/* Links: the OS talks to your Linkwarden (links.example.com) with an access token and shows bookmarks in its own app.
    The token stays on the server. Owner only. */
 import { effective } from './config.js';
 import { json, readJson, httpError } from './util.js';

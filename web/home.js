@@ -1,3 +1,4 @@
+window.aosHost = function (sub, path) { var p = location.hostname.split('.'); return 'https://' + sub + '.' + (p.length > 2 && !/^\d+$/.test(p[p.length - 1]) ? p.slice(1).join('.') : 'example.com') + (path || ''); };
 /* Home page live sections: "Right now" cards, and every service grouped. Data comes from the connected services only. */
 (function () {
   'use strict';
@@ -38,8 +39,8 @@
     return '<div class="lives">' + out.join('') + '</div>';
   }
   var GROUPS = [
-    ['Everyday', [['Pulse', 'pulse', 'https://control.anands.xyz', 'Anands Control Center', 'pulse'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password'], ['Files', 'folder', 'https://files.anands.xyz/api/auth/oidc/login', 'Anands Filemanager', 'files']]],
-    ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', 'https://status.anands.xyz', 'Anands Status'], ['Storage', 'folder', 'https://s3-admin.anands.xyz', 'Anands S3 Storage', 'storage']]]
+    ['Everyday', [['Pulse', 'pulse', aosHost('control'), 'Anands Control Center', 'pulse'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password'], ['Files', 'folder', aosHost('files', '/api/auth/oidc/login'), 'Anands Filemanager', 'files']]],
+    ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', aosHost('status'), 'Anands Status'], ['Storage', 'folder', aosHost('s3-admin'), 'Anands S3 Storage', 'storage']]]
   ];
   function tile(s, state) {
     var st = state(s[3]), OIM = { Pulse: 'pulse', Photos: 'photos', Cards: 'cards', Drive: 'drive', Vault: 'vault', 'AI Chat': 'ai', Files: 'files', 'Cloud Insights': 'insights', Servers: 'servers', VPN: 'vpn', Status: 'status', Storage: 'storage', Money: 'money', Paperless: 'paperless', Links: 'bookmarks', Notes: 'notes', Subscriptions: 'subs', Investments: 'invest', Belongings: 'belong', Household: 'house' }, inner = '<span class="ic' + (OIM[s[0]] ? ' img' : '') + '">' + (OIM[s[0]] ? '<img src="/oicons/' + OIM[s[0]] + '.svg" alt="">' : ic(s[1])) + '</span><span class="tx"><b>' + s[0] + '</b></span><i class="dot ' + st[0] + '" title="' + st[1] + '" role="img" aria-label="' + st[1] + '"></i>';

@@ -1,6 +1,6 @@
 /* A tiny stand-in for Joplin Server's API (sessions, items), for tests and previews. */
 import http from 'node:http';
-export const EMAIL = 'me@anands.xyz', PASSWORD = 'pw-notes', SID = 'sess-123';
+export const EMAIL = 'me@example.com', PASSWORD = 'pw-notes', SID = 'sess-123';
 const t0 = '2026-10-10T08:00:00.000Z';
 const id = (n) => n.toString(16).padStart(32, '0');
 const propsNote = (i, parent, extra = {}) => ['id: ' + id(i), 'parent_id: ' + id(parent), 'created_time: ' + t0, 'updated_time: ' + (extra.upd || t0), 'is_conflict: 0', 'is_todo: ' + (extra.todo ? 1 : 0), 'todo_completed: ' + (extra.done ? 1790000000000 : 0), 'user_created_time: ' + t0, 'user_updated_time: ' + (extra.upd || t0), 'encryption_applied: ' + (extra.enc ? 1 : 0), 'markup_language: 1', 'deleted_time: ' + (extra.del || 0), 'type_: 1'].join('\n');
