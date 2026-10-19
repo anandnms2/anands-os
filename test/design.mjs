@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -528,6 +528,25 @@ try {
     // the picture chooser offers upload, free photos and AI
     await p.frameLocator('#frame').locator('img[data-img], [data-img]').first().click(); await p.waitForSelector('#picUpload'); assert.ok(await p.$('#picQ') && await p.$('#picGen'));
     await p.close();
+  });
+  await t('Video editor: import, split, titles, automatic captions (real speech-to-text route), .srt, WebM export, reload', async () => {
+    const clipPath = path.join(os.tmpdir(), 'vid-' + Date.now() + '.webm'); const ff = spawnSync('ffmpeg', ['-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=15:duration=3', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=3', '-c:v', 'libvpx', '-b:v', '300k', '-c:a', 'libopus', '-shortest', clipPath]);
+    if (ff.status !== 0) { console.log('skip  ffmpeg not installed (video editor test)'); return; }
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/video.html'); await p.waitForFunction(() => typeof V !== 'undefined' && V);
+    await p.setInputFiles('#fMedia', clipPath); await p.waitForFunction(() => V.clips.length === 1, null, { timeout: 20000 }); await p.waitForFunction(() => els[V.clips[0].id] && els[V.clips[0].id].readyState >= 2, null, { timeout: 15000 });
+    assert.ok(await p.evaluate(() => Math.abs(V.clips[0].dur - 3) < .2));
+    await p.evaluate(() => seek(1)); await p.waitForTimeout(600); assert.ok(await p.evaluate(() => { const d = cv.getContext('2d').getImageData(640, 360, 1, 1).data; return d[0] + d[1] + d[2] > 30; }), 'the frame is drawn');
+    await p.evaluate(() => seek(1.5)); await p.click('#bSplit'); assert.equal(await p.evaluate(() => V.clips.length), 2); assert.ok(await p.evaluate(() => Math.abs(V.clips[1].in - 1.5) < .01 && Math.abs(V.clips[1].start - 1.5) < .01));
+    await p.click('#bTitle'); await p.fill('#pane textarea', 'Hello there'); assert.equal(await p.evaluate(() => V.clips.find((c) => c.kind === 'text').text), 'Hello there');
+    await p.click('[data-tab=caps]'); await p.click('#bAuto'); await p.waitForFunction(() => V.clips.filter((c) => c.kind === 'cap').length === 2, null, { timeout: 20000 });
+    assert.equal(await p.evaluate(() => V.clips.find((c) => c.kind === 'cap').text), 'Hello world.');
+    const stt = aiCalls.filter((c) => c.who === 'stt').at(-1); assert.ok(stt && stt.has, 'the mixed WAV reached the speech-to-text service');
+    await p.click('[data-tab=caps] >> nth=0'); const srt = await Promise.all([p.waitForEvent('download'), (async () => { await p.click('#bEx'); await p.click('text=Captions (.srt)'); })()]); const sp = path.join(os.tmpdir(), 'v-' + Date.now() + '.srt'); await srt[0].saveAs(sp); assert.match(fs.readFileSync(sp, 'utf8'), /^1\n00:00:00,000 --> 00:00:0\d,\d{3}\n.+/);
+    await p.evaluate(() => { const c = V.clips.find((x) => x.kind === 'cap'); c.text = 'Edited caption'; seek(c.start + .05); }); await p.waitForTimeout(200);
+    await p.waitForTimeout(1500); const url = p.url(); assert.match(url, /\?f=/);
+    const ex = await Promise.all([p.waitForEvent('download', { timeout: 40000 }), (async () => { await p.click('#bEx'); await p.click('text=Video (.webm)'); })()]); const wp = path.join(os.tmpdir(), 'v-' + Date.now() + '.webm'); await ex[0].saveAs(wp); assert.ok(fs.statSync(wp).size > 3000, 'exported video has content');
+    const p2 = await ctx.newPage(); await p2.goto(url); await p2.waitForFunction(() => typeof V !== 'undefined' && V && V.clips.length >= 4); await p2.waitForFunction(() => Object.keys(els).length > 0, null, { timeout: 15000 }); assert.ok(await p2.evaluate(() => V.clips.some((c) => c.text === 'Edited caption')));
+    await p2.goto(B + '/apps/design-studio/#videos'); await p2.waitForSelector('.hc[data-ed="videos"]'); await p2.close(); await p.close();
   });
   await t('right-click menu text is readable in dark mode', async () => {
     const p = await ctx.newPage(); await p.emulateMedia({ colorScheme: 'dark' }); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof ctxMenu === 'function');

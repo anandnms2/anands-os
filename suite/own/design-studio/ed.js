@@ -7,7 +7,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 function toast(m,ms=2200){let t=$('#toast');if(!t){t=el('div',{id:'toast',role:'status'});document.body.append(t)}t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),ms)}
 try{const th=localStorage.getItem('ds.theme');if(th)document.documentElement.dataset.theme=th}catch(e){}
 const PUT=()=>window.puter;
-const KIND={doc:{dir:'/Designs/Docs',ext:'ddoc',label:'Document',home:'docs'},board:{dir:'/Designs/Whiteboards',ext:'dboard',label:'Whiteboard',home:'boards'},site:{dir:'/Designs/Websites',ext:'dsite',label:'Website',home:'sites'}};
+const KIND={doc:{dir:'/Designs/Docs',ext:'ddoc',label:'Document',home:'docs'},board:{dir:'/Designs/Whiteboards',ext:'dboard',label:'Whiteboard',home:'boards'},site:{dir:'/Designs/Websites',ext:'dsite',label:'Website',home:'sites'},video:{dir:'/Designs/Videos',ext:'dvideo',label:'Video',home:'videos'}};
 const safe=n=>String(n||'Untitled').replace(/[\\/:*?"<>|\u0000-\u001f]+/g,'').replace(/\s+/g,' ').trim().slice(0,60)||'Untitled';
 async function readJSON(p){const b=await PUT().fs.read(p);return JSON.parse(await b.text())}
 function closeModal(){const m=$('.modal');if(m)m.remove()}
@@ -41,7 +41,7 @@ function startEditor(kind,{blank,onLoad,collect}){
 }
 
 /* Move the open file to the shared trash (30 days, restorable from Home) and go back to Home. */
-async function trashEditor(ed,kind){const home={doc:'docs',board:'boards',site:'sites'}[kind];await ed.save();const path=ed.path,rec=ed.rec;if(!path||!rec){location.href='./#'+home;return}
+async function trashEditor(ed,kind){const home={doc:'docs',board:'boards',site:'sites',video:'videos'}[kind];await ed.save();const path=ed.path,rec=ed.rec;if(!path||!rec){location.href='./#'+home;return}
   const k=home,base=path.split('/').pop();const j=JSON.parse(JSON.stringify(rec));j._trash={kind:k,from:path,at:Date.now()};if(j.pub){try{await unpublish(j.pub.token)}catch(e){}delete j.pub}
   await PUT().fs.write('/Designs/.trash-ed/'+k+'__'+base,JSON.stringify(j),{createMissingParents:true,overwrite:true});await PUT().fs.delete(path);location.href='./#'+home}
 const askTrash=(ed,kind,name)=>askSure('Move “'+name+'” to the trash? You can restore it from Home for 30 days.','Move to trash',()=>trashEditor(ed,kind).catch(()=>toast('Could not move it')));

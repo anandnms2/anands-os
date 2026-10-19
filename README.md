@@ -115,3 +115,4 @@ It uses [Scramjet](https://github.com/MercuryWorkshop/scramjet), the engine behi
 - **Contact forms** on published sites are stored in a server inbox (Messages button) and can optionally be emailed.
 - **AI** (Settings → AI for Design Studio): uses your connected AI by default; Gemini (free tier) or the Anthropic API can be selected. Drives Magic Write, doc/site rewriting, AI pictures and caption transcription.
 - **Stock photos**: Wikimedia, Openverse, Pexels/Pixabay/Unsplash (keys), Freepik (key); Burst and StockVault open as links.
+- **Video editor** (Home ▸ Videos): timeline with video, picture, sound, title and overlay clips (move, trim, split, volume, fades), captions (typed, `.srt` import/export, or automatic using your connected AI's speech-to-text or Gemini), and WebM export recorded in the browser. Media is kept in Files under Designs ▸ Videos. Export runs in real time, so a 2-minute video takes about 2 minutes.
