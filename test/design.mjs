@@ -45,7 +45,7 @@ const port = 20000 + Math.floor(Math.random() * 20000), B = `http://127.0.0.1:${
 const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', ANTHROPIC_API_BASE: `http://127.0.0.1:${an.address().port}`, GEMINI_API_BASE: `http://127.0.0.1:${gm.address().port}`, PEXELS_API_BASE: `http://127.0.0.1:${px.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, PIXABAY_API_BASE: `http://127.0.0.1:${pb.address().port}`, OPENVERSE_API_BASE: `http://127.0.0.1:${ov.address().port}`, WIKIMEDIA_API_BASE: `http://127.0.0.1:${wk.address().port}/w/api.php`, PIXABAY_API_KEY: '', BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '', POLLINATIONS_BASE: `http://127.0.0.1:${imgHost.address().port}` } });
 for (let i = 0; i < 60; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
 let pass = 0, failed = 0; const t = async (n, f) => { try { await f(); pass++; console.log('ok   ' + n); } catch (e) { failed++; console.log('FAIL ' + n + '\n     ' + String(e.stack || e).split('\n').slice(0, 5).join('\n     ')); } };
-const browser = await chromium.launch({ args: ['--no-sandbox'] }); const errs = [];
+const browser = await chromium.launch({ args: ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] }); const errs = [];
 try {
   const ctx = await browser.newContext({ viewport: { width: 1360, height: 860 } }); await ctx.route(/fonts\.g(oogleapis|static)\.com/, (r) => r.abort());
   assert.ok((await ctx.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } })).ok());
@@ -541,6 +541,11 @@ try {
     await p.click('[data-tab=caps]'); await p.click('#bAuto'); await p.waitForFunction(() => V.clips.filter((c) => c.kind === 'cap').length === 2, null, { timeout: 20000 });
     assert.equal(await p.evaluate(() => V.clips.find((c) => c.kind === 'cap').text), 'Hello world.');
     const stt = aiCalls.filter((c) => c.who === 'stt').at(-1); assert.ok(stt && stt.has, 'the mixed WAV reached the speech-to-text service');
+    // caption styles, translation (a count mismatch changes nothing), speed, voice-over
+    await p.selectOption('#capStyle', 'karaoke'); await p.evaluate(() => seek(.2)); await p.waitForTimeout(150); assert.equal(await p.evaluate(() => V.cap.style), 'karaoke');
+    await p.selectOption('#trLang', 'French'); await p.click('#bTr'); await p.waitForFunction(() => /^GATEWAY:/.test(V.clips.find((c) => c.kind === 'cap').text), null, { timeout: 15000 });
+    await p.evaluate(() => { sel = V.clips.find((c) => c.kind === 'video').id; setTab('clip'); }); await p.selectOption('#spd', '2'); assert.equal(await p.evaluate(() => byId(sel).speed), 2); assert.ok(await p.evaluate(() => byId(sel).dur <= 1.51));
+    await p.click('[data-tab=media]'); const before = await p.evaluate(() => V.clips.length); await p.click('#bVO'); await p.waitForTimeout(1500); await p.click('#bVO'); await p.waitForFunction((n) => V.clips.length > n && V.clips.some((c) => c.kind === 'audio'), before, { timeout: 15000 });
     await p.click('[data-tab=caps] >> nth=0'); const srt = await Promise.all([p.waitForEvent('download'), (async () => { await p.click('#bEx'); await p.click('text=Captions (.srt)'); })()]); const sp = path.join(os.tmpdir(), 'v-' + Date.now() + '.srt'); await srt[0].saveAs(sp); assert.match(fs.readFileSync(sp, 'utf8'), /^1\n00:00:00,000 --> 00:00:0\d,\d{3}\n.+/);
     await p.evaluate(() => { const c = V.clips.find((x) => x.kind === 'cap'); c.text = 'Edited caption'; seek(c.start + .05); }); await p.waitForTimeout(200);
     await p.waitForTimeout(1500); const url = p.url(); assert.match(url, /\?f=/);
