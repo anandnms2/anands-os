@@ -15,6 +15,7 @@ app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(
 
 const freePort = () => new Promise((ok, no) => { const s = net.createServer(); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => ok(p)); }); s.on('error', no); });
 function credentials(dir) {
+  const w = readWeb(); if (w && w.password) return String(w.password); // linked to the web version: the same password you use there
   const f = path.join(dir, 'desktop-password');
   try { return fs.readFileSync(f, 'utf8').trim(); } catch {}
   const v = crypto.randomBytes(18).toString('base64url'); fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(f, v + '\n', { mode: 0o600 }); return v;
@@ -111,6 +112,7 @@ function menu() {
       { label: 'Remove a folder', submenu: pcs.length ? pcs.map((f) => ({ label: f.name + '  (' + f.path + ')', click: () => removePcFolder(f.name) })) : [{ label: 'No folders added', enabled: false }] },
       { label: readWeb() ? 'Anands Web connection…' : 'Connect to Anands Web…', click: () => connectWindow() },
       { label: 'Sync with Anands Web now', click: () => runSync(true, false) },
+      { label: 'Show the sign-in password', click: () => dialog.showMessageBox(win, { type: 'info', message: 'Sign-in password for this app', detail: readWeb() ? 'This app uses the same password as your Anands Web account.' : 'Not connected to Anands Web, so this app uses its own password:\n\n' + credentials(dataDir()) + '\n\nConnect to Anands Web to use your website password instead.' }) },
       { label: 'Open data folder', click: () => shell.openPath(dataDir()) },
       { type: 'separator' }, { role: 'quit' } ] },
     { role: 'editMenu' }, { role: 'windowMenu' }
