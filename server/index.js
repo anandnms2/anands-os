@@ -34,6 +34,7 @@ import { handleBookmarks, bookmarksTest } from './bookmarks.js';
 import { handleJoplin, joplinTest } from './joplin.js';
 import { handlePrefs } from './prefs.js';
 import { handleDesk } from './deskapps.js';
+import { handleSync } from './sync.js';
 import { handleTeam, areaOf, allowed, isOwner, suiteOk } from './team.js';
 import { isWorkerPath, handleWorkerRequest, isGuestPage, serveGuestPage } from './workers.js';
 import { noteOrigin, publicOrigin } from './origin.js';
@@ -54,6 +55,7 @@ const EMAIL_CSP = APP_CSP.replace("img-src 'self' data: blob:", "img-src 'self' 
 function redact(o) { const out = {}; for (const [g, v] of Object.entries(o)) { if (!v || typeof v !== 'object') { out[g] = v; continue; } out[g] = {}; for (const [k, x] of Object.entries(v)) out[g][k] = ['user', 'clientId', 'from', 'fromName', 'host', 'port', 'secret', 'stun', 'urls'].includes(k) ? (typeof x === 'boolean' ? x : '') : x; } return out; }
 async function api(req, res, url) {
   const p = url.pathname;
+  if (p === '/api/sync/manifest' || p === '/api/sync/file') return handleSync(req, res, url, isOwner(sessionOf(req)));
   if (p === '/api/settings' && req.method === 'GET') return json(res, 200, isOwner(sessionOf(req)) ? publicSettings() : redact(publicSettings()));
   if (p === '/api/settings' && req.method === 'PUT') { updateSettings(await readJson(req, 16 * 1024)); clearInsightsCache(); clearStatusCache(); clearAiUsageCache(); clearCardsCache(); return json(res, 200, publicSettings()); }
   if (p === '/api/settings/test' && req.method === 'POST') {

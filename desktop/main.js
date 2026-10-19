@@ -1,5 +1,6 @@
 /* Anands OS desktop. Runs the same OS server on this computer (127.0.0.1 only) and shows it in a window,
  * so everything that lives on this computer works with no internet. Your files stay in the app's data folder. */
+const { syncFromWeb } = require('./sync.js');
 const { app, BrowserWindow, Menu, shell, dialog, session, ipcMain, safeStorage } = require('electron');
 const { spawn } = require('node:child_process');
 const crypto = require('node:crypto'); const fs = require('node:fs'); const net = require('node:net'); const path = require('node:path');
@@ -61,7 +62,7 @@ function connectWindow() {
 ipcMain.handle('web:connect', async (e, url, password) => {
   url = String(url || '').trim().replace(/\/+$/, ''); if (!/^https?:\/\/[^\s]+$/.test(url)) return 'Enter the full address, like https://os.example.com';
   if (!password) return 'Enter your password.'; const err = await checkWeb(url, String(password)); if (err) return err;
-  saveWeb({ url, password: String(password) }); BrowserWindow.fromWebContents(e.sender).close(); await restartServer(); return '';
+  saveWeb({ url, password: String(password) }); BrowserWindow.fromWebContents(e.sender).close(); await restartServer(); runSync(true, false); return '';
 });
 ipcMain.handle('web:disconnect', async (e) => { try { fs.rmSync(webFile(), { force: true }); } catch {} BrowserWindow.fromWebContents(e.sender).close(); await restartServer(); });
 ipcMain.handle('win:close', (e) => { BrowserWindow.fromWebContents(e.sender).close(); });
@@ -87,6 +88,18 @@ async function signIn(password) {
   if (!r.ok) throw new Error('Could not sign in locally (' + r.status + ')');
   for (const c of r.headers.getSetCookie()) { const [kv] = c.split(';'); const i = kv.indexOf('='); await session.defaultSession.cookies.set({ url: base, name: kv.slice(0, i), value: kv.slice(i + 1), httpOnly: true, expirationDate: Math.floor(Date.now() / 1000) + 86400 * 30 }); }
 }
+let syncing = false;
+async function runSync(manual, filesOnly) {
+  const w = readWeb(); if (!w || syncing) { if (manual && !w) dialog.showMessageBox(win, { type: 'info', message: 'Connect to Anands Web first', detail: 'Use "Connect to Anands Web…" in the menu, then sync.' }); return; }
+  syncing = true;
+  try {
+    const r = await syncFromWeb({ url: w.url, password: w.password, dataDir: dataDir(), filesOnly, onProgress: (n, t) => { if (win) win.setProgressBar(t ? n / t : -1); } });
+    if (win) win.setProgressBar(-1);
+    if (r.appData) await restartServer();
+    if (manual) dialog.showMessageBox(win, { type: 'info', message: 'Synced with Anands Web', detail: r.downloaded + ' updated, ' + r.unchanged + ' already current' + (r.removed ? ', ' + r.removed + ' removed' : '') + (r.kept ? ', ' + r.kept + ' kept because you changed them on this computer' : '') + (r.skipped ? ', ' + r.skipped + ' skipped for size' : '') + (r.errors ? ', ' + r.errors + ' failed (try again)' : '') + '.' });
+  } catch (e) { if (win) win.setProgressBar(-1); if (manual) dialog.showMessageBox(win, { type: 'warning', message: 'Could not sync', detail: String(e.message || e).replace(/fetch failed/, 'The web version is not reachable. You are working offline.') }); }
+  finally { syncing = false; }
+}
 function menu() {
   const pcs = pcFolders() || [];
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -97,6 +110,7 @@ function menu() {
       { label: 'Add a folder from this computer…', click: () => addPcFolder() },
       { label: 'Remove a folder', submenu: pcs.length ? pcs.map((f) => ({ label: f.name + '  (' + f.path + ')', click: () => removePcFolder(f.name) })) : [{ label: 'No folders added', enabled: false }] },
       { label: readWeb() ? 'Anands Web connection…' : 'Connect to Anands Web…', click: () => connectWindow() },
+      { label: 'Sync with Anands Web now', click: () => runSync(true, false) },
       { label: 'Open data folder', click: () => shell.openPath(dataDir()) },
       { type: 'separator' }, { role: 'quit' } ] },
     { role: 'editMenu' }, { role: 'windowMenu' }
@@ -109,6 +123,7 @@ async function main() {
   win.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith(base)) return { action: 'allow' }; shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith(base)) { e.preventDefault(); shell.openExternal(url); } });
   await win.loadURL(base + '/');
+  runSync(false, false); setInterval(() => runSync(false, true), 15 * 60 * 1000);
 }
 app.whenReady().then(() => main().catch((e) => { dialog.showErrorBox('Anands OS could not start', String(e.message || e)); app.quit(); }));
 app.on('before-quit', () => { app.isQuitting = true; if (child) child.kill(); });

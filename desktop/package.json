@@ -24,6 +24,7 @@
     },
     "files": [
       "main.js",
+      "sync.js",
       "preload.js",
       "package.json",
       "icon.png"
