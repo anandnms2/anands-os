@@ -52,8 +52,7 @@ const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self'" + (SJ_HOST ? ' https://
 const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
 
 /* The Email app shows a message's own pictures only after "Show images"; the message frame has its own tighter policy, but a frame inherits this page's, so the page must allow them. */
-/* Design Studio may show and read Wikimedia and Openverse pictures straight from the browser. Their servers throttle shared data-centre addresses, so this keeps search working when the server's route is blocked. */
-const DS_CSP = APP_CSP.replace("img-src 'self' data: blob:", "img-src 'self' data: blob: https://upload.wikimedia.org https://api.openverse.org").replace("connect-src 'self' data: blob:", "connect-src 'self' data: blob: https://upload.wikimedia.org https://commons.wikimedia.org https://api.openverse.org");
+const DS_CSP = APP_CSP;
 const EMAIL_CSP = APP_CSP.replace("img-src 'self' data: blob:", "img-src 'self' data: blob: https: http:");
 /* what a team member or guest may see of the connections: where things are, never who they sign in as */
 function redact(o) { const out = {}; for (const [g, v] of Object.entries(o)) { if (!v || typeof v !== 'object') { out[g] = v; continue; } out[g] = {}; for (const [k, x] of Object.entries(v)) out[g][k] = ['user', 'clientId', 'from', 'fromName', 'host', 'port', 'secret', 'stun', 'urls'].includes(k) ? (typeof x === 'boolean' ? x : '') : x; } return out; }

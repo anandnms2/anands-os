@@ -1,5 +1,5 @@
 // Design Studio inside the OS: saving to Files, exports (PNG/PDF/SVG/GIF/video), animation, background remover,
-// stock photo search (fake Pexels/Unsplash), share links, and the safety rules around them. No internet needed.
+// stock photo search (fake Unsplash/Pixabay), share links, and the safety rules around them. No internet needed.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -12,16 +12,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let chromium = null; for (const base of [root + '/', '/opt/npm-tools/node_modules/']) { try { chromium = createRequire(base)('playwright').chromium; break; } catch {} }
 if (!chromium) { console.log('skip  Playwright not installed'); process.exit(0); }
 
-/* fake upstreams: Pexels, Unsplash, and the host the background remover files come from */
-const hits = { pexels: [], unsplash: [], pixabay: [], openverse: [], wiki: [], bg: [] };
+/* fake upstreams: Unsplash, Pixabay, and the host the background remover files come from */
+const hits = { unsplash: [], pixabay: [], bg: [] };
 const listen = (h) => new Promise((r) => { const s = http.createServer(h); s.listen(0, '127.0.0.1', () => r(s)); });
-const px = await listen((req, res) => { hits.pexels.push({ u: req.url, auth: req.headers.authorization }); if (req.headers.authorization !== 'px-key') { res.writeHead(401); return res.end('{}'); }
-  res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ photos: [{ id: 7, width: 4000, height: 3000, photographer: 'Ana', url: 'https://www.pexels.com/photo/7/', alt: 'a lake', src: { medium: 'https://images.pexels.com/photos/7/m.jpg', large2x: 'https://images.pexels.com/photos/7/l.jpg' } }, { id: 8, src: {} }] })); });
 const un = await listen((req, res) => { hits.unsplash.push({ u: req.url, auth: req.headers.authorization }); res.writeHead(200, { 'content-type': 'application/json' });
   res.end(JSON.stringify({ results: [{ id: 'abc', width: 100, height: 80, user: { name: 'Bo' }, alt_description: 'a hill', links: { html: 'https://unsplash.com/photos/abc', download_location: 'https://api.unsplash.com/photos/abc/download' }, urls: { small: 'https://images.unsplash.com/s.jpg', regular: 'https://images.unsplash.com/r.jpg' } }] })); });
 const pb = await listen((req, res) => { hits.pixabay.push(req.url); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ hits: [{ id: 5, webformatURL: 'https://pixabay.com/get/w.jpg', largeImageURL: 'https://pixabay.com/get/l.jpg', imageWidth: 3000, imageHeight: 2000, user: 'Cy', pageURL: 'https://pixabay.com/photos/5/', tags: 'sea, wave' }] })); });
-const ov = await listen((req, res) => { hits.openverse.push(req.url); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ results: [{ id: 'o1', title: 'Forest', creator: 'Di', thumbnail: 'https://api.openverse.org/v1/images/o1/thumb/', width: 800, height: 600, license: 'by', license_version: '4.0', foreign_landing_url: 'https://example.org/o1' }] })); });
-const wk = await listen((req, res) => { hits.wiki.push(req.url); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ query: { pages: { 22: { pageid: 22, index: 2, title: 'File:Old_mill.jpg', imageinfo: [{ mime: 'image/jpeg', width: 4000, height: 3000, thumburl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Old_mill.jpg/1280px-Old_mill.jpg', descriptionurl: 'https://commons.wikimedia.org/wiki/File:Old_mill.jpg', extmetadata: { Artist: { value: '<a href="x">Eva &amp; Co</a>' }, LicenseShortName: { value: 'CC BY-SA 4.0' } } }] }, 21: { pageid: 21, index: 1, title: 'File:Doc.pdf', imageinfo: [{ mime: 'application/pdf', thumburl: 'https://upload.wikimedia.org/x.png' }] } } } })); });
 const PNG1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'); const imgCalls = [];
 const imgHost = await listen((req, res) => { const b = []; req.on('data', (d) => b.push(d)); req.on('end', () => { imgCalls.push({ u: req.url, ct: String(req.headers['content-type'] || '').split(';')[0], auth: req.headers.authorization });
   if (req.url.startsWith('/prompt/')) { res.writeHead(200, { 'content-type': 'image/png' }); return res.end(PNG1); }
@@ -42,7 +38,7 @@ const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-ds-')), suite = fs.mkdte
 fs.mkdirSync(suite + '/apps', { recursive: true }); fs.cpSync(root + '/suite/own/design-studio', suite + '/apps/design-studio', { recursive: true }); fs.mkdirSync(suite + '/_icons');
 fs.writeFileSync(suite + '/apps.json', JSON.stringify([{ slug: 'design-studio', name: 'Design Studio', alternativeTo: 'Canva', category: 'Creative Tools', hasSource: true }]));
 const port = 20000 + Math.floor(Math.random() * 20000), B = `http://127.0.0.1:${port}`;
-const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', ANTHROPIC_API_BASE: `http://127.0.0.1:${an.address().port}`, GEMINI_API_BASE: `http://127.0.0.1:${gm.address().port}`, PEXELS_API_BASE: `http://127.0.0.1:${px.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, PIXABAY_API_BASE: `http://127.0.0.1:${pb.address().port}`, OPENVERSE_API_BASE: `http://127.0.0.1:${ov.address().port}`, WIKIMEDIA_API_BASE: `http://127.0.0.1:${wk.address().port}/w/api.php`, PIXABAY_API_KEY: '', BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '', POLLINATIONS_BASE: `http://127.0.0.1:${imgHost.address().port}` } });
+const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', ANTHROPIC_API_BASE: `http://127.0.0.1:${an.address().port}`, GEMINI_API_BASE: `http://127.0.0.1:${gm.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, PIXABAY_API_BASE: `http://127.0.0.1:${pb.address().port}`, PIXABAY_API_KEY: '', BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '', POLLINATIONS_BASE: `http://127.0.0.1:${imgHost.address().port}` } });
 for (let i = 0; i < 60; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
 let pass = 0, failed = 0; const t = async (n, f) => { try { await f(); pass++; console.log('ok   ' + n); } catch (e) { failed++; console.log('FAIL ' + n + '\n     ' + String(e.stack || e).split('\n').slice(0, 5).join('\n     ')); } };
 const browser = await chromium.launch({ args: ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--auto-select-desktop-capture-source=Entire screen', '--enable-usermedia-screen-capturing'] }); const errs = [];
@@ -64,31 +60,21 @@ try {
     await ctx.request.get(B + '/_local/bgdata/ort.min.js'); assert.equal(hits.bg.filter((u) => u.endsWith('ort.min.js')).length, 1);
     const w = await ctx.request.get(B + '/_local/bgdata/ort-wasm.wasm'); assert.equal(w.status(), 502); assert.match((await w.json()).error, /Could not download/);
   });
-  await t('stock photos: no key gives a clear message; keys stay on the server', async () => {
-    assert.deepEqual(without((await post('/design/stockstatus')).j, 'image'), { pexels: false, unsplash: false, pixabay: false, openverse: true, wikimedia: true, freepik: false });
-    const r = await post('/design/stock', { q: 'lake', source: 'pexels' }); assert.equal(r.s, 400); assert.equal(r.j.code, 'no_key');
-    const free = (await post('/design/stock', { q: 'lake' })).j; assert.equal(free.source, 'openverse'); assert.equal(free.items.length, 1);
-    const put = await ctx.request.put(B + '/api/settings', { data: { stock: { pexels: 'px-key', unsplash: 'un-key', pixabay: 'pb-key' } }, headers: H }); assert.ok(put.ok());
-    const s = await (await ctx.request.get(B + '/api/settings')).json(); assert.deepEqual(s.stock, { pexelsSet: true, unsplashSet: true, pixabaySet: true, freepikSet: false }); assert.ok(!JSON.stringify(s).includes('px-key'));
-    assert.deepEqual(without((await post('/design/stockstatus')).j, 'image'), { pexels: true, unsplash: true, pixabay: true, openverse: true, wikimedia: true, freepik: false });
+  await t('stock photos: no key gives a clear message; keys stay on the server; removed sources are gone', async () => {
+    assert.deepEqual(without((await post('/design/stockstatus')).j, 'image'), { unsplash: false, pixabay: false });
+    const r = await post('/design/stock', { q: 'lake', source: 'unsplash' }); assert.equal(r.s, 400); assert.equal(r.j.code, 'no_key');
+    for (const src of ['pexels', 'openverse', 'wikimedia', 'freepik']) { const x = await post('/design/stock', { q: 'lake', source: src }); assert.equal(x.s, 400); assert.equal(x.j.code, 'no_key'); }
+    const put = await ctx.request.put(B + '/api/settings', { data: { stock: { unsplash: 'un-key', pixabay: 'pb-key', pexels: 'px-key' } }, headers: H }); assert.ok(put.ok());
+    const s = await (await ctx.request.get(B + '/api/settings')).json(); assert.deepEqual(s.stock, { unsplashSet: true, pixabaySet: true }); assert.ok(!JSON.stringify(s).includes('un-key'));
+    assert.deepEqual(without((await post('/design/stockstatus')).j, 'image'), { unsplash: true, pixabay: true });
   });
-  await t('stock photos: Pexels and Unsplash results are normalised; bad keys and junk are handled', async () => {
-    const a = (await post('/design/stock', { q: 'lake', source: 'pexels' })).j; assert.equal(a.source, 'pexels'); assert.equal(a.items.length, 1); assert.equal(a.items[0].by, 'Ana'); assert.match(a.items[0].full, /l\.jpg$/);
-    assert.match(hits.pexels.at(-1).u, /query=lake/); assert.equal(hits.pexels.at(-1).auth, 'px-key');
-    const b = (await post('/design/stock', { q: 'hill', source: 'unsplash' })).j; assert.equal(b.items[0].by, 'Bo'); assert.equal(hits.unsplash.at(-1).auth, 'Client-ID un-key');
-    await ctx.request.put(B + '/api/settings', { data: { stock: { pexels: 'wrong' } }, headers: H });
-    const bad = await post('/design/stock', { q: 'x', source: 'pexels' }); assert.equal(bad.s, 502); assert.match(bad.j.error, /did not accept that key/);
-    await ctx.request.put(B + '/api/settings', { data: { stock: { pexels: 'px-key' } }, headers: H });
-    const long = (await post('/design/stock', { q: 'a'.repeat(500), page: -9 })).j; assert.equal(long.page, 1); assert.ok(decodeURIComponent(hits.pexels.at(-1).u).length < 260);
-  });
-  await t('stock photos: Pixabay, Openverse and Wikimedia Commons results are normalised with credit and license', async () => {
+  await t('stock photos: Unsplash and Pixabay results are normalised with credit; junk input is handled', async () => {
+    const b = (await post('/design/stock', { q: 'hill', source: 'unsplash' })).j; assert.equal(b.source, 'unsplash'); assert.equal(b.items[0].by, 'Bo'); assert.equal(hits.unsplash.at(-1).auth, 'Client-ID un-key');
     const a = (await post('/design/stock', { q: 'sea', source: 'pixabay' })).j; assert.equal(a.items[0].by, 'Cy'); assert.match(a.items[0].full, /l\.jpg$/); assert.match(hits.pixabay.at(-1), /key=pb-key.*q=sea/);
-    const o = (await post('/design/stock', { q: 'forest', source: 'openverse' })).j; assert.equal(o.items[0].lic, 'CC BY 4.0'); assert.equal(o.items[0].by, 'Di'); assert.match(hits.openverse.at(-1), /q=forest/);
-    const w = (await post('/design/stock', { q: 'mill', source: 'wikimedia' })).j; assert.equal(w.items.length, 1); assert.equal(w.items[0].by, 'Eva & Co'); assert.equal(w.items[0].lic, 'CC BY-SA 4.0'); assert.match(w.items[0].thumb, /\/330px-/); assert.match(w.items[0].full, /\/1280px-/); assert.equal(w.items[0].alt, 'Old mill');
-    assert.match(decodeURIComponent(hits.wiki.at(-1)), /gsrsearch=mill filetype:bitmap/);
+    const d = (await post('/design/stock', { q: 'a'.repeat(500), page: -9 })).j; assert.equal(d.page, 1); assert.ok(decodeURIComponent(hits.unsplash.at(-1).u).length < 260);
   });
   await t('stock image proxy only fetches the two photo CDNs over https', async () => {
-    for (const u of ['http://127.0.0.1/x.jpg', 'https://evil.example/x.jpg', 'file:///etc/passwd', 'https://images.pexels.com.evil.com/a.jpg', 'https://pixabay.com.evil.com/a.jpg', 'not a url']) assert.equal((await ctx.request.get(B + '/_local/design/stockimg?u=' + encodeURIComponent(u))).status(), 400, u);
+    for (const u of ['http://127.0.0.1/x.jpg', 'https://evil.example/x.jpg', 'file:///etc/passwd', 'https://images.pexels.com/a.jpg', 'https://upload.wikimedia.org/a.jpg', 'https://pixabay.com.evil.com/a.jpg', 'not a url']) assert.equal((await ctx.request.get(B + '/_local/design/stockimg?u=' + encodeURIComponent(u))).status(), 400, u);
   });
   await t('share links: public by link only, right type, expiring, removable, unguessable', async () => {
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -158,7 +144,7 @@ try {
   });
   await t('photos panel: explains missing keys, then lists results with credit', async () => {
     await page.evaluate(() => { stock.status = null; stock.items = []; openTab('stock'); }); await page.waitForSelector('#panelBody .cell img', { state: 'attached', timeout: 8000 });
-    assert.ok((await page.$$('#panelBody .cell')).length >= 1); assert.match(await page.textContent('#panelBody'), /Pexels|Unsplash/);
+    assert.ok((await page.$$('#panelBody .cell')).length >= 1); assert.match(await page.textContent('#panelBody'), /Unsplash/);
   });
   await t('present mode runs animated frames without errors', async () => {
     await page.evaluate(() => present()); await page.waitForSelector('#present canvas'); await page.waitForTimeout(500); await page.keyboard.press('Escape'); await page.waitForTimeout(200); assert.equal(await page.$('#present'), null);
@@ -633,5 +619,5 @@ try {
     assert.deepEqual(miss, []);
   });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
-} finally { an.close(); gw.close(); gm.close(); await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }
+} finally { an.close(); gw.close(); gm.close(); await browser.close(); srv.kill(); un.close(); pb.close(); bgHost.close(); imgHost.close(); }
 console.log(`${pass} passed${failed ? ', ' + failed + ' failed' : ''}`); process.exit(failed ? 1 : 0);

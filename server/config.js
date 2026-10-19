@@ -64,7 +64,7 @@ export function effective() {
     bookmarks: { url: (clean(s.bookmarks?.url) || clean(env.LINKS_URL) || `https://links.${BASE_DOMAIN}`).replace(/\/+$/, ''), token: clean(s.bookmarks?.token) || clean(env.LINKS_TOKEN) },
     public: { url: clean(s.public?.url) || PUBLIC_URL },
     turn: { urls: clean(s.turn?.urls) || clean(env.TURN_URLS) || ((s.turn?.secret || env.TURN_SECRET) && PUBLIC_URL ? (() => { try { const h = new URL(PUBLIC_URL).hostname; return 'turn:' + h + ':3478,turn:' + h + ':3478?transport=tcp'; } catch { return ''; } })() : ''), secret: clean(s.turn?.secret) || clean(env.TURN_SECRET), stun: clean(s.turn?.stun) || clean(env.STUN_URLS) },
-    stock: { pexels: clean(s.stock?.pexels) || clean(env.PEXELS_API_KEY), unsplash: clean(s.stock?.unsplash) || clean(env.UNSPLASH_ACCESS_KEY), pixabay: clean(s.stock?.pixabay) || clean(env.PIXABAY_API_KEY), freepik: clean(s.stock?.freepik) || clean(env.FREEPIK_API_KEY) },
+    stock: { unsplash: clean(s.stock?.unsplash) || clean(env.UNSPLASH_ACCESS_KEY), pixabay: clean(s.stock?.pixabay) || clean(env.PIXABAY_API_KEY) },
     image: { provider: clean(s.image?.provider) || clean(env.IMAGE_PROVIDER) || 'auto', url: (clean(s.image?.url) || clean(env.IMAGE_API_URL)).replace(/\/+$/, ''), key: clean(s.image?.key) || clean(env.IMAGE_API_KEY), model: clean(s.image?.model) || clean(env.IMAGE_MODEL) },
     ai: { provider: ['auto', 'builtin', 'gemini', 'anthropic'].includes(clean(s.ai?.provider)) ? clean(s.ai?.provider) : 'auto', geminiKey: clean(s.ai?.geminiKey) || clean(env.GEMINI_API_KEY), geminiModel: clean(s.ai?.geminiModel) || clean(env.GEMINI_MODEL) || 'gemini-2.5-flash', geminiImageModel: clean(s.ai?.geminiImageModel) || 'gemini-2.5-flash-image', key: clean(s.ai?.key) || clean(env.ANTHROPIC_API_KEY), model: clean(s.ai?.model) || clean(env.ANTHROPIC_MODEL) || 'claude-sonnet-5-5', sttModel: clean(s.ai?.sttModel) || 'whisper-1' },
     llm: { base: clean(s.llm?.base) || clean(env.LLM_BASE_URL), key: clean(s.llm?.key) || clean(env.LLM_API_KEY), model: clean(s.llm?.model) || clean(env.LLM_MODEL) || 'gpt-4o-mini' }
@@ -92,7 +92,7 @@ export function publicSettings() {
     bookmarks: { url: e.bookmarks.url, tokenSet: !!e.bookmarks.token },
     public: { url: e.public.url },
     turn: { urls: e.turn.urls, secretSet: !!e.turn.secret, stun: e.turn.stun },
-    stock: { pexelsSet: !!e.stock.pexels, unsplashSet: !!e.stock.unsplash, pixabaySet: !!e.stock.pixabay, freepikSet: !!e.stock.freepik },
+    stock: { unsplashSet: !!e.stock.unsplash, pixabaySet: !!e.stock.pixabay },
     image: { provider: e.image.provider, url: e.image.url, keySet: !!e.image.key, model: e.image.model },
     ai: { provider: e.ai.provider, keySet: !!e.ai.key, model: e.ai.model, sttModel: e.ai.sttModel, geminiKeySet: !!e.ai.geminiKey, geminiModel: e.ai.geminiModel, geminiImageModel: e.ai.geminiImageModel },
     llm: { base: e.llm.base, keySet: !!e.llm.key, model: e.llm.model }
@@ -149,7 +149,7 @@ export function updateSettings(patch) {
   set('public', 'url', p.public?.url === undefined ? undefined : String(p.public.url).replace(/\/+$/, ''));
   if (p.image?.provider !== undefined && !['auto', 'pollinations', 'openai', 'huggingface', 'gateway', 'gemini'].includes(clean(p.image.provider))) throw Object.assign(new Error('Image provider must be auto, pollinations, openai, gateway, gemini or huggingface'), { status: 400 });
   set('image', 'provider', p.image?.provider); set('image', 'url', p.image?.url); set('image', 'model', p.image?.model); set('image', 'key', p.image?.key, true);
-  set('stock', 'pexels', p.stock?.pexels, true); set('stock', 'unsplash', p.stock?.unsplash, true); set('stock', 'pixabay', p.stock?.pixabay, true); set('stock', 'freepik', p.stock?.freepik, true);
+  set('stock', 'unsplash', p.stock?.unsplash, true); set('stock', 'pixabay', p.stock?.pixabay, true);
   if (p.ai?.provider !== undefined && !['auto', 'builtin', 'gemini', 'anthropic'].includes(clean(p.ai.provider))) throw Object.assign(new Error('AI provider must be auto, builtin, gemini or anthropic'), { status: 400 });
   set('ai', 'provider', p.ai?.provider); set('ai', 'key', p.ai?.key, true); set('ai', 'model', p.ai?.model); set('ai', 'sttModel', p.ai?.sttModel); set('ai', 'geminiKey', p.ai?.geminiKey, true); set('ai', 'geminiModel', p.ai?.geminiModel); set('ai', 'geminiImageModel', p.ai?.geminiImageModel);
   set('llm', 'base', p.llm?.base); set('llm', 'key', p.llm?.key, true); set('llm', 'model', p.llm?.model);
