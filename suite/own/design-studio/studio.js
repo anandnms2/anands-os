@@ -3303,6 +3303,40 @@ gp(['Progress bar',u=>[SH('rect',0,0,u*40,u*3.2,'#e9ecef',{r:u*1.6}),SH('rect',0
 gp(['Checklist',u=>[0,1,2].flatMap(i=>[SH('ellipse',0,i*u*7,u*4.6,u*4.6,c0()),TX('✓',0,i*u*7+u*.6,u*4.6,u*3.4,{bold:true,color:'#fff',align:'center'}),TX(['Fast delivery','Easy returns','Friendly support'][i],u*6.4,i*u*7+u*.6,u*30,u*3.6,{color:'#1f1c19'})])]);
 }
 
+/* ---------- true vector PDF: text, shapes and plain photos stay vector; fonts are embedded ---------- */
+const VFONT=new Map();
+function vfFetch(fam,w,it){const k=fam+'|'+w+'|'+(it?1:0);if(!VFONT.has(k))VFONT.set(k,fetch(`/_local/design/font?f=${encodeURIComponent(fam)}&w=${w}&i=${it?1:0}`,{credentials:'same-origin',headers:{'x-aos':'1'}}).then(r=>r.ok?r.arrayBuffer():null).catch(()=>null));return VFONT.get(k)}
+function vfB64(buf){const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
+async function vfPng(src){return new Promise(res=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;c.getContext('2d').drawImage(im,0,0);res(c.toDataURL('image/png'))};im.onerror=()=>res(null);im.src=src})}
+async function makeVectorPdf(pgs){
+  const {jsPDF}=window.jspdf||{},s2p=window.svg2pdf&&(window.svg2pdf.svg2pdf||window.svg2pdf);if(!jsPDF||typeof s2p!=='function')throw new Error('PDF library did not load');
+  await loadFonts(pgs);
+  const used=new Map(),walk=os=>os.forEach(o=>{if(o.type==='text'&&o.font)used.set(`${o.font}|${wt(o)}|${o.italic?1:0}`,[o.font,wt(o),!!o.italic]);if(o.kids)walk(o.kids)});pgs.forEach(p=>walk(p.objs));
+  const ori=D.w>=D.h?'l':'p',pdf=new jsPDF({orientation:ori,unit:'px',format:[D.w,D.h],hotfixes:['px_scaling'],compress:true});
+  const map=new Map(),miss=new Set();let n=0;
+  await Promise.all([...used.values()].map(async([fam,w,it])=>{
+    let buf=await vfFetch(fam,w,it),ital=it;if(!buf&&it){buf=await vfFetch(fam,w,false);ital=false}
+    if(!buf){miss.add(fam);return}
+    const id=`F${n++}`,file=id+'.ttf';
+    try{pdf.addFileToVFS(file,vfB64(buf));pdf.addFont(file,id,'normal');map.set(`${fam}|${w}|${it?1:0}`,id)}catch(e){miss.add(fam)}}));
+  const host=el('div',{style:'position:fixed;left:-99999px;top:0;width:'+D.w+'px;height:'+D.h+'px;overflow:hidden','aria-hidden':'true'});document.body.append(host);
+  try{
+    for(let i=0;i<pgs.length;i++){
+      if(i)pdf.addPage([D.w,D.h],ori);
+      host.innerHTML=pageSVG(pgs[i],'p'+i);const svg=host.querySelector('svg');
+      svg.querySelectorAll('[font-family]').forEach(g=>{
+        const fam=(g.getAttribute('font-family').match(/^'([^']+)'/)||[])[1]||'',w=+g.getAttribute('font-weight')||400,it=g.getAttribute('font-style')==='italic',id=map.get(`${fam}|${w}|${it?1:0}`)||map.get(`${fam}|${w}|${it?0:1}`);
+        g.setAttribute('font-family',id||'helvetica');g.setAttribute('font-weight',id?'normal':(w>=600?'bold':'normal'));g.removeAttribute('font-style');
+        if(!id){miss.add(fam);if(it)g.setAttribute('font-style','italic')}});
+      for(const im of svg.querySelectorAll('image')){const h=im.getAttribute('xlink:href')||im.getAttribute('href')||'';if(/^data:image\/(png|jpe?g)/i.test(h))continue;const png=await vfPng(h);if(png){im.setAttribute('xlink:href',png);im.setAttribute('href',png)}else im.remove()}
+      await s2p(svg,pdf,{x:0,y:0,width:D.w,height:D.h});
+      pdfLinks(pdf,pgs[i],i,pgs.length>1?pgs.length:0,(x,y,w,h)=>[x,y,w,h]);
+    }
+  }finally{host.remove()}
+  if(miss.size)toast(`Fonts not embedded (${[...miss].slice(0,3).join(', ')}${miss.size>3?'…':''}): Helvetica used instead. Check your internet connection.`,6000);
+  return pdf.output('blob');
+}
+
 /* =====================================================================
    Anands OS integration + the studio's advanced features
    (files, background remover, animation, stock photos, SVG/vector, video/GIF, share links)
@@ -3744,6 +3778,7 @@ async function makeExport(){
   commit();await ensureAssets();const base=baseName(),pgs=expo.pages==='all'?D.pages:[P()],f=expo.fmt;
   if(f==='json')return {name:base+'.json',blob:new Blob([JSON.stringify({v:1,name:D.name,w:D.w,h:D.h,pages:D.pages,assets:usedAssets()},(k,v)=>k[0]==='_'?undefined:v)],{type:'application/json'})};
   if(f==='pdf')return {name:base+'.pdf',blob:makePdf(pgs)};
+  if(f==='pdfv')return {name:base+'.pdf',blob:await makeVectorPdf(pgs)};
   if(f==='svg'){await loadFonts(pgs);const svgs=pgs.map((p,i)=>pageSVG(p,'s'+i));
     if(svgs.length===1)return {name:base+'.svg',blob:new Blob([svgs[0]],{type:'image/svg+xml'})};
     const z=new JSZip();svgs.forEach((s,i)=>z.file(`${base}-${i+1}.svg`,s));return {name:base+'.zip',blob:await z.generateAsync({type:'blob'})};}
@@ -3760,7 +3795,6 @@ async function makeExport(){
 function downloadBlob(name,blob){const a=el('a',{href:URL.createObjectURL(blob),download:name});document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
 async function doExport(mode){
   try{
-    if(expo.fmt==='pdfv'){commit();await ensureAssets();await printVector(expo.pages==='all'?D.pages:[P()]);return}
     if(mode==='copy'){commit();await ensureAssets();const b=await toBlob(renderPageTo(P(),expo.scale),'image/png');await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);toast('Copied to clipboard');return}
     toast('Preparing…',60000);const r=await makeExport();toast('',1);if(!r)return;
     if(mode==='files'){await PUT().fs.write(`${DIR}/Exports/${r.name}`,r.blob,{createMissingParents:true,overwrite:true});toast('Saved to Files › Designs › Exports');return}
@@ -3797,12 +3831,11 @@ function openExport(){
     if(f==='pdf')body.append(el('label',{class:'row note',style:'gap:8px'},el('input',{type:'checkbox',checked:!!expo.bleed,onchange:e=>{expo.bleed=e.target.checked;draw()}}),'Print-ready: add 3 mm bleed and crop marks'));
     if(f==='png')body.append(el('div',{class:'row'},el('label',{style:'flex:0 0 70px'},'Background'),seg([{v:false,l:'As designed'},{v:true,l:'Transparent'}],()=>expo.transp,v=>{expo.transp=v})));
     if(f==='jpg'||f==='webp')body.append(slider('Quality',()=>expo.q*100,v=>expo.q=v/100,{min:40,max:100,suffix:'%'}));
-    const notes={pdf:'PDF pages are high-resolution pictures of your design. Links on objects stay clickable.'+(expo.bleed?' With bleed on, the page is sized in millimetres: 300 dpi designs print at true size.':''),pdfv:'Text and shapes stay sharp and selectable. Your print window opens — choose “Save as PDF”.',svg:'Shapes, text and plain photos stay vector. Effects, filters and drawings are embedded as pictures. Text uses its font name, so install the fonts where you open it.',video:'Plays each page for its page length with its animations. MP4 where this browser can make it, otherwise WebM.',gif:'Looping GIF, up to 720 px wide.',json:'Saves everything, including uploaded images, so you can re-open it later.'};
+    const notes={pdf:'PDF pages are high-resolution pictures of your design. Links on objects stay clickable.'+(expo.bleed?' With bleed on, the page is sized in millimetres: 300 dpi designs print at true size.':''),pdfv:'Text and shapes stay sharp at any zoom and the text can be selected and searched. Fonts are embedded. Effects, shadows and curved text are placed as pictures. Needs an internet connection the first time a font is used.',svg:'Shapes, text and plain photos stay vector. Effects, filters and drawings are embedded as pictures. Text uses its font name, so install the fonts where you open it.',video:'Plays each page for its page length with its animations. MP4 where this browser can make it, otherwise WebM.',gif:'Looping GIF, up to 720 px wide.',json:'Saves everything, including uploaded images, so you can re-open it later.'};
     body.append(el('p',{class:'note'},notes[f]||(D.pages.length>1&&expo.pages==='all'?'Multiple pages are downloaded as a ZIP.':'Your file is made on this device.')));
     const mk=(cls,ico,t,mode)=>el('button',{class:'btn '+cls,html:ic(ico,16)+' '+t,onclick:async()=>{closeModal();await doExport(mode)}});
-    if(f==='pdfv')body.append(el('div',{class:'row'},mk('pri grow','download','Open print window','download')));
-    else{body.append(el('div',{class:'row',style:'flex-wrap:wrap'},mk('pri grow','download','Download','download'),mk('grow','folder','Save to Files','files')));
-      if(['png','jpg','webp','pdf','svg','gif','video'].includes(f)&&expo.pages==='cur'||['video','gif'].includes(f)){
+    {body.append(el('div',{class:'row',style:'flex-wrap:wrap'},mk('pri grow','download','Download','download'),mk('grow','folder','Save to Files','files')));
+      if(['png','jpg','webp','pdf','pdfv','svg','gif','video'].includes(f)&&expo.pages==='cur'||['video','gif'].includes(f)){
         body.append(el('div',{class:'row',style:'flex-wrap:wrap'},mk('grow','link','Create link','share'),el('select',{class:'f','aria-label':'Link lifetime',style:'flex:0 0 auto;width:auto',onchange:e=>expo.days=+e.target.value},[[7,'7 days'],[30,'30 days'],[90,'90 days'],[365,'1 year']].map(([v,l])=>el('option',{value:v,selected:expo.days===v},l))),el('button',{class:'btn sm',onclick:openLinks},'My links')))}
       if(ras&&navigator.clipboard&&window.ClipboardItem)body.append(el('button',{class:'btn',html:ic('copy',16)+' Copy image',onclick:()=>doExport('copy')}))}
   };

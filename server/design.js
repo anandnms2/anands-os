@@ -85,6 +85,28 @@ async function stockImage(res, u) {
   res.writeHead(200, { 'content-type': type.split(';')[0], 'content-length': buf.length, 'cache-control': 'private, max-age=86400' }); res.end(buf);
 }
 
+const FONTC = new Map();
+async function fontFile(res, fam, w, it) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9 ]{0,59}$/.test(fam)) throw httpError(400, 'Bad font name');
+  w = Math.max(100, Math.min(900, Math.round((+w || 400) / 100) * 100)); const key = fam + '|' + w + '|' + (it ? 1 : 0);
+  let buf = FONTC.get(key);
+  if (!buf) {
+    const spec = it ? 'ital,wght@1,' + w : 'wght@' + w, q = (sp) => 'https://fonts.googleapis.com/css2?family=' + fam.replace(/ /g, '+') + ':' + sp;
+    let css = '';
+    for (const sp of [spec, 'wght@' + w, '']) {
+      if (sp === '' && w !== 400) break;
+      try { const r = await fetch(sp ? q(sp) : 'https://fonts.googleapis.com/css2?family=' + fam.replace(/ /g, '+'), { headers: { 'user-agent': 'curl/8.4.0' }, signal: AbortSignal.timeout(15000) }); if (r.ok) { css = await r.text(); break; } } catch { throw httpError(502, 'Fonts could not be reached'); }
+      if (it && sp === spec) it = false;
+    }
+    const m = /url\((https:\/\/fonts\.gstatic\.com\/[^)\s]+?\.ttf)\)/.exec(css); if (!m) throw httpError(404, 'Font not found');
+    let r; try { r = await fetch(m[1], { headers: { 'user-agent': 'curl/8.4.0' }, signal: AbortSignal.timeout(30000) }); } catch { throw httpError(502, 'Fonts could not be reached'); }
+    if (!r.ok) throw httpError(502, 'Font could not be loaded');
+    buf = Buffer.from(await r.arrayBuffer()); if (buf.length > 15e6 || buf.length < 100) throw httpError(502, 'Unexpected font file');
+    if (FONTC.size >= 60) FONTC.delete(FONTC.keys().next().value); FONTC.set(key, buf);
+  }
+  res.writeHead(200, { 'content-type': 'font/ttf', 'content-length': buf.length, 'cache-control': 'private, max-age=604800' }); res.end(buf);
+}
+
 /* ---------- share links ---------- */
 const SF = path.join(DATA, 'design-shares'), SI = path.join(DATA, 'design-shares.json');
 const EXT = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', pdf: 'application/pdf', svg: 'image/svg+xml', gif: 'image/gif', mp4: 'video/mp4', webm: 'video/webm' };
@@ -292,6 +314,7 @@ export async function handleDesign(req, res, url, p, s) {
     res.writeHead(200, { 'content-type': BGSRC[name][1], 'content-length': st.size, 'cache-control': 'private, max-age=31536000, immutable' });
     if (req.method === 'HEAD') return res.end(); return fs.createReadStream(f).pipe(res);
   }
+  if (p === '/design/font' && req.method === 'GET') return fontFile(res, url.searchParams.get('f') || '', url.searchParams.get('w'), url.searchParams.get('i') === '1');
   if (p === '/design/stockimg' && req.method === 'GET') return stockImage(res, url.searchParams.get('u') || '');
   if (req.method !== 'POST') throw httpError(405, 'Method not allowed');
   if (p === '/design/stockstatus') return json(res, 200, { ...stockStatus(), image: imageStatus() });

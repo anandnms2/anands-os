@@ -114,6 +114,18 @@ try {
     assert.match(asc(r.pdf.head), /^%PDF/); assert.match(asc(r.gif.head), /^GIF89a/); assert.equal(asc(r.png.head.slice(1, 4)), 'PNG'); assert.match(asc(r.svg.head), /^<svg/);
     assert.match(r.video.name, /\.(mp4|webm)$/); assert.ok(r.video.size > 5000); assert.ok(r.gif.size > 5000);
   });
+  await t('PDF (vector): a real downloadable PDF with embedded fonts and selectable text, no print window', async () => {
+    const ttf = fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf') ? fs.readFileSync('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf') : null;
+    const asked = []; await page.route('**/design/font*', (route) => { asked.push(new URL(route.request().url()).searchParams.get('f')); if (!ttf) return route.fulfill({ status: 502, body: 'x' }); route.fulfill({ status: 200, contentType: 'font/ttf', body: ttf }); });
+    const b64 = await page.evaluate(async () => { let printed = 0; const wp = window.print; HTMLIFrameElement.prototype.__p = 1; expo.fmt = 'pdfv'; expo.pages = 'cur'; expo.scale = 1; const o = mkText('Vector Karibu 2026', { x: 40, y: 40, w: 600, size: 60, font: 'Poppins', color: '#c2410c' }); P().objs.push(o); const x = await makeExport(); closeModal();
+      const u = new Uint8Array(await x.blob.arrayBuffer()); let s = ''; for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return { name: x.name, b: btoa(s) }; });
+    await page.unroute('**/design/font*');
+    const f = path.join(os.tmpdir(), 'vec-' + Date.now() + '.pdf'); fs.writeFileSync(f, Buffer.from(b64.b, 'base64')); fs.writeFileSync('/tmp/vec-latest.pdf', Buffer.from(b64.b, 'base64'));
+    assert.match(b64.name, /\.pdf$/); assert.ok(asked.includes('Poppins'));
+    const txt = spawnSync('pdftotext', [f, '-'], { encoding: 'utf8' }).stdout || ''; const fonts = spawnSync('pdffonts', [f], { encoding: 'utf8' }).stdout || '';
+    if (spawnSync('which', ['pdftotext']).status === 0 && ttf) { assert.match(txt, /Vector Karibu 2026/); assert.match(fonts, /CID TrueType\s+Identity-H\s+yes/); }
+    fs.writeFileSync('/tmp/vec-latest.pdf', Buffer.from(b64.b, 'base64'));
+  });
   await t('SVG export matches what the canvas draws (text, gradients, rounded images, effects)', async () => {
     const d = await page.evaluate(async () => {
       addObj(mkText('Hello vector', { x: 100, y: 700, w: 600, size: 90, font: 'Poppins', color: '#1b4332', bold: true, rot: -8, ul: true }));
