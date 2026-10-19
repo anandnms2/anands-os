@@ -26,7 +26,7 @@ async function plJson(path, init = {}, timeout) {
   if (r.status === 401 || r.status === 403) throw httpError(409, 'Paperless refused the token. Create a new one in Paperless (My Profile) and save it in Settings', 'bad_token');
   const text = await r.text(); let d = null; try { d = text ? JSON.parse(text) : null; } catch { d = null; }
   if (!r.ok) throw httpError(r.status === 404 ? 404 : 502, (d && (d.detail || d.error)) || 'Paperless returned ' + r.status, 'upstream');
-  if (d === null && !(init.method && init.method !== 'GET' && !text)) throw httpError(502, 'That address answered, but not with Paperless data (it sent a web page instead). Use the Paperless site address itself, like https://paperless.anands.xyz, with no extra path, and make sure the token belongs to a Paperless user.', 'not_paperless');
+  if (d === null && !(init.method && init.method !== 'GET' && !text)) throw httpError(502, 'That address answered, but not with Paperless data (it sent a web page instead). Use the Paperless site address itself, like https://paperless.anands.xyz, with no extra path, and make sure the token belongs to a Paperless user. (Details: status ' + r.status + ', ' + (r.headers.get('content-type') || 'no type').split(';')[0] + (r.redirected ? ', redirected to ' + String(r.url).replace(/[?#].*$/, '').slice(0, 120) : ', not redirected') + ', page starts: ' + text.replace(/\s+/g, ' ').slice(0, 80) + ')', 'not_paperless');
   return d;
 }
 const strip = (h) => String(h || '').replace(/<\/?span[^>]*>/g, (m) => (m[1] === '/' ? '</mark>' : '<mark>')).replace(/<(?!\/?mark>)[^>]*>/g, '').slice(0, 400);
