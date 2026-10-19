@@ -293,7 +293,7 @@ try {
     const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof trashDesign === 'function');
     await p.evaluate(async () => { for (const n of ['Zed one', 'Alpha two', 'Mid three']) { newDesign(800, 600, n); await saveDoc(); } showHome(); home.view = 'projects'; await refreshDocs(); });
     const r = await p.evaluate(async () => {
-      const L = async () => (await listDocs()); let d = (await L()).find((x) => x.name === 'Alpha two'); await setStar(d, true);
+      const L = async () => (await listDocs()); let d = (await L()).find((x) => x.name === 'Alpha two'); await setStar(d, true); await refreshDocs();
       d = (await L()).find((x) => x.name === 'Alpha two'); const starred = d.starred;
       home.filter = 'starred'; renderHome(); const onlyStar = [...document.querySelectorAll('#hsections .hc b')].map((b) => b.textContent).filter((x) => /two|one|three/.test(x));
       home.filter = 'all'; home.sort = 'name'; renderHome(); const order = [...document.querySelectorAll('#hsections .hc b')].map((b) => b.textContent).filter((x) => /two|one|three/.test(x));
