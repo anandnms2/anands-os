@@ -124,7 +124,8 @@ async function setLinks(e, wanted) {
   for (const k of want) { const dst = path.join(MAIL, k, e.d, e.n); if (have.has(k) && await exists(dst)) continue; try { await fsp.mkdir(path.dirname(dst), { recursive: true }); await fsp.rm(dst, { force: true }); try { await fsp.link(src, dst); } catch { await fsp.copyFile(src, dst); } } catch {} }
   e.k = [...want];
 }
-const wantedLinks = (e) => (e.b === 'trash' ? [] : ['allmail', ...(e.L || []).map(slug)]);
+const ancestors = (l) => { const parts = String(l).split('/'), out = []; for (let i = 1; i <= parts.length; i++) out.push(parts.slice(0, i).join('/')); return out; };   // "Finance/Banking" is also in "Finance"
+const wantedLinks = (e) => (e.b === 'trash' ? [] : ['allmail', ...new Set((e.L || []).flatMap(ancestors).map(slug))]);
 async function gmailSync(cmd, a, full) {
   const all = await allMailFolder(cmd); if (!all) return null;
   await cmd('SELECT ' + q(all)); const idx = (a.idx ||= {}); let count = 0;
@@ -165,8 +166,9 @@ async function gmailSync(cmd, a, full) {
       const u = /UID (\d+)/.exec(chunk); const e = u && idx[u[1]]; if (!e || !(await exists(where(e.b, e)))) continue;
       const meta = parseMeta(chunk), box = boxFor(meta.labels, catOf.get(Number(u[1]))), L = userLabels(meta.labels);
       if (!box) continue; if (box !== e.b) await relocate(e, box);
-      if (box !== e.b || JSON.stringify(L) !== JSON.stringify(e.L || []) || !(e.k || []).length) { e.L = L; await setLinks(e, wantedLinks(e)); }
+      if (box !== e.b || JSON.stringify(L) !== JSON.stringify(e.L || []) || !(e.k || []).length || a.lv !== 2) { e.L = L; await setLinks(e, wantedLinks(e)); }
     }
+    a.lv = 2;
     if (keys.length > 1500) for (const k of keys.slice(0, keys.length - 1500)) delete idx[k];
   }
   return count;
@@ -174,10 +176,10 @@ async function gmailSync(cmd, a, full) {
 /* What the Email app should show in its sidebar, read by the Email app overlay before it starts. */
 export function boxesFor() {
   const gm = accounts.filter((a) => a.gm && a.idx); if (!gm.length) return { main: [], labels: [], dirs: {}, acts: {} };
-  const used = new Set(), names = new Map(); for (const a of gm) for (const e of Object.values(a.idx)) { if (INBOXISH.includes(e.b)) used.add(e.b); for (const l of e.L || []) names.set(slug(l), l); }
+  const used = new Set(), names = new Map(); for (const a of gm) for (const e of Object.values(a.idx)) { if (INBOXISH.includes(e.b)) used.add(e.b); for (const l of e.L || []) for (const x of ancestors(l)) names.set(slug(x), x); }
   const main = CATS.filter((c) => used.has(c[0]) || true).map(([id, label, icon]) => ({ id, label, icon, box: id })), dirs = {}, acts = {};
   for (const m of main) { dirs[m.id] = m.id; acts[m.id] = ['archive', 'trash']; }
-  const labels = [...names].sort((x, y) => x[1].localeCompare(y[1])).map(([id, label]) => ({ id, label, icon: 'folder', box: id })); labels.unshift({ id: 'allmail', label: 'All Mail', icon: 'folder', box: 'allmail' });
+  const labels = [...names].sort((x, y) => x[1].toLowerCase().localeCompare(y[1].toLowerCase())).map(([id, path]) => { const parts = path.split('/'); return { id, label: '\u2003'.repeat(parts.length - 1) + parts[parts.length - 1], icon: 'folder', box: id }; }); labels.unshift({ id: 'allmail', label: 'All Mail', icon: 'folder', box: 'allmail' });
   for (const l of labels) { dirs[l.id] = l.id; acts[l.id] = []; }
   return { main, labels, dirs, acts };
 }

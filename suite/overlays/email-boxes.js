@@ -2,6 +2,7 @@
  * Runs before the app starts; the app's bundle is patched at build time to read window.__aosBoxes/__aosDirs/__aosActs. */
 (function () {
   window.__aosBoxes = { main: [], labels: [] }; window.__aosDirs = {}; window.__aosActs = {};
+  try { var st = document.createElement('style'); st.textContent = '.sidebar{padding-bottom:72px!important}.sidebar a,.sidebar button{white-space:nowrap}'; document.head.appendChild(st); } catch (e) {}
   try {
     var x = new XMLHttpRequest(); x.open('GET', '/api/mailboxes/boxes', false); x.withCredentials = true; x.setRequestHeader('x-aos', '1'); x.send();
     if (x.status === 200) { var b = JSON.parse(x.responseText); window.__aosBoxes = { main: b.main || [], labels: b.labels || [] }; window.__aosDirs = b.dirs || {}; window.__aosActs = b.acts || {}; }
