@@ -859,7 +859,7 @@ function shapeInsp(){
 function imageInsp(){
   const I=['image'],o=first(I),out=[];
   const fl=(k)=>()=>(first(I).flt||{})[k]||0,setf=(k)=>v=>each(x=>{(x.flt||(x.flt={}))[k]=v},I);
-  out.push(sec('Image',el('div',{class:'row'},el('button',{class:'btn grow',html:ic('upload',16)+(o.src?' Replace':' Add image'),onclick:()=>pickFile('replace')}),el('button',{class:'btn grow',html:ic('crop',16)+' Crop',onclick:()=>{cropMode=cropMode===o.id?null:o.id;toast(cropMode?'Drag the image inside its frame, or use Zoom':'Crop finished');renderUI()}})),
+  out.push(sec('Image',el('div',{class:'row'},el('button',{class:'btn grow',html:ic('upload',16)+(o.src?' Replace':' Add image'),onclick:()=>pickFile('replace')}),el('button',{class:'btn grow',id:'btnCrop',html:ic('crop',16)+' Crop',onclick:()=>openCropper(o)}),el('button',{class:'btn grow',html:'Reposition',title:'Drag the picture inside its frame',onclick:()=>{cropMode=cropMode===o.id?null:o.id;toast(cropMode?'Drag the image inside its frame, or use Zoom':'Reposition finished');renderUI()}})),
     slider('Zoom',()=>first(I).z||1,v=>each(x=>x.z=v,I),{min:1,max:4,step:.01}),
     el('div',{class:'row'},seg([{v:'cover',l:'Fill'},{v:'contain',l:'Fit'}],()=>first(I).fit||'cover',v=>each(x=>x.fit=v,I)),el('button',{class:'btn sm',onclick:()=>each(x=>{x.ox=0;x.oy=0;x.z=1},I)},'Reset position'))));
   out.push(sec('Filters',el('div',{class:'chips'},Object.keys(FILTERS).map(k=>el('button',{class:'chip','aria-pressed':(first(I).fp||'none')===k,onclick:e=>{each(x=>x.fp=k,I);$$('.chip',e.currentTarget.parentNode).forEach(c=>c.setAttribute('aria-pressed',c===e.currentTarget))}},k[0].toUpperCase()+k.slice(1)))),
@@ -2638,7 +2638,7 @@ function canvasMenu(e){
     if(so.length>1)items.push({label:'Group',key:'Ctrl G',go:groupSel});
     if(so.some(o=>o.type==='group'))items.push({label:'Ungroup',go:ungroupSel});
     items.push({label:locked?'Unlock':'Lock',go:()=>{const v=!locked;so.forEach(o=>o.locked=v);touch();selChanged()}});
-    if(so.length===1&&so[0].type==='image')items.push('-',{label:'Replace image…',go:()=>{const i=el('input',{type:'file',accept:'image/*'});i.onchange=async()=>{const a=i.files[0]&&await ingestImage(i.files[0]);if(a){so[0].src=a.id;touch();renderInsp()}};i.click()}});
+    if(so.length===1&&so[0].type==='image')items.push('-',{label:'Crop image…',go:()=>openCropper(so[0])},{label:'Replace image…',go:()=>{const i=el('input',{type:'file',accept:'image/*'});i.onchange=async()=>{const a=i.files[0]&&await ingestImage(i.files[0]);if(a){so[0].src=a.id;touch();renderInsp()}};i.click()}});
   }else{
     items.push({label:'Paste',key:'Ctrl V',off:!clip.length,go:pasteClip},{label:'Add page',go:()=>addPage()},{label:'Duplicate this page',go:()=>dupPage(cur)});
   }
@@ -3013,6 +3013,50 @@ function edKindView(k){const K=EDKIND[k],list=edCache[k],out=[];
   if(!list){out.push(el('p',{class:'note'},'Loading…'));edRefresh(k);return out}
   out.push(list.length?el('div',{class:'hg big'},list.map(r=>edCard(k,r))):el('div',{class:'hempty'},K.empty));
   return out}
+
+/* Canva-style Crop: a window with the whole picture, a box with handles, ratio presets and rotate. Apply makes a new, smaller picture. */
+const CROP_RATIOS=[['Free',0],['Original',-1],['1:1',1],['4:3',4/3],['3:4',3/4],['16:9',16/9],['9:16',9/16],['3:2',3/2],['2:3',2/3]];
+function cropSrcUrl(o){return D.assets[o.src]||o.src}
+async function openCropper(o){
+  if(!o||o.type!=='image'||!o.src){toast('Add a picture first');return}
+  const url=cropSrcUrl(o);let work=new Image();work.src=url;try{await work.decode()}catch(e){toast('That picture cannot be cropped');return}
+  let ratio=0,rot=0;let nat={w:work.naturalWidth,h:work.naturalHeight};const VW=Math.min(680,innerWidth-80),VH=Math.min(440,innerHeight-300);
+  const stage=el('div',{class:'cropstage',style:`position:relative;width:${VW}px;height:${VH}px;margin:auto;background:#222;border-radius:8px;overflow:hidden;touch-action:none;user-select:none`});
+  const im=el('img',{alt:'',draggable:false,style:'position:absolute;pointer-events:none'});const box=el('div',{class:'cropbox',role:'group','aria-label':'Crop area',style:'position:absolute;box-shadow:0 0 0 9999px #000a;outline:2px solid #fff;cursor:move'});
+  const grid=el('div',{style:'position:absolute;inset:0;pointer-events:none;background:linear-gradient(#fff6,#fff6) 33.3% 0/1px 100% no-repeat,linear-gradient(#fff6,#fff6) 66.6% 0/1px 100% no-repeat,linear-gradient(#fff6,#fff6) 0 33.3%/100% 1px no-repeat,linear-gradient(#fff6,#fff6) 0 66.6%/100% 1px no-repeat'});box.append(grid);
+  const HN=['nw','n','ne','e','se','s','sw','w'];const hs={};HN.forEach(k=>{const h=el('i',{'data-h':k,style:`position:absolute;width:16px;height:16px;background:#fff;border:2px solid #e8590c;border-radius:3px;cursor:${k.length===2?(k==='nw'||k==='se'?'nwse':'nesw'):(k==='n'||k==='s'?'ns':'ew')}-resize;${k.includes('n')?'top:-8px;':k.includes('s')?'bottom:-8px;':'top:calc(50% - 8px);'}${k.includes('w')?'left:-8px;':k.includes('e')?'right:-8px;':'left:calc(50% - 8px);'}`});hs[k]=h;box.append(h)});
+  stage.append(im,box);
+  let sc=1,ox=0,oy=0,cb={x:0,y:0,w:0,h:0};
+  const layout=()=>{sc=Math.min(VW/nat.w,VH/nat.h);const dw=nat.w*sc,dh=nat.h*sc;ox=(VW-dw)/2;oy=(VH-dh)/2;Object.assign(im.style,{left:ox+'px',top:oy+'px',width:dw+'px',height:dh+'px'});im.src=work.src};
+  const paint=()=>Object.assign(box.style,{left:cb.x+'px',top:cb.y+'px',width:cb.w+'px',height:cb.h+'px'});
+  const bounds=()=>({x0:ox,y0:oy,x1:ox+nat.w*sc,y1:oy+nat.h*sc});
+  const fitBox=()=>{const b=bounds();const bw=b.x1-b.x0,bh=b.y1-b.y0;let r=ratio===-1?nat.w/nat.h:ratio;if(!r){cb={x:b.x0+bw*.05,y:b.y0+bh*.05,w:bw*.9,h:bh*.9}}else{let w=bw*.9,h=w/r;if(h>bh*.9){h=bh*.9;w=h*r}cb={x:b.x0+(bw-w)/2,y:b.y0+(bh-h)/2,w,h}}paint();info()};
+  const info=()=>{lab.textContent=Math.round(cb.w/sc)+' × '+Math.round(cb.h/sc)+' px'};
+  let drag=null;
+  stage.addEventListener('pointerdown',e=>{const t=e.target.closest('[data-h]');const bx=box.contains(e.target);if(!t&&!bx)return;stage.setPointerCapture(e.pointerId);drag={h:t?t.dataset.h:'move',x:e.clientX,y:e.clientY,cb:{...cb}};e.preventDefault()});
+  stage.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y,b=bounds(),c0=drag.cb;let {x,y,w,h}=c0;const MIN=24;
+    if(drag.h==='move'){x=clamp(c0.x+dx,b.x0,b.x1-w);y=clamp(c0.y+dy,b.y0,b.y1-h)}
+    else{let x0=c0.x,y0=c0.y,x1=c0.x+c0.w,y1=c0.y+c0.h;const k=drag.h;if(k.includes('w'))x0=clamp(x0+dx,b.x0,x1-MIN);if(k.includes('e'))x1=clamp(x1+dx,x0+MIN,b.x1);if(k.includes('n'))y0=clamp(y0+dy,b.y0,y1-MIN);if(k.includes('s'))y1=clamp(y1+dy,y0+MIN,b.y1);
+      const r=ratio===-1?nat.w/nat.h:ratio;
+      if(r){let w2=x1-x0,h2=y1-y0;if(k==='n'||k==='s'){w2=h2*r;const cx=(c0.x+c0.x+c0.w)/2;x0=cx-w2/2;x1=cx+w2/2}else{h2=w2/r;if(k.includes('n'))y0=y1-h2;else if(k.includes('s')||k==='e'||k==='w'){if(k==='e'||k==='w'){const cy=c0.y+c0.h/2;y0=cy-h2/2;y1=cy+h2/2}else y1=y0+h2}}
+        if(x0<b.x0||x1>b.x1||y0<b.y0||y1>b.y1){return}}
+      x=x0;y=y0;w=x1-x0;h=y1-y0}
+    cb={x,y,w,h};paint();info()});
+  const end=()=>{drag=null};stage.addEventListener('pointerup',end);stage.addEventListener('pointercancel',end);
+  const lab=el('span',{class:'note','aria-live':'polite'});
+  const chips=el('div',{class:'chips',style:'justify-content:center'});
+  const drawChips=()=>{chips.innerHTML='';CROP_RATIOS.forEach(([n,r])=>chips.append(el('button',{class:'chip','data-ratio':n,'aria-pressed':ratio===r,onclick:()=>{ratio=r;fitBox();drawChips()}},n)))};
+  const rotate=async()=>{const c=document.createElement('canvas');c.width=nat.h;c.height=nat.w;const x=c.getContext('2d');x.translate(c.width/2,c.height/2);x.rotate(Math.PI/2);x.drawImage(work,-nat.w/2,-nat.h/2);const n=new Image();n.src=c.toDataURL('image/png');await n.decode();work=n;nat={w:n.naturalWidth,h:n.naturalHeight};rot=(rot+90)%360;layout();fitBox()};
+  const apply=()=>{
+    const sx=(cb.x-ox)/sc,sy=(cb.y-oy)/sc,sw=cb.w/sc,sh=cb.h/sc;const c=document.createElement('canvas');const maxS=Math.min(1,3000/Math.max(sw,sh));c.width=Math.max(1,Math.round(sw*maxS));c.height=Math.max(1,Math.round(sh*maxS));
+    c.getContext('2d').drawImage(work,sx,sy,sw,sh,0,0,c.width,c.height);
+    const png=/^data:image\/(png|svg|gif|webp)/.test(url)||rot;const data=c.toDataURL(png?'image/png':'image/jpeg',.92);
+    const id='a_'+uid();D.assets[id]=data;(D.uploads||(D.uploads=[])).push(id);
+    const cx=o.x+o.w/2,cy=o.y+o.h/2;let nw=o.w,nh=o.w*c.height/c.width;const lim=Math.max(D.w,D.h);if(nh>lim){nh=lim;nw=nh*c.width/c.height}
+    commit();o.src=id;o.ox=0;o.oy=0;o.z=1;o.fit='cover';o.w=nw;o.h=nh;o.x=cx-nw/2;o.y=cy-nh/2;touch();renderAll();closeModal();toast('Cropped')};
+  const body=el('div',{style:'display:grid;gap:12px;max-width:100%'},dlgHead('Crop picture'),stage,chips,el('div',{class:'row',style:'display:flex;gap:8px;align-items:center'},el('button',{class:'btn',id:'cropRot',onclick:rotate},'↻ Rotate'),lab,el('span',{class:'grow',style:'flex:1'}),el('button',{class:'btn',onclick:closeModal},'Cancel'),el('button',{class:'btn pri',id:'cropApply',onclick:apply},'Apply crop')));
+  openModal(body);drawChips();layout();fitBox();
+}
 
 /* =====================================================================
    Anands OS integration + the studio's advanced features

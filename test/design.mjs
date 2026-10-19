@@ -421,6 +421,24 @@ try {
     for (const k of ['docs', 'boards', 'sites']) assert.ok(await p.$('.hq [data-new=' + k + ']') || true);
     await p.close();
   });
+  await t('Crop: window with handles and ratios makes a new, smaller picture', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof openCropper === 'function');
+    await p.evaluate(async () => { newDesign(1000, 1000, 'Crop test'); const c = document.createElement('canvas'); c.width = 800; c.height = 400; const x = c.getContext('2d'); x.fillStyle = '#e8590c'; x.fillRect(0, 0, 400, 400); x.fillStyle = '#1c7ed6'; x.fillRect(400, 0, 400, 400);
+      const id = 'a_t1'; D.assets[id] = c.toDataURL('image/png'); const o = mkImage(id, 800, 400); addObj(o); sel = [o.id]; selChanged(); renderInsp(); });
+    await p.click('#btnCrop'); await p.waitForSelector('.cropbox');
+    await p.click('[data-ratio="1:1"]');
+    const bx = await p.locator('.cropbox').boundingBox(); const st = await p.locator('.cropstage').boundingBox();
+    assert.ok(Math.abs(bx.width - bx.height) < 2, 'square ' + bx.width + 'x' + bx.height);
+    // drag the east handle inwards with the real mouse (ratio stays square)
+    const h = await p.locator('[data-h="e"]').boundingBox(); await p.mouse.move(h.x + 8, h.y + 8); await p.mouse.down(); await p.mouse.move(h.x - 60, h.y + 8, { steps: 6 }); await p.mouse.up();
+    const bx2 = await p.locator('.cropbox').boundingBox(); assert.ok(bx2.width < bx.width - 20 && Math.abs(bx2.width - bx2.height) < 3, 'resized ' + JSON.stringify([bx, bx2]));
+    // move the box to the far right: should crop the blue half
+    const b3 = await p.locator('.cropbox').boundingBox(); await p.mouse.move(b3.x + b3.width / 2, b3.y + b3.height / 2); await p.mouse.down(); await p.mouse.move(st.x + st.width, b3.y + b3.height / 2, { steps: 6 }); await p.mouse.up();
+    await p.click('#cropApply'); await p.waitForFunction(() => !document.querySelector('.cropbox'));
+    const r = await p.evaluate(async () => { const o = selObjs()[0]; const im = new Image(); im.src = D.assets[o.src]; await im.decode(); const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; const x = c.getContext('2d'); x.drawImage(im, 0, 0); const d = x.getImageData(im.naturalWidth / 2, im.naturalHeight / 2, 1, 1).data; return { w: im.naturalWidth, h: im.naturalHeight, ow: o.w, oh: o.h, px: [...d] }; });
+    assert.ok(Math.abs(r.w - r.h) <= 1 && r.w < 400 && r.w > 100, JSON.stringify(r)); assert.ok(r.px[2] > 150 && r.px[0] < 80, 'blue: ' + JSON.stringify(r)); assert.ok(Math.abs(r.ow - r.oh) < 1);
+    await p.close();
+  });
   await t('right-click menu text is readable in dark mode', async () => {
     const p = await ctx.newPage(); await p.emulateMedia({ colorScheme: 'dark' }); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof ctxMenu === 'function');
     const c = await p.evaluate(() => { ctxMenu(100, 100, [{ label: 'Open', go() {} }]); const b = document.querySelector('.ctx button'), m = document.querySelector('.ctx'); return [getComputedStyle(b).color, getComputedStyle(m).backgroundColor]; });
