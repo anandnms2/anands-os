@@ -245,7 +245,7 @@ function drawImage(ctx,o,opt){
   else{
     const iw=img.naturalWidth,ih=img.naturalHeight,fit=o.fit==='contain'?Math.min(o.w/iw,o.h/ih):Math.max(o.w/iw,o.h/ih),sc=fit*(o.z||1),dw=iw*sc,dh=ih*sc;
     const dx=(o.w-dw)/2+(o.ox||0)*o.w,dy=(o.h-dh)/2+(o.oy||0)*o.h;
-    const fs=filterStr(o,opt.s||1);if(fs!=='none')ctx.filter=fs;ctx.drawImage(img,dx,dy,dw,dh);ctx.filter='none';
+    const fs=filterStr(o,opt.s||1);if(o.duo&&o.duo.a&&typeof duoDraw==='function')duoDraw(ctx,img,o,dx,dy,dw,dh,fs);else{if(fs!=='none')ctx.filter=fs;ctx.drawImage(img,dx,dy,dw,dh);ctx.filter='none'}
     if(o.vig>0){const g=ctx.createRadialGradient(o.w/2,o.h/2,Math.min(o.w,o.h)*.25,o.w/2,o.h/2,Math.hypot(o.w,o.h)/2);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,`rgba(0,0,0,${o.vig/100})`);ctx.fillStyle=g;ctx.fillRect(0,0,o.w,o.h)}
     if(o.tint&&o.tintv>0){ctx.globalAlpha=o.tintv/100;ctx.fillStyle=o.tint;ctx.globalCompositeOperation='multiply';ctx.fillRect(0,0,o.w,o.h);ctx.globalCompositeOperation='source-over'}
   }
@@ -395,6 +395,7 @@ function paintUI(){
     so.forEach(o=>{ctx.strokeStyle=acc;ctx.globalAlpha=.8;outline(o,1,[]);ctx.globalAlpha=1});
     const b=unionBox(so);ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.strokeRect(view.px+b.x*z,view.py+b.y*z,b.w*z,b.h*z);ctx.setLineDash([]);
   }
+  if(typeof drawPrintGuides==='function'){drawPrintGuides(ctx,z);drawCommentPins(ctx,z)}
   if(guides.length){ctx.strokeStyle='#f0f';ctx.lineWidth=1;ctx.setLineDash([]);guides.forEach(g=>{ctx.beginPath();if(g.v){ctx.moveTo(view.px+g.p*z,view.py+g.a*z);ctx.lineTo(view.px+g.p*z,view.py+g.b*z)}else{ctx.moveTo(view.px+g.a*z,view.py+g.p*z);ctx.lineTo(view.px+g.b*z,view.py+g.p*z)}ctx.stroke()})}
   if(drag&&drag.k==='marquee'){const m=drag;ctx.fillStyle='rgba(232,89,12,.12)';ctx.strokeStyle=acc;ctx.lineWidth=1;ctx.setLineDash([]);const x=Math.min(m.sx,m.cx),y=Math.min(m.sy,m.cy);ctx.fillRect(x,y,Math.abs(m.cx-m.sx),Math.abs(m.cy-m.sy));ctx.strokeRect(x,y,Math.abs(m.cx-m.sx),Math.abs(m.cy-m.sy))}
   if(drag&&drag.label&&so.length){const b=unionBox(so);const t=drag.label;ctx.font='600 11px system-ui';const tw=ctx.measureText(t).width+14,x=view.px+(b.x+b.w/2)*z-tw/2,y=view.py+(b.y+b.h)*z+14;ctx.fillStyle=acc;ctx.beginPath();ctx.roundRect(x,y,tw,20,10);ctx.fill();ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.textAlign='center';ctx.fillText(t,x+tw/2,y+10.5)}
@@ -477,6 +478,7 @@ function onDown(e){
   if(pointers.size===2){const [a,b]=[...pointers.values()];drag={k:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y),z0:view.z,px0:view.px,py0:view.py,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2};return}
   const p=toDoc(e.clientX,e.clientY);
   closePop();
+  if(typeof placeComment==='function'&&placeComment(e))return;
   if(tool==='draw'){startPen(e,p);return}
   if(e.button===1||spaceDown||tool==='pan'){drag={k:'pan',x:e.clientX,y:e.clientY,px:view.px,py:view.py};ui$().style.cursor='grabbing';return}
   const so=selObjs();
@@ -865,7 +867,8 @@ function imageInsp(){
     slider('Brightness',fl('b'),setf('b'),{min:-80,max:80}),slider('Contrast',fl('c'),setf('c'),{min:-80,max:80}),slider('Saturation',fl('s'),setf('s'),{min:-100,max:150}),slider('Hue',fl('h'),setf('h'),{min:-180,max:180}),slider('Blur',fl('bl'),setf('bl'),{min:0,max:30,step:.5}),
     slider('Vignette',()=>first(I).vig||0,v=>each(x=>x.vig=v,I),{min:0,max:90}),
     el('div',{class:'row'},el('label',{},'Tint'),colorBtn(()=>first(I).tint||'#e8590c',c=>each(x=>{x.tint=c;if(!x.tintv)x.tintv=30},I)),el('div',{class:'grow'},slider('',()=>first(I).tintv||0,v=>each(x=>x.tintv=v,I),{min:0,max:100}).querySelector('input'))),
-    el('button',{class:'btn sm',onclick:()=>{each(x=>{x.flt={};x.fp='none';x.vig=0;x.tintv=0},I);renderInsp()}},'Reset filters')));
+    duoUI(I),paletteUI(I),
+    el('button',{class:'btn sm',onclick:()=>{each(x=>{x.flt={};x.fp='none';x.vig=0;x.tintv=0;x.duo=null},I);renderInsp()}},'Reset filters')));
   const masks=[['none','None'],['rect','Rounded'],['ellipse','Circle'],['diamond','Diamond'],['tri','Triangle'],['hex','Hexagon'],['star','Star'],['heart','Heart'],['blob','Blob'],['cloud','Cloud']];
   out.push(sec('Frame & border',el('div',{class:'chips'},masks.map(([v,l])=>el('button',{class:'chip','aria-pressed':(first(I).mask||'none')===v,onclick:e=>{each(x=>{x.mask=v;if(v==='rect'&&!x.r)x.r=Math.min(x.w,x.h)*.1},I);$$('.chip',e.currentTarget.parentNode).forEach(c=>c.setAttribute('aria-pressed',c===e.currentTarget))}},l))),
     slider('Corners',()=>first(I).r||0,v=>each(x=>{x.r=v;if(!x.mask||x.mask==='none')x.mask=v?'rect':'none'},I),{min:0,max:Math.round(Math.min(o.w,o.h)/2)||200}),
@@ -903,6 +906,7 @@ function commonInsp(so){
     row('Shadow',seg([{v:true,l:'On'},{v:false,l:'Off'}],()=>!!(first().shadow&&first().shadow.on),v=>{each(o=>{o.shadow=o.shadow||{on:false,c:'#00000066',b:20,x:0,y:10};o.shadow.on=v});drawSh()})));
     if(first().shadow&&first().shadow.on){const g=k=>()=>first().shadow[k],s=k=>v=>each(o=>{o.shadow[k]=v});shBox.append(slider('Blur',g('b'),s('b'),{min:0,max:100}),slider('X offset',g('x'),s('x'),{min:-80,max:80}),slider('Y offset',g('y'),s('y'),{min:-80,max:80}),row('Color',colorBtn(g('c'),c=>each(o=>o.shadow.c=c||'#000')))); }};
   drawSh();out.push(shBox);
+  out.push(linkUI(so));
   out.push(sec('',el('div',{class:'row'},el('button',{class:'btn grow',html:ic('copy',16)+' Duplicate',onclick:dupSel}),el('button',{class:'btn grow',html:ic(so.every(o=>o.locked)?'lock':'unlock',16)+(so.every(o=>o.locked)?' Unlock':' Lock'),onclick:()=>{const v=!so.every(o=>o.locked);so.forEach(o=>o.locked=v);touch();selChanged()}})),el('button',{class:'btn wide danger',html:ic('trash',16)+' Delete',onclick:removeSel})));
   return out;
 }
@@ -927,6 +931,7 @@ function pageInsp(){
     el('button',{class:'btn wide',onclick:()=>resizeDoc(+wi.value,+hi_.value,'canvas')},'Change canvas only'),
     el('p',{class:'note'},'Magic resize rescales and re-centres everything on every page.')));
   out.push(sec('Page',el('div',{class:'row'},el('button',{class:'btn grow',onclick:()=>addPage()},'Add page'),el('button',{class:'btn grow',onclick:()=>dupPage(cur)},'Duplicate')),D.pages.length>1?el('button',{class:'btn wide danger',onclick:()=>delPage(cur)},'Delete page'):null));
+  out.push(pageExtras());
   out.push(pageDurSec());out.push(sec('View',row('Snap guides',seg([{v:true,l:'On'},{v:false,l:'Off'}],()=>snapOn,v=>snapOn=v)),row('Grid',seg([{v:true,l:'On'},{v:false,l:'Off'}],()=>gridOn,v=>{gridOn=v;render()})),el('button',{class:'btn sm',onclick:openHelp},'Keyboard shortcuts')));
   return out;
 }
@@ -1007,7 +1012,7 @@ function pElements(b){
     const shp=SHAPE_LIST.filter(([k,n])=>!s||n.toLowerCase().includes(s));
     if(shp.length)body.append(el('div',{},el('h4',{class:'sh'},'Shapes'),el('div',{class:'grid5'},shp.map(([k,n])=>el('button',{class:'cell',title:n,'aria-label':n,html:shapeIcon(k),onclick:()=>addObj(mkShape(k,k==='ring'||k==='check'?{}:{}))})))));
     if(!s||'line arrow'.includes(s))body.append(el('div',{},el('h4',{class:'sh'},'Lines'),el('div',{class:'grid4'},[['solid','none','none'],['dash','none','none'],['solid','none','arrow'],['solid','dot','arrow']].map(([d,a0,a1])=>el('button',{class:'cell',style:'aspect-ratio:2/1',title:'Line','aria-label':'Line',html:`<svg viewBox="0 0 60 20"><line x1="${a0==='dot'?10:4}" y1="10" x2="${a1==='arrow'?48:56}" y2="10" stroke="currentColor" stroke-width="3" ${d==='dash'?'stroke-dasharray="7 5"':''}/>${a1==='arrow'?'<path d="M46 3l10 7-10 7z" fill="currentColor"/>':''}${a0==='dot'?'<circle cx="6" cy="10" r="3" fill="currentColor"/>':''}</svg>`,onclick:()=>addObj(mkLine({dash:d,a0,a1}))})))));
-    {const fs_=framesSection(s),ms_=mockupsSection(s),is_=iconsSection(s);if(is_)body.append(is_);if(fs_)body.append(fs_);if(ms_)body.append(ms_)}
+    {const fs_=framesSection(s),ms_=mockupsSection(s),is_=iconsSection(s),cl_=collageSection(s);if(is_)body.append(is_);if(cl_)body.append(cl_);if(fs_)body.append(fs_);if(ms_)body.append(ms_)}
     if(!s||'graphic badge sticker'.includes(s))body.append(el('div',{},el('h4',{class:'sh'},'Graphics'),el('div',{class:'grid2'},GRAPHICS.map(([n,f])=>{const parts=f(unit()*10.8);return el('button',{class:'btn',onclick:()=>{const list=f(unit()*10.8);const g=list.length>1?makeGroup(list):list[0];if(list.length>1)g.name=n;g.x=(D.w-g.w)/2;g.y=(D.h-g.h)/2;addObj(g)}},n)}))));
     const em=el('div',{});em.append(el('h4',{class:'sh'},'Stickers'));
     for(const [cat,str] of Object.entries(EMOJI)){const arr=[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(str)].map(x=>x.segment);const f=arr.filter(x=>!s||cat.toLowerCase().includes(s));if(!f.length)continue;em.append(el('p',{class:'note',style:'margin:6px 0 4px'},cat),el('div',{class:'grid5'},f.map(ch=>el('button',{class:'cell em',title:ch,'aria-label':'Sticker '+ch,onclick:()=>addObj(mkText(ch,{size:Math.round(160*unit()),w:Math.round(220*unit()),align:'center',font:'Instrument Sans'}))},ch))))}
@@ -1098,7 +1103,7 @@ function pLayers(b){
 
 /* ---------- brand ---------- */
 function pBrand(b){
-  b.append(el('h3',{class:'ph'},'Brand kit'),el('p',{class:'note'},'Saved in this browser and used across every design.'));
+  b.append(el('h3',{class:'ph'},'Brand kit'),el('p',{class:'note'},'Saved in this browser and used across every design.'),kitsUI(()=>renderPanel()));
   const cols=el('div',{class:'swatches'});
   const draw=()=>{cols.innerHTML='';brand.colors.forEach((c,i)=>cols.append(el('div',{style:'position:relative'},colorBtn(()=>brand.colors[i],v=>{brand.colors[i]=v||c;saveBrand()}),el('button',{title:'Remove','aria-label':'Remove color',style:'position:absolute;top:-6px;right:-6px;width:16px;height:16px;border-radius:50%;background:var(--panel);border:1px solid var(--line);font-size:11px;line-height:1',onclick:()=>{brand.colors.splice(i,1);saveBrand();draw()}},'×'))));
     cols.append(el('button',{class:'sw',style:'display:grid;place-items:center;color:var(--mut)',title:'Add color','aria-label':'Add color',html:ic('plus',14),onclick:()=>{brand.colors.push('#7048e8');saveBrand();draw()}}))};
@@ -2600,10 +2605,12 @@ function newFolderFor(r){askText('New folder','','Create & move',async n=>{try{c
 function designMenuItems(r){
   const open=()=>r.id===D.id&&!document.getElementById('home').hidden?hideHome():openDesignFile(r._file);
   const mv=[...(r.folder?[{label:'Projects (top level)',go:()=>moveDesignTo(r,'')}]:[]),...home.dirs.filter(d=>d!==r.folder).map(d=>({label:'📁 '+d,go:()=>moveDesignTo(r,d)})),{label:'＋ New folder…',go:()=>newFolderFor(r)}];
-  return [{label:'Open',go:open},{label:'Rename',go:()=>askText('Rename design',r.name,'Rename',n=>renameDesignFile(r,n))},{label:'Make a copy',go:()=>duplicateDesignFile(r)},{label:'Move to folder',sub:mv},{label:'Download (.design)',go:()=>downloadDesignFile(r)},'-',{label:'Delete',danger:true,go:()=>deleteDesignFile(r)}]}
+  return [{label:'Open',go:open},{label:r.starred?'Remove star':'Star',go:()=>setStar(r,!r.starred)},{label:'Rename',go:()=>askText('Rename design',r.name,'Rename',n=>renameDesignFile(r,n))},{label:'Make a copy',go:()=>duplicateDesignFile(r)},{label:'Move to folder',sub:mv},{label:'Download (.design)',go:()=>downloadDesignFile(r)},'-',{label:'Move to trash',danger:true,go:async()=>{if(await trashDesign(r)){refreshDocs();toast('Moved to trash. Restore it from Trash.')}}}]}
 function folderMenuItems(d){return [{label:'Open',go:()=>{home.folder=d;renderHome()}},{label:'Rename',go:()=>askText('Rename folder',d,'Rename',async n=>{try{await renameFolder(d,n);await refreshDocs()}catch(e){toast('Could not rename')}})},'-',{label:'Delete folder',danger:true,go:()=>askSure('Delete the folder “'+d+'”? The designs inside move back to Projects; none are deleted.','Delete folder',async()=>{try{await removeFolder(d);if(home.folder===d)home.folder='';await refreshDocs();toast('Folder deleted')}catch(e){toast('Could not delete the folder')}})}]}
 function wireDesignCard(card,r){
-  const tn=card.querySelector('.tn');const more=el('button',{class:'dots','aria-label':'More actions for '+r.name,title:'More',onclick:e=>{e.stopPropagation();menuAt(more,designMenuItems(r))}},'⋯');card.append(more);
+  const tn=card.querySelector('.tn');card.dataset.file=r._file;const st=el('button',{class:'star'+(r.starred?' on':''),'aria-label':(r.starred?'Remove star from ':'Star ')+r.name,'aria-pressed':!!r.starred,onclick:e=>{e.stopPropagation();setStar(r,!r.starred)}},r.starred?'★':'☆');card.append(st);if(home.selMode){card.classList.add('selmode');if(home.sel.has(r._file))card.classList.add('sel')}
+  card.addEventListener('click',e=>{if(!home.selMode||e.target.closest('.dots,.star'))return;e.preventDefault();e.stopPropagation();home.sel.has(r._file)?home.sel.delete(r._file):home.sel.add(r._file);renderHome()},true);
+const more=el('button',{class:'dots','aria-label':'More actions for '+r.name,title:'More',onclick:e=>{e.stopPropagation();menuAt(more,designMenuItems(r))}},'⋯');card.append(more);
   card.addEventListener('contextmenu',e=>{e.preventDefault();ctxMenu(e.clientX,e.clientY,designMenuItems(r))});
   card.draggable=true;card.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/x-design',r._file);e.dataTransfer.effectAllowed='move';card.classList.add('drag')});card.addEventListener('dragend',()=>card.classList.remove('drag'));
 }
@@ -2637,6 +2644,264 @@ function canvasMenu(e){
   }
   ctxMenu(e.clientX,e.clientY,items);
 }
+
+/* ---------- Home: trash, stars, sort, list view, multi-select ---------- */
+const TRASHDIR='.trash',TRASH_DAYS=30;
+async function trashDesign(r){
+  try{await moveDesign(r._file,TRASHDIR)}catch(e){toast('Could not move to trash');return false}
+  if(D._file&&D._file.endsWith('/'+r._file.split('/').pop())){D._file=null;D.id=uid();dirty=false}
+  home.sel.delete(r._file);return true}
+async function listTrash(){
+  let it=[];try{it=await PUT().fs.readdir(DIR+'/'+TRASHDIR)}catch(e){return []}
+  const out=[],now=Date.now();
+  for(const f of it.filter(i=>!i.is_dir&&/\.design$/i.test(i.name))){
+    let m=f.modified||0;m=m>1e11?m:m*1000;
+    if(m&&now-m>TRASH_DAYS*864e5){try{await PUT().fs.delete(f.path)}catch(e){}continue}
+    try{const r=await readDesign(f.path);out.push({id:r.id,name:r.name,w:r.w,h:r.h,pages:r.pages.length,updated:r.updated||0,thumb:r.thumb||'',_file:f.path,trashed:m||now})}catch(e){}}
+  return out.sort((a,b)=>b.trashed-a.trashed)}
+async function restoreDesign(r){try{await moveDesign(r._file,'');toast('Restored to Projects');renderTrash()}catch(e){toast('Could not restore')}}
+function purgeDesign(r){askSure('Delete “'+r.name+'” forever? This cannot be undone.','Delete forever',async()=>{try{await PUT().fs.delete(r._file);fileCache.delete(r._file)}catch(e){}renderTrash();toast('Deleted forever')})}
+function emptyTrash(list){if(!list.length)return;askSure('Delete all '+list.length+' design'+(list.length>1?'s':'')+' in the trash forever?','Empty trash',async()=>{for(const r of list){try{await PUT().fs.delete(r._file)}catch(e){}}renderTrash();toast('Trash emptied')})}
+async function renderTrash(){if(home.view!=='trash')return;home.trash=await listTrash();const b=document.getElementById('hsections');if(b){b.innerHTML='';b.append(...homeSections())}}
+async function setStar(r,v){
+  try{if(D._file===r._file){D.starred=v;dirty=true;await saveDoc()}else{const x=await readDesign(r._file);delete x._file;x.starred=v;await PUT().fs.write(r._file,JSON.stringify(x),{overwrite:true});fileCache.delete(r._file)}}catch(e){toast('Could not update');return}
+  refreshDocs();toast(v?'Starred':'Removed from starred')}
+function trashCard(r){
+  const c=el('div',{class:'hc'},el('div',{class:'tn'},r.thumb?el('img',{src:r.thumb,alt:''}):null),el('b',{title:r.name},r.name),el('small',{},'Deleted '+fmtDate(r.trashed)+' · auto-removes after '+TRASH_DAYS+' days'),
+    el('div',{class:'row',style:'display:flex;gap:6px;margin-top:6px'},el('button',{class:'btn sm',onclick:()=>restoreDesign(r)},'Restore'),el('button',{class:'btn sm danger',onclick:()=>purgeDesign(r)},'Delete forever')));
+  return c}
+function trashView(){
+  const out=[],list=home.trash;
+  out.push(el('div',{class:'hs'},el('h2',{},'Trash'),el('span',{class:'grow'}),list&&list.length?el('button',{class:'more',onclick:()=>emptyTrash(list)},'Empty trash'):null));
+  if(!list){out.push(el('p',{class:'note'},'Loading…'));renderTrash();return out}
+  out.push(list.length?el('div',{class:'hg big'},list.map(trashCard)):el('div',{class:'hempty'},'Trash is empty. Designs you delete stay here for '+TRASH_DAYS+' days so you can restore them.'));
+  return out}
+function sortDocs(list){const s=home.sort;return list.slice().sort((a,b)=>s==='name'?a.name.localeCompare(b.name):s==='size'?(b.w*b.h)-(a.w*a.h):s==='pages'?b.pages-a.pages:b.updated-a.updated)}
+function projectsToolbar(){
+  const chip=(k,l)=>el('button',{class:'chip','aria-pressed':home.filter===k,onclick:()=>{home.filter=k;renderHome()}},l);
+  const sort=el('select',{class:'f','aria-label':'Sort designs',style:'width:auto;height:34px',onchange:()=>{home.sort=sort.value;renderHome()}},...[['updated','Last modified'],['name','Name'],['size','Canvas size'],['pages','Pages']].map(([k,l])=>el('option',{value:k,selected:home.sort===k},l)));
+  const bar=el('div',{class:'hchips',style:'align-items:center;margin:2px 0 12px'},chip('all','All'),chip('starred','★ Starred'),el('span',{class:'grow'}),sort,
+    el('button',{class:'chip','aria-pressed':!!home.list,'aria-label':'List view',title:'List view',onclick:()=>{home.list=!home.list;renderHome()}},home.list?'▤ List':'▦ Grid'),
+    el('button',{class:'chip','aria-pressed':home.selMode,onclick:()=>{home.selMode=!home.selMode;home.sel.clear();renderHome()}},home.selMode?'Done':'Select'));
+  return bar}
+function selBar(list){
+  if(!home.selMode)return null;
+  const files=[...home.sel];const n=files.length;const byFile=Object.fromEntries((home.docs||[]).map(r=>[r._file,r]));
+  const mv=el('select',{class:'f','aria-label':'Move selected to',style:'width:auto;height:34px',disabled:!n,onchange:async()=>{if(mv.value==='__')return;const t=mv.value==='__top'?'':mv.value;for(const f of files)try{await moveDesign(f,t)}catch(e){}home.sel.clear();toast('Moved '+n);refreshDocs()}},el('option',{value:'__'},'Move to…'),el('option',{value:'__top'},'Projects (top level)'),...home.dirs.map(d=>el('option',{value:d},'📁 '+d)));
+  return el('div',{class:'selbar',role:'toolbar','aria-label':'Selected designs'},el('b',{},n?n+' selected':'Click designs to select them'),el('button',{class:'btn sm',onclick:()=>{list.forEach(r=>home.sel.add(r._file));renderHome()}},'Select all'),mv,
+    el('button',{class:'btn sm',disabled:!n,onclick:async()=>{for(const f of files)if(byFile[f])await trashDesign(byFile[f]);home.sel.clear();toast(n+' moved to trash');refreshDocs()}},'Move to trash'))}
+
+/* ---------- editor extras: duotone, palette, colours, links, notes, transitions, history, page grid, print guides ---------- */
+const DUOS=[['Sunset','#2b1055','#ff8e53'],['Ocean','#06283d','#7dd3fc'],['Berry','#3a0ca3','#f72585'],['Forest','#0b3d2e','#d9f99d'],['Gold','#1c1c1c','#f5c542'],['Mono blue','#0a1f44','#e0ecff'],['Rose','#4a0d2a','#ffd1dc'],['Mint','#064e3b','#a7f3d0']];
+const duoCache=new Map();
+function hex2rgb(h){h=String(h||'#000').replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16)||0;return[n>>16&255,n>>8&255,n&255]}
+function duoDraw(ctx,img,o,dx,dy,dw,dh,fs){
+  const k=Math.min(1,1400/Math.max(o.w,o.h,1)),W=Math.max(2,Math.round(o.w*k)),H=Math.max(2,Math.round(o.h*k));
+  const key=[img.src.length,img.src.slice(-40),W,H,Math.round(dx),Math.round(dy),Math.round(dw),o.duo.a,o.duo.b,fs].join('|');
+  let c=duoCache.get(key);
+  if(!c){c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');if(fs!=='none')x.filter=fs;x.drawImage(img,dx*k,dy*k,dw*k,dh*k);x.filter='none';
+    const id=x.getImageData(0,0,W,H),d=id.data,A=hex2rgb(o.duo.a),B=hex2rgb(o.duo.b);
+    for(let i=0;i<d.length;i+=4){const l=(d[i]*.299+d[i+1]*.587+d[i+2]*.114)/255;d[i]=A[0]+(B[0]-A[0])*l;d[i+1]=A[1]+(B[1]-A[1])*l;d[i+2]=A[2]+(B[2]-A[2])*l}
+    x.putImageData(id,0,0);duoCache.set(key,c);if(duoCache.size>8)duoCache.delete(duoCache.keys().next().value)}
+  ctx.drawImage(c,0,0,o.w,o.h)}
+function duoUI(I){
+  const f=first(I);const on=!!(f.duo&&f.duo.a);
+  const set=d=>{each(x=>x.duo=d,I);renderInsp()};
+  return el('div',{class:'sec'},el('h4',{},'Duotone'),el('div',{class:'chips'},el('button',{class:'chip','aria-pressed':!on,onclick:()=>set(null)},'Off'),...DUOS.map(([n,a,b])=>el('button',{class:'chip','aria-pressed':on&&f.duo.a===a&&f.duo.b===b,title:n,style:`background:linear-gradient(90deg,${a},${b});color:#fff;border-color:transparent`,onclick:()=>set({a,b})},n))),
+    on?el('div',{class:'row'},el('label',{},'Shadows'),colorBtn(()=>f.duo.a,c=>each(x=>x.duo={a:c,b:(x.duo||f.duo).b},I)),el('label',{},'Highlights'),colorBtn(()=>f.duo.b,c=>each(x=>x.duo={a:(x.duo||f.duo).a,b:c},I))):null)}
+
+/* palette from a photo */
+function paletteOf(img,n=6){
+  const s=64,c=document.createElement('canvas');c.width=c.height=s;const x=c.getContext('2d');x.drawImage(img,0,0,s,s);const d=x.getImageData(0,0,s,s).data;
+  let px=[];for(let i=0;i<d.length;i+=4)if(d[i+3]>200)px.push([d[i],d[i+1],d[i+2]]);
+  const split=(box,depth)=>{if(depth===0||box.length<2)return[box];let mn=[255,255,255],mx=[0,0,0];box.forEach(p=>{for(let k=0;k<3;k++){mn[k]=Math.min(mn[k],p[k]);mx[k]=Math.max(mx[k],p[k])}});const r=[0,1,2].map(k=>mx[k]-mn[k]),ch=r.indexOf(Math.max(...r));box=box.slice().sort((a,b)=>a[ch]-b[ch]);const m=box.length>>1;return[...split(box.slice(0,m),depth-1),...split(box.slice(m),depth-1)]};
+  const boxes=split(px,3).filter(b=>b.length);
+  const cols=boxes.map(b=>{const m=[0,1,2].map(k=>Math.round(b.reduce((a,p)=>a+p[k],0)/b.length));return{m,n:b.length}}).sort((a,b)=>b.n-a.n);
+  const hex=m=>'#'+m.map(v=>v.toString(16).padStart(2,'0')).join('');
+  const out=[];for(const c of cols){const h=hex(c.m);if(!out.some(o=>colDist(hex2rgb(o),c.m)<40))out.push(h)}
+  return out.slice(0,n)}
+const colDist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
+const lumOf=h=>{const[r,g,b]=hex2rgb(h);return .299*r+.587*g+.114*b};
+const hexOk=v=>typeof v==='string'&&/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
+const norm6=v=>{v=v.toLowerCase();return v.length===4?'#'+v.slice(1).split('').map(c=>c+c).join(''):v};
+function eachColorSlot(fn){
+  const walk=o=>{['fill','color','stroke','bgc','hl','shadow','tint'].forEach(k=>{const v=o[k];if(hexOk(v))o[k]=fn(norm6(v));else if(v&&typeof v==='object'&&hexOk(v.c1)){v.c1=fn(norm6(v.c1));if(hexOk(v.c2))v.c2=fn(norm6(v.c2))}});if(o.type==='group'&&o.kids)o.kids.forEach(walk)};
+  D.pages.forEach(p=>{const b=p.bg;if(b){if(hexOk(b.c))b.c=fn(norm6(b.c));if(hexOk(b.c1))b.c1=fn(norm6(b.c1));if(hexOk(b.c2))b.c2=fn(norm6(b.c2))}p.objs.forEach(walk)})}
+function designColors(){const m=new Map();eachColorSlot(c=>{m.set(c,(m.get(c)||0)+1);return c});return[...m.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,16)}
+function replaceColor(a,b){commit();eachColorSlot(c=>c===a?b:c);dirty=true;touch();renderAll()}
+function recolorWith(pal){
+  if(!pal.length)return;commit();const cols=designColors().sort((a,b)=>lumOf(a)-lumOf(b)),ps=pal.slice().sort((a,b)=>lumOf(a)-lumOf(b));
+  const map=new Map();cols.forEach((c,i)=>map.set(c,ps[Math.min(ps.length-1,Math.round(i*(ps.length-1)/Math.max(1,cols.length-1)))]));
+  eachColorSlot(c=>map.get(c)||c);dirty=true;touch();renderAll();toast('Design recoloured with the palette')}
+function paletteUI(I){
+  const f=first(I);const img=f.src&&getImg(f.src);if(!img||!img.complete||!img.naturalWidth)return null;
+  let pal=[];try{pal=paletteOf(img)}catch(e){return null}
+  return el('div',{class:'sec'},el('h4',{},'Colours in this photo'),el('div',{class:'row',style:'flex-wrap:wrap;gap:6px'},pal.map(h=>el('button',{class:'sw',style:'background:'+h,title:'Copy '+h,'aria-label':'Photo colour '+h,onclick:()=>{try{navigator.clipboard.writeText(h)}catch(e){}toast(h+' copied')}}))),
+    el('button',{class:'btn sm',onclick:()=>recolorWith(pal)},'Recolour my design with these'),
+    el('button',{class:'btn sm',onclick:()=>{pal.forEach(h=>{if(!brand.colors.includes(h))brand.colors.push(h)});saveBrand();toast('Added to your Brand Kit')}},'Add to Brand Kit'))}
+
+/* hyperlinks */
+function linkUI(so){
+  if(!so.length)return null;const f=so[0];const inp=el('input',{class:'f',placeholder:'https://…  or  page:2',value:f.href||'','aria-label':'Link','aria-describedby':'lnkh'});
+  inp.addEventListener('change',()=>{const v=inp.value.trim();so.forEach(o=>{if(v)o.href=/^(https?:|mailto:|tel:|page:)/i.test(v)?v:(/^page:?\d+$/i.test(v)?'page:'+v.replace(/\D/g,''):'https://'+v);else delete o.href});touch();toast(v?'Link added. It works in Present mode and exported HTML/PDF viewers that support links.':'Link removed');renderInsp()});
+  return sec('Link',inp,el('small',{id:'lnkh',class:'note'},'Web address, or page:2 to jump to a page when presenting.'))}
+function openHref(h){if(!h)return false;const m=String(h).match(/^page:(\d+)$/i);if(m)return{page:Math.max(0,+m[1]-1)};if(/^(https?:|mailto:|tel:)/i.test(h)){try{window.open(h,'_blank','noopener')}catch(e){}return true}return false}
+
+/* presenter: notes, timer, transitions, laser, pen */
+const TRANS=[['none','None'],['fade','Fade'],['slide','Slide'],['push','Push'],['zoom','Zoom'],['wipe','Wipe']];
+function pageExtras(){
+  const p=D.pages[cur];if(!p)return null;
+  const notes=el('textarea',{class:'f',rows:4,placeholder:'Speaker notes for this page (shown in Present with N)','aria-label':'Speaker notes',value:p.notes||''});notes.addEventListener('input',()=>{p.notes=notes.value;dirty=true;clearTimeout(pageExtras.t);pageExtras.t=setTimeout(()=>{touch()},500)});
+  const tr=el('select',{class:'f','aria-label':'Page transition',onchange:()=>{p.trans=tr.value;touch()}},...TRANS.map(([k,l])=>el('option',{value:k,selected:(p.trans||'none')===k},l)));
+  const cols=designColors();
+  return el('div',{class:'sec'},el('h4',{},'Present & colours'),el('label',{class:'note'},'Transition into this page'),tr,
+    el('button',{class:'btn sm',onclick:()=>{D.pages.forEach(x=>x.trans=tr.value);touch();toast('Transition applied to every page')}},'Apply to all pages'),
+    el('label',{class:'note'},'Speaker notes'),notes,
+    cols.length?el('div',{},el('label',{class:'note'},'Colours in this design (change one to change it everywhere)'),el('div',{class:'row',style:'flex-wrap:wrap;gap:6px'},cols.map(c=>{const i=el('input',{type:'color',value:c,'aria-label':'Replace '+c,style:'width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:50%;background:none;cursor:pointer'});i.addEventListener('change',()=>replaceColor(c,i.value.toLowerCase()));return i}))):null,
+    el('div',{class:'row'},el('button',{class:'btn grow',onclick:openPageGrid},'Page grid'),el('button',{class:'btn grow',onclick:openHistory},'Version history')),
+    el('button',{class:'btn wide',onclick:openBulk},'Bulk create from a spreadsheet (CSV)'),commentsUI(),
+    el('label',{class:'row note',style:'gap:8px'},el('input',{type:'checkbox',checked:!!D.printGuides,onchange:e=>{D.printGuides=e.target.checked;dirty=true;renderUI()}}),'Show bleed & safe-area guides'))}
+function drawPrintGuides(ctx,z){
+  if(!D.printGuides)return;const pm=D.w>=1500?11.81:3.78,b=3*pm,s=b+5*pm,x0=view.px,y0=view.py,w=D.w*z,h=D.h*z;
+  ctx.save();ctx.lineWidth=1;ctx.setLineDash([6,4]);ctx.strokeStyle='#e03131';ctx.strokeRect(x0+b*z,y0+b*z,w-2*b*z,h-2*b*z);ctx.strokeStyle='#2f9e44';ctx.strokeRect(x0+s*z,y0+s*z,w-2*s*z,h-2*s*z);ctx.setLineDash([]);ctx.font='11px sans-serif';ctx.fillStyle='#e03131';ctx.fillText('bleed 3 mm',x0+b*z+4,y0+b*z+12);ctx.fillStyle='#2f9e44';ctx.fillText('safe area',x0+s*z+4,y0+s*z+12);ctx.restore()}
+
+function presentShow(){
+  commit();ensureAssets().then(()=>{
+    let i=cur,prev=-1,tT=0,t0=performance.now(),raf=0,start=performance.now(),showNotes=false,laser=false,pen=false,mx=-1,my=-1,ink=[],stroke=null;
+    const wrap=el('div',{id:'present'});const cv=el('canvas');const lab=el('span',{style:'min-width:54px;text-align:center'});const clock=el('span',{style:'min-width:46px;text-align:center;font-variant-numeric:tabular-nums;opacity:.85'});
+    const notesEl=el('div',{style:'position:absolute;left:0;right:0;bottom:64px;max-height:34vh;overflow:auto;margin:0 auto;max-width:820px;background:#000c;color:#fff;border-radius:12px;padding:12px 16px;font-size:16px;line-height:1.5;white-space:pre-wrap',hidden:true});
+    const lz=el('div',{style:'position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:radial-gradient(#ff2020,#ff202080 55%,transparent 70%);pointer-events:none',hidden:true});
+    const geo=()=>{const W=innerWidth,H=innerHeight,dp=devicePixelRatio||1,sc=Math.min(W/D.w,H/D.h)*dp;return{W,H,dp,sc}};
+    const page=(x,idx,sc,age)=>{const p=D.pages[idx];x.fillStyle='#fff';x.fillRect(0,0,D.w,D.h);drawPageContent(x,p,D.w,D.h,{s:sc,t:pageHasAnim(p)?(performance.now()-t0)/1000:null})};
+    const draw=()=>{const{W,H,dp,sc}=geo();if(cv.width!==Math.round(D.w*sc)||cv.height!==Math.round(D.h*sc)){cv.width=Math.round(D.w*sc);cv.height=Math.round(D.h*sc);cv.style.width=cv.width/dp+'px';cv.style.height=cv.height/dp+'px'}
+      const x=cv.getContext('2d');x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,cv.width,cv.height);x.scale(sc,sc);
+      const p=D.pages[i],tr=p.trans||'none',k=prev>=0&&tr!=='none'?Math.min(1,(performance.now()-tT)/520):1,e=1-Math.pow(1-k,3);
+      if(k<1){const W0=D.w,H0=D.h;
+        if(tr==='fade'){page(x,prev,sc);x.globalAlpha=e;page(x,i,sc);x.globalAlpha=1}
+        else if(tr==='slide'||tr==='push'){const dir=i>prev?1:-1;if(tr==='push'){x.save();x.translate(-dir*W0*e,0);page(x,prev,sc);x.restore()}else page(x,prev,sc);x.save();x.translate(dir*W0*(1-e),0);page(x,i,sc);x.restore()}
+        else if(tr==='zoom'){page(x,prev,sc);x.save();x.globalAlpha=e;x.translate(W0/2,H0/2);x.scale(.85+.15*e,.85+.15*e);x.translate(-W0/2,-H0/2);page(x,i,sc);x.restore()}
+        else if(tr==='wipe'){page(x,prev,sc);x.save();x.beginPath();x.rect(0,0,W0*e,H0);x.clip();page(x,i,sc);x.restore()}
+      }else page(x,i,sc);
+      x.setTransform(sc,0,0,sc,0,0);ink.filter(s=>s.page===i).forEach(s=>{x.strokeStyle=s.c;x.lineWidth=s.w;x.lineCap=x.lineJoin='round';x.beginPath();s.p.forEach((q,j)=>j?x.lineTo(q[0],q[1]):x.moveTo(q[0],q[1]));x.stroke()});
+      lab.textContent=`${i+1} / ${D.pages.length}`;const sec=Math.floor((performance.now()-start)/1000);clock.textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
+      notesEl.hidden=!showNotes;if(showNotes)notesEl.textContent=p.notes||'No notes for this page.'};
+    const loop=()=>{draw();raf=requestAnimationFrame(loop)};
+    const go=d=>{const n=clamp(i+d,0,D.pages.length-1);if(n!==i){prev=i;i=n;t0=performance.now();tT=t0}};
+    const jump=n=>{n=clamp(n,0,D.pages.length-1);if(n!==i){prev=i;i=n;t0=performance.now();tT=t0}};
+    const end=()=>{cancelAnimationFrame(raf);document.removeEventListener('keydown',key,true);wrap.remove();try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}};
+    const key=e=>{const k=e.key;if(k==='Escape'){e.stopPropagation();end()}else if(['ArrowRight','ArrowDown',' ','PageDown'].includes(k)){e.preventDefault();e.stopPropagation();go(1)}else if(['ArrowLeft','ArrowUp','PageUp'].includes(k)){e.preventDefault();e.stopPropagation();go(-1)}
+      else if(k==='n'||k==='N'){showNotes=!showNotes}else if(k==='l'||k==='L'){laser=!laser;lz.hidden=!laser;cv.style.cursor=laser?'none':''}else if(k==='d'||k==='D'){pen=!pen;cv.style.cursor=pen?'crosshair':''}else if(k==='e'||k==='E'){ink=ink.filter(s=>s.page!==i)}};
+    document.addEventListener('keydown',key,true);
+    const pt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width*D.w,(e.clientY-r.top)/r.height*D.h]};
+    cv.addEventListener('pointermove',e=>{if(laser){lz.hidden=false;lz.style.left=e.clientX+'px';lz.style.top=e.clientY+'px'}if(stroke){stroke.p.push(pt(e))}});
+    cv.addEventListener('pointerdown',e=>{if(pen){stroke={page:i,c:'#ff3b30',w:Math.max(4,D.w/220),p:[pt(e)]};ink.push(stroke);cv.setPointerCapture(e.pointerId)}});
+    cv.addEventListener('pointerup',()=>{stroke=null});
+    cv.addEventListener('click',e=>{if(pen)return;const[px,py]=pt(e);const os=D.pages[i].objs;for(let k=os.length-1;k>=0;k--){const o=os[k];if(o.href&&px>=o.x&&px<=o.x+o.w&&py>=o.y&&py<=o.y+o.h){const r=openHref(o.href);if(r&&r.page!==undefined)jump(r.page);if(r)return}}go(1)});
+    const bt=(t,l,f)=>el('button',{title:t,'aria-label':t,onclick:f},l);
+    wrap.append(cv,notesEl,lz,el('div',{class:'pc'},el('button',{'aria-label':'Previous',html:ic('left',18),onclick:()=>go(-1)}),lab,el('button',{'aria-label':'Next',html:ic('right',18),onclick:()=>go(1)}),clock,bt('Speaker notes (N)','Notes',()=>{showNotes=!showNotes}),bt('Laser pointer (L)','Laser',()=>{laser=!laser;lz.hidden=!laser}),bt('Draw (D), erase (E)','Pen',()=>{pen=!pen;cv.style.cursor=pen?'crosshair':''}),el('button',{'aria-label':'Exit',html:ic('close',18),onclick:end})));
+    document.body.append(wrap);loop();try{wrap.requestFullscreen&&wrap.requestFullscreen().catch(()=>{})}catch(e){}
+  })}
+
+/* page grid (drag to reorder) */
+function openPageGrid(){
+  const body=el('div',{style:'display:grid;gap:12px;min-width:min(720px,86vw)'});openModal(body);
+  const draw=()=>{body.innerHTML='';const g=el('div',{style:'display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;max-height:62vh;overflow:auto'});
+    D.pages.forEach((p,n)=>{let c;try{c=renderPageTo(p,150/Math.max(D.w,D.h))}catch(e){c=document.createElement('canvas')}c.style.cssText='max-width:100%;border:1px solid var(--line);border-radius:6px;background:#fff';
+      const card=el('div',{draggable:true,'aria-label':'Page '+(n+1),style:'display:grid;gap:4px;justify-items:center;padding:6px;border-radius:10px;cursor:grab;'+(n===cur?'outline:2px solid var(--accent)':'')},c,el('small',{},'Page '+(n+1)),el('div',{style:'display:flex;gap:4px'},el('button',{class:'btn sm',onclick:()=>{closeModal();switchPage(n)}},'Open'),el('button',{class:'btn sm',onclick:()=>{dupPage(n);draw()}},'Copy'),D.pages.length>1?el('button',{class:'btn sm danger',onclick:()=>{delPage(n);draw()}},'Delete'):null));
+      card.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/x-page',String(n))});card.addEventListener('dragover',e=>e.preventDefault());
+      card.addEventListener('drop',e=>{e.preventDefault();const f=+e.dataTransfer.getData('text/x-page');if(isNaN(f)||f===n)return;commit();const cp=D.pages[cur];const [m]=D.pages.splice(f,1);D.pages.splice(n,0,m);cur=D.pages.indexOf(cp);dirty=true;commit();renderAll();draw()});g.append(card)});
+    body.append(dlgHead('Pages'),el('p',{class:'note'},'Drag a page onto another to reorder.'),g,el('div',{style:'display:flex;gap:8px;justify-content:flex-end'},el('button',{class:'btn',onclick:()=>{addPage();draw()}},'Add page'),el('button',{class:'btn primary',onclick:closeModal},'Done')))};
+  draw()}
+
+/* version history (snapshots in Files › Designs/.versions) */
+const VERDIR=()=>DIR+'/.versions';
+let lastSnap=0;
+async function snapshotDesign(force){
+  if(!D._file||!PUT()||(!force&&Date.now()-lastSnap<10*60*1000))return false;lastSnap=Date.now();
+  try{const b=await PUT().fs.read(D._file);await PUT().fs.write(VERDIR()+'/'+D.id.slice(-8)+'-'+Date.now()+'.design',b,{createMissingParents:true,overwrite:true});
+    const l=(await PUT().fs.readdir(VERDIR())).filter(x=>x.name.startsWith(D.id.slice(-8)+'-')).sort((a,b)=>a.name.localeCompare(b.name));for(const x of l.slice(0,Math.max(0,l.length-20)))try{await PUT().fs.delete(x.path)}catch(e){}return true}catch(e){return false}}
+async function listVersions(){let l=[];try{l=await PUT().fs.readdir(VERDIR())}catch(e){return[]}l=l.filter(x=>D.id&&x.name.startsWith(D.id.slice(-8)+'-')).sort((a,b)=>b.name.localeCompare(a.name));const out=[];for(const x of l){try{const r=await readDesign(x.path);out.push({file:x.path,ts:+x.name.split('-')[1].replace('.design',''),name:r.name,thumb:r.thumb||'',pages:r.pages.length})}catch(e){}}return out}
+async function openHistory(){
+  commit();await saveDoc();const body=el('div',{style:'display:grid;gap:12px;min-width:min(560px,86vw)'});openModal(body);
+  const draw=async()=>{const vs=await listVersions();body.innerHTML='';
+    body.append(dlgHead('Version history'),el('p',{class:'note'},'A snapshot is saved automatically at most every 10 minutes while you edit. The last 20 are kept.'),el('button',{class:'btn',onclick:async()=>{await saveDoc();await snapshotDesign(true);draw();toast('Version saved')}},'Save a version now'));
+    body.append(vs.length?el('div',{style:'display:grid;gap:8px;max-height:52vh;overflow:auto'},vs.map(v=>el('div',{style:'display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 10px'},v.thumb?el('img',{src:v.thumb,alt:'',style:'width:64px;height:48px;object-fit:contain;background:#fff;border-radius:6px'}):null,el('div',{style:'flex:1'},el('b',{},new Date(v.ts).toLocaleString()),el('div',{class:'note'},v.pages+' page'+(v.pages>1?'s':''))),
+      el('button',{class:'btn sm',onclick:()=>askSure('Restore this version? Your current design is saved as a version first.','Restore',async()=>{await snapshotDesign(true);try{const r=await readDesign(v.file);const keep=D._file,id=D.id;r.id=id;loadRec({...r,_file:keep});dirty=true;await saveDoc();closeModal();toast('Version restored')}catch(e){toast('Could not restore')}})},'Restore')))):el('div',{class:'hempty'},'No versions yet.'))};
+  draw()}
+setInterval(()=>{if(typeof dirty!=='undefined'&&!dirty&&D&&D._file)snapshotDesign(false)},60000);
+
+/* ---------- collage grids, bulk create (CSV), smart template search, brand kits, comments ---------- */
+const COLLAGES=[
+ ['2 side by side',[[0,0,.5,1],[.5,0,.5,1]]],['2 stacked',[[0,0,1,.5],[0,.5,1,.5]]],['3 columns',[[0,0,1/3,1],[1/3,0,1/3,1],[2/3,0,1/3,1]]],['3 rows',[[0,0,1,1/3],[0,1/3,1,1/3],[0,2/3,1,1/3]]],
+ ['2 × 2',[[0,0,.5,.5],[.5,0,.5,.5],[0,.5,.5,.5],[.5,.5,.5,.5]]],['1 big + 2',[[0,0,.6,1],[.6,0,.4,.5],[.6,.5,.4,.5]]],['1 big + 3',[[0,0,1,.6],[0,.6,1/3,.4],[1/3,.6,1/3,.4],[2/3,.6,1/3,.4]]],['Left big, 3 right',[[0,0,.62,1],[.62,0,.38,1/3],[.62,1/3,.38,1/3],[.62,2/3,.38,1/3]]],
+ ['3 × 3',Array.from({length:9},(_,i)=>[i%3/3,Math.floor(i/3)/3,1/3,1/3])],['4 rows',Array.from({length:4},(_,i)=>[0,i/4,1,.25])],['Mosaic',[[0,0,.4,.6],[.4,0,.6,.3],[.4,.3,.3,.3],[.7,.3,.3,.3],[0,.6,.55,.4],[.55,.6,.45,.4]]],['Hero + strip',[[0,0,1,.7],[0,.7,.25,.3],[.25,.7,.25,.3],[.5,.7,.25,.3],[.75,.7,.25,.3]]],
+ ['Polaroid trio',[[.05,.08,.42,.5],[.53,.08,.42,.5],[.28,.52,.44,.44]]],['Photo strip',[[.3,0,.4,.25],[.3,.25,.4,.25],[.3,.5,.4,.25],[.3,.75,.4,.25]]]];
+function collageSection(s){
+  const q=(s||'').toLowerCase();const list=COLLAGES.filter(([n])=>!q||(n+' collage grid layout photos').toLowerCase().includes(q));if(!list.length)return null;
+  const sec_=el('div',{class:'sec'},el('h4',{},'Collage grids'),el('div',{class:'frames'},list.map(([n,cells])=>{
+    const sv=`<svg viewBox="0 0 60 60" width="46" height="46">${cells.map(c=>`<rect x="${c[0]*54+3.5}" y="${c[1]*54+3.5}" width="${Math.max(1,c[2]*54-2)}" height="${Math.max(1,c[3]*54-2)}" rx="2" fill="currentColor" opacity=".55"/>`).join('')}</svg>`;
+    return el('button',{class:'fr',title:n+' (add, then drop photos)','aria-label':'Collage: '+n,html:sv+'<small>'+n+'</small>',onclick:()=>{const m=D.w*.05,g=Math.min(D.w,D.h)*.012,W=D.w-2*m,H=D.h-2*m;addObjs(cells.map(c=>emptyImg(m+c[0]*W+g/2,m+c[1]*H+g/2,c[2]*W-g,c[3]*H-g,{r:g*1.2})));toast(n+' added. Drop a photo onto each cell.',2600)}})})));
+  return sec_}
+
+/* bulk create */
+function parseCSV(t){const rows=[];let r=[],f='',q=false;t=String(t).replace(/^﻿/,'');for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else if(c==='"')q=true;else if(c===','||c==='\t'||c===';'&&!/,/.test(t.split('\n')[0])){r.push(f);f=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;r.push(f);f='';if(r.some(x=>x!==''))rows.push(r);r=[]}else f+=c}
+  r.push(f);if(r.some(x=>x!==''))rows.push(r);if(!rows.length)return{head:[],rows:[]};const head=rows[0].map(h=>h.trim());return{head,rows:rows.slice(1).map(r=>Object.fromEntries(head.map((h,i)=>[h,(r[i]||'').trim()])))}}
+function textLayers(list,out=[]){list.forEach(o=>{if(o.type==='text')out.push(o);else if(o.type==='group'&&o.kids)textLayers(o.kids,out)});return out}
+function bulkFill(objs,row,map){const subst=s=>String(s).replace(/\{\{\s*([^}]+?)\s*\}\}/g,(m,k)=>row[k]!==undefined?row[k]:m);
+  const walk=o=>{if(o.type==='text'){if(map&&map[o.id]&&row[map[o.id]]!==undefined)o.text=row[map[o.id]];else if(typeof o.text==='string')o.text=subst(o.text)}else if(o.type==='group'&&o.kids)o.kids.forEach(walk)};objs.forEach(walk)}
+function openBulk(){
+  commit();const body=el('div',{style:'display:grid;gap:12px;min-width:min(620px,88vw)'});openModal(body);
+  const st={csv:null,map:{},mode:'pages'};
+  const txt=el('textarea',{class:'f',rows:6,placeholder:'Paste rows here (first row = column names), or choose a CSV file:\nname,role\nAsha,Designer\nRavi,Manager','aria-label':'CSV data'});
+  const file=el('input',{type:'file',accept:'.csv,.tsv,.txt,text/csv'});file.onchange=async()=>{if(file.files[0]){txt.value=await file.files[0].text();draw()}};
+  const info=el('div'),mapUI=el('div');
+  const draw=()=>{st.csv=parseCSV(txt.value);info.innerHTML='';mapUI.innerHTML='';const c=st.csv;
+    if(!c.head.length||!c.rows.length){info.append(el('p',{class:'note'},'Add at least a header row and one data row.'));return}
+    info.append(el('p',{class:'note'},c.rows.length+' row'+(c.rows.length>1?'s':'')+' · columns: '+c.head.join(', ')));
+    const layers=textLayers(D.pages[cur].objs);const tok=layers.filter(o=>/\{\{[^}]+\}\}/.test(o.text||''));
+    mapUI.append(el('p',{class:'note'},tok.length?'Text containing {{column}} placeholders is filled in automatically ('+tok.length+' found). You can also map other text layers:':'Tip: type {{column}} inside any text, or map text layers to columns here.'));
+    layers.filter(o=>!/\{\{[^}]+\}\}/.test(o.text||'')).slice(0,12).forEach(o=>{const sel=el('select',{class:'f','aria-label':'Column for “'+String(o.text).slice(0,30)+'”',onchange:()=>{if(sel.value)st.map[o.id]=sel.value;else delete st.map[o.id]}},el('option',{value:''},'Keep as is'),...c.head.map(h=>el('option',{value:h,selected:st.map[o.id]===h},h)));mapUI.append(el('label',{class:'row',style:'justify-content:space-between;gap:10px'},el('span',{style:'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%'},String(o.text).slice(0,40)),sel))})};
+  txt.addEventListener('input',draw);
+  const mode=el('select',{class:'f','aria-label':'Create as',onchange:()=>{st.mode=mode.value}},el('option',{value:'pages'},'New pages in this design'),el('option',{value:'designs'},'Separate designs in a new folder'));
+  const go=el('button',{class:'btn primary',onclick:async()=>{const c=st.csv;if(!c||!c.rows.length){toast('Add some rows first');return}const rows=c.rows.slice(0,500);
+    try{const src=D.pages[cur];
+      if(st.mode==='pages'){commit();const at=cur+1;const ps=rows.map(r=>{const p=JSON.parse(JSON.stringify(src,(k,v)=>k[0]==='_'?undefined:v));p.id=uid();p.objs.forEach(o=>{o.id=o.id});bulkFill(p.objs,r,st.map);p.notes=undefined;return p});D.pages.splice(at,0,...ps);dirty=true;commit();renderAll();closeModal();toast(rows.length+' pages created')}
+      else{await saveDoc();const folder=await makeFolder('Bulk · '+safeName(D.name));let n=0;for(const r of rows){const p=JSON.parse(JSON.stringify(src,(k,v)=>k[0]==='_'?undefined:v));bulkFill(p.objs,r,st.map);const nm=(Object.values(r)[0]||'row')+'';const rec={v:1,id:uid(),name:D.name+' – '+nm,updated:Date.now(),w:D.w,h:D.h,pages:[p],assets:usedAssets(),thumb:''};
+        await PUT().fs.write(DIR+'/'+folder+'/'+safeName(rec.name)+' ['+rec.id.slice(-5)+'].design',JSON.stringify(rec),{createMissingParents:true,overwrite:true});n++}
+        closeModal();toast(n+' designs created in Projects › '+folder);refreshDocs()}}catch(e){toast('Could not create: '+(e&&e.message||'error'))}}},'Create');
+  body.append(dlgHead('Bulk create'),el('p',{class:'note'},'Make one page or design for every row of a spreadsheet: certificates, name cards, price tags, invitations. The current page is the template.'),txt,el('div',{class:'row'},file),info,mapUI,el('label',{class:'note'},'Create as'),mode,el('div',{style:'display:flex;gap:8px;justify-content:flex-end'},el('button',{class:'btn',onclick:closeModal},'Cancel'),go));draw()}
+
+/* smart template search */
+const SYN={birthday:['bday','party','cake','celebration','balloons'],wedding:['marriage','shaadi','engagement','bride','groom','invite','invitation','save the date'],diwali:['deepavali','festival','lights','diya'],sale:['discount','offer','deal','promo','promotion','clearance'],resume:['cv','job','career'],invite:['invitation','event','party','card'],food:['restaurant','menu','cafe','recipe','biryani'],fitness:['gym','workout','health','yoga'],business:['corporate','company','professional','marketing','brand'],real:['estate','property','house','home','flat'],quote:['motivation','inspirational','saying'],youtube:['thumbnail','video','channel'],presentation:['slides','deck','pitch','ppt'],eid:['ramadan','mubarak'],christmas:['xmas','santa','holiday'],new:['year','newyear'],school:['education','class','teacher','student','course'],jewellery:['jewelry','gold','fashion','saree'],travel:['trip','holiday','tour','vacation'],logo:['brand','identity'],poster:['flyer','banner','print']};
+const STOP=new Set(['a','an','the','for','my','our','of','and','to','in','on','with','me','i','want','need','make','create','design','something','like','that','this','is','it']);
+function tplRank(q){
+  const toks=String(q).toLowerCase().split(/[^a-z0-9ऀ-෿]+/).filter(t=>t&&!STOP.has(t));if(!toks.length)return[];
+  const exp=toks.map(t=>({t,alts:[...(SYN[t]||[]),...Object.entries(SYN).filter(([k,v])=>v.includes(t)).map(([k])=>k)]}));
+  return TEMPLATES.map(t=>{const hay=(t.n+' '+t.c+' '+(t.g||'')+' '+(t.tag||'')).toLowerCase();const nm=t.n.toLowerCase();let s=0;
+    exp.forEach(({t:w,alts})=>{if(nm.includes(w))s+=4;else if(hay.includes(w))s+=2;else if(alts.some(a=>hay.includes(a)))s+=1});return{t,s}}).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).map(x=>x.t)}
+
+/* brand kits */
+function loadKits(){try{return JSON.parse(localStorage.getItem('ds.brandkits')||'[]')}catch(e){return[]}}
+function saveKits(k){try{localStorage.setItem('ds.brandkits',JSON.stringify(k))}catch(e){}}
+function kitsUI(redraw){
+  const kits=loadKits();const sel=el('select',{class:'f','aria-label':'Brand kit',onchange:()=>{const k=kits.find(x=>x.name===sel.value);if(k){brand.colors=k.colors.slice();brand.head=k.head;brand.body=k.body;saveBrand();redraw();toast('Switched to '+k.name)}}},el('option',{value:''},kits.length?'Switch kit…':'No saved kits yet'),...kits.map(k=>el('option',{value:k.name},k.name)));
+  return el('div',{class:'sec'},el('h4',{},'Brand kits'),sel,el('div',{class:'row'},
+    el('button',{class:'btn sm grow',onclick:()=>askText('Save this brand as a kit','','Save',n=>{const ks=loadKits().filter(x=>x.name!==n);ks.push({name:n,colors:brand.colors.slice(),head:brand.head,body:brand.body});saveKits(ks);redraw();toast('Kit saved')})},'Save current as kit'),
+    kits.length?el('button',{class:'btn sm danger',onclick:()=>{const n=sel.value;if(!n){toast('Pick a kit to delete first');return}askSure('Delete the kit “'+n+'”?','Delete',()=>{saveKits(loadKits().filter(x=>x.name!==n));redraw()})}},'Delete'):null))}
+
+/* comments */
+let commentMode=false;
+function commentList(){return(D.comments=D.comments||[])}
+function drawCommentPins(ctx,z){
+  (D.comments||[]).forEach((c,i)=>{if(c.page!==cur)return;const x=view.px+c.x*z,y=view.py+c.y*z;ctx.save();ctx.beginPath();ctx.arc(x,y,12,0,7);ctx.fillStyle=c.done?'#868e96':'#f59f00';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),x,y+.5);ctx.restore()})}
+function placeComment(e){
+  if(!commentMode)return false;commentMode=false;ui$().style.cursor='';const p=toDoc(e.clientX,e.clientY);
+  askText('Comment','','Add',t=>{commentList().push({id:uid(),page:cur,x:p.x,y:p.y,text:t,ts:Date.now(),done:false});dirty=true;touch();renderUI();renderInsp()});return true}
+function commentsUI(){
+  const cs=commentList();
+  return el('div',{class:'sec'},el('h4',{},'Comments'),el('button',{class:'btn sm',onclick:()=>{commentMode=true;ui$().style.cursor='crosshair';toast('Click on the design to place a comment')}},'＋ Add comment'),
+    ...cs.map((c,i)=>c.page===cur||true?el('div',{style:'display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:6px 8px;'+(c.done?'opacity:.55':'')},el('b',{style:'min-width:18px'},String(i+1)),el('div',{style:'flex:1;font-size:13px'},c.text,el('div',{class:'note'},'Page '+(c.page+1)+' · '+new Date(c.ts).toLocaleDateString())),
+      el('button',{class:'btn sm',title:c.done?'Reopen':'Resolve',onclick:()=>{c.done=!c.done;dirty=true;touch();renderUI();renderInsp()}},c.done?'↺':'✓'),el('button',{class:'btn sm danger',title:'Delete comment','aria-label':'Delete comment',onclick:()=>{cs.splice(i,1);dirty=true;touch();renderUI();renderInsp()}},'×')):null))}
 
 /* =====================================================================
    Anands OS integration + the studio's advanced features
@@ -2672,7 +2937,7 @@ async function doSave(){
   try{
     setSaveState('Saving…');
     const th=await thumbOf(D.pages[0],240);
-    const rec={v:1,id:D.id,name:D.name,updated:Date.now(),w:D.w,h:D.h,pages:D.pages,assets:usedAssets(),thumb:th};
+    const rec={v:1,id:D.id,name:D.name,updated:Date.now(),w:D.w,h:D.h,pages:D.pages,assets:usedAssets(),thumb:th,starred:!!D.starred,comments:D.comments||[]};
     const f=fileFor(),old=D._file;
     await PUT().fs.write(f,new Blob([JSON.stringify(rec,(k,v)=>k[0]==='_'?undefined:v)],{type:'application/json'}),{createMissingParents:true,overwrite:true});
     if(old&&old!==f){try{await PUT().fs.delete(old)}catch(e){}}
@@ -2681,7 +2946,7 @@ async function doSave(){
   }catch(e){setSaveState('Not saved')}
 }
 async function readDesign(path){const b=await PUT().fs.read(path);const r=JSON.parse(await b.text());if(!r||!Array.isArray(r.pages)||!r.w||!r.h)throw new Error('Not a design');r._file=path;return r}
-function loadRec(r){D={id:r.id||uid(),name:r.name||'Untitled design',w:r.w,h:r.h,pages:r.pages,assets:r.assets||{}};D._file=r._file||null;D._folder=folderOf(D._file);cur=0;sel=[];$('#title').value=D.name;resetHistory();fit();renderAll();setSaveState(D._file?'Saved to Files':'');hideHome()}
+function loadRec(r){D={id:r.id||uid(),name:r.name||'Untitled design',w:r.w,h:r.h,pages:r.pages,assets:r.assets||{}};D._file=r._file||null;D.starred=!!r.starred;D.comments=r.comments||[];D._folder=folderOf(D._file);cur=0;sel=[];$('#title').value=D.name;resetHistory();fit();renderAll();setSaveState(D._file?'Saved to Files':'');hideHome()}
 const RESERVED=/^(uploads|\.)/i;
 async function listFolders(){let it=[];try{it=await PUT().fs.readdir(DIR)}catch(e){return []}return it.filter(i=>i.is_dir&&!RESERVED.test(i.name)).map(i=>i.name).sort((a,b)=>a.localeCompare(b))}
 async function listDocs(){
@@ -2690,7 +2955,7 @@ async function listDocs(){
   for(const s of subs){try{const x=await PUT().fs.readdir(DIR+'/'+s.name);items.push(...x)}catch(e){}}
   items=items.filter(i=>!i.is_dir&&/\.design$/i.test(i.name));const out=[];let k=0;
   await Promise.all(Array.from({length:4},async()=>{while(k<items.length){const it=items[k++];const key=it.path+'|'+(it.modified||0)+'|'+(it.size||0);let c=fileCache.get(it.path);
-    if(!c||c.key!==key){try{const r=await readDesign(it.path);c={key,meta:{id:r.id,name:r.name,w:r.w,h:r.h,pages:r.pages.length,updated:r.updated||0,thumb:r.thumb||''}};fileCache.set(it.path,c)}catch(e){continue}}
+    if(!c||c.key!==key){try{const r=await readDesign(it.path);c={key,meta:{id:r.id,name:r.name,w:r.w,h:r.h,pages:r.pages.length,updated:r.updated||0,thumb:r.thumb||'',starred:!!r.starred}};fileCache.set(it.path,c)}catch(e){continue}}
     out.push({...c.meta,_file:it.path,folder:folderOf(it.path).slice(DIR.length+1)})}}));
   return out.sort((a,b)=>b.updated-a.updated);
 }
@@ -3145,19 +3410,7 @@ function openExport(){
 }
 
 /* ---------- present (animations play) ---------- */
-function present(){
-  commit();ensureAssets().then(()=>{
-    let i=cur,t0=performance.now(),raf=0;const wrap=el('div',{id:'present'});const cv=el('canvas');const lab=el('span',{style:'min-width:54px;text-align:center'});
-    const draw=()=>{const W=innerWidth,H=innerHeight,dp=devicePixelRatio||1,sc=Math.min(W/D.w,H/D.h)*dp;cv.width=Math.round(D.w*sc);cv.height=Math.round(D.h*sc);cv.style.width=cv.width/dp+'px';cv.style.height=cv.height/dp+'px';const x=cv.getContext('2d');x.scale(sc,sc);x.fillStyle='#fff';x.fillRect(0,0,D.w,D.h);const p=D.pages[i];drawPageContent(x,p,D.w,D.h,{s:sc,t:pageHasAnim(p)?(performance.now()-t0)/1000:null});lab.textContent=`${i+1} / ${D.pages.length}`};
-    const loop=()=>{draw();raf=requestAnimationFrame(loop)};
-    const go=d=>{const n=clamp(i+d,0,D.pages.length-1);if(n!==i){i=n;t0=performance.now()}};
-    const end=()=>{cancelAnimationFrame(raf);document.removeEventListener('keydown',key,true);wrap.remove();try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}};
-    const key=e=>{if(e.key==='Escape'){e.stopPropagation();end()}else if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();e.stopPropagation();go(1)}else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();e.stopPropagation();go(-1)}};
-    document.addEventListener('keydown',key,true);
-    wrap.append(cv,el('div',{class:'pc'},el('button',{'aria-label':'Previous',html:ic('left',18),onclick:()=>go(-1)}),lab,el('button',{'aria-label':'Next',html:ic('right',18),onclick:()=>go(1)}),el('button',{'aria-label':'Exit',html:ic('close',18),onclick:end})));
-    cv.addEventListener('click',()=>go(1));document.body.append(wrap);loop();try{wrap.requestFullscreen&&wrap.requestFullscreen().catch(()=>{})}catch(e){}
-  });
-}
+function present(){presentShow()}
 
 /* ---------- Magic (AI) through the OS's own AI settings ---------- */
 function jsonOf(t){const m=String(t).match(/[\[{][\s\S]*[\]}]/);if(!m)throw new Error('The AI did not answer with data');return JSON.parse(m[0])}
@@ -3201,7 +3454,7 @@ async function openLaunchItems(items){
    Home screen — Canva-style: sidebar, search banner, design types, recents, templates
    ===================================================================== */
 const QUICK=[['Presentation','play','#7048e8',1920,1080],['Instagram post','image','#d6336c',1080,1080],['Story','sparkle','#e8590c',1080,1920],['WhatsApp status','chat','#2f9e44',1080,1920],['Video','film','#1098ad',1920,1080],['Poster','text','#2f9e44',1800,2400],['Flyer','grid','#f59f00',874,1240],['Invitation','heart','#c2255c',1050,1470],['Greeting card','sparkle','#ae3ec9',1050,1470],['Resume','text','#364fc7',1240,1754],['Certificate','trophy','#e67700',1754,1240],['Menu','grid','#e8590c',1240,1754],['YouTube thumbnail','play','#e03131',1280,720],['Facebook cover','image','#1971c2',1640,624],['Logo','brand','#ae3ec9',800,800],['Business card','tpl','#0ca678',1050,600],['Brochure','tpl','#5c940d',1754,1240],['Infographic','chart','#1098ad',800,2000],['T-shirt','tpl','#862e9c',2400,2880],['Custom size','plus','#6f685f',0,0]];
-const home={folder:'',dirs:[],view:'home',q:'',cat:'All',fest:'',docs:null,mine:''};
+const home={folder:'',dirs:[],view:'home',q:'',cat:'All',fest:'',docs:null,mine:'',sort:'updated',filter:'all',list:false,selMode:false,sel:new Set(),trash:null};
 const homeEl=()=>document.getElementById('home');
 function showHome(){commit();saveDoc();home.view='home';home.q='';const h=homeEl();h.hidden=false;home.docs=null;renderHome();refreshDocs()}
 function hideHome(){const h=homeEl();if(h)h.hidden=true;setTimeout(()=>{fit();renderStrip()},60)}
@@ -3221,21 +3474,23 @@ function designCard(r,withActions){
 }
 function templateCard(t){const th=el('button',{class:'tn','aria-label':'Use template '+t.n,onclick:()=>startTemplate(t)},tplThumb(t));const [w,h]=tplSize(t);return el('div',{class:'hc'},th,el('b',{title:t.n},t.n),el('small',{},(t.g||t.c)+' · '+w+'×'+h))}
 function sizeButtons(list){return el('div',{class:'hsz'},list.map(s=>el('button',{onclick:()=>startSize(s.w,s.h,s.n)},s.n,el('small',{},`${s.w}×${s.h}`))))}
-function tplList(){const q=(home.tq||'').trim().toLowerCase();return TEMPLATES.filter(t=>(home.cat==='All'||t.c===home.cat)&&(!home.fest||t.g===home.fest)&&(!q||(t.n+' '+t.c+' '+(t.g||'')+' '+(t.tag||'')).toLowerCase().includes(q)))}
+function tplList(){const q=(home.tq||'').trim().toLowerCase();return (q?tplRank(q):TEMPLATES).filter(t=>(home.cat==='All'||t.c===home.cat)&&(!home.fest||t.g===home.fest)&&true)}
 const HOME_ROWS=[['Festivals','Indian festivals & greetings',t=>/Greeting$/.test(t.n)],['Wedding & Events','Weddings & celebrations'],['Business','Business & marketing'],['Social','Social media'],['YouTube','YouTube & video'],['Slides','Presentations'],['Print','Print & cards'],['Resume & Docs','Resumes & documents'],['Education','Education'],['Food','Food & restaurants'],['Fashion & Jewellery','Fashion & jewellery'],['Real estate','Real estate'],['Fitness','Fitness & wellness']];
 function homeSections(){
   const q=home.q.trim().toLowerCase(),out=[];
   const docs=home.docs;
+  if(home.view==='trash')return trashView();
   if(home.view==='projects'){
     const inF=r=>(r.folder||'')===home.folder,qm=home.mine.toLowerCase();
-    const list=(docs||[]).filter(r=>qm?r.name.toLowerCase().includes(qm):inF(r));
+    const list=sortDocs((docs||[]).filter(r=>(qm?r.name.toLowerCase().includes(qm):(home.filter==='starred'||inF(r)))&&(home.filter!=='starred'||r.starred)));
     const s=el('input',{class:'f',type:'search',placeholder:'Search your designs',value:home.mine,'aria-label':'Search your designs',style:'max-width:360px'});
     s.addEventListener('input',()=>{home.mine=s.value;renderHome();const n=document.querySelector('#home input[aria-label="Search your designs"]');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}});
     const newF=el('button',{class:'more',onclick:()=>askText('New folder','','Create',async n=>{try{await makeFolder(n);await refreshDocs()}catch(e){toast('Could not create that folder')}})},'+ New folder');
     out.push(el('div',{class:'hs'},el('h2',{},home.folder?el('span',{},(()=>{const c=el('button',{class:'crumb',title:'Drop a design here to move it out of the folder',onclick:()=>{home.folder='';renderHome()}},'Projects');dropTarget(c,'');return c})(),' / '+home.folder):'Projects'),el('span',{class:'grow'}),home.folder?el('button',{class:'more',onclick:()=>askText('Rename folder',home.folder,'Rename',n=>renameFolder(home.folder,n).then(x=>{home.folder=x;refreshDocs()}).catch(()=>toast('Could not rename')))},'Rename'):null,home.folder?el('button',{class:'more',onclick:()=>askSure('Delete the folder “'+home.folder+'”? Its designs move back to All designs.','Delete folder',async()=>{try{await removeFolder(home.folder);home.folder='';await refreshDocs();toast('Folder deleted')}catch(e){toast('Could not delete')}})},'Delete folder'):null,newF,el('button',{class:'more',onclick:openLinks},'Share links')),s,el('div',{style:'height:16px'}));
     if(docs===null){out.push(el('p',{class:'note'},'Loading…'));return out}
-    const dirCards=(home.folder||qm)?[]:home.dirs.map(d=>{const n=docs.filter(r=>r.folder===d);const fc=el('div',{class:'hc'},el('button',{class:'tn fold',onclick:()=>{home.folder=d;renderHome()},'aria-label':'Open folder '+d,html:ic('folder',54)}),el('b',{title:d},d),el('small',{},n.length+' design'+(n.length===1?'':'s')));wireFolderCard(fc,d);return fc});
-    out.push(list.length||dirCards.length||!home.folder?el('div',{class:'hg big'},[el('div',{class:'hc'},el('button',{class:'tn new',onclick:()=>openNew(),'aria-label':'Create a design',html:ic('plus',34)}),el('b',{},'Create new')),...dirCards,...list.map(r=>designCard(r,true))]):el('div',{class:'hempty'},'This folder is empty. Drag a design onto the folder, or right-click a design › Move to folder.'));
+    const dirCards=(home.folder||qm||home.filter==='starred')?[]:home.dirs.map(d=>{const n=docs.filter(r=>r.folder===d);const fc=el('div',{class:'hc'},el('button',{class:'tn fold',onclick:()=>{home.folder=d;renderHome()},'aria-label':'Open folder '+d,html:ic('folder',54)}),el('b',{title:d},d),el('small',{},n.length+' design'+(n.length===1?'':'s')));wireFolderCard(fc,d);return fc});
+    out.push(projectsToolbar());if(home.selMode)out.push(selBar(list));
+    out.push(list.length||dirCards.length||!home.folder?el('div',{class:'hg big'+(home.list?' list':'')},[el('div',{class:'hc'},el('button',{class:'tn new',onclick:()=>openNew(),'aria-label':'Create a design',html:ic('plus',34)}),el('b',{},'Create new')),...dirCards,...list.map(r=>designCard(r,true))]):el('div',{class:'hempty'},'This folder is empty. Drag a design onto the folder, or right-click a design › Move to folder.'));
     if(!list.length&&!dirCards.length&&!home.folder)out.push(el('div',{class:'hempty'},qm?'No designs match that search.':'Nothing here yet. Your designs save automatically to Files › Designs.'));
     return out;
   }
@@ -3250,7 +3505,7 @@ function homeSections(){
     return out;
   }
   if(q){
-    const ss=[...SIZES,{n:'Video',w:1920,h:1080},{n:'Presentation',w:1920,h:1080},{n:'Document',w:1240,h:1754}].filter(s=>s.n.toLowerCase().includes(q)),ts=TEMPLATES.filter(t=>(t.n+' '+t.c+' '+(t.g||'')+' '+(t.tag||'')).toLowerCase().includes(q)).slice(0,60),ds=(docs||[]).filter(r=>r.name.toLowerCase().includes(q));
+    const ss=[...SIZES,{n:'Video',w:1920,h:1080},{n:'Presentation',w:1920,h:1080},{n:'Document',w:1240,h:1754}].filter(s=>s.n.toLowerCase().includes(q)),ts=tplRank(q).slice(0,60),ds=(docs||[]).filter(r=>r.name.toLowerCase().includes(q));
     out.push(el('div',{class:'hs'},el('h2',{},`Results for “${home.q.trim()}”`)));
     if(ss.length)out.push(el('div',{class:'hs',style:'margin-top:6px'},el('h2',{style:'font-size:16px'},'Design types')),sizeButtons(ss));
     if(ts.length)out.push(el('div',{class:'hs'},el('h2',{style:'font-size:16px'},'Templates')),el('div',{class:'hg'},ts.map(templateCard)));
@@ -3267,7 +3522,7 @@ function homeSections(){
 function renderHome(){
   const h=homeEl();if(!h)return;h.innerHTML='';
   const nav=el('nav',{class:'hn','aria-label':'Design Studio'},el('div',{class:'hlogo','aria-hidden':'true'},'D'));
-  [['home','Home','home'],['projects','Projects','folder'],['templates','Templates','tpl']].forEach(([k,l,i])=>nav.append(el('button',{class:'hi','aria-current':home.view===k,onclick:()=>{home.view=k;home.q='';renderHome();if(k==='projects')refreshDocs()}},el('span',{class:'ib',html:ic(i,20)}),l)));
+  [['home','Home','home'],['projects','Projects','folder'],['templates','Templates','tpl'],['trash','Trash','trash']].forEach(([k,l,i])=>nav.append(el('button',{class:'hi','aria-current':home.view===k,onclick:()=>{home.view=k;home.q='';if(k==='trash')home.trash=null;renderHome();if(k==='projects')refreshDocs()}},el('span',{class:'ib',html:ic(i,20)}),l)));
   nav.append(el('button',{class:'hi',onclick:()=>{hideHome();openTab('brand')}},el('span',{class:'ib',html:ic('brand',20)}),'Brand'),el('span',{class:'sp'}),
     el('button',{class:'hi',onclick:()=>{hideHome()}},el('span',{class:'ib',html:ic('pen',20)}),'Editor'));
   const hero=el('section',{class:'hero'},el('h1',{},'What will you design today?'));

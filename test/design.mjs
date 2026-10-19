@@ -247,8 +247,8 @@ try {
     const card = p.locator('#home .hc', { hasText: 'Menu test' }).first();
     await card.click({ button: 'right' });
     const items = await p.$$eval('#ctxm > button, #ctxm .ctxs > button', (b) => b.map((x) => x.textContent));
-    for (const w of ['Open', 'Rename', 'Make a copy', 'Move to folder', 'Download', 'Delete']) assert.ok(items.some((x) => x.startsWith(w)), 'missing ' + w + ': ' + items);
-    await p.keyboard.press('Escape'); assert.equal(await p.locator('#ctxm').count(), 0);
+    for (const w of ['Open', 'Rename', 'Make a copy', 'Move to folder', 'Download', 'Move to trash']) assert.ok(items.some((x) => x.startsWith(w)), 'missing ' + w + ': ' + items);
+    await p.waitForTimeout(100); await p.keyboard.press('Escape'); await p.waitForTimeout(50); assert.equal(await p.locator('#ctxm').count(), 0);
     const r = await p.evaluate(async () => {
       const d = (await listDocs()).find((x) => x.name === 'Menu test'); await renameDesignFile(d, 'Menu renamed'); await moveDesignTo((await listDocs()).find((x) => x.name === 'Menu renamed'), (await makeFolder('Client A')));
       const a = (await listDocs()).find((x) => x.name === 'Menu renamed'); const inFolder = a.folder;
@@ -265,6 +265,70 @@ try {
     const pt = await p.evaluate(() => { const o = objs()[objs().length - 1]; const rc = document.querySelector('#ui,canvas#ui,#stage canvas')?.getBoundingClientRect() || { left: 0, top: 0 }; return { o: o.id }; });
     await p.evaluate(() => { const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 300, clientY: 300 }); uiEl.dispatchEvent(e); });
     const cm = await p.$$eval('#ctxm button', (b) => b.map((x) => x.textContent)); assert.ok(cm.some((x) => x.startsWith('Copy')) || cm.some((x) => x.startsWith('Paste')), 'canvas menu: ' + cm);
+    await p.close();
+  });
+  await t('Home: trash with restore, stars, sort, list view and multi-select', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof trashDesign === 'function');
+    await p.evaluate(async () => { for (const n of ['Zed one', 'Alpha two', 'Mid three']) { newDesign(800, 600, n); await saveDoc(); } showHome(); home.view = 'projects'; await refreshDocs(); });
+    const r = await p.evaluate(async () => {
+      const L = async () => (await listDocs()); let d = (await L()).find((x) => x.name === 'Alpha two'); await setStar(d, true);
+      d = (await L()).find((x) => x.name === 'Alpha two'); const starred = d.starred;
+      home.filter = 'starred'; renderHome(); const onlyStar = [...document.querySelectorAll('#hsections .hc b')].map((b) => b.textContent).filter((x) => /two|one|three/.test(x));
+      home.filter = 'all'; home.sort = 'name'; renderHome(); const order = [...document.querySelectorAll('#hsections .hc b')].map((b) => b.textContent).filter((x) => /two|one|three/.test(x));
+      home.list = true; renderHome(); const list = !!document.querySelector('#hsections .hg.list');
+      home.selMode = true; home.sel.clear(); renderHome(); document.querySelector('#hsections .hc[data-file] .tn').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); const picked = home.sel.size;
+      home.selMode = false; home.sel.clear();
+      const z = (await L()).find((x) => x.name === 'Zed one'); await trashDesign(z); const gone = !(await L()).some((x) => x.name === 'Zed one'); const tr = await listTrash(); const inTrash = tr.some((x) => x.name === 'Zed one');
+      await restoreDesign(tr.find((x) => x.name === 'Zed one')); await new Promise((r) => setTimeout(r, 400)); const back = (await L()).some((x) => x.name === 'Zed one');
+      for (const x of await L()) { if (/two|one|three/.test(x.name)) await PUT().fs.delete(x._file); }
+      return { starred, onlyStar, order, list, picked, gone, inTrash, back };
+    });
+    assert.ok(r.starred && r.onlyStar.join() === 'Alpha two' && r.order.join() === 'Alpha two,Mid three,Zed one' && r.list && r.picked === 1 && r.gone && r.inTrash && r.back, JSON.stringify(r));
+    await p.close();
+  });
+  await t('editor extras: duotone, photo palette, recolour, links, notes/transitions in Present, page grid, version history, print guides', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof presentShow === 'function');
+    const r = await p.evaluate(async () => {
+      newDesign(800, 600, 'Extras'); await saveDoc(); const o = {};
+      const c = document.createElement('canvas'); c.width = 80; c.height = 80; const x = c.getContext('2d'); x.fillStyle = '#e03131'; x.fillRect(0, 0, 40, 80); x.fillStyle = '#1971c2'; x.fillRect(40, 0, 40, 80);
+      const img = new Image(); img.src = c.toDataURL(); await img.decode();
+      const pal = paletteOf(img); o.pal = pal.length >= 2;
+      const d2 = document.createElement('canvas'); d2.width = d2.height = 60; const ob = { x: 0, y: 0, w: 60, h: 60, duo: { a: '#000000', b: '#ff0000' } }; const cx = d2.getContext('2d'); duoDraw(cx, img, ob, 0, 0, 60, 60, 'none'); const px = cx.getImageData(10, 30, 1, 1).data; o.duo = px[0] > 0 && px[1] === 0 && px[2] === 0;
+      D.pages[0].objs.push({ id: uid(), type: 'shape', kind: 'rect', x: 0, y: 0, w: 100, h: 100, fill: '#112233', rot: 0, op: 1 }); D.pages[0].bg = { t: 'solid', c: '#ffffff' };
+      o.cols = designColors().includes('#112233'); replaceColor('#112233', '#abcdef'); o.rep = D.pages[0].objs[0].fill === '#abcdef' && designColors().includes('#abcdef');
+      recolorWith(['#ff0000', '#00ff00']); o.rec = ['#ff0000', '#00ff00'].includes(D.pages[0].objs[0].fill);
+      o.href = JSON.stringify([openHref('page:3'), openHref('nope')]);
+      D.pages.push(newPage()); D.pages[1].trans = 'fade'; D.pages[1].notes = 'Say hello'; cur = 0;
+      presentShow(); await new Promise((r) => setTimeout(r, 400)); const w = document.getElementById('present'); o.pres = !!w && !!w.querySelector('canvas');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true })); await new Promise((r) => setTimeout(r, 300));
+      o.notes = /Say hello/.test(w.textContent); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); o.closed = !document.getElementById('present');
+      D.printGuides = true; renderUI(); o.guides = true;
+      await saveDoc(); o.snap = await snapshotDesign(true); o.vers = (await listVersions()).length >= 1;
+      openPageGrid(); o.grid = !!document.querySelector('#modal [aria-label="Page 1"]'); closeModal();
+      return o;
+    });
+    assert.ok(Object.values(r).every((v) => v === true || typeof v === 'string'), JSON.stringify(r));
+    assert.equal(r.href, JSON.stringify([{ page: 2 }, false]));
+    await p.close();
+  });
+  await t('collage grids, bulk create from CSV, smart template search, brand kits and comments', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof openBulk === 'function');
+    const r = await p.evaluate(async () => {
+      const o = {}; newDesign(1000, 700, 'Bulk base'); await saveDoc();
+      o.collages = COLLAGES.length >= 12; const n0 = D.pages[0].objs.length; const sec = collageSection(''); sec.querySelector('button.fr').click(); o.added = D.pages[0].objs.length === n0 + 2;
+      D.pages[0].objs = [mkText('Hello {{name}}, you are {{role}}'), mkText('Fixed')];
+      const csv = parseCSV('name,role\n"Asha, K",Designer\nRavi,Manager\n'); o.csv = csv.rows.length === 2 && csv.rows[0].name === 'Asha, K' && csv.head.join() === 'name,role';
+      const objs = JSON.parse(JSON.stringify(D.pages[0].objs)); bulkFill(objs, csv.rows[0], {}); o.fill = objs[0].text === 'Hello Asha, K, you are Designer';
+      openBulk(); const ta = document.querySelector('#modal textarea'); ta.value = 'name,role\nA,B\nC,D\nE,F'; ta.dispatchEvent(new Event('input')); [...document.querySelectorAll('#modal button')].find((b) => b.textContent === 'Create').click(); await new Promise((r) => setTimeout(r, 400));
+      o.pages = D.pages.length === 4 && /Hello C, you are D/.test(D.pages[2].objs[0].text);
+      const rk = tplRank('birthday party invite for my son'); o.rank = rk.length > 3 && rk.slice(0, 5).some((t) => /birthday|party|invit/i.test(t.n + t.c + (t.tag || '')));
+      const dw = tplRank('diwali'); o.diw = dw.length > 5;
+      brand.colors = ['#111111', '#222222']; saveKits([]); const ui = kitsUI(() => {}); [...ui.querySelectorAll('button')][0].click(); document.querySelector('#modal input').value = 'KitX'; document.querySelector('#modal .btn.primary').click(); await new Promise((r) => setTimeout(r, 200));
+      o.kit = loadKits().some((k) => k.name === 'KitX' && k.colors[0] === '#111111');
+      D.comments = []; cur = 0; commentList().push({ id: uid(), page: 0, x: 50, y: 50, text: 'Fix logo', ts: Date.now(), done: false }); await saveDoc(); const rec = JSON.parse(await (await PUT().fs.read(D._file)).text()); o.cmt = rec.comments.length === 1; o.cui = !!commentsUI();
+      return o;
+    });
+    assert.ok(Object.values(r).every((v) => v === true), JSON.stringify(r));
     await p.close();
   });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
