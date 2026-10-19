@@ -56,12 +56,12 @@ try {
     const w = await ctx.request.get(B + '/_local/bgdata/ort-wasm.wasm'); assert.equal(w.status(), 502); assert.match((await w.json()).error, /Could not download/);
   });
   await t('stock photos: no key gives a clear message; keys stay on the server', async () => {
-    assert.deepEqual(without((await post('/design/stockstatus')).j, 'image'), { pexels: false, unsplash: false, pixabay: false, openverse: true, wikimedia: true });
+    assert.deepEqual(without((await post('/design/stockstatus')).j, 'image'), { pexels: false, unsplash: false, pixabay: false, openverse: true, wikimedia: true, freepik: false });
     const r = await post('/design/stock', { q: 'lake', source: 'pexels' }); assert.equal(r.s, 400); assert.equal(r.j.code, 'no_key');
     const free = (await post('/design/stock', { q: 'lake' })).j; assert.equal(free.source, 'openverse'); assert.equal(free.items.length, 1);
     const put = await ctx.request.put(B + '/api/settings', { data: { stock: { pexels: 'px-key', unsplash: 'un-key', pixabay: 'pb-key' } }, headers: H }); assert.ok(put.ok());
-    const s = await (await ctx.request.get(B + '/api/settings')).json(); assert.deepEqual(s.stock, { pexelsSet: true, unsplashSet: true, pixabaySet: true }); assert.ok(!JSON.stringify(s).includes('px-key'));
-    assert.deepEqual(without((await post('/design/stockstatus')).j, 'image'), { pexels: true, unsplash: true, pixabay: true, openverse: true, wikimedia: true });
+    const s = await (await ctx.request.get(B + '/api/settings')).json(); assert.deepEqual(s.stock, { pexelsSet: true, unsplashSet: true, pixabaySet: true, freepikSet: false }); assert.ok(!JSON.stringify(s).includes('px-key'));
+    assert.deepEqual(without((await post('/design/stockstatus')).j, 'image'), { pexels: true, unsplash: true, pixabay: true, openverse: true, wikimedia: true, freepik: false });
   });
   await t('stock photos: Pexels and Unsplash results are normalised; bad keys and junk are handled', async () => {
     const a = (await post('/design/stock', { q: 'lake', source: 'pexels' })).j; assert.equal(a.source, 'pexels'); assert.equal(a.items.length, 1); assert.equal(a.items[0].by, 'Ana'); assert.match(a.items[0].full, /l\.jpg$/);
@@ -75,7 +75,7 @@ try {
   await t('stock photos: Pixabay, Openverse and Wikimedia Commons results are normalised with credit and license', async () => {
     const a = (await post('/design/stock', { q: 'sea', source: 'pixabay' })).j; assert.equal(a.items[0].by, 'Cy'); assert.match(a.items[0].full, /l\.jpg$/); assert.match(hits.pixabay.at(-1), /key=pb-key.*q=sea/);
     const o = (await post('/design/stock', { q: 'forest', source: 'openverse' })).j; assert.equal(o.items[0].lic, 'CC BY 4.0'); assert.equal(o.items[0].by, 'Di'); assert.match(hits.openverse.at(-1), /q=forest/);
-    const w = (await post('/design/stock', { q: 'mill', source: 'wikimedia' })).j; assert.equal(w.items.length, 1); assert.equal(w.items[0].by, 'Eva & Co'); assert.equal(w.items[0].lic, 'CC BY-SA 4.0'); assert.match(w.items[0].thumb, /\/320px-/); assert.match(w.items[0].full, /\/1280px-/); assert.equal(w.items[0].alt, 'Old mill');
+    const w = (await post('/design/stock', { q: 'mill', source: 'wikimedia' })).j; assert.equal(w.items.length, 1); assert.equal(w.items[0].by, 'Eva & Co'); assert.equal(w.items[0].lic, 'CC BY-SA 4.0'); assert.match(w.items[0].thumb, /\/330px-/); assert.match(w.items[0].full, /\/1280px-/); assert.equal(w.items[0].alt, 'Old mill');
     assert.match(decodeURIComponent(hits.wiki.at(-1)), /gsrsearch=mill filetype:bitmap/);
   });
   await t('stock image proxy only fetches the two photo CDNs over https', async () => {

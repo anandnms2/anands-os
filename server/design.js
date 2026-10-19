@@ -39,10 +39,11 @@ async function ensureBg(name) {
 /* ---------- stock photos: Pexels, Unsplash, Pixabay (free keys) and Openverse, Wikimedia Commons (no key) ---------- */
 const UA = 'AnandsOS-DesignStudio/1.0 (self-hosted; https://github.com/anandnms2/anands-os)';
 const PIXABAY = (process.env.PIXABAY_API_BASE || 'https://pixabay.com/api').replace(/\/+$/, ''), OPENVERSE = (process.env.OPENVERSE_API_BASE || 'https://api.openverse.org/v1').replace(/\/+$/, ''), WIKI = process.env.WIKIMEDIA_API_BASE || 'https://commons.wikimedia.org/w/api.php';
+const hostOk = (h) => HOSTS.has(h) || h === 'freepik.com' || h.endsWith('.freepik.com');
 const HOSTS = new Set(['images.pexels.com', 'images.unsplash.com', 'plus.unsplash.com', 'upload.wikimedia.org', 'api.openverse.org', 'pixabay.com', 'cdn.pixabay.com']);
 const clip = (v, n) => String(v == null ? '' : v).slice(0, n);
 const plain = (h, n) => clip(String(h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim(), n);
-export const stockStatus = () => { const k = effective().stock || {}; return { pexels: !!k.pexels, unsplash: !!k.unsplash, pixabay: !!k.pixabay, openverse: true, wikimedia: true }; };
+export const stockStatus = () => { const k = effective().stock || {}; return { pexels: !!k.pexels, unsplash: !!k.unsplash, pixabay: !!k.pixabay, openverse: true, wikimedia: true, freepik: !!k.freepik }; };
 async function getJson(name, url, headers, fetcher) {
   let r; try { r = await fetcher(url, { headers: { 'user-agent': UA, accept: 'application/json', ...headers }, signal: AbortSignal.timeout(15000) }); } catch { throw httpError(502, 'Could not reach ' + name + '. Check this server can reach the internet.'); }
   if (r.status === 401 || r.status === 403) throw httpError(502, name + ' did not accept that key');
@@ -51,9 +52,9 @@ async function getJson(name, url, headers, fetcher) {
   try { return await r.json(); } catch { throw httpError(502, name + ' sent something unexpected'); }
 }
 const needKey = (n) => httpError(400, 'Add a ' + n + ' key in Settings to search it', 'no_key');
-export async function stockSearch(q, page, source, fetcher = fetch) {
+export async function stockSearch(q, page, source, fetcher = fetch, kind0 = '') {
   const k = effective().stock || {}; q = clip(q, 100).trim(); page = Math.max(1, Math.min(50, parseInt(page, 10) || 1));
-  const want = ['pexels', 'unsplash', 'pixabay', 'openverse', 'wikimedia'].includes(source) ? source : (k.pexels ? 'pexels' : k.unsplash ? 'unsplash' : k.pixabay ? 'pixabay' : 'openverse');
+  const want = ['pexels', 'unsplash', 'pixabay', 'openverse', 'wikimedia', 'freepik'].includes(source) ? source : (k.pexels ? 'pexels' : k.unsplash ? 'unsplash' : k.pixabay ? 'pixabay' : 'openverse');
   const enc = encodeURIComponent;
   if (want === 'pexels') {
     if (!k.pexels) throw needKey('Pexels');
@@ -70,20 +71,27 @@ export async function stockSearch(q, page, source, fetcher = fetch) {
     const j = await getJson('Pixabay', PIXABAY + '/?key=' + enc(k.pixabay) + '&image_type=photo&safesearch=true&per_page=24&page=' + page + (q ? '&q=' + enc(q) : ''), {}, fetcher);
     return { source: want, page, items: (j.hits || []).map((p) => ({ id: 'pb' + p.id, thumb: p.webformatURL, full: p.largeImageURL || p.webformatURL, w: p.imageWidth, h: p.imageHeight, by: clip(p.user, 80), link: clip(p.pageURL, 300), alt: clip(p.tags, 120), lic: 'Pixabay license' })).filter((x) => x.thumb && x.full) };
   }
+  if (want === 'freepik') {
+    if (!k.freepik) throw needKey('Freepik');
+    const kind = ['photo', 'vector', 'psd', 'icon'].includes(kind0) ? kind0 : 'photo';
+    const j = await getJson('Freepik', 'https://api.freepik.com/v1/resources?limit=24&page=' + page + '&order=relevance&filters%5Bcontent_type%5D%5B' + kind + '%5D=1&term=' + enc(q || 'nature'), { 'x-freepik-api-key': k.freepik, 'accept-language': 'en-US' }, fetcher);
+    return { source: want, page, items: (j.data || []).map((p) => { const u = p.image && p.image.source && p.image.source.url; return { id: 'fp' + p.id, thumb: u, full: u, w: parseInt(p.image && p.image.source && String(p.image.source.size || '').split('x')[0], 10) || 0, h: parseInt(p.image && p.image.source && String(p.image.source.size || '').split('x')[1], 10) || 0, by: clip(p.author && p.author.name, 80), link: clip(p.url, 300), alt: clip(p.title, 120), lic: 'Freepik license (credit the author)', lowres: true }; }).filter((x) => x.thumb) };
+  }
   if (want === 'openverse') {
-    const j = await getJson('Openverse', OPENVERSE + '/images/?page_size=24&page=' + page + '&mature=false&license_type=commercial&q=' + enc(q || 'nature'), {}, fetcher);
+    const j = await getJson('Openverse', OPENVERSE + '/images/?page_size=20&page=' + page + '&mature=false&license_type=commercial&q=' + enc(q || 'nature'), {}, fetcher);
     return { source: want, page, items: (j.results || []).map((p) => { const t = p.thumbnail || (p.id ? OPENVERSE + '/images/' + p.id + '/thumb/' : ''); return { id: 'ov' + p.id, thumb: t, full: t, w: p.width, h: p.height, by: clip(p.creator, 80), link: clip(p.foreign_landing_url, 300), alt: clip(p.title, 120), lic: clip(('CC ' + (p.license || '') + ' ' + (p.license_version || '')).trim().toUpperCase(), 40), lowres: true }; }).filter((x) => x.thumb) };
   }
   const j = await getJson('Wikimedia Commons', WIKI + '?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=24&gsroffset=' + (page - 1) * 24 + '&gsrsearch=' + enc((q || 'nature landscape') + ' filetype:bitmap') + '&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1280&iiextmetadatafilter=Artist|LicenseShortName', {}, fetcher);
   const pages = Object.values((j.query && j.query.pages) || {}).sort((a, b) => (a.index || 0) - (b.index || 0));
   return { source: want, page, items: pages.map((p) => { const i = (p.imageinfo || [])[0]; if (!i || !/^image\/(jpeg|png|webp)$/.test(i.mime || '') || !i.thumburl) return null; const m = i.extmetadata || {};
-    return { id: 'wm' + p.pageid, thumb: i.thumburl.replace(/\/\d+px-/, '/320px-'), full: i.thumburl, w: i.width, h: i.height, by: plain(m.Artist && m.Artist.value, 80) || 'Wikimedia contributor', link: clip(i.descriptionurl, 300), alt: clip(String(p.title || '').replace(/^File:/, '').replace(/\.\w+$/, '').replace(/_/g, ' '), 120), lic: plain(m.LicenseShortName && m.LicenseShortName.value, 40) }; }).filter(Boolean) };
+    return { id: 'wm' + p.pageid, thumb: i.thumburl.replace(/\/\d+px-/, '/330px-'), full: i.thumburl, w: i.width, h: i.height, by: plain(m.Artist && m.Artist.value, 80) || 'Wikimedia contributor', link: clip(i.descriptionurl, 300), alt: clip(String(p.title || '').replace(/^File:/, '').replace(/\.\w+$/, '').replace(/_/g, ' '), 120), lic: plain(m.LicenseShortName && m.LicenseShortName.value, 40) }; }).filter(Boolean) };
 }
 async function stockImage(res, u) {
   let t; try { t = new URL(u); } catch { throw httpError(400, 'Bad address'); }
   let r = null;
   for (let hop = 0; hop < 4; hop++) {
-    if (t.protocol !== 'https:' || !HOSTS.has(t.hostname)) throw httpError(400, 'That address is not a stock photo');
+    if (t.protocol !== 'https:' || !hostOk(t.hostname)) throw httpError(400, 'That address is not a stock photo');
+    if (t.hostname === 'upload.wikimedia.org') { const STEPS = [20, 40, 60, 120, 250, 330, 500, 960, 1280, 1920, 3840]; t.pathname = t.pathname.replace(/\/(\d+)px-/, (m, n) => '/' + (STEPS.find((x) => x >= +n) || 3840) + 'px-'); }
     try { r = await fetch(t, { redirect: 'manual', headers: { 'user-agent': UA }, signal: AbortSignal.timeout(20000) }); } catch { throw httpError(502, 'The photo could not be loaded'); }
     if (r.status >= 300 && r.status < 400 && r.headers.get('location')) { try { t = new URL(r.headers.get('location'), t); } catch { throw httpError(502, 'The photo could not be loaded'); } continue; }
     break;
@@ -230,7 +238,7 @@ export async function handleDesign(req, res, url, p, s) {
   if (req.method !== 'POST') throw httpError(405, 'Method not allowed');
   if (p === '/design/stockstatus') return json(res, 200, { ...stockStatus(), image: imageStatus() });
   if (p === '/design/genimage') { const b = await readJson(req, 20 * 1024 * 1024); return json(res, 200, await imageGen(b, who(s))); }
-  if (p === '/design/stock') { const b = await readJson(req, 4096); return json(res, 200, await stockSearch(b.q, b.page, b.source)); }
+  if (p === '/design/stock') { const b = await readJson(req, 4096); return json(res, 200, await stockSearch(b.q, b.page, b.source, fetch, b.kind)); }
   if (p === '/design/stockuse') { const b = await readJson(req, 4096), k = effective().stock || {}; try { const u = new URL(b.dl); if (u.hostname === 'api.unsplash.com' && k.unsplash) await fetch(u, { headers: { authorization: 'Client-ID ' + k.unsplash }, signal: AbortSignal.timeout(8000) }); } catch {} return json(res, 200, { ok: true }); }
   if (p === '/design/share') {
     const q = url.searchParams, ext = String(q.get('ext') || '').toLowerCase(); if (!EXT[ext]) throw httpError(400, 'That file type cannot be shared');

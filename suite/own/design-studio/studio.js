@@ -3300,19 +3300,36 @@ function pageDurSec(){
 }
 
 /* ---------- free photos: Pexels, Unsplash, Pixabay, Openverse, Wikimedia Commons ---------- */
-const STOCK_SRC=[['pexels','Pexels',1],['unsplash','Unsplash',1],['pixabay','Pixabay',1],['openverse','Openverse',0],['wikimedia','Wikimedia',0]];
-const stock={q:'',page:1,items:[],src:'',status:null,busy:false,err:'',more:true,srcUsed:''};
+const STOCK_SRC=[['pexels','Pexels',1],['unsplash','Unsplash',1],['pixabay','Pixabay',1],['openverse','Openverse',0],['wikimedia','Wikimedia',0],['freepik','Freepik',1],['burst','Burst',0],['stockvault','StockVault',0]];
+const stock={kind:'photo',q:'',page:1,items:[],src:'',status:null,busy:false,err:'',more:true,srcUsed:''};
 const stockImg=u=>'/_local/design/stockimg?u='+enc(u);
 const stockName=k=>(STOCK_SRC.find(x=>x[0]===k)||[0,k])[1];
+const DIRECT_HOSTS=/^https:\/\/(upload\.wikimedia\.org|api\.openverse\.org)\//;
+const stockSrcUrl=u=>DIRECT_HOSTS.test(u)?u:stockImg(u);
+const sPlain=(h,n)=>String(h||'').replace(/<[^>]*>/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/\s+/g,' ').trim().slice(0,n);
+async function directStock(src,q,page){ // the browser asks Openverse / Wikimedia itself, so a blocked server address cannot break search
+  const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),9000);
+  try{
+    if(src==='openverse'){const r=await fetch('https://api.openverse.org/v1/images/?page_size=20&page='+page+'&mature=false&license_type=commercial&q='+enc(q||'nature'),{credentials:'omit',signal:ctl.signal});if(!r.ok)throw new Error('openverse '+r.status);const j=await r.json();
+      return {source:src,page,items:(j.results||[]).map(p=>{const t=p.thumbnail||(p.id?'https://api.openverse.org/v1/images/'+p.id+'/thumb/':'');return {id:'ov'+p.id,thumb:t,full:t,w:p.width,h:p.height,by:String(p.creator||'').slice(0,80),link:String(p.foreign_landing_url||'').slice(0,300),alt:String(p.title||'').slice(0,120),lic:('CC '+(p.license||'')+' '+(p.license_version||'')).trim().toUpperCase(),lowres:true}}).filter(x=>x.thumb)}}
+    const r=await fetch('https://commons.wikimedia.org/w/api.php?origin=*&action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=24&gsroffset='+(page-1)*24+'&gsrsearch='+enc((q||'nature landscape')+' filetype:bitmap')+'&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1280&iiextmetadatafilter=Artist|LicenseShortName',{credentials:'omit',signal:ctl.signal});if(!r.ok)throw new Error('wikimedia '+r.status);const j=await r.json();
+    const pages=Object.values((j.query&&j.query.pages)||{}).sort((a,b)=>(a.index||0)-(b.index||0));
+    return {source:src,page,items:pages.map(p=>{const i=(p.imageinfo||[])[0];if(!i||!/^image\/(jpeg|png|webp)$/.test(i.mime||'')||!i.thumburl)return null;const m=i.extmetadata||{};return {id:'wm'+p.pageid,thumb:i.thumburl.replace(/\/\d+px-/,'/330px-'),full:i.thumburl,w:i.width,h:i.height,by:sPlain(m.Artist&&m.Artist.value,80)||'Wikimedia contributor',link:String(i.descriptionurl||'').slice(0,300),alt:String(p.title||'').replace(/^File:/,'').replace(/\.\w+$/,'').replace(/_/g,' ').slice(0,120),lic:sPlain(m.LicenseShortName&&m.LicenseShortName.value,40)}}).filter(Boolean)}
+  }finally{clearTimeout(to)}
+}
 async function stockLoad(reset){
   if(stock.busy)return;stock.busy=true;stock.err='';if(reset){stock.page=1;stock.items=[];stock.more=true}
   const mine=stock.src;
-  try{const r=await api('/design/stock',{q:stock.q,page:stock.page,source:stock.src});if(mine===stock.src){stock.items=stock.items.concat(r.items);stock.more=r.items.length>=10;stock.page++;stock.srcUsed=r.source}}
+  if(mine==='burst'||mine==='stockvault'){stock.busy=false;return}
+  try{let r=null;
+    if(mine==='openverse'||mine==='wikimedia'){try{r=await directStock(mine,stock.q,stock.page);if(!r.items.length)r=null}catch(e){r=null}}
+    if(!r)r=await api('/design/stock',{q:stock.q,page:stock.page,source:mine,kind:stock.kind});
+    if(mine===stock.src){stock.items=stock.items.concat(r.items);stock.more=r.items.length>=10;stock.page++;stock.srcUsed=r.source}}
   catch(e){stock.err=e.message||'Search failed'}
   stock.busy=false;if(tab==='stock')renderPanel();
 }
 async function addStock(it){
-  try{toast('Adding photo…',8000);const r=await fetch(stockImg(it.full),{credentials:'same-origin'});if(!r.ok)throw new Error('The photo could not be loaded');const b=await r.blob();
+  try{toast('Adding photo…',8000);let b=null;if(DIRECT_HOSTS.test(it.full)){try{const r0=await fetch(it.full,{credentials:'omit'});if(r0.ok)b=await r0.blob()}catch(e){}}if(!b){const r=await fetch(stockImg(it.full),{credentials:'same-origin'});if(!r.ok)throw new Error('The photo could not be loaded');b=await r.blob()}
     const f=new File([b],'photo.jpg',{type:b.type||'image/jpeg'});const a=await ingestImage(f);if(a){addImageAsset(a);const o=selObjs()[0];if(o)o.credit=`${it.by||'Unknown'} · ${stockName(stock.srcUsed)}${it.lic?' · '+it.lic:''}`;toast(`Photo by ${it.by||'the photographer'} · ${stockName(stock.srcUsed)}${it.lic?' · '+it.lic:''}`,4000);if(it.dl)api('/design/stockuse',{dl:it.dl}).catch(()=>{})}}
   catch(e){toast(e.message||'Could not add that photo')}
 }
@@ -3327,15 +3344,19 @@ function pStock(b){
   if(!stock.status){api('/design/stockstatus').then(s=>{stock.status=s;if(!stock.src)stock.src=['pexels','unsplash','pixabay'].find(k=>s[k])||'openverse';if(tab==='stock'){renderPanel()}}).catch(()=>{stock.status={openverse:true,wikimedia:true};if(!stock.src)stock.src='openverse';if(tab==='stock')renderPanel()});b.append(el('p',{class:'note'},'Loading…'));return}
   b.append(el('div',{class:'chips'},STOCK_SRC.map(([k,l,keyed])=>{const off=keyed&&!stock.status[k];return el('button',{class:'chip','aria-pressed':stock.src===k,title:off?'Add a free '+l+' key in Settings to use it':l,style:off?'opacity:.55':'',onclick:()=>{if(stock.src===k)return;stock.src=k;stock.items=[];stock.err='';stock.page=1;stock.more=true;renderPanel()}},l+(off?' 🔑':''))})));
   const off=(STOCK_SRC.find(x=>x[0]===stock.src)||[])[2]&&!stock.status[stock.src];
+  if(stock.src==='burst'||stock.src==='stockvault'){}
+  if(stock.src==='burst'||stock.src==='stockvault'){const nm=stockName(stock.src),q=encodeURIComponent(stock.q||'');const url=stock.src==='burst'?'https://burst.shopify.com/photos/search?q='+q:'https://www.stockvault.net/search/?q='+q;
+    b.append(el('p',{class:'note'},nm+' has no public search service that this studio can call, so it opens in a new tab. Download a picture there, then use “Add from Files” above to bring it in. '+(stock.src==='burst'?'Burst pictures are free to use (CC0).':'Check each StockVault picture’s license before you use it.')),el('a',{class:'btn wide pri',id:'stockOpen',href:url,target:'_blank',rel:'noopener noreferrer'},'Search '+nm+' for “'+(stock.q||'…')+'”'));return}
+  if(stock.src==='freepik'&&stock.status.freepik)b.append(el('div',{class:'chips'},[['photo','Photos'],['vector','Vectors'],['psd','PSD'],['icon','Icons']].map(([k,l])=>el('button',{class:'chip','aria-pressed':stock.kind===k,onclick:()=>{stock.kind=k;stock.items=[];stock.err='';stock.page=1;stock.more=true;renderPanel()}},l))));
   if(off){b.append(el('p',{class:'note'},`${stockName(stock.src)} needs a free key. Add it under Settings › Stock photos in Anands OS, or use Openverse or Wikimedia right now with no key.`));return}
   if(stock.err)b.append(el('p',{class:'note',style:'color:var(--danger)'},stock.err));
   const g=el('div',{class:'grid2'});
-  stock.items.forEach(it=>g.append(el('button',{class:'cell',style:'aspect-ratio:4/3;padding:0;overflow:hidden',title:(it.alt||'Photo')+' — '+(it.by||''),'aria-label':'Add photo: '+(it.alt||it.by||'stock photo'),onclick:()=>addStock(it)},el('img',{src:stockImg(it.thumb),alt:it.alt||'',loading:'lazy',style:'width:100%;height:100%;object-fit:cover'}))));
+  stock.items.forEach(it=>g.append(el('button',{class:'cell',style:'aspect-ratio:4/3;padding:0;overflow:hidden',title:(it.alt||'Photo')+' — '+(it.by||''),'aria-label':'Add photo: '+(it.alt||it.by||'stock photo'),onclick:()=>addStock(it)},el('img',{src:stockSrcUrl(it.thumb),alt:it.alt||'',loading:'lazy',style:'width:100%;height:100%;object-fit:cover',onerror:e=>{const i=e.target;if(!i.dataset.retry){i.dataset.retry=1;setTimeout(()=>{i.src=stockImg(it.thumb)+'&r=1'},400)}else{i.replaceWith(el('span',{class:'note',style:'padding:6px;font-size:11px'},'Preview unavailable'))}}}))));
   b.append(g);
   if(stock.busy)b.append(el('p',{class:'note'},'Loading…'));
   else if(stock.items.length&&stock.more)b.append(el('button',{class:'btn wide',onclick:()=>stockLoad(false)},'Load more'));
   else if(!stock.items.length&&!stock.err)stockLoad(true);
-  const lic={pexels:'Pexels license: free to use.',unsplash:'Unsplash license: free to use.',pixabay:'Pixabay license: free to use.',openverse:'Openverse: Creative Commons images that allow commercial use. Credit the creator where the license asks. Medium resolution.',wikimedia:'Wikimedia Commons: free-licensed images. Many need credit (CC BY, CC BY-SA); the license is shown when you add one.'}[stock.src];
+  const lic={pexels:'Pexels license: free to use.',unsplash:'Unsplash license: free to use.',pixabay:'Pixabay license: free to use.',freepik:'Freepik license: free to use with credit to the author (shown when you add one). Previews are medium resolution.',openverse:'Openverse: Creative Commons images that allow commercial use. Credit the creator where the license asks. Medium resolution.',wikimedia:'Wikimedia Commons: free-licensed images. Many need credit (CC BY, CC BY-SA); the license is shown when you add one.'}[stock.src];
   b.append(el('p',{class:'note'},lic));
 }
 
