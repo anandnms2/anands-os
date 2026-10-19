@@ -331,6 +331,39 @@ try {
     assert.ok(Object.values(r).every((v) => v === true), JSON.stringify(r));
     await p.close();
   });
+  await t('real clicks: Present extras, page grid, comments panel; review link with a public page reviewers can comment on; print-ready PDF with bleed, crop marks and link areas', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof createReview === 'function');
+    await p.evaluate(async () => { newDesign(1200, 800, 'Click test'); D.pages[0].objs = [mkText('Visit us', { x: 100, y: 100 })]; D.pages[0].objs[0].href = 'https://example.com'; D.pages[0].notes = 'Welcome everyone'; D.pages.push(newPage()); D.pages[1].trans = 'slide'; cur = 0; sel = []; renderAll(); await saveDoc(); hideHome(); });
+    await p.waitForTimeout(400);
+    // Present with real keys
+    await p.click('#btnPresent'); await p.waitForSelector('#present canvas'); await p.keyboard.press('n'); await p.waitForTimeout(250);
+    assert.ok(/Welcome everyone/.test(await p.locator('#present').innerText()), 'notes not shown');
+    await p.keyboard.press('ArrowRight'); await p.waitForTimeout(700); assert.ok(/2 \/ 2/.test(await p.locator('#present .pc').innerText()), 'did not advance');
+    await p.keyboard.press('Escape'); await p.waitForSelector('#present', { state: 'detached' });
+    // page grid through the inspector button
+    await p.evaluate(() => { sel = []; selChanged(); renderInsp(); }); await p.getByRole('button', { name: 'Page grid' }).click(); await p.waitForSelector('#modal [aria-label="Page 2"]');
+    await p.locator('#modal [aria-label="Page 2"]').getByRole('button', { name: 'Open' }).click(); assert.equal(await p.evaluate(() => cur), 1);
+    // comments panel: add a comment with real clicks
+    await p.evaluate(() => { switchPage(0); sel = []; selChanged(); renderInsp(); });
+    await p.getByRole('button', { name: '＋ Add comment' }).click(); const box = await p.locator('#ui').boundingBox(); await p.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await p.waitForSelector('#modal input'); await p.fill('#modal input', 'Make the logo bigger'); await p.keyboard.press('Enter');
+    await p.waitForFunction(() => D.comments && D.comments.length === 1);
+    // review link + public reviewer
+    await p.getByRole('button', { name: /Share for review/ }).click(); await p.waitForFunction(() => D.review && D.review.url, null, { timeout: 20000 });
+    const url = await p.evaluate(() => D.review.url);
+    const anon = await browser.newContext(); const rp = await anon.newPage(); await rp.goto(url); await rp.waitForSelector('.pg img');
+    const img = await rp.locator('.pg img').first().boundingBox(); await rp.mouse.click(img.x + img.width * .3, img.y + img.height * .4);
+    await rp.fill('#nm', 'Priya'); await rp.fill('#tx', 'Love it, fix the date'); await rp.click('#ok'); await rp.waitForFunction(() => /Love it/.test(document.querySelector('#list').textContent));
+    const bad = await anon.request.post(url + '/comment', { data: { text: '' } }); assert.equal(bad.status(), 400);
+    await anon.close();
+    await p.getByRole('button', { name: 'Get new comments' }).click(); await p.waitForFunction(() => D.comments.length === 2 && D.comments[1].by === 'Priya');
+    // PDF: bleed + crop marks + links
+    const info = await p.evaluate(async () => { expo.fmt = 'pdf'; expo.pages = 'all'; expo.scale = 1; expo.bleed = true; const b = makePdf(D.pages); const t = await b.text(); const b2 = (expo.bleed = false, makePdf(D.pages)); const t2 = await b2.text(); return { mb: (t.match(/\/MediaBox\s*\[([^\]]+)\]/) || [])[1], link: /\/Subtype\s*\/Link/.test(t) && /example\.com/.test(t), link2: /\/Subtype\s*\/Link/.test(t2), n: (t.match(/\/Type\s*\/Page\b/g) || []).length }; });
+    const dims = info.mb.trim().split(/\s+/).map(Number); assert.ok(info.link && info.link2 && info.n === 2, JSON.stringify(info));
+    assert.ok(Math.abs(dims[2] / 72 * 25.4 - (1200 / 3.78 + 16)) < 1.5 || Math.abs(dims[2] / 72 * 25.4 - (1200 / 11.81 + 16)) < 1.5, 'size ' + info.mb);
+    await p.evaluate(() => { D.review && fetch('/_local/design/reviewend', { method: 'POST', credentials: 'same-origin', headers: { 'x-aos': '1', 'content-type': 'application/json' }, body: JSON.stringify({ token: D.review.token }) }); });
+    await p.close();
+  });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
 } finally { await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }
 console.log(`${pass} passed${failed ? ', ' + failed + ' failed' : ''}`); process.exit(failed ? 1 : 0);

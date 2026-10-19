@@ -110,6 +110,54 @@ export async function publicShare(req, res, p) {
   if (req.method === 'HEAD') return res.end(); fs.createReadStream(path.join(SF, t)).on('error', () => res.destroy()).pipe(res);
 }
 
+
+/* ---------- review links: a public page where reviewers pin comments on a design ---------- */
+const RF = path.join(DATA, 'design-reviews');
+const RT = (t) => String(t || '').replace(/[^A-Za-z0-9_-]/g, '');
+const rFile = (t) => path.join(RF, RT(t) + '.json');
+const readRev = (t) => { try { const j = JSON.parse(fs.readFileSync(rFile(t), 'utf8')); return j && (!j.exp || j.exp > Date.now()) ? j : null; } catch { return null; } };
+const writeRev = (t, j) => { fs.mkdirSync(RF, { recursive: true, mode: 0o700 }); const f = rFile(t); fs.writeFileSync(f + '.tmp', JSON.stringify(j), { mode: 0o600 }); fs.renameSync(f + '.tmp', f); };
+const revHits = new Map();
+const REVIEW_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Design review</title><style>
+:root{color-scheme:light dark;--bg:#f6f3ee;--fg:#1f1c19;--card:#fff;--line:#ddd6cc;--acc:#e8590c}@media(prefers-color-scheme:dark){:root{--bg:#1a1816;--fg:#f3efe8;--card:#26231f;--line:#3a3631}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}h1{font-size:17px;margin:0;flex:1}
+main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;padding:16px;max-width:1200px;margin:0 auto}@media(max-width:820px){main{grid-template-columns:1fr}}
+.pg{position:relative;margin:0 0 18px;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}.pg img{display:block;width:100%;height:auto;cursor:crosshair}
+.pin{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#f59f00;color:#fff;font-weight:700;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 6px #0004;font-size:12px}.pin.done{background:#868e96}
+aside{position:sticky;top:12px;align-self:start;display:grid;gap:10px}.c{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px}.c small{opacity:.65;display:block}
+input,textarea,button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}button{background:var(--acc);color:#fff;border:0;cursor:pointer;font-weight:600}
+.note{opacity:.7;font-size:13px}#form{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);width:min(420px,92vw);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px;box-shadow:0 8px 30px #0005}[hidden]{display:none!important}
+</style></head><body><header><h1 id="t">Design review</h1><span class="note">Click on the design to leave a comment.</span></header><main><div id="pages"></div><aside><div id="list"></div></aside></main>
+<div id="form" hidden role="dialog" aria-label="Add a comment"><input id="nm" placeholder="Your name" maxlength="40" aria-label="Your name"><textarea id="tx" rows="3" maxlength="600" placeholder="Your comment" aria-label="Comment"></textarea><div style="display:flex;gap:8px"><button id="ok">Add comment</button><button id="no" style="background:#868e96">Cancel</button></div></div>
+<script>
+(()=>{const T=location.pathname.split('/')[2];let data=null,at=null;const $=s=>document.querySelector(s);
+const load=async()=>{const r=await fetch('/r/'+T+'/data');if(!r.ok){document.body.textContent='This review link has expired or was removed.';return}data=await r.json();draw()};
+const draw=()=>{$('#t').textContent=data.name;const P=$('#pages');P.innerHTML='';data.pages.forEach((src,i)=>{const d=document.createElement('div');d.className='pg';const im=new Image();im.src=src;im.alt='Page '+(i+1);im.onclick=e=>{const r=im.getBoundingClientRect();at={page:i,x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};$('#form').hidden=false;try{$('#nm').value=localStorage.getItem('rv.name')||''}catch(x){}($('#nm').value?$('#tx'):$('#nm')).focus()};d.append(im);
+ data.comments.filter(c=>c.page===i).forEach(c=>{const n=data.comments.indexOf(c)+1;const p=document.createElement('div');p.className='pin'+(c.done?' done':'');p.style.left=c.x*100+'%';p.style.top=c.y*100+'%';p.textContent=n;p.title=c.text;d.append(p)});P.append(d)});
+ const L=$('#list');L.innerHTML='';if(!data.comments.length){const n=document.createElement('p');n.className='note';n.textContent='No comments yet.';L.append(n)}data.comments.forEach((c,i)=>{const d=document.createElement('div');d.className='c';const b=document.createElement('b');b.textContent=(i+1)+'. '+(c.by||'Reviewer');const t=document.createElement('div');t.textContent=c.text;const s=document.createElement('small');s.textContent='Page '+(c.page+1)+' · '+new Date(c.ts).toLocaleString()+(c.done?' · resolved':'');d.append(b,t,s);L.append(d)})};
+$('#no').onclick=()=>{$('#form').hidden=true};
+$('#ok').onclick=async()=>{const text=$('#tx').value.trim(),by=$('#nm').value.trim()||'Reviewer';if(!text||!at)return;try{localStorage.setItem('rv.name',by)}catch(x){}const r=await fetch('/r/'+T+'/comment',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...at,text,by})});if(r.ok){$('#tx').value='';$('#form').hidden=true;load()}else alert((await r.json().catch(()=>({}))).error||'Could not add the comment')};
+load();setInterval(load,30000)})();
+</script></body></html>`;
+export async function publicReview(req, res, p) {
+  const parts = p.split('/'), t = RT(parts[2]), sub = parts[3] || '';
+  const gone = () => { res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }); return res.end('This review link has expired or was removed.'); };
+  if (!t || t.length < 20) return gone();
+  const j = readRev(t); if (!j) return gone();
+  const sec = { 'x-content-type-options': 'nosniff', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' };
+  if (!sub && (req.method === 'GET' || req.method === 'HEAD')) { res.writeHead(200, { ...sec, 'content-type': 'text/html; charset=utf-8', 'content-security-policy': "default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" }); return res.end(req.method === 'HEAD' ? undefined : REVIEW_PAGE); }
+  if (sub === 'data' && req.method === 'GET') return json(res, 200, { name: j.name, pages: j.pages, comments: j.comments });
+  if (sub === 'comment' && req.method === 'POST') {
+    const now = Date.now(), a = (revHits.get(t) || []).filter((x) => now - x < 600000); if (a.length >= 30) throw httpError(429, 'Too many comments. Try again in a few minutes.'); a.push(now); revHits.set(t, a);
+    const b = await readJson(req, 8192); const text = String(b.text || '').trim().slice(0, 600); if (!text) throw httpError(400, 'Write a comment first');
+    if (j.comments.length >= 200) throw httpError(400, 'This review has reached its comment limit');
+    const num = (v) => Math.max(0, Math.min(1, Number(v) || 0));
+    j.comments.push({ id: crypto.randomBytes(6).toString('hex'), page: Math.max(0, Math.min(j.pages.length - 1, parseInt(b.page, 10) || 0)), x: num(b.x), y: num(b.y), text, by: String(b.by || 'Reviewer').trim().slice(0, 40) || 'Reviewer', ts: now, done: false }); writeRev(t, j);
+    return json(res, 200, { ok: true });
+  }
+  throw httpError(404, 'Not found');
+}
+
 /* ---------- routes under /_local ---------- */
 /* ---------- AI images (Magic Edit, BG Generator): Pollinations (no key), any OpenAI-compatible endpoint, or Hugging Face ---------- */
 const POLL = (process.env.POLLINATIONS_BASE || 'https://image.pollinations.ai').replace(/\/+$/, ''), HF = (process.env.HF_API_BASE || 'https://api-inference.huggingface.co').replace(/\/+$/, '');
@@ -176,6 +224,21 @@ export async function handleDesign(req, res, url, p, s) {
     const t = crypto.randomBytes(24).toString('base64url'); await fsp.mkdir(SF, { recursive: true, mode: 0o700 }); await fsp.writeFile(path.join(SF, t), body, { mode: 0o600 });
     idx[t] = { name: clip(q.get('name') || 'design', 60).replace(/[^\w\- ]/g, '').trim() || 'design', ext, by: who(s), at: Date.now(), exp: Date.now() + days * 864e5, size: body.length }; writeIdx(idx);
     return json(res, 200, { token: t, path: '/d/' + t, exp: idx[t].exp });
+  }
+  if (p === '/design/review') {
+    const q = url.searchParams, days = Math.max(1, Math.min(60, parseInt(q.get('days'), 10) || 14)), b = await readJson(req, 40 * 1024 * 1024);
+    const pages = (Array.isArray(b.pages) ? b.pages : []).slice(0, 40).map((d) => { const m = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.exec(String(d || '')); if (!m) throw httpError(400, 'A page image could not be read'); return m[0]; });
+    if (!pages.length) throw httpError(400, 'Nothing to review');
+    fs.mkdirSync(RF, { recursive: true, mode: 0o700 }); const mine = fs.readdirSync(RF).map((f) => { try { return JSON.parse(fs.readFileSync(path.join(RF, f), 'utf8')); } catch { return null; } }).filter((x) => x && x.by === who(s) && (!x.exp || x.exp > Date.now())).length; if (mine >= 30) throw httpError(400, 'Too many active review links. Remove some first.');
+    const t = crypto.randomBytes(24).toString('base64url'); writeRev(t, { name: clip(b.name || 'Design', 60).replace(/[^\w\- ]/g, '').trim() || 'Design', by: who(s), at: Date.now(), exp: Date.now() + days * 864e5, pages, comments: (Array.isArray(b.comments) ? b.comments : []).slice(0, 100).map((c) => ({ id: String(c.id || crypto.randomBytes(6).toString('hex')).slice(0, 24), page: Math.max(0, Math.min(pages.length - 1, parseInt(c.page, 10) || 0)), x: Math.max(0, Math.min(1, Number(c.x) || 0)), y: Math.max(0, Math.min(1, Number(c.y) || 0)), text: String(c.text || '').slice(0, 600), by: String(c.by || 'You').slice(0, 40), ts: Number(c.ts) || Date.now(), done: !!c.done })) });
+    return json(res, 200, { token: t, path: '/r/' + t, exp: Date.now() + days * 864e5 });
+  }
+  if (p === '/design/reviewpull') {
+    const b = await readJson(req, 1024), j = readRev(RT(b.token)); if (!j || (j.by !== who(s) && !isOwner(s))) throw httpError(404, 'That review link is gone');
+    return json(res, 200, { comments: j.comments });
+  }
+  if (p === '/design/reviewend') {
+    const b = await readJson(req, 1024), t = RT(b.token), j = readRev(t); if (j && (j.by === who(s) || isOwner(s))) { try { await fsp.rm(rFile(t)); } catch {} } return json(res, 200, { ok: true });
   }
   if (p === '/design/shares') { const idx = await sweep(readIdx()); return json(res, 200, { items: Object.entries(idx).filter(([, v]) => v.by === who(s) || isOwner(s)).map(([t, v]) => ({ token: t, path: '/d/' + t, name: v.name, ext: v.ext, at: v.at, exp: v.exp, size: v.size })).sort((a, b) => b.at - a.at) }); }
   if (p === '/design/unshare') { const b = await readJson(req, 1024), idx = readIdx(), t = String(b.token || ''); const e = idx[t]; if (e && (e.by === who(s) || isOwner(s))) { delete idx[t]; writeIdx(idx); try { await fsp.rm(path.join(SF, t.replace(/[^A-Za-z0-9_-]/g, ''))); } catch {} } return json(res, 200, { ok: true }); }
