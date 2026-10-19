@@ -188,7 +188,7 @@ server.on('upgrade', (req, socket, head) => {
   } catch { socket.destroy(); }
 });
 server.requestTimeout = 0; server.headersTimeout = 30000;
-server.listen(PORT, () => {
+server.listen(PORT, process.env.HOST || undefined, () => {
   console.log(`Anands OS listening on :${PORT}  data=${DATA}  suite=${fs.existsSync(SUITE) ? 'ok' : 'MISSING ' + SUITE}`);
   setTimeout(() => syncAll().catch(() => {}), 5000);
   setTimeout(() => sjCheck().catch(() => {}), 3000);

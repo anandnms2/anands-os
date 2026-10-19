@@ -1,0 +1,79 @@
+{
+  "name": "anands-os-desktop",
+  "productName": "Anands OS",
+  "version": "1.0.0",
+  "description": "Anands OS as a desktop app: the whole OS runs on your computer and works offline.",
+  "main": "main.js",
+  "author": "Anand",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "stage": "node stage.mjs",
+    "start": "electron .",
+    "dist": "node stage.mjs && electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^38.2.2",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "xyz.anands.os",
+    "productName": "Anands OS",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "icon.png"
+    ],
+    "extraResources": [
+      {
+        "from": "stage",
+        "to": "app"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility",
+      "icon": "icon.png"
+    }
+  }
+}

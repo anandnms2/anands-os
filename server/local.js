@@ -17,6 +17,8 @@ import { json, readJson, httpError } from './util.js';
 import { llmChat } from './chat.js';
 import * as dav from './webdav.js';
 import * as gfs from './gfs.js';
+import * as pcfs from './pcfs.js';
+import * as webfs from './webfs.js';
 import { Readable } from 'node:stream';
 import { readBody } from './util.js';
 
@@ -80,7 +82,7 @@ async function ensureMailDirs({ abs, rel }) {
 const notFound = () => httpError(404, 'Not found', 'subject_does_not_exist');
 
 /* ---------- cloud mounts: /Drive (Cloudreve over WebDAV) and /Google Drive ---------- */
-const MOUNTS = [{ dir: 'Drive', be: dav }, { dir: 'Google Drive', be: gfs }];
+const MOUNTS = [{ dir: 'This PC', be: pcfs }, { dir: 'Anands Web', be: webfs }, { dir: 'Drive', be: dav }, { dir: 'Google Drive', be: gfs }];
 function driveRel(p, user) {
   const parts = String(p ?? '/').replace(/\\/g, '/').replace(/^~/, '').split('/').filter((x) => x && x !== '.');
   if (parts[0] && user && parts[0].toLowerCase() === String(user.username).toLowerCase()) parts.shift();
