@@ -2610,7 +2610,7 @@ function folderMenuItems(d){return [{label:'Open',go:()=>{home.folder=d;renderHo
 function wireDesignCard(card,r){
   const tn=card.querySelector('.tn');card.dataset.file=r._file;const st=el('button',{class:'star'+(r.starred?' on':''),'aria-label':(r.starred?'Remove star from ':'Star ')+r.name,'aria-pressed':!!r.starred,onclick:e=>{e.stopPropagation();setStar(r,!r.starred)}},r.starred?'★':'☆');card.append(st);if(home.selMode){card.classList.add('selmode');if(home.sel.has(r._file))card.classList.add('sel')}
   card.addEventListener('click',e=>{if(!home.selMode||e.target.closest('.dots,.star'))return;e.preventDefault();e.stopPropagation();home.sel.has(r._file)?home.sel.delete(r._file):home.sel.add(r._file);renderHome()},true);
-const more=el('button',{class:'dots','aria-label':'More actions for '+r.name,title:'More',onclick:e=>{e.stopPropagation();menuAt(more,designMenuItems(r))}},'⋯');card.append(more);
+const more=el('button',{class:'dots','aria-label':'More actions for '+r.name,title:'More',onclick:e=>{e.stopPropagation();menuAt(more,designMenuItems(r))}},'⋯');const del=el('button',{class:'delb','aria-label':'Move '+r.name+' to trash',title:'Move to trash',onclick:async e=>{e.stopPropagation();if(await trashDesign(r)){refreshDocs();toast('Moved to trash. Restore it from Trash.')}}},'🗑');card.append(del,more);
   card.addEventListener('contextmenu',e=>{e.preventDefault();ctxMenu(e.clientX,e.clientY,designMenuItems(r))});
   card.draggable=true;card.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/x-design',r._file);e.dataTransfer.effectAllowed='move';card.classList.add('drag')});card.addEventListener('dragend',()=>card.classList.remove('drag'));
 }
@@ -2947,6 +2947,46 @@ function reviewUI(){
     el('div',{class:'row'},el('button',{class:'btn sm grow',onclick:async()=>{try{await navigator.clipboard.writeText(D.review.url);toast('Link copied')}catch(e){toast(D.review.url,6000)}}},'Copy link'),el('button',{class:'btn sm grow',onclick:pullReview},'Get new comments'),el('button',{class:'btn sm danger',onclick:endReview},'Stop')),
     el('small',{class:'note'},'Expires '+new Date(D.review.exp).toLocaleDateString()+'. Reviewers see a snapshot taken now; share again after big changes.'))}
 
+/* ---------- editor File menu, Resize dialog, delete from the editor ---------- */
+async function trashCurrentDesign(){
+  commit();try{await saveDoc()}catch(e){}
+  const file=D._file;
+  if(file){try{await moveDesign(file,TRASHDIR);fileCache.delete(file)}catch(e){toast('Could not move it to the trash');return false}}
+  D=newDoc(1080,1080,'Untitled design');D._discard=true;cur=0;sel=[];$('#title').value='';resetHistory();dirty=false;renderAll();return true}
+function deleteCurrentDesign(){
+  askSure('Move “'+D.name+'” to the trash? You can restore it from Trash on the home screen.','Move to trash',async()=>{
+    if(await trashCurrentDesign()){showHome();toast('Moved to trash. Restore it from Trash.')}})}
+function makeCopyOfCurrent(){
+  commit();saveDoc().then(()=>{const x=JSON.parse(JSON.stringify({id:uid(),name:D.name+' copy',w:D.w,h:D.h,pages:D.pages,assets:D.assets||{},comments:[]},(k,v)=>k[0]==='_'?undefined:v));x._file=null;loadRec(x);return saveDoc()}).then(()=>toast('Made a copy. You are now editing the copy.')).catch(()=>toast('Could not make a copy'))}
+async function moveCurrentTo(folder){
+  commit();await saveDoc();if(!D._file){toast('Saving first, try again in a moment');return}
+  try{await moveDesign(D._file,folder);toast(folder?'Moved to '+folder:'Moved to Projects');await refreshDocs()}catch(e){toast('Could not move')}}
+async function fileMenu(btn){
+  const r=btn.getBoundingClientRect();let dirs=[];try{dirs=await listFolders()}catch(e){}
+  const mv=[{label:'Projects (top level)',go:()=>moveCurrentTo('')},...dirs.map(d=>({label:'📁 '+d,go:()=>moveCurrentTo(d)})),{label:'＋ New folder…',go:()=>askText('New folder','','Create & move',async n=>{try{const f=await makeFolder(n);await moveCurrentTo(f)}catch(e){toast('Could not create that folder')}})}];
+  ctxMenu(r.left,r.bottom+4,[
+    {label:'New design…',key:'',go:()=>openNew()},{label:'All designs (home)',go:()=>showHome()},'-',
+    {label:'Save now',key:'Ctrl S',go:async()=>{commit();await saveDoc();toast('Saved to Files')}},
+    {label:'Rename',go:()=>{const t=$('#title');t.focus();t.select()}},{label:'Make a copy',go:makeCopyOfCurrent},{label:'Move to folder',sub:mv},
+    {label:D.starred?'Remove star':'Star this design',go:()=>{D.starred=!D.starred;dirty=true;touch();saveDoc();toast(D.starred?'Starred':'Star removed')}},'-',
+    {label:'Resize…',go:openResize},{label:'Download…',go:()=>openExport()},{label:'Share for review (link)',go:()=>createReview()},{label:'Present',go:()=>present()},'-',
+    {label:'Version history',go:()=>openHistory()},{label:'Page grid',go:()=>openPageGrid()},{label:'Bulk create from CSV…',go:()=>openBulk()},{label:D.printGuides?'Hide bleed & safe-area guides':'Show bleed & safe-area guides',go:()=>{D.printGuides=!D.printGuides;dirty=true;renderUI()}},'-',
+    {label:'Keyboard shortcuts',key:'?',go:()=>openHelp()},{label:'Move to trash',go:deleteCurrentDesign}])}
+function openResize(){
+  commit();const body=el('div',{style:'display:grid;gap:12px;min-width:min(420px,88vw)'});openModal(body,true);
+  const w=el('input',{class:'f',type:'number',min:20,max:8000,value:D.w,'aria-label':'Width'}),h=el('input',{class:'f',type:'number',min:20,max:8000,value:D.h,'aria-label':'Height'});
+  const dd=el('select',{class:'f','aria-label':'Size preset',onchange:()=>{if(dd.value!==''){w.value=SIZES[dd.value].w;h.value=SIZES[dd.value].h}}},el('option',{value:''},'Choose a size…'),SIZES.map((s,i)=>el('option',{value:i},`${s.n} — ${s.w}×${s.h}`)));
+  body.append(dlgHead('Resize'),dd,el('div',{class:'row'},el('label',{style:'flex:1'},'Width',w),el('label',{style:'flex:1'},'Height',h)),
+    el('button',{class:'btn pri wide',html:ic('sparkle',16)+' Magic resize',onclick:()=>{closeModal();resizeDoc(+w.value,+h.value,'magic')}}),el('button',{class:'btn wide',onclick:()=>{closeModal();resizeDoc(+w.value,+h.value,'canvas')}},'Change canvas only'),el('p',{class:'note'},'Magic resize scales and re-centres everything on every page.'))}
+(function(){const b=document.getElementById('btnFile'),r=document.getElementById('btnResize');if(b)b.onclick=()=>fileMenu(b);if(r)r.onclick=openResize;
+  addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&!document.getElementById('home').hidden===false){e.preventDefault();commit();saveDoc().then(()=>toast('Saved to Files'))}})})();
+
+/* icons the home screen asks for that the base set lacked */
+Object.assign(IC,{
+ chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12Z"/><path d="M8.5 10.5h7M8.5 13.5h4.5"/>',
+ heart:'<path d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.700 3.700 4.500 7 4.500c2 0 3.500 1 5 3 1.500-2 3-3 5-3 3.300 0 5.400 3.200 4.200 6.600-1.700 4.800-9.200 9.400-9.200 9.400Z"/>',
+ trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8.500 20h7"/>'});
+
 /* =====================================================================
    Anands OS integration + the studio's advanced features
    (files, background remover, animation, stock photos, SVG/vector, video/GIF, share links)
@@ -2977,7 +3017,7 @@ let saveQ=Promise.resolve();
 function setSaveState(s){const e=document.getElementById('saveState');if(e)e.textContent=s}
 function saveDoc(){saveQ=saveQ.then(doSave,doSave);return saveQ}
 async function doSave(){
-  if(!ready||!PUT())return;
+  if(!ready||!PUT()||D._discard)return;
   try{
     setSaveState('Saving…');
     const th=await thumbOf(D.pages[0],240);

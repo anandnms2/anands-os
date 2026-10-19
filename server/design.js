@@ -158,6 +158,21 @@ export async function publicReview(req, res, p) {
   throw httpError(404, 'Not found');
 }
 
+
+/* ---------- published pages (Docs and Websites): static, script-free, public by link ---------- */
+const WF = path.join(DATA, 'design-sites');
+const wFile = (t) => path.join(WF, RT(t) + '.json');
+const readSite = (t) => { try { return JSON.parse(fs.readFileSync(wFile(t), 'utf8')); } catch { return null; } };
+export async function publicSite(req, res, p) {
+  const parts = p.split('/'), t = RT(parts[2]), slug = String(parts[3] || 'index').toLowerCase().replace(/\.html$/, '').replace(/[^a-z0-9-]/g, '');
+  const gone = () => { res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }); return res.end('This page is not published.'); };
+  if (!t || t.length < 20 || (req.method !== 'GET' && req.method !== 'HEAD')) return gone();
+  const j = readSite(t); if (!j) return gone(); const html = j.pages[slug] || (slug === 'index' ? Object.values(j.pages)[0] : null); if (!html) return gone();
+  res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-cache', 'x-frame-options': 'DENY',
+    'content-security-policy': "default-src 'none'; script-src 'none'; img-src data: https:; media-src data: https:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; form-action https: mailto:; base-uri 'none'; frame-ancestors 'none'" });
+  res.end(req.method === 'HEAD' ? undefined : html);
+}
+
 /* ---------- routes under /_local ---------- */
 /* ---------- AI images (Magic Edit, BG Generator): Pollinations (no key), any OpenAI-compatible endpoint, or Hugging Face ---------- */
 const POLL = (process.env.POLLINATIONS_BASE || 'https://image.pollinations.ai').replace(/\/+$/, ''), HF = (process.env.HF_API_BASE || 'https://api-inference.huggingface.co').replace(/\/+$/, '');
@@ -225,6 +240,17 @@ export async function handleDesign(req, res, url, p, s) {
     idx[t] = { name: clip(q.get('name') || 'design', 60).replace(/[^\w\- ]/g, '').trim() || 'design', ext, by: who(s), at: Date.now(), exp: Date.now() + days * 864e5, size: body.length }; writeIdx(idx);
     return json(res, 200, { token: t, path: '/d/' + t, exp: idx[t].exp });
   }
+  if (p === '/design/publish') {
+    const b = await readJson(req, 30 * 1024 * 1024), pages = {}; let n = 0, total = 0;
+    for (const [k, v] of Object.entries(b.pages || {})) { const slug = String(k).toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40); if (!slug || typeof v !== 'string') continue; if (++n > 30) throw httpError(400, 'A site can have up to 30 pages'); total += v.length; pages[slug] = v; }
+    if (!n) throw httpError(400, 'Nothing to publish'); if (total > 28 * 1024 * 1024) throw httpError(400, 'This is too large to publish. Use smaller pictures.');
+    let t = RT(b.token); const old = t ? readSite(t) : null;
+    if (old && old.by !== who(s) && !isOwner(s)) throw httpError(403, 'That page belongs to someone else');
+    if (!old) { t = crypto.randomBytes(24).toString('base64url'); fs.mkdirSync(WF, { recursive: true, mode: 0o700 }); const mine = fs.readdirSync(WF).map((f) => { try { return JSON.parse(fs.readFileSync(path.join(WF, f), 'utf8')); } catch { return null; } }).filter((x) => x && x.by === who(s)).length; if (mine >= 30) throw httpError(400, 'Too many published pages. Unpublish some first.'); }
+    const rec = { name: clip(b.name || 'Page', 60), by: old ? old.by : who(s), at: Date.now(), pages }; fs.writeFileSync(wFile(t) + '.tmp', JSON.stringify(rec), { mode: 0o600 }); fs.renameSync(wFile(t) + '.tmp', wFile(t));
+    return json(res, 200, { token: t, path: '/w/' + t + '/' });
+  }
+  if (p === '/design/unpublish') { const b = await readJson(req, 1024), t = RT(b.token), j = readSite(t); if (j && (j.by === who(s) || isOwner(s))) { try { await fsp.rm(wFile(t)); } catch {} } return json(res, 200, { ok: true }); }
   if (p === '/design/review') {
     const q = url.searchParams, days = Math.max(1, Math.min(60, parseInt(q.get('days'), 10) || 14)), b = await readJson(req, 40 * 1024 * 1024);
     const pages = (Array.isArray(b.pages) ? b.pages : []).slice(0, 40).map((d) => { const m = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.exec(String(d || '')); if (!m) throw httpError(400, 'A page image could not be read'); return m[0]; });

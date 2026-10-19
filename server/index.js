@@ -24,7 +24,7 @@ import { handleGdrive, googleCallback, gConnected, gConfigured } from './gdrive.
 import { ping as davPing } from './webdav.js';
 import { handleVault, status as vaultStatus } from './vault.js';
 import { handleLocal } from './local.js';
-import { publicShare, publicReview } from './design.js';
+import { publicShare, publicReview, publicSite } from './design.js';
 import { handleSearch } from './search.js';
 import { handleSecurity } from './security.js';
 import { handleTerminal } from './terminal.js';
@@ -131,6 +131,7 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/session') return json(res, 200, sessionInfo(req));
     if (p.startsWith('/d/') && (req.method === 'GET' || req.method === 'HEAD')) return await publicShare(req, res, p);
     if (p.startsWith('/r/')) return await publicReview(req, res, p);
+    if (p.startsWith('/w/')) return await publicSite(req, res, p);
     if (p === '/share-target') { res.writeHead(303, { location: '/' }); return res.end(); }
     if (p === '/_suite/puter.js') { return serveStatic(req, res, path.dirname(SHIM), path.basename(SHIM), {}); }
     if (p === '/_suite/peer.js') { return serveStatic(req, res, path.dirname(SHIM), 'peer.js', {}); }

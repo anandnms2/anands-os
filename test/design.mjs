@@ -364,6 +364,28 @@ try {
     await p.evaluate(() => { D.review && fetch('/_local/design/reviewend', { method: 'POST', credentials: 'same-origin', headers: { 'x-aos': '1', 'content-type': 'application/json' }, body: JSON.stringify({ token: D.review.token }) }); });
     await p.close();
   });
+  await t('File menu in the editor; delete from the editor returns to Home; delete on Recent designs', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof fileMenu === 'function');
+    await p.evaluate(async () => { newDesign(900, 900, 'Gone soon'); await saveDoc(); });
+    await p.waitForTimeout(500);
+    await p.click('#btnFile'); await p.waitForSelector('.ctx');
+    const items = await p.$$eval('.ctx button', (b) => b.map((x) => x.textContent));
+    for (const w of ['New design', 'Save now', 'Rename', 'Make a copy', 'Move to folder', 'Resize', 'Download', 'Version history', 'Move to trash']) assert.ok(items.some((x) => x.startsWith(w)), 'File menu missing ' + w + ': ' + items);
+    await p.getByRole('menuitem', { name: /Move to trash/ }).click(); await p.waitForSelector('#modal .btn.danger'); await p.click('#modal .btn.danger');
+    await p.waitForFunction(() => !document.getElementById('home').hidden, null, { timeout: 8000 });
+    await p.waitForTimeout(800);
+    const r = await p.evaluate(async () => { await refreshDocs(); const live = (await listDocs()).some((x) => x.name === 'Gone soon'); const tr = (await listTrash()).some((x) => x.name === 'Gone soon'); const blank = (await listDocs()).filter((x) => x.name === 'Untitled design' && x.pages === 1).length; return { live, tr, blank }; });
+    assert.ok(!r.live && r.tr, JSON.stringify(r));
+    // Recent designs: visible trash button
+    await p.evaluate(async () => { newDesign(800, 800, 'Recent del'); await saveDoc(); showHome(); await refreshDocs(); });
+    await p.waitForSelector('#home .hc .delb'); const card = p.locator('#home .hc', { hasText: 'Recent del' }).first(); await card.hover(); await card.locator('.delb').click(); await p.waitForTimeout(800);
+    assert.ok(!(await p.evaluate(async () => (await listDocs()).some((x) => x.name === 'Recent del'))), 'still listed'); 
+    await p.close();
+  });
+  await t('every icon the home screen and panels ask for exists', async () => {
+    const miss = await page.evaluate(() => { const names = new Set(); QUICK.forEach((q) => names.add(q[1])); return [...names].filter((n) => !IC[n]); });
+    assert.deepEqual(miss, []);
+  });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
 } finally { await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }
 console.log(`${pass} passed${failed ? ', ' + failed + ' failed' : ''}`); process.exit(failed ? 1 : 0);

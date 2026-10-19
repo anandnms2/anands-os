@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Docs · Design Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;700&family=Poppins:wght@400;600&family=Montserrat:wght@400;700&family=Roboto+Slab:wght@400;700&family=Source+Serif+4:wght@400;700&family=Inter:wght@400;600&family=Open+Sans:wght@400;700&family=Caveat&family=Space+Mono&display=swap">
+<link rel="stylesheet" href="ed.css">
+<script src="/_suite/puter.js"></script><script src="vendor/jszip.min.js"></script>
+<style>
+#work{display:grid;grid-template-columns:auto minmax(0,1fr);min-height:0}
+#outline{width:210px;border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:10px;font-size:13px}#outline h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+#outline a{display:block;padding:4px 6px;border-radius:6px;color:inherit;text-decoration:none;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#outline a:hover{background:var(--panel2)}#outline a.l2{padding-left:16px}#outline a.l3{padding-left:28px;color:var(--mut)}
+#scroll{overflow:auto;padding:24px 12px 80px;background:var(--work)}
+#page{--pw:794px;width:var(--pw);max-width:100%;min-height:1123px;margin:0 auto;background:#fff;color:#1f1c19;padding:72px 80px;box-shadow:var(--shadow);outline:none;font-family:"Instrument Sans",sans-serif;font-size:16px;line-height:1.6}
+#page.wide{--pw:1100px}
+#page.empty::before{content:attr(data-ph);color:#9a948b;position:absolute;pointer-events:none}
+.doc h1{font-size:2em;margin:.8em 0 .3em;line-height:1.2}.doc h2{font-size:1.5em;margin:.9em 0 .3em;line-height:1.25}.doc h3{font-size:1.2em;margin:.9em 0 .3em}.doc p{margin:0 0 .7em}
+.doc blockquote{margin:.8em 0;padding:.2em 1em;border-left:4px solid #e8590c;color:#555;background:#faf6f1}.doc pre{background:#1f1c19;color:#f3efe8;padding:12px 14px;border-radius:8px;overflow:auto;font-family:"Space Mono",monospace;font-size:.88em;white-space:pre-wrap}
+.doc table{border-collapse:collapse;width:100%;margin:.6em 0}.doc td,.doc th{border:1px solid #cfc8bd;padding:6px 9px;vertical-align:top;min-width:40px}.doc th{background:#f3eee6}
+.doc img{max-width:100%;height:auto}.doc img.sel{outline:3px solid #e8590c}.doc hr{border:0;border-top:1px solid #cfc8bd;margin:1.2em 0}
+.doc ul.check{list-style:none;padding-left:4px}.doc ul.check li{position:relative;padding-left:28px;margin:.15em 0}.doc ul.check li::before{content:'';position:absolute;left:0;top:.3em;width:16px;height:16px;border:2px solid #8a8378;border-radius:4px;cursor:pointer}.doc ul.check li.done::before{background:#e8590c;border-color:#e8590c;content:'✓';color:#fff;font-size:12px;text-align:center;line-height:13px}.doc ul.check li.done{color:#8a8378;text-decoration:line-through}
+.doc .pb{border:0;border-top:2px dashed #bdb6aa;margin:2em 0;position:relative;height:0;page-break-after:always;break-after:page}.doc .pb::after{content:'page break';position:absolute;right:0;top:-.9em;font:11px sans-serif;color:#9a948b;background:#fff;padding:0 6px}
+.doc mark{background:#ffe066}
+#imgbar{position:fixed;z-index:50;display:flex;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;box-shadow:var(--shadow)}#imgbar button{border:0;background:none;padding:4px 8px;border-radius:6px}#imgbar button:hover{background:var(--panel2)}
+#find{display:flex;gap:6px;align-items:center;padding:6px 12px;background:var(--panel);border-bottom:1px solid var(--line)}#find input{width:180px}
+#foot{position:fixed;left:12px;bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:12px;color:var(--mut);z-index:20}
+@media(max-width:820px){#outline{display:none}#page{padding:36px 22px}}
+@media print{body{display:block;overflow:visible;background:#fff}.bar,.tools,#outline,#find,#foot,#imgbar,.modal,.menu{display:none!important}#work{display:block}#scroll{padding:0;background:#fff;overflow:visible}#page{box-shadow:none;width:auto;padding:0;min-height:0}.doc .pb{border:0;height:0}.doc .pb::after{display:none}@page{margin:18mm}}
+</style></head><body>
+<header class="bar"><a class="logo" href="./#docs" title="Back to Design Studio"><b>D</b><span>Docs</span></a><input id="title" class="ttl" aria-label="Document title" placeholder="Untitled document"><span id="st" class="st" role="status"></span><span class="grow"></span>
+<button class="btn" id="bFind">Find</button><button class="btn" id="bDl">Download ▾</button><button class="btn pri" id="bShare">Share</button><button class="btn" id="btnTheme" aria-label="Light or dark">◐</button></header>
+<div class="tools" id="tools" role="toolbar" aria-label="Formatting"></div>
+<div id="findwrap"></div>
+<div id="work"><nav id="outline" aria-label="Outline"><h3>Outline</h3><div id="ol"></div></nav><div id="scroll"><article id="page" class="doc" contenteditable="true" spellcheck="true" data-ph="Start typing, or paste something. Use the toolbar for headings, lists, tables and pictures."></article></div></div>
+<div id="foot" aria-live="polite"></div>
+<script src="ed.js"></script><script src="docs.js"></script>
+</body></html>
