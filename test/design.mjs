@@ -34,11 +34,15 @@ const gw = await listen((req, res) => { const b = []; req.on('data', (d) => b.pu
   const j = JSON.parse(raw.toString() || '{}'); const msgs = j.messages || []; const last = String(msgs.at(-1)?.content || ''); aiCalls.push({ who: 'gateway', model: j.model, last: last.slice(0, 80), auth: req.headers.authorization });
   res.writeHead(200, { 'content-type': 'application/json' }); let text = 'GATEWAY: ' + last.slice(0, 40); if (/same keys/.test(String(msgs[0]?.content))) { try { const f = JSON.parse(last); text = JSON.stringify(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v + ' (ai)']))); } catch {} } res.end(JSON.stringify({ model: 'gw-model', choices: [{ message: { content: text } }] })); }); });
 
+const gm = await listen((req, res) => { const b = []; req.on('data', (d) => b.push(d)); req.on('end', () => { const j = JSON.parse(Buffer.concat(b).toString() || '{}'); const txt = JSON.stringify(j.contents || ''); aiCalls.push({ who: 'gemini', url: req.url, key: req.headers['x-goog-api-key'], sys: j.systemInstruction && j.systemInstruction.parts[0].text, modal: j.generationConfig && j.generationConfig.responseModalities, hasAudio: /inlineData/.test(txt) && /audio/.test(txt) }); res.writeHead(200, { 'content-type': 'application/json' });
+  if (j.generationConfig && j.generationConfig.responseModalities) return res.end(JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: PNG1.toString('base64') } }] } }] }));
+  if (/Transcribe/.test(txt)) return res.end(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify([{ start: 0, end: 1.5, text: 'Karibu sana' }, { start: 1.5, end: 3, text: 'Welcome' }]) }] } }] }));
+  res.end(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'GEMINI: ' + (j.contents[0].parts[0].text || '').slice(0, 40) }] } }] })); }); });
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-ds-')), suite = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-suite-'));
 fs.mkdirSync(suite + '/apps', { recursive: true }); fs.cpSync(root + '/suite/own/design-studio', suite + '/apps/design-studio', { recursive: true }); fs.mkdirSync(suite + '/_icons');
 fs.writeFileSync(suite + '/apps.json', JSON.stringify([{ slug: 'design-studio', name: 'Design Studio', alternativeTo: 'Canva', category: 'Creative Tools', hasSource: true }]));
 const port = 20000 + Math.floor(Math.random() * 20000), B = `http://127.0.0.1:${port}`;
-const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', ANTHROPIC_API_BASE: `http://127.0.0.1:${an.address().port}`, PEXELS_API_BASE: `http://127.0.0.1:${px.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, PIXABAY_API_BASE: `http://127.0.0.1:${pb.address().port}`, OPENVERSE_API_BASE: `http://127.0.0.1:${ov.address().port}`, WIKIMEDIA_API_BASE: `http://127.0.0.1:${wk.address().port}/w/api.php`, PIXABAY_API_KEY: '', BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '', POLLINATIONS_BASE: `http://127.0.0.1:${imgHost.address().port}` } });
+const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', ANTHROPIC_API_BASE: `http://127.0.0.1:${an.address().port}`, GEMINI_API_BASE: `http://127.0.0.1:${gm.address().port}`, PEXELS_API_BASE: `http://127.0.0.1:${px.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, PIXABAY_API_BASE: `http://127.0.0.1:${pb.address().port}`, OPENVERSE_API_BASE: `http://127.0.0.1:${ov.address().port}`, WIKIMEDIA_API_BASE: `http://127.0.0.1:${wk.address().port}/w/api.php`, PIXABAY_API_KEY: '', BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '', POLLINATIONS_BASE: `http://127.0.0.1:${imgHost.address().port}` } });
 for (let i = 0; i < 60; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
 let pass = 0, failed = 0; const t = async (n, f) => { try { await f(); pass++; console.log('ok   ' + n); } catch (e) { failed++; console.log('FAIL ' + n + '\n     ' + String(e.stack || e).split('\n').slice(0, 5).join('\n     ')); } };
 const browser = await chromium.launch({ args: ['--no-sandbox'] }); const errs = [];
@@ -484,6 +488,19 @@ try {
     const tr = (await post('/design/transcribe', { audio: 'data:audio/webm;base64,AAAAAAAA' })).j; assert.equal(tr.segments.length, 2); assert.equal(tr.segments[0].text, 'Hello world.'); const sc = aiCalls.find((c) => c.who === 'stt'); assert.ok(sc.has && sc.ct === 'multipart/form-data' && sc.auth === 'Bearer gw-key');
     assert.equal((await post('/design/aitext', { task: 'bogus' })).s, 400);
   });
+  await t('Gemini: text, pictures and captions with a free-tier key; connected AI still wins in automatic mode', async () => {
+    const H = { 'x-aos': '1' };
+    assert.ok((await ctx.request.put(B + '/api/settings', { data: { ai: { provider: 'auto', geminiKey: 'AIza-test' }, image: { provider: 'auto' } }, headers: H })).ok());
+    let st = (await post('/design/aistatus')).j; assert.equal(st.text.provider, 'builtin', 'gateway is preferred when connected'); assert.equal(st.stt.via, 'gateway');
+    assert.ok((await ctx.request.put(B + '/api/settings', { data: { llm: { base: '' } }, headers: H })).ok());
+    st = (await post('/design/aistatus')).j; assert.equal(st.text.provider, 'gemini'); assert.equal(st.text.model, 'gemini-2.5-flash'); assert.equal(st.stt.via, 'gemini'); assert.equal(st.image.provider, 'gemini');
+    let r = (await post('/design/aitext', { task: 'write', prompt: 'a bakery slogan' })).j; assert.match(r.text, /^GEMINI:/); let gc = aiCalls.filter((c) => c.who === 'gemini').at(-1); assert.equal(gc.key, 'AIza-test'); assert.match(gc.url, /models\/gemini-2\.5-flash:generateContent/); assert.ok(gc.sys.length > 10);
+    const img = (await post('/design/genimage', { prompt: 'a diya', w: 1024, h: 1024 })).j; assert.equal(img.provider, 'gemini'); assert.match(img.image, /^data:image\/png/); assert.deepEqual(aiCalls.filter((c) => c.who === 'gemini').at(-1).modal, ['IMAGE']);
+    const tr = (await post('/design/transcribe', { audio: 'data:audio/webm;base64,AAAAAAAA', language: 'sw' })).j; assert.equal(tr.via, 'gemini'); assert.deepEqual(tr.segments.map((x) => x.text), ['Karibu sana', 'Welcome']); assert.ok(aiCalls.filter((c) => c.who === 'gemini').at(-1).hasAudio);
+    assert.ok(!JSON.stringify((await (await ctx.request.get(B + '/api/settings')).json())).includes('AIza-test'), 'key never returned');
+    assert.ok((await ctx.request.put(B + '/api/settings', { data: { ai: { provider: 'anthropic' } }, headers: H })).ok()); assert.match((await post('/design/aitext', { task: 'write', prompt: 'x' })).j.text, /^ANTHROPIC:/);
+    assert.ok((await ctx.request.put(B + '/api/settings', { data: { ai: { provider: 'auto' }, llm: { base: `http://127.0.0.1:${gw.address().port}/v1`, key: 'gw-key', model: 'gw-model' } }, headers: H })).ok());
+  });
   await t('AI in the editors: Docs rewrites the selection, Websites rewrites a section and a whole page, Magic uses the server AI', async () => {
     const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/docs.html'); await p.waitForFunction(() => typeof sanitize === 'function' && document.querySelector('#page'));
     await p.evaluate(() => { page.innerHTML = '<h1>Memo</h1><p id="tgt">hello there friend</p>'; const r = document.createRange(); r.selectNodeContents(document.getElementById('tgt')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); page.focus(); });
@@ -507,5 +524,5 @@ try {
     assert.deepEqual(miss, []);
   });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
-} finally { an.close(); gw.close(); await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }
+} finally { an.close(); gw.close(); gm.close(); await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }
 console.log(`${pass} passed${failed ? ', ' + failed + ' failed' : ''}`); process.exit(failed ? 1 : 0);

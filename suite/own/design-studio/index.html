@@ -27,7 +27,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.4 var(--ui);overf
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
-#app{display:grid;height:100%;grid-template-columns:64px 304px minmax(0,1fr) 296px;grid-template-rows:52px minmax(0,1fr);grid-template-areas:"top top top top" "rail panel center insp"}
+#app{display:grid;height:100%;grid-template-columns:72px 304px minmax(0,1fr) 296px;grid-template-rows:52px minmax(0,1fr);grid-template-areas:"top top top top" "rail panel center insp"}
 #top{grid-area:top;display:flex;align-items:center;gap:6px;padding:0 10px;background:var(--panel);border-bottom:1px solid var(--line);min-width:0}
 #top .sp{flex:1;min-width:0}
 .logo{display:flex;align-items:center;gap:9px;font:800 16px var(--disp);letter-spacing:-.01em;padding:4px 8px;border-radius:8px}
@@ -41,8 +41,9 @@ svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .tb.pri:hover{filter:brightness(1.07);background:var(--accent)}
 .zoomv{min-width:46px;text-align:center;font-variant-numeric:tabular-nums;color:var(--mut)}
 .vr{width:1px;height:22px;background:var(--line);margin:0 4px}
-#rail{grid-area:rail;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;padding:8px 6px;overflow:auto}
-#rail button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border-radius:9px;color:var(--mut);font-size:10.5px;font-weight:500}
+#rail{grid-area:rail;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px;padding:8px 6px;overflow-y:auto;overflow-x:hidden}
+#rail button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border-radius:9px;color:var(--mut);font-size:10.5px;font-weight:500;min-width:0;width:100%;overflow:hidden}
+#rail button>*{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.15px}
 #rail button:hover{background:var(--panel2);color:var(--fg)}
 #rail button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent)}
 #panel{grid-area:panel;background:var(--panel);border-right:1px solid var(--line);overflow:auto;min-width:0}

@@ -209,13 +209,26 @@ export async function publicSite(req, res, p) {
 const aiHits = new Map();
 function aiLimit(who) { const now = Date.now(), a = (aiHits.get(who) || []).filter((t) => now - t < 600000); if (a.length >= 60) throw httpError(429, 'Too many AI requests. Try again in a few minutes.', 'rate_limited'); a.push(now); aiHits.set(who, a); }
 export function aiProvider() {
-  const e = effective(), a = e.ai || {}, hasGw = !!(e.llm && e.llm.base), hasAn = !!a.key;
-  const want = a.provider || 'auto'; const use = want === 'builtin' ? (hasGw ? 'builtin' : '') : want === 'anthropic' ? (hasAn ? 'anthropic' : '') : (hasGw ? 'builtin' : hasAn ? 'anthropic' : '');
-  return { provider: use, want, ready: !!use, model: use === 'anthropic' ? a.model : use === 'builtin' ? e.llm.model : '', reason: use ? '' : want === 'anthropic' ? 'Add your Anthropic key in Settings › AI for Design Studio' : 'Connect your AI in Settings › Assistant, or add an Anthropic key in Settings › AI for Design Studio' };
+  const e = effective(), a = e.ai || {}, hasGw = !!(e.llm && e.llm.base), hasG = !!a.geminiKey, hasAn = !!a.key;
+  const want = a.provider || 'auto'; const has = { builtin: hasGw, gemini: hasG, anthropic: hasAn };
+  const use = want === 'auto' ? (hasGw ? 'builtin' : hasG ? 'gemini' : hasAn ? 'anthropic' : '') : (has[want] ? want : '');
+  const model = use === 'anthropic' ? a.model : use === 'gemini' ? a.geminiModel : use === 'builtin' ? e.llm.model : '';
+  return { provider: use, want, ready: !!use, model, reason: use ? '' : want === 'anthropic' ? 'Add your Anthropic key in Settings › AI for Design Studio' : want === 'gemini' ? 'Add your Gemini key in Settings › AI for Design Studio' : 'Connect your AI in Settings › Assistant, or add a Gemini or Anthropic key in Settings › AI for Design Studio' };
 }
+const GEM = () => (process.env.GEMINI_API_BASE || 'https://generativelanguage.googleapis.com').replace(/\/+$/, '');
+async function gemini(model, body, fetcher = fetch, ms = 90000) {
+  const a = effective().ai; let r;
+  try { r = await fetcher(GEM() + '/v1beta/models/' + encodeURIComponent(model) + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': a.geminiKey }, body: JSON.stringify(body), signal: AbortSignal.timeout(ms) }); } catch { throw httpError(502, 'Could not reach Gemini. Check this server can reach the internet.'); }
+  if (r.status === 400 || r.status === 401 || r.status === 403) { let m = ''; try { m = (await r.json()).error?.message || ''; } catch {} throw httpError(502, 'Gemini did not accept that' + (m ? ': ' + clip(m, 160) : ' (key or request)')); }
+  if (r.status === 429) throw httpError(502, 'Gemini’s free limit is reached for now. Try again in a minute, or tomorrow.');
+  if (!r.ok) throw httpError(502, 'Gemini could not answer (' + r.status + ')');
+  return r.json();
+}
+const gemText = (j) => ((j.candidates || [])[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
 export async function aiText(system, user, { maxTokens = 1200, fetcher = fetch } = {}) {
   const st = aiProvider(); if (!st.ready) throw httpError(400, st.reason, 'no_ai');
   if (st.provider === 'builtin') { const r = await llmChat([{ role: 'system', content: system }, { role: 'user', content: user }], { temperature: 0.7, max_tokens: maxTokens }); return { text: String(r.text || '').trim(), provider: 'builtin', model: r.model }; }
+  if (st.provider === 'gemini') { const j = await gemini(effective().ai.geminiModel, { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 } }, fetcher); const text = gemText(j); if (!text) throw httpError(502, 'Gemini sent an empty answer'); return { text, provider: 'gemini', model: effective().ai.geminiModel }; }
   const a = effective().ai; let r;
   try { r = await fetcher((process.env.ANTHROPIC_API_BASE || 'https://api.anthropic.com') + '/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': a.key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: a.model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }), signal: AbortSignal.timeout(60000) }); } catch { throw httpError(502, 'Could not reach Anthropic. Check this server can reach the internet.'); }
   if (r.status === 401 || r.status === 403) throw httpError(502, 'Anthropic did not accept the key'); if (r.status === 429) throw httpError(502, 'Anthropic is limiting requests right now. Try again in a minute.');
@@ -236,7 +249,8 @@ const AI_TASKS = {
 /* ---------- routes under /_local ---------- */
 /* ---------- AI images (Magic Edit, BG Generator): Pollinations (no key), any OpenAI-compatible endpoint, or Hugging Face ---------- */
 const POLL = (process.env.POLLINATIONS_BASE || 'https://image.pollinations.ai').replace(/\/+$/, ''), HF = (process.env.HF_API_BASE || 'https://api-inference.huggingface.co').replace(/\/+$/, '');
-export const imageStatus = () => { const i = effective().image || {}; const prov = i.provider || 'pollinations'; const gw = !!(effective().llm || {}).base; const ok = prov === 'pollinations' || (prov === 'openai' && !!i.url) || (prov === 'gateway' && gw) || (prov === 'huggingface' && !!i.key); return { provider: prov, ready: ok, edit: (prov === 'openai' && !!i.url) || (prov === 'gateway' && gw), reason: ok ? '' : prov === 'openai' ? 'Add the image service address in Settings › Design Studio AI images' : prov === 'gateway' ? 'Connect your AI gateway in Settings › Assistant first' : 'Add a Hugging Face token in Settings › Design Studio AI images' }; };
+export const imgProv = () => { const p = (effective().image || {}).provider || 'auto'; return p === 'auto' ? ((effective().ai || {}).geminiKey ? 'gemini' : 'pollinations') : p; };
+export const imageStatus = () => { const i = effective().image || {}; const prov = imgProv(); const gk = !!(effective().ai || {}).geminiKey; const gw = !!(effective().llm || {}).base; const ok = prov === 'pollinations' || (prov === 'gemini' && gk) || (prov === 'openai' && !!i.url) || (prov === 'gateway' && gw) || (prov === 'huggingface' && !!i.key); return { provider: prov, ready: ok, edit: (prov === 'openai' && !!i.url) || (prov === 'gateway' && gw) || (prov === 'gemini' && gk), reason: ok ? '' : prov === 'openai' ? 'Add the image service address in Settings › Design Studio AI images' : prov === 'gateway' ? 'Connect your AI gateway in Settings › Assistant first' : prov === 'gemini' ? 'Add your Gemini key in Settings › AI for Design Studio' : 'Add a Hugging Face token in Settings › Design Studio AI images' }; };
 const imgHits = new Map();
 function imgLimit(who) { const now = Date.now(), a = (imgHits.get(who) || []).filter((t) => now - t < 600000); if (a.length >= 40) throw httpError(429, 'Too many AI image requests. Try again in a few minutes.', 'rate_limited'); a.push(now); imgHits.set(who, a); }
 const dataUrl = (buf, type) => 'data:' + type + ';base64,' + buf.toString('base64');
@@ -245,24 +259,31 @@ const safeHttps = (u) => { try { const x = new URL(u); if (x.protocol !== 'https
 async function fetchImg(r, name) { if (!r.ok) { if (r.status === 401 || r.status === 403) throw httpError(502, name + ' did not accept the key'); if (r.status === 429) throw httpError(502, name + ' is limiting requests right now. Try again in a minute.'); let m = ''; try { m = (await r.json()).error?.message || ''; } catch {} throw httpError(502, name + ' could not make that image' + (m ? ': ' + clip(m, 160) : ' (' + r.status + ')')); } const type = (r.headers.get('content-type') || '').split(';')[0]; if (!/^image\/(png|jpeg|webp)$/.test(type)) throw httpError(502, name + ' sent something that is not an image'); const b = Buffer.from(await r.arrayBuffer()); if (b.length > 12e6) throw httpError(502, 'That image is too large'); return dataUrl(b, type); }
 export async function imageGen(body, who, fetcher = fetch) {
   imgLimit(who);
-  const i = effective().image || {}, st = imageStatus(); if (!st.ready) throw httpError(400, st.reason, 'no_image_ai');
+  const i = effective().image || {}, st = imageStatus(), prov = imgProv(); if (!st.ready) throw httpError(400, st.reason, 'no_image_ai');
   const prompt = clip(body.prompt, 900).trim(); if (!prompt) throw httpError(400, 'Describe what you want first');
   const w = Math.max(256, Math.min(1536, Math.round((parseInt(body.w, 10) || 1024) / 64) * 64)), h = Math.max(256, Math.min(1536, Math.round((parseInt(body.h, 10) || 1024) / 64) * 64)), seed = parseInt(body.seed, 10) || Math.floor(Math.random() * 1e9);
   const edit = body.mode === 'edit';
   try {
-    if (i.provider === 'pollinations') {
+    if (prov === 'pollinations') {
       if (edit) throw httpError(400, 'Pollinations makes new images but cannot edit one. Choose an OpenAI-compatible image service in Settings for true Magic Edit.', 'no_edit');
       const u = POLL + '/prompt/' + encodeURIComponent(prompt) + '?width=' + w + '&height=' + h + '&seed=' + seed + '&nologo=true&model=' + encodeURIComponent(i.model || 'flux') + '&private=true';
       const r = await fetcher(u, { headers: { 'user-agent': UA, ...(i.key ? { authorization: 'Bearer ' + i.key } : {}) }, signal: AbortSignal.timeout(90000) });
       return { image: await fetchImg(r, 'Pollinations'), provider: 'pollinations' };
     }
-    if (i.provider === 'huggingface') {
+    if (prov === 'huggingface') {
       if (edit) throw httpError(400, 'Hugging Face text-to-image cannot edit an image. Choose an OpenAI-compatible image service for Magic Edit.', 'no_edit');
       const r = await fetcher(HF + '/models/' + (i.model || 'black-forest-labs/FLUX.1-schnell'), { method: 'POST', headers: { authorization: 'Bearer ' + i.key, 'content-type': 'application/json', accept: 'image/png', 'user-agent': UA }, body: JSON.stringify({ inputs: prompt, parameters: { width: w, height: h, seed } }), signal: AbortSignal.timeout(90000) });
       return { image: await fetchImg(r, 'Hugging Face'), provider: 'huggingface' };
     }
+    if (prov === 'gemini') {
+      const a = effective().ai, parts = [{ text: edit ? 'Edit the first image as described. If a second image is given it is a mask: change only the white area and keep everything else exactly the same. Description: ' + prompt : prompt + '. Aspect ratio ' + (Math.abs(w / h - 1) < .2 ? '1:1' : w > h ? '3:2' : '2:3') + '.' }];
+      if (edit) { const im = parseData(body.image, 8e6), mk = body.mask ? parseData(body.mask, 8e6) : null; parts.push({ inlineData: { mimeType: im.type, data: im.buf.toString('base64') } }); if (mk) parts.push({ inlineData: { mimeType: mk.type, data: mk.buf.toString('base64') } }); }
+      const j = await gemini(a.geminiImageModel || 'gemini-2.5-flash-image', { contents: [{ role: 'user', parts }], generationConfig: { responseModalities: ['IMAGE'] } }, fetcher, 120000);
+      const pt = ((j.candidates || [])[0]?.content?.parts || []).find((x) => (x.inlineData || x.inline_data)); const idt = pt && (pt.inlineData || pt.inline_data); if (!idt) throw httpError(502, 'Gemini did not return a picture. Its free image limit may be used up, or the model name is wrong (Settings › AI for Design Studio).');
+      const type = idt.mimeType || idt.mime_type || 'image/png'; if (!/^image\/(png|jpeg|webp)$/.test(type)) throw httpError(502, 'Gemini sent something that is not an image'); return { image: dataUrl(Buffer.from(idt.data, 'base64'), type), provider: 'gemini' };
+    }
     // OpenAI-compatible
-    const gwc = i.provider === 'gateway' ? effective().llm : null; const base = gwc ? (gwc.base.replace(/\/+$/, '').replace(/\/v1$/, '') + '/v1') : i.url, model = i.model || 'gpt-image-1', i_key = gwc ? gwc.key : i.key, size = Math.abs(w / h - 1) < .2 ? '1024x1024' : w > h ? '1536x1024' : '1024x1536';
+    const gwc = prov === 'gateway' ? effective().llm : null; const base = gwc ? (gwc.base.replace(/\/+$/, '').replace(/\/v1$/, '') + '/v1') : i.url, model = i.model || 'gpt-image-1', i_key = gwc ? gwc.key : i.key, size = Math.abs(w / h - 1) < .2 ? '1024x1024' : w > h ? '1536x1024' : '1024x1536';
     let r;
     if (edit) {
       const im = parseData(body.image, 8e6), mk = parseData(body.mask, 8e6), fd = new FormData();
@@ -300,13 +321,20 @@ export async function handleDesign(req, res, url, p, s) {
     idx[t] = { name: clip(q.get('name') || 'design', 60).replace(/[^\w\- ]/g, '').trim() || 'design', ext, by: who(s), at: Date.now(), exp: Date.now() + days * 864e5, size: body.length }; writeIdx(idx);
     return json(res, 200, { token: t, path: '/d/' + t, exp: idx[t].exp });
   }
-  if (p === '/design/aistatus') { const e = effective(); return json(res, 200, { text: aiProvider(), image: imageStatus(), stt: { ready: !!(e.llm && e.llm.base) } }); }
+  if (p === '/design/aistatus') { const e = effective(); return json(res, 200, { text: aiProvider(), image: imageStatus(), stt: { ready: !!(e.llm && e.llm.base) || !!(e.ai && e.ai.geminiKey), via: e.llm && e.llm.base ? 'gateway' : e.ai && e.ai.geminiKey ? 'gemini' : '' } }); }
   if (p === '/design/aichat') { const b = await readJson(req, 128 * 1024); aiLimit(who(s)); const pr = clip(b.prompt, 60000).trim(); if (!pr) throw httpError(400, 'Nothing to ask'); return json(res, 200, await aiText(clip(b.system, 4000) || 'Follow the instructions exactly. When asked for JSON, reply with only JSON.', pr, { maxTokens: 3500 })); }
   if (p === '/design/aitext') { const b = await readJson(req, 64 * 1024); aiLimit(who(s)); const f = AI_TASKS[b.task]; if (!f) throw httpError(400, 'Unknown AI task'); const [sys, usr] = f(b); if (!String(usr).trim() || usr === '{}') throw httpError(400, 'Write or select some text first');
     const r = await aiText(AI_SYS + ' ' + sys, usr, { maxTokens: b.task === 'write' ? 1600 : 1200 }); return json(res, 200, r); }
   if (p === '/design/transcribe') {
-    const b = await readJson(req, 34 * 1024 * 1024); aiLimit(who(s)); const e = effective(); if (!(e.llm && e.llm.base)) throw httpError(400, 'Automatic captions need your AI gateway with speech-to-text (Settings › Assistant). Anthropic does not transcribe audio. You can type captions or import an .srt file instead.', 'no_stt');
+    const b = await readJson(req, 34 * 1024 * 1024); aiLimit(who(s)); const e = effective(); const viaGem = !(e.llm && e.llm.base) && !!(e.ai && e.ai.geminiKey); if (!(e.llm && e.llm.base) && !viaGem) throw httpError(400, 'Automatic captions need your AI gateway with speech-to-text, or a Gemini key (Settings › AI for Design Studio). Anthropic does not transcribe audio. You can type captions or import an .srt file instead.', 'no_stt');
     const m = /^data:(audio\/[\w.+-]+|video\/[\w.+-]+);base64,([A-Za-z0-9+/=]+)$/.exec(String(b.audio || '')); if (!m) throw httpError(400, 'That sound could not be read'); const buf = Buffer.from(m[2], 'base64'); if (!buf.length || buf.length > 24e6) throw httpError(400, 'That sound is too large. Use a clip under 24 MB.');
+    if (viaGem) {
+      const lang = b.language ? ' The language is ' + clip(b.language, 8).replace(/[^a-z-]/gi, '') + '.' : '';
+      const j = await gemini(e.ai.geminiModel, { contents: [{ role: 'user', parts: [{ text: 'Transcribe this audio.' + lang + ' Reply with ONLY a JSON array of caption segments: [{"start":seconds,"end":seconds,"text":"..."}]. Each segment is one short sentence or phrase, under 12 words, in time order. Use numbers for seconds.' }, { inlineData: { mimeType: m[1], data: m[2] } }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0 } }, fetch, 170000);
+      let arr = []; try { arr = JSON.parse(gemText(j)); } catch { const mm = gemText(j).match(/\[[\s\S]*\]/); try { arr = JSON.parse(mm ? mm[0] : '[]'); } catch {} }
+      const segs = (Array.isArray(arr) ? arr : []).map((x) => ({ start: +x.start || 0, end: +x.end || 0, text: clip(x.text, 300).trim() })).filter((x) => x.text && x.end >= x.start);
+      if (!segs.length) throw httpError(502, 'Gemini could not find speech in that clip', 'stt_failed'); return json(res, 200, { text: segs.map((x) => x.text).join(' ').slice(0, 20000), segments: segs, via: 'gemini' });
+    }
     const fd = new FormData(); fd.append('file', new Blob([buf], { type: m[1] }), 'audio.' + (m[1].split('/')[1] || 'webm').replace(/[^a-z0-9]/gi, '')); fd.append('model', e.ai.sttModel || 'whisper-1'); fd.append('response_format', 'verbose_json'); if (b.language) fd.append('language', clip(b.language, 8).replace(/[^a-z-]/gi, ''));
     let r; try { r = await fetch(e.llm.base.replace(/\/+$/, '').replace(/\/v1$/, '') + '/v1/audio/transcriptions', { method: 'POST', headers: e.llm.key ? { authorization: 'Bearer ' + e.llm.key } : {}, body: fd, signal: AbortSignal.timeout(180000) }); } catch { throw httpError(502, 'Could not reach your AI gateway'); }
     if (!r.ok) { let t = ''; try { t = (await r.json()).error?.message || ''; } catch {} throw httpError(502, 'Your AI gateway could not transcribe that' + (t ? ': ' + clip(t, 160) : ' (' + r.status + ')') + '. It needs a speech-to-text model such as whisper-1; set the model name in Settings › AI for Design Studio.', 'stt_failed'); }
