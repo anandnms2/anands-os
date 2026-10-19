@@ -44,7 +44,7 @@ jobs:
             desktop/dist/*.exe
             desktop/dist/*.zip
             desktop/dist/*.dmg
-          retention-days: 30
+          retention-days: 2
       - if: startsWith(github.ref, 'refs/tags/desktop-v')
         uses: softprops/action-gh-release@v2
         with:
