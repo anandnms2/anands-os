@@ -13,7 +13,7 @@
     "dist": "node stage.mjs && electron-builder"
   },
   "devDependencies": {
-    "electron": "^38.2.2",
+    "electron": "41.10.7",
     "electron-builder": "26.0.12"
   },
   "build": {
