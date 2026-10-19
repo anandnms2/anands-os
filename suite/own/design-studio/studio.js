@@ -2995,7 +2995,7 @@ const EDKIND={docs:{dir:'/Designs/Docs',ext:'ddoc',page:'docs.html',one:'Doc',ma
 Object.assign(IC,{doc:'<path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6"/>',board:'<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 22l4-4 4 4M7 9h4v4H7zM14 9h3"/>',globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>'});
 const edCache={};
 const edOpen=(k,path)=>{location.href=EDKIND[k].page+(path?'?f='+encodeURIComponent(path):'')};
-function edNew(k){location.href=EDKIND[k].page}
+function edNew(k){location.href=EDKIND[k].page+(k==='sites'?'?new=1':'')}
 async function edList(k){const K=EDKIND[k];let it=[];try{it=await PUT().fs.readdir(K.dir)}catch(e){return[]}
   const out=[];for(const i of it){if(i.is_dir||!i.name.endsWith('.'+K.ext))continue;const path=K.dir+'/'+i.name;let name=i.name.replace(/\s*\[[^\]]*\]\.\w+$/,'').replace(/\.\w+$/,''),updated=(i.modified||0)*(i.modified<1e12?1000:1),pub=false;
     try{const b=await PUT().fs.read(path);const t=typeof b==='string'?b:await b.text();const j=JSON.parse(t);name=j.name||name;updated=j.updated||updated;pub=!!j.pub}catch(e){}
