@@ -5,13 +5,14 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-sync-')), data = path.joi
 const w = (p, c) => { const a = path.join(data, p); fs.mkdirSync(path.dirname(a), { recursive: true }); fs.writeFileSync(a, c); };
 w('fs/Docs/a.txt', 'alpha'); w('fs/.mail/inbox/x', 'mail'); w('kv/calendar.json', '{"e":1}'); w('settings.json', '{"immich":{"url":"https://x"}}'); w('sessions.json', 'SECRET-SESSIONS'); w('secret', 'SECRET-KEY'); w('tokens.json', 'SECRET-TOKENS'); w('team.json', 'SECRET-TEAM');
 const port = 20000 + Math.floor(Math.random() * 20000), B = 'http://127.0.0.1:' + port;
-const p = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, NODE_ENV: 'test', PORT: String(port), DATA_DIR: data, SUITE_DIR: path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'webpw', SESSION_SECRET: 'x'.repeat(40) } });
+const p = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, NODE_ENV: 'test', PORT: String(port), DATA_DIR: data, SUITE_DIR: path.join(root, 'test/fixtures/suite'), APP_PASSWORD: 'webpw', IMMICH_API_KEY: 'env-only-key', LLM_API_KEY: 'env-llm', PUBLIC_URL: 'https://os.example.com', SESSION_SECRET: 'x'.repeat(40) } });
 for (let i = 0; i < 60; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
 let pass = 0, bad = 0; const t = async (n, f) => { try { await f(); pass++; console.log('ok   ' + n); } catch (e) { bad++; console.log('FAIL ' + n + '\n     ' + String(e.stack || e).split('\n').slice(0, 3).join('\n     ')); } };
 const rd = (f) => fs.readFileSync(path.join(pc, f), 'utf8'), has = (f) => fs.existsSync(path.join(pc, f));
 const sync = (o = {}) => syncFromWeb({ url: B, password: 'webpw', dataDir: pc, ...o });
 try {
   await t('first sync copies files, mail, app data and settings', async () => { const r = await sync(); assert.equal(rd('fs/Docs/a.txt'), 'alpha'); assert.equal(rd('fs/.mail/inbox/x'), 'mail'); assert.equal(rd('kv/calendar.json'), '{"e":1}'); assert.ok(rd('settings.json').includes('immich')); assert.equal(r.appData, true); });
+  await t('keys that only exist in the web server environment come across too, without its web address', async () => { const j = JSON.parse(rd('settings.json')); assert.equal(j.immich.key, 'env-only-key'); assert.equal(j.immich.url, 'https://x'); assert.equal(j.llm.key, 'env-llm'); assert.equal(j.public, undefined); });
   await t('sign-in material never reaches the desktop', async () => { for (const f of ['sessions.json', 'secret', 'tokens.json', 'team.json']) assert.ok(!has(f), f); });
   await t('a second sync changes nothing', async () => { const r = await sync(); assert.equal(r.downloaded, 0); assert.ok(r.unchanged >= 4); });
   await t('web changes arrive; new web files appear', async () => { await new Promise((r) => setTimeout(r, 20)); w('fs/Docs/a.txt', 'alpha2'); w('fs/Docs/b.txt', 'beta'); const r = await sync(); assert.equal(rd('fs/Docs/a.txt'), 'alpha2'); assert.equal(rd('fs/Docs/b.txt'), 'beta'); assert.equal(r.downloaded, 2); });

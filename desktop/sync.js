@@ -27,7 +27,7 @@ async function syncFromWeb({ url, password, dataDir, filesOnly, onProgress }) {
     if (filesOnly && isApp(f.p)) continue;
     const abs = within(dataDir, f.p); if (!abs) continue;
     const prev = state.files[f.p]; let st = null; try { st = fs.statSync(abs); } catch {}
-    if (prev && prev.size === f.size && prev.mtime === f.mtime && st) { res.unchanged++; continue; }
+    if (prev && prev.size === f.size && prev.mtime === f.mtime && (prev.h || '') === (f.h || '') && st) { res.unchanged++; continue; }
     if (st && prev && Math.abs(st.mtimeMs - prev.local) > 1500) { res.kept++; continue; }
     if (st && !prev && st.size === f.size && Math.floor(st.mtimeMs) === f.mtime) { res.unchanged++; state.files[f.p] = { size: f.size, mtime: f.mtime, local: st.mtimeMs }; continue; }
     todo.push({ f, abs });
@@ -40,7 +40,7 @@ async function syncFromWeb({ url, password, dataDir, filesOnly, onProgress }) {
       await fsp.mkdir(path.dirname(abs), { recursive: true });
       const tmp = abs + '.sync-part'; await fsp.writeFile(tmp, Buffer.from(await r.arrayBuffer()));
       const t = new Date(f.mtime); await fsp.utimes(tmp, t, t); await fsp.rename(tmp, abs);
-      state.files[f.p] = { size: f.size, mtime: f.mtime, local: fs.statSync(abs).mtimeMs };
+      state.files[f.p] = { size: f.size, mtime: f.mtime, h: f.h, local: fs.statSync(abs).mtimeMs };
       res.downloaded++; if (isApp(f.p)) res.appData = true;
     } catch { res.errors++; }
     n++; if (onProgress) onProgress(n, todo.length);
