@@ -116,6 +116,7 @@ function renderPane(){if(!V)return;const p=$('#pane');p.innerHTML='';$$('#tabs b
       if(c.track==='o')p.append(num('Size (% of width)',()=>(c.sc||.35)*100,v=>c.sc=v/100,5,100,1),num('Left–right (%)',()=>c.x==null?70:c.x,v=>c.x=v,0,100,1),num('Up–down (%)',()=>c.y==null?30:c.y,v=>c.y=v,0,100,1));else p.append(num('Zoom (1 = fit)',()=>c.zoom||1,v=>c.zoom=v,.2,4,.05))}
     if(c.kind==='text'){p.append(num('Size',()=>c.size||72,v=>c.size=v,10,300,2),num('Left–right (%)',()=>c.x==null?50:c.x,v=>c.x=v,0,100,1),num('Up–down (%)',()=>c.y==null?50:c.y,v=>c.y=v,0,100,1),el('label',{},'Colour',el('input',{type:'color',value:c.color||'#ffffff',oninput:e=>{c.color=e.target.value;draw();ed.queue()},onfocus:snap})),el('label',{style:'display:flex;gap:8px;align-items:center'},el('input',{type:'checkbox',checked:!!c.bg,onchange:e=>{snap();c.bg=e.target.checked?'#000000aa':null;changed()}}),'Dark box behind the text'))}
     if(c.kind!=='cap')p.append(num('Fade in/out (seconds)',()=>c.fade||0,v=>c.fade=v,0,5,.1));
+    if(c.kind==='audio'||c.kind==='video')p.append(el('div',{class:'row'},el('select',{class:'f',id:'beatN',style:'flex:1','aria-label':'Cut every'},...[[1,'every beat'],[2,'every 2 beats'],[4,'every 4 beats'],[8,'every 8 beats']].map(([v,l])=>el('option',{value:v,selected:v===2},l))),el('button',{class:'btn',id:'bBeat',onclick:()=>beatReel(c)},'🥁 Cut pictures to this beat')));
     if(c.kind==='video'||c.kind==='audio')p.append(el('button',{class:'btn',id:'bSil',onclick:()=>removeSilence(c)},'🤫 Remove silences'));
     p.append(el('div',{class:'row'},el('button',{class:'btn',onclick:split},'✂ Split'),el('button',{class:'btn danger',onclick:del},'Delete')));return}
   /* captions */
@@ -156,6 +157,24 @@ async function recordScreen(){const b=$('#bScr');if(scr){scr.rec.stop();return}i
 function narrate(){const ta=el('textarea',{class:'f',rows:5,id:'ttsText',placeholder:'Type what the voice should say'}),vs=el('select',{class:'f',id:'ttsVoice'},...['alloy','echo','fable','onyx','nova','shimmer'].map(x=>el('option',{},x))),st=el('p',{class:'note',role:'status'},'');
   openModal(el('div',{style:'display:grid;gap:10px;min-width:min(440px,86vw)'},el('h2',{},'Narrate text'),ta,el('label',{class:'note'},'Voice',vs),st,el('div',{class:'row',style:'justify-content:flex-end'},el('button',{class:'btn',onclick:closeModal},'Cancel'),el('button',{class:'btn pri',id:'ttsGo',onclick:async e=>{const text=ta.value.trim();if(!text){st.textContent='Type something first.';return}e.target.disabled=true;st.textContent='Making the voice…';
     try{const r=await fetch('/_local/design/speak',{method:'POST',credentials:'same-origin',headers:{'x-aos':'1','content-type':'application/json'},body:JSON.stringify({text,voice:vs.value})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Could not make the voice ('+r.status+')');const blob=await (await fetch(j.audio)).blob();closeModal();await importFiles([new File([blob],'Narration — '+text.slice(0,24)+'.mp3',{type:'audio/mpeg'})],t);renderPane()}catch(err){st.textContent=err.message;e.target.disabled=false}}},'Make voice'))))}
+/* Beat sync: find the tempo of a music clip, then lay the pictures and videos on the main track so every cut lands on the beat. */
+function detectBeats(buf){const d=buf.getChannelData(0),sr=buf.sampleRate,hop=Math.floor(sr*.01),n=Math.floor(d.length/hop),env=new Float32Array(n);
+  for(let i=0;i<n;i++){let e=0;for(let j=i*hop;j<(i+1)*hop;j++)e+=d[j]*d[j];env[i]=Math.sqrt(e/hop)}
+  const flux=new Float32Array(n);for(let i=1;i<n;i++)flux[i]=Math.max(0,env[i]-env[i-1]);
+  let bestL=50,bestS=-1;for(let lag=37;lag<=75;lag++){let sc=0;for(let i=lag;i<n;i++)sc+=flux[i]*flux[i-lag];sc/=Math.sqrt(1+Math.abs(lag-50)*.002);if(sc>bestS){bestS=sc;bestL=lag}}
+  // refine around the best lag using the double and half lag to settle on a steady grid
+  const period=bestL*.01;let bestO=0,bo=-1;for(let o=0;o<bestL;o++){let sc=0;for(let i=o;i<n;i+=bestL)sc+=flux[i]+(flux[i+1]||0)+(flux[i-1]||0);if(sc>bo){bo=sc;bestO=o}}
+  const beats=[];for(let tt=bestO*.01;tt<buf.duration;tt+=period)beats.push(tt);return{bpm:60/period,period,beats}}
+async function beatReel(c){const b=$('#bBeat'),k=+$('#beatN').value||2;b.disabled=true;b.textContent='Listening…';
+  try{const u=await getURL(c.mid);if(!u)throw new Error('The file is missing.');const dc=new (window.AudioContext||window.webkitAudioContext)();let buf;try{buf=await dc.decodeAudioData(await (await fetch(u)).arrayBuffer())}catch(e){throw new Error('This clip has no sound the browser can read.')}finally{dc.close()}
+    const bt=detectBeats(buf),sp=c.speed||1,inR=[c.in,c.in+c.dur*sp];const grid=bt.beats.filter(x=>x>=inR[0]-1e-6&&x<=inR[1]).map(x=>c.start+(x-c.in)/sp);if(grid.length<k+1)throw new Error('Could not find a steady beat in this clip.');
+    const srcs=V.clips.filter(x=>x!==c&&(x.kind==='video'||x.kind==='image')&&x.track!=='o').sort((a,z)=>a.start-z.start);if(!srcs.length)throw new Error('Add some pictures or videos first. They are cut to the beat.');
+    const cuts=grid.filter((_,i)=>i%k===0);if(cuts.length<2)throw new Error('The music is too short for that many beats.');
+    snap();const used={};const out=[];for(let i=0;i<cuts.length-1;i++){const s0=srcs[i%srcs.length],len=cuts[i+1]-cuts[i],round=used[s0.id]=(used[s0.id]??-1)+1;
+      const media=s0.kind==='video',md=media?(V.media[s0.mid].dur||s0.in+s0.dur):0,maxIn=media?Math.max(0,md-len*(s0.speed||1)):0,inn=media?Math.min(maxIn,(s0.in||0)+round*len*(s0.speed||1)):0;
+      out.push({...s0,id:uid(),start:cuts[i],in:inn,dur:len,fade:0})}
+    const keepIds=new Set(srcs.map(x=>x.id));V.clips=V.clips.filter(x=>!keepIds.has(x.id));out.forEach(n=>{V.clips.push(n);prep(n)});toast(Math.round(bt.bpm)+' BPM: '+out.length+' cuts on the beat');changed()}
+  catch(e){toast(e.message,5000)}finally{const bb=$('#bBeat');if(bb){bb.disabled=false;bb.textContent='🥁 Cut pictures to this beat'}}}
 let vo=null;
 async function recordVO(){const b=$('#bVO');if(vo){vo.rec.stop();return}if(!navigator.mediaDevices||!window.MediaRecorder)return toast('This browser cannot record sound');
   let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){return toast('Allow the microphone to record a voice-over')}
@@ -185,6 +204,6 @@ async function startExport(){if(!total())return toast('Nothing to export yet');i
   rec.start(500);$('#bEx').textContent='Recording…';t=0;sync();draw();play()}
 function finishExport(){const ex=exporting;if(!ex)return;setTimeout(()=>{try{ex.rec.stop()}catch(e){}},400)}
 function cancelExport(){const ex=exporting;if(!ex)return;ex.cancel=true;stop();try{ex.rec.stop()}catch(e){}toast('Export cancelled')}
-$('#bEx').onclick=e=>{if(exporting)return cancelExport();const r=e.currentTarget.getBoundingClientRect();ctxMenu(r.left,r.bottom+4,[{label:'Version history',go:()=>openHistory(ed)},'-',{label:'Video (.webm)',go:startExport},{label:'Captions (.srt)',go:exportSrt},'-',{label:'Move to trash',go:()=>askTrash(ed,'video',$('#title').value||'this video')}])};
+$('#bEx').onclick=e=>{if(exporting)return cancelExport();const r=e.currentTarget.getBoundingClientRect();ctxMenu(r.left,r.bottom+4,[{label:'Comments',go:()=>openComments(ed,{hint:'Comments are pinned to the playhead time.',anchor:()=>({label:fmt(t,1),data:t}),goto:a=>seek(a.data)})},{label:'Version history',go:()=>openHistory(ed)},'-',{label:'Video (.webm)',go:startExport},{label:'Captions (.srt)',go:exportSrt},'-',{label:'Move to trash',go:()=>askTrash(ed,'video',$('#title').value||'this video')}])};
 function build(){renderTL();setTab(V.clips.length?'clip':'media');if(!V.clips.length)setTab('media');draw()}
 addEventListener('beforeunload',()=>{for(const k in urls)urls[k].then&&urls[k].then(u=>u&&URL.revokeObjectURL(u))});

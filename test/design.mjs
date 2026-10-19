@@ -589,6 +589,30 @@ try {
     await s.waitForFunction(() => S.name === 'Mama Mkate', null, { timeout: 20000 }); await s.waitForFunction(() => S.pages[0].blocks.some((b) => b.type === 'hero' && / \(ai\)$/.test(b.d.title || '')), null, { timeout: 30000 });
     assert.ok(await s.evaluate(() => !JSON.stringify(S.pages).includes('Kahawa Corner') && JSON.stringify(S.pages).includes('Mama Mkate') || true)); await s.close();
   });
+  await t('Beat-synced cuts, comments, newsletter starters, shared library, blog posts with their own pages', async () => {
+    const tmp = (n) => path.join(os.tmpdir(), n + '-' + Date.now()); const ck = tmp('clicks') + '.ogg', i1 = tmp('a') + '.png', i2 = tmp('b') + '.png';
+    const f1 = spawnSync('ffmpeg', ['-loglevel', 'error', '-y', '-f', 'lavfi', '-i', "aevalsrc='if(lt(mod(t,0.5),0.03),0.8*sin(2*PI*1000*t),0)':d=8:s=16000", '-c:a', 'libopus', ck]);
+    spawnSync('ffmpeg', ['-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc=size=200x120:rate=1:duration=1', '-frames:v', '1', i1]); spawnSync('ffmpeg', ['-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'smptebars=size=200x120:rate=1:duration=1', '-frames:v', '1', i2]);
+    if (f1.status === 0) {
+      const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/video.html'); await p.waitForFunction(() => typeof V !== 'undefined' && V);
+      await p.setInputFiles('#fMedia', [i1, i2]); await p.waitForFunction(() => V.clips.length === 2, null, { timeout: 20000 }); await p.setInputFiles('#fMedia', ck); await p.waitForFunction(() => V.clips.some((c) => c.kind === 'audio'), null, { timeout: 20000 }); await p.waitForFunction(() => els[V.clips.find((c) => c.kind === 'audio').id], null, { timeout: 15000 });
+      await p.evaluate(() => { const a = V.clips.find((c) => c.kind === 'audio'); a.start = 0; sel = a.id; setTab('clip'); }); await p.selectOption('#beatN', '2'); await p.click('#bBeat');
+      await p.waitForFunction(() => V.clips.filter((c) => c.kind === 'image').length > 4, null, { timeout: 20000 });
+      const durs = await p.evaluate(() => V.clips.filter((c) => c.kind === 'image').map((c) => +c.dur.toFixed(2))); assert.ok(durs.every((d) => Math.abs(d - 1) < .12), 'cuts follow a 120 BPM beat: ' + durs.join(','));
+      await p.evaluate(() => { seek(2.3); sel = null; }); await p.click('[data-tab=caps]'); await p.close();
+    } else console.log('skip  ffmpeg not installed (beat test)');
+    const s = await ctx.newPage(); await s.goto(B + '/apps/design-studio/site.html'); await s.waitForFunction(() => typeof blogPages === 'function' && S);
+    const bp = await s.evaluate(() => { const b = mkBlock('blog'); page().blocks.push(b); const n0 = S.pages.length; blogPages(b); const h = pageHTML(S.pages[0], 'pub', { hrefFor: (x) => x }); return { added: S.pages.length - n0, more: (h.match(/class="more"/g) || []).length, slug: S.pages.at(-1).slug, hasNav: S.pages.at(-1).blocks[0].type === 'nav' }; });
+    assert.equal(bp.added, 3); assert.equal(bp.more, 3); assert.ok(bp.hasNav);
+    await s.click('#bDl'); await s.click('text=Save to shared library'); await s.fill('.dlg input', 'My test site'); await s.click('.dlg >> text=Share'); await s.waitForFunction(() => /shared library/i.test(document.querySelector('#toast').textContent));
+    await s.evaluate(() => { selB = S.pages[0].blocks.find((b) => b.type !== 'nav').id; }); await s.click('#bDl'); await s.click('text=Comments'); await s.fill('#cmText', 'Check the wording here'); await s.click('#cmAdd'); await s.waitForSelector('[data-cm]'); assert.equal(await s.evaluate(() => ed.rec.comments.length), 1); assert.ok(await s.evaluate(() => !!ed.rec.comments[0].a)); await s.click('[data-done]'); await s.waitForFunction(() => ed.rec.comments[0].done === true); await s.click('.dlg >> text=Close');
+    await s.click('#bDl'); await s.click('text=Start from shared library'); await s.waitForSelector('[data-lib]'); await s.click('[data-use]'); await s.click('.dlg >> text=Replace'); await s.waitForFunction(() => S.name === 'My test site' || S.pages.length > 3, null, { timeout: 10000 }); await s.close();
+    const d = await ctx.newPage(); await d.goto(B + '/apps/design-studio/docs.html'); await d.waitForSelector('#page'); await d.click('#bDl'); await d.click('text=Newsletter starters'); await d.fill('#nlName', 'Mama Mkate'); await d.click('[data-nl="Promotion"]'); await d.waitForFunction(() => /SAVE20/.test(document.querySelector('#page').innerText));
+    assert.ok(await d.evaluate(() => /background-color:\s*(#e8590c|rgb\(232, 89, 12\))/i.test(document.querySelector('#page').innerHTML) && /Mama Mkate/.test(document.querySelector('#page').innerText)));
+    await d.click('#bDl'); await d.click('text=Comments'); await d.fill('#cmText', 'Add the real discount'); await d.click('#cmAdd'); await d.waitForSelector('[data-cm]'); await d.click('.dlg >> text=Close');
+    await d.click('#bDl'); await d.click('text=Save to shared library'); await d.fill('.dlg input', 'Promo letter'); await d.click('.dlg >> text=Share'); await d.waitForTimeout(500);
+    const lib = await (await ctx.request.post(B + '/_local/design/library', { data: { op: 'list' }, headers: { 'x-aos': '1' } })).json(); assert.ok(lib.items.length >= 2 && lib.items.some((x) => x.kind === 'doc' && x.name === 'Promo letter')); await d.close();
+  });
   await t('right-click menu text is readable in dark mode', async () => {
     const p = await ctx.newPage(); await p.emulateMedia({ colorScheme: 'dark' }); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof ctxMenu === 'function');
     const c = await p.evaluate(() => { ctxMenu(100, 100, [{ label: 'Open', go() {} }]); const b = document.querySelector('.ctx button'), m = document.querySelector('.ctx'); return [getComputedStyle(b).color, getComputedStyle(m).backgroundColor]; });
