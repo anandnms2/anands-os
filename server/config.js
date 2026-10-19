@@ -64,7 +64,7 @@ export function effective() {
     bookmarks: { url: (clean(s.bookmarks?.url) || clean(env.LINKS_URL) || `https://links.${BASE_DOMAIN}`).replace(/\/+$/, ''), token: clean(s.bookmarks?.token) || clean(env.LINKS_TOKEN) },
     public: { url: clean(s.public?.url) || PUBLIC_URL },
     turn: { urls: clean(s.turn?.urls) || clean(env.TURN_URLS) || ((s.turn?.secret || env.TURN_SECRET) && PUBLIC_URL ? (() => { try { const h = new URL(PUBLIC_URL).hostname; return 'turn:' + h + ':3478,turn:' + h + ':3478?transport=tcp'; } catch { return ''; } })() : ''), secret: clean(s.turn?.secret) || clean(env.TURN_SECRET), stun: clean(s.turn?.stun) || clean(env.STUN_URLS) },
-    stock: { pexels: clean(s.stock?.pexels) || clean(env.PEXELS_API_KEY), unsplash: clean(s.stock?.unsplash) || clean(env.UNSPLASH_ACCESS_KEY) },
+    stock: { pexels: clean(s.stock?.pexels) || clean(env.PEXELS_API_KEY), unsplash: clean(s.stock?.unsplash) || clean(env.UNSPLASH_ACCESS_KEY), pixabay: clean(s.stock?.pixabay) || clean(env.PIXABAY_API_KEY) },
     llm: { base: clean(s.llm?.base) || clean(env.LLM_BASE_URL), key: clean(s.llm?.key) || clean(env.LLM_API_KEY), model: clean(s.llm?.model) || clean(env.LLM_MODEL) || 'gpt-4o-mini' }
   };
 }
@@ -90,7 +90,7 @@ export function publicSettings() {
     bookmarks: { url: e.bookmarks.url, tokenSet: !!e.bookmarks.token },
     public: { url: e.public.url },
     turn: { urls: e.turn.urls, secretSet: !!e.turn.secret, stun: e.turn.stun },
-    stock: { pexelsSet: !!e.stock.pexels, unsplashSet: !!e.stock.unsplash },
+    stock: { pexelsSet: !!e.stock.pexels, unsplashSet: !!e.stock.unsplash, pixabaySet: !!e.stock.pixabay },
     llm: { base: e.llm.base, keySet: !!e.llm.key, model: e.llm.model }
   };
 }
@@ -143,7 +143,7 @@ export function updateSettings(patch) {
     set('turn', 'secret', p.turn.secret, true);
   }
   set('public', 'url', p.public?.url === undefined ? undefined : String(p.public.url).replace(/\/+$/, ''));
-  set('stock', 'pexels', p.stock?.pexels, true); set('stock', 'unsplash', p.stock?.unsplash, true);
+  set('stock', 'pexels', p.stock?.pexels, true); set('stock', 'unsplash', p.stock?.unsplash, true); set('stock', 'pixabay', p.stock?.pixabay, true);
   set('llm', 'base', p.llm?.base); set('llm', 'key', p.llm?.key, true); set('llm', 'model', p.llm?.model);
   stored = next;
   const tmp = sfile + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(stored, null, 2), { mode: 0o600 }); fs.renameSync(tmp, sfile);

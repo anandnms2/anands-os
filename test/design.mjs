@@ -13,19 +13,22 @@ let chromium = null; for (const base of [root + '/', '/opt/npm-tools/node_module
 if (!chromium) { console.log('skip  Playwright not installed'); process.exit(0); }
 
 /* fake upstreams: Pexels, Unsplash, and the host the background remover files come from */
-const hits = { pexels: [], unsplash: [], bg: [] };
+const hits = { pexels: [], unsplash: [], pixabay: [], openverse: [], wiki: [], bg: [] };
 const listen = (h) => new Promise((r) => { const s = http.createServer(h); s.listen(0, '127.0.0.1', () => r(s)); });
 const px = await listen((req, res) => { hits.pexels.push({ u: req.url, auth: req.headers.authorization }); if (req.headers.authorization !== 'px-key') { res.writeHead(401); return res.end('{}'); }
   res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ photos: [{ id: 7, width: 4000, height: 3000, photographer: 'Ana', url: 'https://www.pexels.com/photo/7/', alt: 'a lake', src: { medium: 'https://images.pexels.com/photos/7/m.jpg', large2x: 'https://images.pexels.com/photos/7/l.jpg' } }, { id: 8, src: {} }] })); });
 const un = await listen((req, res) => { hits.unsplash.push({ u: req.url, auth: req.headers.authorization }); res.writeHead(200, { 'content-type': 'application/json' });
   res.end(JSON.stringify({ results: [{ id: 'abc', width: 100, height: 80, user: { name: 'Bo' }, alt_description: 'a hill', links: { html: 'https://unsplash.com/photos/abc', download_location: 'https://api.unsplash.com/photos/abc/download' }, urls: { small: 'https://images.unsplash.com/s.jpg', regular: 'https://images.unsplash.com/r.jpg' } }] })); });
+const pb = await listen((req, res) => { hits.pixabay.push(req.url); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ hits: [{ id: 5, webformatURL: 'https://pixabay.com/get/w.jpg', largeImageURL: 'https://pixabay.com/get/l.jpg', imageWidth: 3000, imageHeight: 2000, user: 'Cy', pageURL: 'https://pixabay.com/photos/5/', tags: 'sea, wave' }] })); });
+const ov = await listen((req, res) => { hits.openverse.push(req.url); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ results: [{ id: 'o1', title: 'Forest', creator: 'Di', thumbnail: 'https://api.openverse.org/v1/images/o1/thumb/', width: 800, height: 600, license: 'by', license_version: '4.0', foreign_landing_url: 'https://example.org/o1' }] })); });
+const wk = await listen((req, res) => { hits.wiki.push(req.url); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ query: { pages: { 22: { pageid: 22, index: 2, title: 'File:Old_mill.jpg', imageinfo: [{ mime: 'image/jpeg', width: 4000, height: 3000, thumburl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Old_mill.jpg/1280px-Old_mill.jpg', descriptionurl: 'https://commons.wikimedia.org/wiki/File:Old_mill.jpg', extmetadata: { Artist: { value: '<a href="x">Eva &amp; Co</a>' }, LicenseShortName: { value: 'CC BY-SA 4.0' } } }] }, 21: { pageid: 21, index: 1, title: 'File:Doc.pdf', imageinfo: [{ mime: 'application/pdf', thumburl: 'https://upload.wikimedia.org/x.png' }] } } } })); });
 const bgHost = await listen((req, res) => { hits.bg.push(req.url); if (req.url.endsWith('ort.min.js')) { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('/* fake ort */'.padEnd(2000, ' ')); } res.writeHead(404); res.end(); });
 
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-ds-')), suite = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-suite-'));
 fs.mkdirSync(suite + '/apps', { recursive: true }); fs.cpSync(root + '/suite/own/design-studio', suite + '/apps/design-studio', { recursive: true }); fs.mkdirSync(suite + '/_icons');
 fs.writeFileSync(suite + '/apps.json', JSON.stringify([{ slug: 'design-studio', name: 'Design Studio', alternativeTo: 'Canva', category: 'Creative Tools', hasSource: true }]));
 const port = 20000 + Math.floor(Math.random() * 20000), B = `http://127.0.0.1:${port}`;
-const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', PEXELS_API_BASE: `http://127.0.0.1:${px.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '' } });
+const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', PEXELS_API_BASE: `http://127.0.0.1:${px.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, PIXABAY_API_BASE: `http://127.0.0.1:${pb.address().port}`, OPENVERSE_API_BASE: `http://127.0.0.1:${ov.address().port}`, WIKIMEDIA_API_BASE: `http://127.0.0.1:${wk.address().port}/w/api.php`, PIXABAY_API_KEY: '', BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '' } });
 for (let i = 0; i < 60; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
 let pass = 0, failed = 0; const t = async (n, f) => { try { await f(); pass++; console.log('ok   ' + n); } catch (e) { failed++; console.log('FAIL ' + n + '\n     ' + String(e.stack || e).split('\n').slice(0, 5).join('\n     ')); } };
 const browser = await chromium.launch({ args: ['--no-sandbox'] }); const errs = [];
@@ -47,11 +50,12 @@ try {
     const w = await ctx.request.get(B + '/_local/bgdata/ort-wasm.wasm'); assert.equal(w.status(), 502); assert.match((await w.json()).error, /Could not download/);
   });
   await t('stock photos: no key gives a clear message; keys stay on the server', async () => {
-    assert.deepEqual((await post('/design/stockstatus')).j, { pexels: false, unsplash: false });
-    const r = await post('/design/stock', { q: 'lake' }); assert.equal(r.s, 400); assert.equal(r.j.code, 'no_key');
-    const put = await ctx.request.put(B + '/api/settings', { data: { stock: { pexels: 'px-key', unsplash: 'un-key' } }, headers: H }); assert.ok(put.ok());
-    const s = await (await ctx.request.get(B + '/api/settings')).json(); assert.deepEqual(s.stock, { pexelsSet: true, unsplashSet: true }); assert.ok(!JSON.stringify(s).includes('px-key'));
-    assert.deepEqual((await post('/design/stockstatus')).j, { pexels: true, unsplash: true });
+    assert.deepEqual((await post('/design/stockstatus')).j, { pexels: false, unsplash: false, pixabay: false, openverse: true, wikimedia: true });
+    const r = await post('/design/stock', { q: 'lake', source: 'pexels' }); assert.equal(r.s, 400); assert.equal(r.j.code, 'no_key');
+    const free = (await post('/design/stock', { q: 'lake' })).j; assert.equal(free.source, 'openverse'); assert.equal(free.items.length, 1);
+    const put = await ctx.request.put(B + '/api/settings', { data: { stock: { pexels: 'px-key', unsplash: 'un-key', pixabay: 'pb-key' } }, headers: H }); assert.ok(put.ok());
+    const s = await (await ctx.request.get(B + '/api/settings')).json(); assert.deepEqual(s.stock, { pexelsSet: true, unsplashSet: true, pixabaySet: true }); assert.ok(!JSON.stringify(s).includes('px-key'));
+    assert.deepEqual((await post('/design/stockstatus')).j, { pexels: true, unsplash: true, pixabay: true, openverse: true, wikimedia: true });
   });
   await t('stock photos: Pexels and Unsplash results are normalised; bad keys and junk are handled', async () => {
     const a = (await post('/design/stock', { q: 'lake', source: 'pexels' })).j; assert.equal(a.source, 'pexels'); assert.equal(a.items.length, 1); assert.equal(a.items[0].by, 'Ana'); assert.match(a.items[0].full, /l\.jpg$/);
@@ -62,8 +66,14 @@ try {
     await ctx.request.put(B + '/api/settings', { data: { stock: { pexels: 'px-key' } }, headers: H });
     const long = (await post('/design/stock', { q: 'a'.repeat(500), page: -9 })).j; assert.equal(long.page, 1); assert.ok(decodeURIComponent(hits.pexels.at(-1).u).length < 260);
   });
+  await t('stock photos: Pixabay, Openverse and Wikimedia Commons results are normalised with credit and license', async () => {
+    const a = (await post('/design/stock', { q: 'sea', source: 'pixabay' })).j; assert.equal(a.items[0].by, 'Cy'); assert.match(a.items[0].full, /l\.jpg$/); assert.match(hits.pixabay.at(-1), /key=pb-key.*q=sea/);
+    const o = (await post('/design/stock', { q: 'forest', source: 'openverse' })).j; assert.equal(o.items[0].lic, 'CC BY 4.0'); assert.equal(o.items[0].by, 'Di'); assert.match(hits.openverse.at(-1), /q=forest/);
+    const w = (await post('/design/stock', { q: 'mill', source: 'wikimedia' })).j; assert.equal(w.items.length, 1); assert.equal(w.items[0].by, 'Eva & Co'); assert.equal(w.items[0].lic, 'CC BY-SA 4.0'); assert.match(w.items[0].thumb, /\/320px-/); assert.match(w.items[0].full, /\/1280px-/); assert.equal(w.items[0].alt, 'Old mill');
+    assert.match(decodeURIComponent(hits.wiki.at(-1)), /gsrsearch=mill filetype:bitmap/);
+  });
   await t('stock image proxy only fetches the two photo CDNs over https', async () => {
-    for (const u of ['http://127.0.0.1/x.jpg', 'https://evil.example/x.jpg', 'file:///etc/passwd', 'https://images.pexels.com.evil.com/a.jpg', 'not a url']) assert.equal((await ctx.request.get(B + '/_local/design/stockimg?u=' + encodeURIComponent(u))).status(), 400, u);
+    for (const u of ['http://127.0.0.1/x.jpg', 'https://evil.example/x.jpg', 'file:///etc/passwd', 'https://images.pexels.com.evil.com/a.jpg', 'https://pixabay.com.evil.com/a.jpg', 'not a url']) assert.equal((await ctx.request.get(B + '/_local/design/stockimg?u=' + encodeURIComponent(u))).status(), 400, u);
   });
   await t('share links: public by link only, right type, expiring, removable, unguessable', async () => {
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -80,15 +90,21 @@ try {
 
   const page = await ctx.newPage(); page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/ERR_FAILED|status of 502/.test(m.text())) errs.push(m.text()); });
   await page.goto(B + '/apps/design-studio/'); await page.waitForFunction(() => window.ready === true, null, { timeout: 15000 }); await page.waitForTimeout(1500);
+  await t('opens on a Canva-style home: banner, design types, recents and templates', async () => {
+    await page.waitForSelector('#home:not([hidden]) .hero'); assert.match(await page.textContent('#home h1'), /What will you design today/); assert.ok((await page.$$('#home .hq button')).length >= 10); assert.ok((await page.$$('#home .hg .hc')).length >= 6);
+    await page.fill('#home .hsearch input', 'poster'); await page.waitForSelector('#home .hsz button'); assert.match(await page.textContent('#home .hsz'), /Poster/); await page.fill('#home .hsearch input', 'zzzz'); assert.match(await page.textContent('#home'), /Nothing matches/); await page.fill('#home .hsearch input', '');
+    await page.click('#home .hq button:has-text("Presentation")'); await page.waitForFunction(() => document.getElementById('home').hidden); assert.deepEqual(await page.evaluate(() => [D.w, D.h]), [1920, 1080]);
+    await page.click('#btnHome'); await page.waitForSelector('#home:not([hidden])'); await page.click('#home .hn button:has-text("Templates")'); await page.click('#home .hg.big .hc:has-text("Neon night") .tn'); await page.waitForFunction(() => document.getElementById('home').hidden); assert.equal(await page.evaluate(() => D.name), 'Neon night'); assert.ok(await page.evaluate(() => P().objs.length > 2));
+  });
+  await page.evaluate(() => hideHome());
   const ls = async () => { const r = await post('/fs/readdir', { path: '/Designs' }); return Array.isArray(r.j) ? r.j.map((x) => x.name) : []; };
   await t('a design autosaves to Files › Designs and is renamed (not duplicated) with its title', async () => {
-    assert.equal((await ls()).length, 1); await page.fill('#title', 'Summer Sale'); await page.waitForTimeout(2200);
-    const f = await ls(); assert.equal(f.length, 1); assert.match(f[0], /^Summer Sale \[\w{5}\]\.design$/);
-    await page.click('#btnHome'); await page.waitForSelector('.dcard'); assert.deepEqual(await page.$$eval('.dcard b', (n) => n.map((x) => x.textContent)), ['Summer Sale (open)']);
-    await page.evaluate(() => closeModal());
+    await page.waitForTimeout(2000); const nf0 = (await ls()).length; await page.fill('#title', 'Summer Sale'); await page.waitForTimeout(2200);
+    const f = await ls(); assert.equal(f.length, nf0, 'rename must not add a file'); assert.ok(f.some((n) => /^Summer Sale \[\w{5}\]\.design$/.test(n)));
+    await page.click('#btnHome'); await page.waitForFunction(() => [...document.querySelectorAll('#home:not([hidden]) .hc b')].some((b) => b.textContent === 'Summer Sale'), null, { timeout: 8000 }); await page.evaluate(() => hideHome());
   });
   await t('a saved design reopens with its content after a reload', async () => {
-    const n = await page.evaluate(() => P().objs.length); await page.reload(); await page.waitForFunction(() => window.ready === true); assert.equal(await page.evaluate(() => P().objs.length), n); assert.equal(await page.inputValue('#title'), 'Summer Sale');
+    const n = await page.evaluate(() => P().objs.length); await page.reload(); await page.waitForFunction(() => window.ready === true); await page.evaluate(() => hideHome()); assert.equal(await page.evaluate(() => P().objs.length), n); assert.equal(await page.inputValue('#title'), 'Summer Sale');
   });
   await t('exports: PNG, JPG, WebP, PDF, SVG, GIF, video and project all produce real files', async () => {
     const r = await page.evaluate(async () => { const o = P().objs.find((x) => x.type === 'text'); o.an = { i: 'rise', o: 'fade', l: 'float', d: 0.2, du: 0.6 }; P().dur = 2; const out = {};
@@ -106,8 +122,8 @@ try {
       const svg = pageSVG(P(), 't'), img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); await img.decode();
       const c = document.createElement('canvas'); c.width = D.w; c.height = D.h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, D.w, D.h); x.drawImage(img, 0, 0);
       const A = x.getImageData(0, 0, D.w, D.h).data, R = renderPageTo(P(), 1).getContext('2d').getImageData(0, 0, D.w, D.h).data; let big = 0; for (let i = 0; i < A.length; i += 4) if ((Math.abs(A[i] - R[i]) + Math.abs(A[i + 1] - R[i + 1]) + Math.abs(A[i + 2] - R[i + 2])) / 3 > 40) big++;
-      return { pct: 100 * big / (D.w * D.h), texts: (svg.match(/<text /g) || []).length }; });
-    assert.ok(d.pct < 2, 'SVG differs from canvas on ' + d.pct.toFixed(2) + '% of pixels'); assert.ok(d.texts >= 3, 'text stays live text');
+      return { pct: 100 * big / (D.w * D.h), texts: (svg.match(/<text /g) || []).length, live: svg.includes('>Hello vector<') }; });
+    assert.ok(d.pct < 2, 'SVG differs from canvas on ' + d.pct.toFixed(2) + '% of pixels'); assert.ok(d.texts >= 1 && d.live, 'plain text stays live text');
   });
   await t('animation: starts hidden, rises in, holds, fades out; the page reports it', async () => {
     const a = await page.evaluate(() => { const o = P().objs.find((x) => x.type === 'text'); o.an = { i: 'rise', o: 'fade', l: 'none', d: 0.5, du: 1 }; P().dur = 4; const f = (t) => animFrame(o, t, 4, D.w, D.h); return { t0: f(0).am, mid: f(1).am, hold: f(2).am, end: f(3.99).am, rise0: f(0).dy > 0, has: pageHasAnim(P()) }; });
@@ -133,5 +149,5 @@ try {
     await page.evaluate(() => present()); await page.waitForSelector('#present canvas'); await page.waitForTimeout(500); await page.keyboard.press('Escape'); await page.waitForTimeout(200); assert.equal(await page.$('#present'), null);
   });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
-} finally { await browser.close(); srv.kill(); px.close(); un.close(); bgHost.close(); }
+} finally { await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); }
 console.log(`${pass} passed${failed ? ', ' + failed + ' failed' : ''}`); process.exit(failed ? 1 : 0);

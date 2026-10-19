@@ -1168,7 +1168,7 @@ const dlgHead=(t)=>el('header',{},el('h2',{},t),el('button',{class:'btn sm','ari
 
 /* ---------- new design ---------- */
 function newDesign(w,h,name){
-  commit();saveDoc();D=newDoc(w,h,name);cur=0;sel=[];$('#title').value=D.name;resetHistory();fit();renderAll();closeModal();openTab('tpl');
+  commit();saveDoc();D=newDoc(w,h,name);cur=0;sel=[];$('#title').value=D.name;resetHistory();fit();renderAll();closeModal();openTab('tpl');hideHome();
 }
 function openNew(){
   const cw=el('input',{class:'f',type:'number',value:1080,min:20,max:8000,'aria-label':'Width'}),ch=el('input',{class:'f',type:'number',value:1080,min:20,max:8000,'aria-label':'Height'});
@@ -1187,7 +1187,7 @@ function openHelp(){
 function resizeLayoutHook(){}
 $('#btnUndo').onclick=undo;$('#btnRedo').onclick=redo;
 $('#zIn').onclick=()=>zoomAt(1.2);$('#zOut').onclick=()=>zoomAt(1/1.2);$('#zFit').onclick=fit;
-$('#btnExport').onclick=openExport;$('#btnPresent').onclick=present;$('#btnHome').onclick=openDesigns;$('#btnNew').onclick=openNew;
+$('#btnExport').onclick=openExport;$('#btnPresent').onclick=present;$('#btnHome').onclick=showHome;$('#btnNew').onclick=openNew;
 $('#title').addEventListener('input',e=>{D.name=e.target.value;dirty=true;clearTimeout(hTimer);hTimer=setTimeout(commit,320);clearTimeout(saveT);saveT=setTimeout(saveDoc,900)});
 $('#btnTheme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;const n=dark?'light':'dark';r.dataset.theme=n;try{localStorage.setItem('ds.theme',n)}catch(e){}$('#btnTheme').innerHTML=ic(n==='dark'?'sun':'moon',18);renderUI();render()};
 try{const t=localStorage.getItem('ds.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
@@ -1241,7 +1241,7 @@ async function doSave(){
   }catch(e){setSaveState('Not saved')}
 }
 async function readDesign(path){const b=await PUT().fs.read(path);const r=JSON.parse(await b.text());if(!r||!Array.isArray(r.pages)||!r.w||!r.h)throw new Error('Not a design');r._file=path;return r}
-function loadRec(r){D={id:r.id||uid(),name:r.name||'Untitled design',w:r.w,h:r.h,pages:r.pages,assets:r.assets||{}};D._file=r._file||null;cur=0;sel=[];$('#title').value=D.name;resetHistory();fit();renderAll();setSaveState(D._file?'Saved to Files':'')}
+function loadRec(r){D={id:r.id||uid(),name:r.name||'Untitled design',w:r.w,h:r.h,pages:r.pages,assets:r.assets||{}};D._file=r._file||null;cur=0;sel=[];$('#title').value=D.name;resetHistory();fit();renderAll();setSaveState(D._file?'Saved to Files':'');hideHome()}
 async function listDocs(){
   let items=[];try{items=await PUT().fs.readdir(DIR)}catch(e){return []}
   items=items.filter(i=>!i.is_dir&&/\.design$/i.test(i.name));const out=[];let k=0;
@@ -1373,18 +1373,21 @@ function pageDurSec(){
     el('p',{class:'note'},'Select a layer to give it an entrance, exit or loop.'));
 }
 
-/* ---------- stock photos ---------- */
-const stock={q:'',page:1,items:[],src:'',status:null,busy:false,err:'',more:true};
+/* ---------- free photos: Pexels, Unsplash, Pixabay, Openverse, Wikimedia Commons ---------- */
+const STOCK_SRC=[['pexels','Pexels',1],['unsplash','Unsplash',1],['pixabay','Pixabay',1],['openverse','Openverse',0],['wikimedia','Wikimedia',0]];
+const stock={q:'',page:1,items:[],src:'',status:null,busy:false,err:'',more:true,srcUsed:''};
 const stockImg=u=>'/_local/design/stockimg?u='+enc(u);
+const stockName=k=>(STOCK_SRC.find(x=>x[0]===k)||[0,k])[1];
 async function stockLoad(reset){
   if(stock.busy)return;stock.busy=true;stock.err='';if(reset){stock.page=1;stock.items=[];stock.more=true}
-  try{const r=await api('/design/stock',{q:stock.q,page:stock.page,source:stock.src});stock.items=stock.items.concat(r.items);stock.more=r.items.length>=12;stock.page++;stock.srcUsed=r.source}
+  const mine=stock.src;
+  try{const r=await api('/design/stock',{q:stock.q,page:stock.page,source:stock.src});if(mine===stock.src){stock.items=stock.items.concat(r.items);stock.more=r.items.length>=10;stock.page++;stock.srcUsed=r.source}}
   catch(e){stock.err=e.message||'Search failed'}
   stock.busy=false;if(tab==='stock')renderPanel();
 }
-async function addStock(it,btn){
+async function addStock(it){
   try{toast('Adding photo…',8000);const r=await fetch(stockImg(it.full),{credentials:'same-origin'});if(!r.ok)throw new Error('The photo could not be loaded');const b=await r.blob();
-    const f=new File([b],'photo.jpg',{type:b.type||'image/jpeg'});const a=await ingestImage(f);if(a){addImageAsset(a);toast('Photo by '+(it.by||'the photographer')+' · '+(stock.srcUsed==='unsplash'?'Unsplash':'Pexels'));if(it.dl)api('/design/stockuse',{dl:it.dl}).catch(()=>{})}}
+    const f=new File([b],'photo.jpg',{type:b.type||'image/jpeg'});const a=await ingestImage(f);if(a){addImageAsset(a);const o=selObjs()[0];if(o)o.credit=`${it.by||'Unknown'} · ${stockName(stock.srcUsed)}${it.lic?' · '+it.lic:''}`;toast(`Photo by ${it.by||'the photographer'} · ${stockName(stock.srcUsed)}${it.lic?' · '+it.lic:''}`,4000);if(it.dl)api('/design/stockuse',{dl:it.dl}).catch(()=>{})}}
   catch(e){toast(e.message||'Could not add that photo')}
 }
 async function pickFromFiles(){
@@ -1393,19 +1396,21 @@ async function pickFromFiles(){
 function pStock(b){
   b.append(el('h3',{class:'ph'},'Photos'));
   const inp=el('input',{class:'f',type:'search',placeholder:'Search free photos',value:stock.q,'aria-label':'Search photos',style:'padding-left:30px'});
-  inp.addEventListener('keydown',e=>{if(e.key==='Enter'){stock.q=inp.value.trim();stockLoad(true)}});
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'){stock.q=inp.value.trim();stockLoad(true);renderPanel()}});
   b.append(el('div',{class:'search'},el('span',{html:ic('search',16)}),inp),el('button',{class:'btn wide',html:ic('folder',16)+' Add from Files',onclick:pickFromFiles}));
-  if(!stock.status){api('/design/stockstatus').then(s=>{stock.status=s;if(!s.pexels&&!s.unsplash){if(tab==='stock')renderPanel()}else if(!stock.items.length)stockLoad(true);else if(tab==='stock')renderPanel()}).catch(()=>{stock.status={}});b.append(el('p',{class:'note'},'Loading…'));return}
-  if(!stock.status.pexels&&!stock.status.unsplash){b.append(el('p',{class:'note'},'Free stock photos need a Pexels or Unsplash key. Add one under Settings › Stock photos in Anands OS (both are free), then search here.'),el('button',{class:'btn sm',onclick:()=>{stock.status=null;renderPanel()}},'Check again'));return}
-  if(stock.status.pexels&&stock.status.unsplash)b.append(el('div',{class:'chips'},[['','Auto'],['pexels','Pexels'],['unsplash','Unsplash']].map(([v,l])=>el('button',{class:'chip','aria-pressed':stock.src===v,onclick:()=>{stock.src=v;stockLoad(true);renderPanel()}},l))));
-  if(stock.err)b.append(el('p',{class:'note',style:'color:var(--danger,#c92a2a)'},stock.err));
+  if(!stock.status){api('/design/stockstatus').then(s=>{stock.status=s;if(!stock.src)stock.src=['pexels','unsplash','pixabay'].find(k=>s[k])||'openverse';if(tab==='stock'){renderPanel()}}).catch(()=>{stock.status={openverse:true,wikimedia:true};if(!stock.src)stock.src='openverse';if(tab==='stock')renderPanel()});b.append(el('p',{class:'note'},'Loading…'));return}
+  b.append(el('div',{class:'chips'},STOCK_SRC.map(([k,l,keyed])=>{const off=keyed&&!stock.status[k];return el('button',{class:'chip','aria-pressed':stock.src===k,title:off?'Add a free '+l+' key in Settings to use it':l,style:off?'opacity:.55':'',onclick:()=>{if(stock.src===k)return;stock.src=k;stock.items=[];stock.err='';stock.page=1;stock.more=true;renderPanel()}},l+(off?' 🔑':''))})));
+  const off=(STOCK_SRC.find(x=>x[0]===stock.src)||[])[2]&&!stock.status[stock.src];
+  if(off){b.append(el('p',{class:'note'},`${stockName(stock.src)} needs a free key. Add it under Settings › Stock photos in Anands OS, or use Openverse or Wikimedia right now with no key.`));return}
+  if(stock.err)b.append(el('p',{class:'note',style:'color:var(--danger)'},stock.err));
   const g=el('div',{class:'grid2'});
   stock.items.forEach(it=>g.append(el('button',{class:'cell',style:'aspect-ratio:4/3;padding:0;overflow:hidden',title:(it.alt||'Photo')+' — '+(it.by||''),'aria-label':'Add photo: '+(it.alt||it.by||'stock photo'),onclick:()=>addStock(it)},el('img',{src:stockImg(it.thumb),alt:it.alt||'',loading:'lazy',style:'width:100%;height:100%;object-fit:cover'}))));
   b.append(g);
   if(stock.busy)b.append(el('p',{class:'note'},'Loading…'));
   else if(stock.items.length&&stock.more)b.append(el('button',{class:'btn wide',onclick:()=>stockLoad(false)},'Load more'));
   else if(!stock.items.length&&!stock.err)stockLoad(true);
-  b.append(el('p',{class:'note'},'Photos from '+(stock.srcUsed==='unsplash'?'Unsplash':'Pexels')+'. Free to use; credit is appreciated.'));
+  const lic={pexels:'Pexels license: free to use.',unsplash:'Unsplash license: free to use.',pixabay:'Pixabay license: free to use.',openverse:'Openverse: Creative Commons images that allow commercial use. Credit the creator where the license asks. Medium resolution.',wikimedia:'Wikimedia Commons: free-licensed images. Many need credit (CC BY, CC BY-SA); the license is shown when you add one.'}[stock.src];
+  b.append(el('p',{class:'note'},lic));
 }
 
 /* ---------- SVG (vector) ---------- */
@@ -1618,7 +1623,7 @@ async function aiSample(){
 /* ---------- hooks into the original panels & inspector ---------- */
 function startFresh(){D=newDoc(1080,1080,'Untitled design');const t=buildTemplate(TEMPLATES[0],D.w,D.h);D.pages[0].bg=t.bg;D.pages[0].objs=t.objs}
 async function openLaunchItems(items){
-  const it=(items||[])[0];if(!it)return;
+  const it=(items||[])[0];if(!it)return;hideHome();
   try{
     if(/\.design$/i.test(it.name)){loadRec(Object.assign(JSON.parse(await it.text()),{_file:it.path}));return}
     if(/\.json$/i.test(it.name)){importRec(JSON.parse(await it.text()),it.name.replace(/\.\w+$/,''));return}
@@ -1638,5 +1643,89 @@ async function openLaunchItems(items){
     requestAnimationFrame(()=>{fit();renderStrip()});setTimeout(()=>{fit();renderStrip()},600);
     try{if(PUT()&&PUT().ui&&PUT().ui.onLaunchedWithItems)PUT().ui.onLaunchedWithItems(items=>openLaunchItems(items))}catch(e){}
     if(!rec)saveDoc();
+    if(!new URLSearchParams(location.search).has('open'))setTimeout(showHome,0);
   })();
 })();
+
+/* =====================================================================
+   Home screen — Canva-style: sidebar, search banner, design types, recents, templates
+   ===================================================================== */
+const QUICK=[['Presentation','play','#7048e8',1920,1080],['Instagram post','image','#d6336c',1080,1080],['Story','sparkle','#e8590c',1080,1920],['Video','film','#1098ad',1920,1080],['Poster','text','#2f9e44',1800,2400],['Flyer','grid','#f59f00',874,1240],['Document','text','#4263eb',1240,1754],['YouTube thumbnail','play','#e03131',1280,720],['Logo','brand','#ae3ec9',800,800],['Business card','tpl','#0ca678',1050,600],['Custom size','plus','#6f685f',0,0]];
+const tplSize=t=>t.n==='Business card'?[1050,600]:t.c==='Slides'?[1920,1080]:t.n==='Flyer'||t.n==='Event poster'?[1240,1754]:[1080,1080];
+const home={view:'home',q:'',cat:'All',docs:null,mine:''};
+const tplThumbs=new Map();
+function tplThumb(t){
+  let c=tplThumbs.get(t.n);if(c)return c;
+  const [W,H]=tplSize(t);try{const built=buildTemplate(t,W,H),k=Math.min(2,(devicePixelRatio||1))*300/Math.max(W,H);c=document.createElement('canvas');c.width=Math.round(W*k);c.height=Math.round(H*k);const x=c.getContext('2d');x.scale(k,k);x.fillStyle='#fff';x.fillRect(0,0,W,H);drawPageContent(x,built,W,H,{s:k})}catch(e){c=document.createElement('canvas');c.width=c.height=10}
+  tplThumbs.set(t.n,c);return c;
+}
+const homeEl=()=>document.getElementById('home');
+function showHome(){commit();saveDoc();home.view='home';home.q='';const h=homeEl();h.hidden=false;home.docs=null;renderHome();refreshDocs()}
+function hideHome(){const h=homeEl();if(h)h.hidden=true;setTimeout(()=>{fit();renderStrip()},60)}
+async function refreshDocs(){try{home.docs=await listDocs()}catch(e){home.docs=[]}if(!homeEl().hidden)renderHome()}
+function startSize(w,h,name){if(!w){openNew();return}newDesign(w,h,name)}
+function startTemplate(t){const [w,h]=tplSize(t);newDesign(w,h,t.n);applyTemplate(t)}
+function fmtDate(ts){try{return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'})}catch(e){return ''}}
+const hIcon=(n,s)=>ic(n,s||22);
+function designCard(r,withActions){
+  let armed=false;
+  const open=()=>r.id===D.id&&!document.getElementById('home').hidden?(hideHome()):openDesignFile(r._file);
+  const card=el('div',{class:'hc'},el('button',{class:'tn','aria-label':'Open '+r.name,onclick:open},r.thumb?el('img',{src:r.thumb,alt:''}):null),el('b',{title:r.name},r.name),el('small',{},`${r.w}×${r.h} · ${r.pages} page${r.pages>1?'s':''} · ${fmtDate(r.updated)}`));
+  if(withActions){
+    const del=el('button',{class:'btn sm danger',onclick:async()=>{if(!armed){armed=true;del.textContent='Delete?';setTimeout(()=>{armed=false;del.textContent='Delete'},3000);return}try{await PUT().fs.delete(r._file);fileCache.delete(r._file)}catch(e){}refreshDocs()}},'Delete');
+    const dup=el('button',{class:'btn sm',onclick:async()=>{try{commit();await saveDoc();const x=await readDesign(r._file);x.id=uid();x.name=r.name+' copy';x._file=null;loadRec(x);await saveDoc();showHome();toast('Duplicated')}catch(e){toast('Could not duplicate')}}},'Duplicate');
+    card.append(el('div',{class:'row'},dup,del));
+  }
+  return card;
+}
+function templateCard(t){const th=el('button',{class:'tn','aria-label':'Use template '+t.n,onclick:()=>startTemplate(t)},tplThumb(t));return el('div',{class:'hc'},th,el('b',{},t.n),el('small',{},t.c==='Slides'?'Presentation':t.c==='Print'?'Print':'Social media'))}
+function sizeButtons(list){return el('div',{class:'hsz'},list.map(s=>el('button',{onclick:()=>startSize(s.w,s.h,s.n)},s.n,el('small',{},`${s.w}×${s.h}`))))}
+function homeSections(){
+  const q=home.q.trim().toLowerCase(),out=[];
+  const docs=home.docs;
+  if(home.view==='projects'){
+    const list=(docs||[]).filter(r=>!home.mine||r.name.toLowerCase().includes(home.mine.toLowerCase()));
+    const s=el('input',{class:'f',type:'search',placeholder:'Search your designs',value:home.mine,'aria-label':'Search your designs',style:'max-width:360px'});
+    s.addEventListener('input',()=>{home.mine=s.value;renderHome();const n=document.querySelector('#home input[aria-label="Search your designs"]');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}});
+    out.push(el('div',{class:'hs'},el('h2',{},'Projects'),el('button',{class:'more',onclick:openLinks},'Share links')),s,el('div',{style:'height:16px'}),docs===null?el('p',{class:'note'},'Loading…'):list.length?el('div',{class:'hg big'},[el('div',{class:'hc'},el('button',{class:'tn new',onclick:()=>openNew(),'aria-label':'Create a design',html:ic('plus',34)}),el('b',{},'Create new')),...list.map(r=>designCard(r,true))]):el('div',{class:'hempty'},home.mine?'No designs match that search.':'Nothing here yet. Your designs save automatically to Files › Designs.'));
+    return out;
+  }
+  if(home.view==='templates'){
+    out.push(el('div',{class:'hs'},el('h2',{},'Templates')),el('div',{class:'hchips'},['All','Social','Slides','Print'].map(c=>el('button',{class:'chip','aria-pressed':home.cat===c,onclick:()=>{home.cat=c;renderHome()}},c==='Social'?'Social media':c==='Slides'?'Presentations':c))),el('div',{style:'height:10px'}),el('div',{class:'hg big'},TEMPLATES.filter(t=>home.cat==='All'||t.c===home.cat).map(templateCard)));
+    return out;
+  }
+  if(q){
+    const ss=[...SIZES,{n:'Video',w:1920,h:1080},{n:'Presentation',w:1920,h:1080},{n:'Document',w:1240,h:1754}].filter(s=>s.n.toLowerCase().includes(q)),ts=TEMPLATES.filter(t=>(t.n+' '+t.c).toLowerCase().includes(q)),ds=(docs||[]).filter(r=>r.name.toLowerCase().includes(q));
+    out.push(el('div',{class:'hs'},el('h2',{},`Results for “${home.q.trim()}”`)));
+    if(ss.length)out.push(el('div',{class:'hs',style:'margin-top:6px'},el('h2',{style:'font-size:16px'},'Design types')),sizeButtons(ss));
+    if(ts.length)out.push(el('div',{class:'hs'},el('h2',{style:'font-size:16px'},'Templates')),el('div',{class:'hg'},ts.map(templateCard)));
+    if(ds.length)out.push(el('div',{class:'hs'},el('h2',{style:'font-size:16px'},'Your designs')),el('div',{class:'hg'},ds.map(r=>designCard(r))));
+    if(!ss.length&&!ts.length&&!ds.length)out.push(el('div',{class:'hempty'},'Nothing matches that. Try “poster”, “Instagram” or “slide”.'));
+    return out;
+  }
+  out.push(el('div',{class:'hs'},el('h2',{},'Recent designs'),(docs&&docs.length>5)?el('button',{class:'more',onclick:()=>{home.view='projects';renderHome()}},'See all'):null),
+    docs===null?el('p',{class:'note'},'Loading…'):el('div',{class:'hg'},[el('div',{class:'hc'},el('button',{class:'tn new',onclick:()=>openNew(),'aria-label':'Create a design',html:ic('plus',34)}),el('b',{},'Create new')),...docs.slice(0,6).map(r=>designCard(r))]));
+  out.push(el('div',{class:'hs'},el('h2',{},'Start from a template'),el('button',{class:'more',onclick:()=>{home.view='templates';renderHome()}},'See all')),el('div',{class:'hg'},TEMPLATES.slice(0,6).map(templateCard)));
+  out.push(el('div',{class:'hs'},el('h2',{},'All sizes')),sizeButtons(SIZES));
+  return out;
+}
+function renderHome(){
+  const h=homeEl();if(!h)return;h.innerHTML='';
+  const nav=el('nav',{class:'hn','aria-label':'Design Studio'},el('div',{class:'hlogo','aria-hidden':'true'},'D'));
+  [['home','Home','home'],['projects','Projects','folder'],['templates','Templates','tpl']].forEach(([k,l,i])=>nav.append(el('button',{class:'hi','aria-current':home.view===k,onclick:()=>{home.view=k;home.q='';renderHome();if(k==='projects')refreshDocs()}},el('span',{class:'ib',html:ic(i,20)}),l)));
+  nav.append(el('button',{class:'hi',onclick:()=>{hideHome();openTab('brand')}},el('span',{class:'ib',html:ic('brand',20)}),'Brand'),el('span',{class:'sp'}),
+    el('button',{class:'hi',onclick:()=>{hideHome()}},el('span',{class:'ib',html:ic('pen',20)}),'Editor'));
+  const hero=el('section',{class:'hero'},el('h1',{},'What will you design today?'));
+  const inp=el('input',{type:'search',placeholder:'Search designs, templates and sizes',value:home.q,'aria-label':'Search',autocomplete:'off'});
+  inp.addEventListener('input',()=>{home.q=inp.value;home.view='home';const body=document.getElementById('hsections');body.innerHTML='';body.append(...homeSections())});
+  inp.addEventListener('keydown',e=>{if(e.key==='Escape'){inp.value='';home.q='';inp.dispatchEvent(new Event('input'))}});
+  hero.append(el('label',{class:'hsearch'},el('span',{html:ic('search',20)}),inp));
+  const main=el('div',{class:'hm'},el('header',{class:'hh'},el('span',{class:'grow'}),el('button',{class:'tb',title:'Light / dark','aria-label':'Toggle theme',onclick:()=>{$('#btnTheme').click();renderHome()},html:$('#btnTheme').innerHTML}),el('button',{class:'hcreate',onclick:()=>openNew(),html:ic('plus',18)+' Create a design'})));
+  const body=el('div',{class:'hbody'});
+  if(home.view==='home'){
+    body.append(hero,el('div',{class:'hq',role:'list'},QUICK.map(([n,i,c,w,hh])=>el('button',{role:'listitem',onclick:()=>startSize(w,hh,n)},el('i',{style:'background:'+c,html:ic(i,26)}),n))));
+  }
+  body.append(el('div',{id:'hsections'},...homeSections()));
+  main.append(body);h.append(nav,main);
+}
+try{document.fonts.addEventListener('loadingdone',()=>{clearTimeout(home.ft);home.ft=setTimeout(()=>{tplThumbs.clear();const h=homeEl();if(h&&!h.hidden)renderHome()},300)})}catch(e){}

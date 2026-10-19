@@ -36,29 +36,59 @@ async function ensureBg(name) {
   pending.set(name, job); return job;
 }
 
-/* ---------- stock photos ---------- */
-const HOSTS = new Set(['images.pexels.com', 'images.unsplash.com', 'plus.unsplash.com']);
+/* ---------- stock photos: Pexels, Unsplash, Pixabay (free keys) and Openverse, Wikimedia Commons (no key) ---------- */
+const UA = 'AnandsOS-DesignStudio/1.0 (self-hosted; https://github.com/anandnms2/anands-os)';
+const PIXABAY = (process.env.PIXABAY_API_BASE || 'https://pixabay.com/api').replace(/\/+$/, ''), OPENVERSE = (process.env.OPENVERSE_API_BASE || 'https://api.openverse.org/v1').replace(/\/+$/, ''), WIKI = process.env.WIKIMEDIA_API_BASE || 'https://commons.wikimedia.org/w/api.php';
+const HOSTS = new Set(['images.pexels.com', 'images.unsplash.com', 'plus.unsplash.com', 'upload.wikimedia.org', 'api.openverse.org', 'pixabay.com', 'cdn.pixabay.com']);
 const clip = (v, n) => String(v == null ? '' : v).slice(0, n);
+const plain = (h, n) => clip(String(h || '').replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim(), n);
+export const stockStatus = () => { const k = effective().stock || {}; return { pexels: !!k.pexels, unsplash: !!k.unsplash, pixabay: !!k.pixabay, openverse: true, wikimedia: true }; };
+async function getJson(name, url, headers, fetcher) {
+  let r; try { r = await fetcher(url, { headers: { 'user-agent': UA, accept: 'application/json', ...headers }, signal: AbortSignal.timeout(15000) }); } catch { throw httpError(502, 'Could not reach ' + name + '. Check this server can reach the internet.'); }
+  if (r.status === 401 || r.status === 403) throw httpError(502, name + ' did not accept that key');
+  if (r.status === 429) throw httpError(502, name + ' is limiting requests right now. Try again in a minute.');
+  if (!r.ok) throw httpError(502, name + ' is not answering (' + r.status + ')');
+  try { return await r.json(); } catch { throw httpError(502, name + ' sent something unexpected'); }
+}
+const needKey = (n) => httpError(400, 'Add a ' + n + ' key in Settings to search it', 'no_key');
 export async function stockSearch(q, page, source, fetcher = fetch) {
-  const k = effective().stock || {}; q = clip(q, 120).trim(); page = Math.max(1, Math.min(50, parseInt(page, 10) || 1));
-  const want = source === 'unsplash' ? 'unsplash' : source === 'pexels' ? 'pexels' : (k.pexels ? 'pexels' : 'unsplash');
+  const k = effective().stock || {}; q = clip(q, 100).trim(); page = Math.max(1, Math.min(50, parseInt(page, 10) || 1));
+  const want = ['pexels', 'unsplash', 'pixabay', 'openverse', 'wikimedia'].includes(source) ? source : (k.pexels ? 'pexels' : k.unsplash ? 'unsplash' : k.pixabay ? 'pixabay' : 'openverse');
+  const enc = encodeURIComponent;
   if (want === 'pexels') {
-    if (!k.pexels) throw httpError(400, 'Add a Pexels key in Settings to search stock photos', 'no_key');
-    const u = q ? PEXELS + '/search?per_page=24&page=' + page + '&query=' + encodeURIComponent(q) : PEXELS + '/curated?per_page=24&page=' + page;
-    let r; try { r = await fetcher(u, { headers: { authorization: k.pexels }, signal: AbortSignal.timeout(12000) }); } catch { throw httpError(502, 'Could not reach Pexels. Check this server can reach the internet.'); } if (!r.ok) throw httpError(502, r.status === 401 ? 'Pexels did not accept that key' : 'Pexels is not answering (' + r.status + ')');
-    const j = await r.json();
-    return { source: 'pexels', page, items: (j.photos || []).map((p) => ({ id: 'px' + p.id, thumb: p.src && p.src.medium, full: p.src && (p.src.large2x || p.src.large || p.src.original), w: p.width, h: p.height, by: clip(p.photographer, 80), link: clip(p.url, 300), alt: clip(p.alt, 120) })).filter((x) => x.thumb && x.full) };
+    if (!k.pexels) throw needKey('Pexels');
+    const j = await getJson('Pexels', q ? PEXELS + '/search?per_page=24&page=' + page + '&query=' + enc(q) : PEXELS + '/curated?per_page=24&page=' + page, { authorization: k.pexels }, fetcher);
+    return { source: want, page, items: (j.photos || []).map((p) => ({ id: 'px' + p.id, thumb: p.src && p.src.medium, full: p.src && (p.src.large2x || p.src.large || p.src.original), w: p.width, h: p.height, by: clip(p.photographer, 80), link: clip(p.url, 300), alt: clip(p.alt, 120), lic: 'Pexels license' })).filter((x) => x.thumb && x.full) };
   }
-  if (!k.unsplash) throw httpError(400, 'Add an Unsplash key in Settings to search stock photos', 'no_key');
-  const u = q ? UNSPLASH + '/search/photos?per_page=24&page=' + page + '&query=' + encodeURIComponent(q) : UNSPLASH + '/photos?per_page=24&page=' + page;
-  let r; try { r = await fetcher(u, { headers: { authorization: 'Client-ID ' + k.unsplash, 'accept-version': 'v1' }, signal: AbortSignal.timeout(12000) }); } catch { throw httpError(502, 'Could not reach Unsplash. Check this server can reach the internet.'); } if (!r.ok) throw httpError(502, r.status === 401 ? 'Unsplash did not accept that key' : 'Unsplash is not answering (' + r.status + ')');
-  const j = await r.json(); const list = Array.isArray(j) ? j : (j.results || []);
-  return { source: 'unsplash', page, items: list.map((p) => ({ id: 'us' + p.id, thumb: p.urls && p.urls.small, full: p.urls && p.urls.regular, w: p.width, h: p.height, by: clip(p.user && p.user.name, 80), link: clip(p.links && p.links.html, 300), alt: clip(p.alt_description, 120), dl: clip(p.links && p.links.download_location, 300) })).filter((x) => x.thumb && x.full) };
+  if (want === 'unsplash') {
+    if (!k.unsplash) throw needKey('Unsplash');
+    const j = await getJson('Unsplash', q ? UNSPLASH + '/search/photos?per_page=24&page=' + page + '&query=' + enc(q) : UNSPLASH + '/photos?per_page=24&page=' + page, { authorization: 'Client-ID ' + k.unsplash, 'accept-version': 'v1' }, fetcher); const list = Array.isArray(j) ? j : (j.results || []);
+    return { source: want, page, items: list.map((p) => ({ id: 'us' + p.id, thumb: p.urls && p.urls.small, full: p.urls && p.urls.regular, w: p.width, h: p.height, by: clip(p.user && p.user.name, 80), link: clip(p.links && p.links.html, 300), alt: clip(p.alt_description, 120), dl: clip(p.links && p.links.download_location, 300), lic: 'Unsplash license' })).filter((x) => x.thumb && x.full) };
+  }
+  if (want === 'pixabay') {
+    if (!k.pixabay) throw needKey('Pixabay');
+    const j = await getJson('Pixabay', PIXABAY + '/?key=' + enc(k.pixabay) + '&image_type=photo&safesearch=true&per_page=24&page=' + page + (q ? '&q=' + enc(q) : ''), {}, fetcher);
+    return { source: want, page, items: (j.hits || []).map((p) => ({ id: 'pb' + p.id, thumb: p.webformatURL, full: p.largeImageURL || p.webformatURL, w: p.imageWidth, h: p.imageHeight, by: clip(p.user, 80), link: clip(p.pageURL, 300), alt: clip(p.tags, 120), lic: 'Pixabay license' })).filter((x) => x.thumb && x.full) };
+  }
+  if (want === 'openverse') {
+    const j = await getJson('Openverse', OPENVERSE + '/images/?page_size=24&page=' + page + '&mature=false&license_type=commercial&q=' + enc(q || 'nature'), {}, fetcher);
+    return { source: want, page, items: (j.results || []).map((p) => { const t = p.thumbnail || (p.id ? OPENVERSE + '/images/' + p.id + '/thumb/' : ''); return { id: 'ov' + p.id, thumb: t, full: t, w: p.width, h: p.height, by: clip(p.creator, 80), link: clip(p.foreign_landing_url, 300), alt: clip(p.title, 120), lic: clip(('CC ' + (p.license || '') + ' ' + (p.license_version || '')).trim().toUpperCase(), 40), lowres: true }; }).filter((x) => x.thumb) };
+  }
+  const j = await getJson('Wikimedia Commons', WIKI + '?action=query&format=json&generator=search&gsrnamespace=6&gsrlimit=24&gsroffset=' + (page - 1) * 24 + '&gsrsearch=' + enc((q || 'nature landscape') + ' filetype:bitmap') + '&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1280&iiextmetadatafilter=Artist|LicenseShortName', {}, fetcher);
+  const pages = Object.values((j.query && j.query.pages) || {}).sort((a, b) => (a.index || 0) - (b.index || 0));
+  return { source: want, page, items: pages.map((p) => { const i = (p.imageinfo || [])[0]; if (!i || !/^image\/(jpeg|png|webp)$/.test(i.mime || '') || !i.thumburl) return null; const m = i.extmetadata || {};
+    return { id: 'wm' + p.pageid, thumb: i.thumburl.replace(/\/\d+px-/, '/320px-'), full: i.thumburl, w: i.width, h: i.height, by: plain(m.Artist && m.Artist.value, 80) || 'Wikimedia contributor', link: clip(i.descriptionurl, 300), alt: clip(String(p.title || '').replace(/^File:/, '').replace(/\.\w+$/, '').replace(/_/g, ' '), 120), lic: plain(m.LicenseShortName && m.LicenseShortName.value, 40) }; }).filter(Boolean) };
 }
 async function stockImage(res, u) {
   let t; try { t = new URL(u); } catch { throw httpError(400, 'Bad address'); }
-  if (t.protocol !== 'https:' || !HOSTS.has(t.hostname)) throw httpError(400, 'That address is not a stock photo');
-  let r; try { r = await fetch(t, { redirect: 'error', signal: AbortSignal.timeout(20000) }); } catch { throw httpError(502, 'The photo could not be loaded'); } if (!r.ok) throw httpError(502, 'The photo could not be loaded');
+  let r = null;
+  for (let hop = 0; hop < 4; hop++) {
+    if (t.protocol !== 'https:' || !HOSTS.has(t.hostname)) throw httpError(400, 'That address is not a stock photo');
+    try { r = await fetch(t, { redirect: 'manual', headers: { 'user-agent': UA }, signal: AbortSignal.timeout(20000) }); } catch { throw httpError(502, 'The photo could not be loaded'); }
+    if (r.status >= 300 && r.status < 400 && r.headers.get('location')) { try { t = new URL(r.headers.get('location'), t); } catch { throw httpError(502, 'The photo could not be loaded'); } continue; }
+    break;
+  }
+  if (!r || !r.ok) throw httpError(502, 'The photo could not be loaded');
   const type = String(r.headers.get('content-type') || ''); if (!/^image\/(jpeg|png|webp)/.test(type)) throw httpError(502, 'Unexpected file type');
   const buf = Buffer.from(await r.arrayBuffer()); if (buf.length > 20e6) throw httpError(413, 'Photo is too large');
   res.writeHead(200, { 'content-type': type.split(';')[0], 'content-length': buf.length, 'cache-control': 'private, max-age=86400' }); res.end(buf);
@@ -91,7 +121,7 @@ export async function handleDesign(req, res, url, p, s) {
   }
   if (p === '/design/stockimg' && req.method === 'GET') return stockImage(res, url.searchParams.get('u') || '');
   if (req.method !== 'POST') throw httpError(405, 'Method not allowed');
-  if (p === '/design/stockstatus') { const k = effective().stock || {}; return json(res, 200, { pexels: !!k.pexels, unsplash: !!k.unsplash }); }
+  if (p === '/design/stockstatus') return json(res, 200, stockStatus());
   if (p === '/design/stock') { const b = await readJson(req, 4096); return json(res, 200, await stockSearch(b.q, b.page, b.source)); }
   if (p === '/design/stockuse') { const b = await readJson(req, 4096), k = effective().stock || {}; try { const u = new URL(b.dl); if (u.hostname === 'api.unsplash.com' && k.unsplash) await fetch(u, { headers: { authorization: 'Client-ID ' + k.unsplash }, signal: AbortSignal.timeout(8000) }); } catch {} return json(res, 200, { ok: true }); }
   if (p === '/design/share') {

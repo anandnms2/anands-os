@@ -31,7 +31,8 @@ Built into the OS (Creative Tools > Design Studio, source in `suite/own/design-s
 
 - **Remove background**: runs in the browser with onnxruntime-web (MIT) and the u2netp model (Apache-2.0). The first use makes the server download the runtime and the 4.5 MB model from jsDelivr/unpkg and GitHub into `DATA_DIR/bgdata`; after that it works offline. Set `BG_ORT_BASE` / `BG_MODEL_URL` to mirror them.
 - **Animation**: enter, exit and loop effects per layer, page length per page. Export as MP4 (WebM where the browser cannot make MP4) or GIF; Present plays them.
-- **Stock photos**: free Pexels and/or Unsplash keys in Settings > Stock photos (or `PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`). Searches and image downloads go through this server, so the keys never reach the browser, and only the two photo CDNs can be fetched.
+- **Home screen**: opens on a Canva-style home (search banner, design-type shortcuts, recent designs, template gallery, Projects and Templates views).
+- **Free photos**: Openverse and Wikimedia Commons work with no key. Add free keys in Settings > Stock photos (or `PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`, `PIXABAY_API_KEY`) to also search Pexels, Unsplash and Pixabay. Credit and license are shown when you add a photo. Searches and image downloads go through this server, so the keys never reach the browser, and only the photo CDNs of those five services can be fetched.
 - **Share links**: Download > Create link stores the export on the server at `/d/<random token>`, public to anyone who has the link, expiring in 7 days to a year, removable under My links. Anyone with the link can view it, so share only what you mean to.
 - **Vector export**: SVG keeps text, shapes and plain photos as vectors (effects and filters are embedded as pictures; text uses the font name). "PDF (vector)" opens the print window; choose Save as PDF. The plain "PDF" option is image-based.
 
