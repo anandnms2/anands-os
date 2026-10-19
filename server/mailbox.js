@@ -61,12 +61,14 @@ async function imap(cfg, fn) {
     return await fn(cmd);
   } finally { try { sock.write('Z LOGOUT\r\n'); } catch {} setTimeout(() => { try { sock.destroy(); } catch {} }, 300); }
 }
-async function folderMessages(cmd, folder, keep, onMsg) {
-  await cmd('SELECT ' + q(folder)); const sr = (await cmd('UID SEARCH ALL')).toString('latin1'); const uids = ((/\* SEARCH([\d ]*)/.exec(sr) || [])[1] || '').trim().split(/\s+/).filter(Boolean).map(Number).slice(-keep);
+async function folderMessages(cmd, folder, keep, onMsg, after = 0) {
+  await cmd('SELECT ' + q(folder)); const sr = (await cmd('UID SEARCH ALL')).toString('latin1'); const all = ((/\* SEARCH([\d ]*)/.exec(sr) || [])[1] || '').trim().split(/\s+/).filter(Boolean).map(Number);
+  const uids = all.filter((u) => u > after).slice(-keep);
   for (const uid of uids) {
     const raw = await cmd(`UID FETCH ${uid} (BODY.PEEK[] INTERNALDATE)`); const head = raw.subarray(0, 400).toString('latin1'); const m = /\{(\d+)\}\r\n/.exec(head); if (!m) continue;
-    const start = m.index + m[0].length; const body = raw.subarray(start, start + Number(m[1])); const d = /INTERNALDATE "([^"]+)"/.exec(raw.subarray(start + Number(m[1])).toString('latin1')); await onMsg(uid, body, d ? new Date(d[1]) : new Date());
+    const start = m.index + m[0].length; const body = raw.subarray(start, start + Number(m[1])); const d = /INTERNALDATE "([^"]+)"/.exec(head) || /INTERNALDATE "([^"]+)"/.exec(raw.subarray(start + Number(m[1])).toString('latin1')); let when = d ? new Date(d[1]) : null; if (!when || isNaN(when)) { const dh = /^date:[ \t]*(.+)$/im.exec(body.subarray(0, 8192).toString('latin1')); when = dh ? new Date(dh[1]) : null; } await onMsg(uid, body, when && !isNaN(when) ? when : new Date());
   }
+  return all.length ? Math.max(...all) : after;
 }
 async function sentFolder(cmd) {
   const l = (await cmd('LIST "" "*"')).toString('latin1').split('\r\n'); let best = null;
@@ -74,23 +76,39 @@ async function sentFolder(cmd) {
   return best;
 }
 
-/* ---------- storage ---------- */
-async function put(dir, name, body, date) { await fsp.mkdir(dir, { recursive: true }); const f = path.join(dir, name); await fsp.writeFile(f, body); try { await fsp.utimes(f, date, date); } catch {} }
-export async function syncOne(a) {
+/* ---------- storage ----------
+ * The Email app reads <.mail>/<box>/<YYYY-MM-DD>/<uuid7>--<base64url(subject)> (no extension), newest name first.
+ * The name is built from the message date, so it sorts by time; the last part of the uuid carries the account id and a hash of the
+ * folder and UID, which makes a re-sync overwrite the same file and lets deleting an account find its mail. */
+const rfc2047 = (v) => String(v).replace(/=\?([\w-]+)\?([bq])\?([^?]*)\?=/gi, (_, cs, enc, t) => { try { const bytes = enc.toLowerCase() === 'b' ? Buffer.from(t, 'base64') : Buffer.from(t.replace(/_/g, ' ').replace(/=([0-9a-f]{2})/gi, (x, h) => String.fromCharCode(parseInt(h, 16))), 'latin1'); return new TextDecoder(/utf-?8|us-ascii/i.test(cs) ? 'utf-8' : cs, { fatal: false }).decode(bytes); } catch { return t; } }).replace(/\?=\s+=\?/g, '');
+function subjectOf(raw) { const head = raw.subarray(0, 65536).toString('latin1').split(/\r?\n\r?\n/)[0].replace(/\r?\n[ \t]+/g, ' '); const m = /^subject:[ \t]*(.*)$/im.exec(head); return m ? rfc2047(m[1]).trim().slice(0, 200) : ''; }
+export function mailName(a, tag, uid, raw, date) {
+  const h = crypto.createHash('sha1').update(a.id + ':' + tag + ':' + uid).digest(), n = Buffer.alloc(10); h.copy(n, 0, 0, 10); n[0] = (n[0] & 15) | 112; n[2] = (n[2] & 63) | 128; Buffer.from(a.id, 'hex').copy(n, 4);
+  const ts = Math.max(0, date.getTime()).toString(16).padStart(12, '0'), x = n.toString('hex');
+  const id = `${ts.slice(0, 8)}-${ts.slice(8, 12)}-${x.slice(0, 4)}-${x.slice(4, 8)}-${x.slice(8)}`;
+  return { day: date.toISOString().slice(0, 10), name: id + '--' + Buffer.from(subjectOf(raw), 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') };
+}
+async function put(box, a, tag, uid, body, date) { const { day, name } = mailName(a, tag, uid, body, date), dir = path.join(MAIL, box, day); await fsp.mkdir(dir, { recursive: true }); const f = path.join(dir, name); await fsp.writeFile(f, body); try { await fsp.utimes(f, date, date); } catch {} }
+/* Older versions saved flat acc-<id>-<uid>.eml files, which the Email app cannot see. */
+async function dropLegacy(a) { for (const d of ['objects', 'sent']) { try { for (const f of await fsp.readdir(path.join(MAIL, d))) if (f.startsWith('acc-' + a.id + '-')) await fsp.rm(path.join(MAIL, d, f), { force: true }); } catch {} } }
+async function dropAccountMail(a) { for (const d of ['objects', 'sent', 'archive', 'trash']) { let days = []; try { days = await fsp.readdir(path.join(MAIL, d)); } catch { continue; } for (const day of days) { const dd = path.join(MAIL, d, day); let fl = []; try { fl = await fsp.readdir(dd); } catch { continue; } for (const f of fl) if (/^[0-9a-f-]{36}--/.test(f) && f.slice(24, 32) === a.id) await fsp.rm(path.join(dd, f), { force: true }); try { await fsp.rmdir(dd); } catch {} } } await dropLegacy(a); }
+const syncing = new Set();
+export async function syncOne(a, full = false) {
+  if (syncing.has(a.id)) return pub(a); syncing.add(a.id);
   const cfg = { host: a.imapHost, port: a.imapPort, security: a.imapSecurity, user: a.user, pass: a.pass };
   try {
-    let count = 0;
+    let count = 0; await dropLegacy(a); a.seen = full ? {} : (a.seen || {});
     await imap(cfg, async (cmd) => {
-      await folderMessages(cmd, 'INBOX', KEEP_INBOX, async (uid, body, date) => { await put(path.join(MAIL, 'objects'), `acc-${a.id}-${uid}.eml`, body, date); count++; });
-      const sf = await sentFolder(cmd); if (sf) await folderMessages(cmd, sf, KEEP_SENT, async (uid, body, date) => { await put(path.join(MAIL, 'sent'), `acc-${a.id}-s${uid}.eml`, body, date); });
+      a.seen.INBOX = await folderMessages(cmd, 'INBOX', a.seen.INBOX ? 500 : KEEP_INBOX, async (uid, body, date) => { await put('objects', a, 'i', uid, body, date); count++; }, a.seen.INBOX || 0);
+      const sf = await sentFolder(cmd); if (sf) a.seen.SENT = await folderMessages(cmd, sf, a.seen.SENT ? 200 : KEEP_SENT, async (uid, body, date) => { await put('sent', a, 's', uid, body, date); }, a.seen.SENT || 0);
     });
-    a.lastSync = new Date().toISOString(); a.count = count; a.error = null;
-  } catch (e) { a.error = e.message; }
+    a.lastSync = new Date().toISOString(); a.count = (full || !a.count ? 0 : a.count) + count; a.error = null;
+  } catch (e) { a.error = e.message; } finally { syncing.delete(a.id); }
   save(); return pub(a);
 }
 const timers = new Map();
 export async function syncAll() { for (const a of accounts) await syncOne(a); }
-if (process.env.NODE_ENV !== 'test') setInterval(() => { syncAll().catch(() => {}); }, 5 * 60000).unref();
+if (process.env.NODE_ENV !== 'test') { setTimeout(() => { syncAll().catch(() => {}); }, 20000).unref(); setInterval(() => { syncAll().catch(() => {}); }, 2 * 60000).unref(); }
 
 /* ---------- routes ---------- */
 const HOST = /^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$/i;
@@ -111,9 +129,9 @@ export async function handleMailboxes(req, res, url) {
   }
   if ((x = /^\/api\/mailboxes\/([0-9a-f]{8})(?:\/(sync|default))?$/.exec(p))) {
     const a = accounts.find((v) => v.id === x[1]); if (!a) throw httpError(404, 'No such account', 'not_found');
-    if (x[2] === 'sync' && m === 'POST') return json(res, 200, { account: await syncOne(a) });
+    if (x[2] === 'sync' && m === 'POST') return json(res, 200, { account: await syncOne(a, true) });
     if (x[2] === 'default' && m === 'POST') { accounts.forEach((v) => (v.default = v === a)); save(); return json(res, 200, { accounts: list() }); }
-    if (!x[2] && m === 'DELETE') { accounts = accounts.filter((v) => v !== a); if (accounts.length && !accounts.some((v) => v.default)) accounts[0].default = true; save(); for (const d of ['objects', 'sent']) { try { for (const f of await fsp.readdir(path.join(MAIL, d))) if (f.startsWith('acc-' + a.id + '-')) await fsp.rm(path.join(MAIL, d, f), { force: true }); } catch {} } return json(res, 200, { accounts: list() }); }
+    if (!x[2] && m === 'DELETE') { accounts = accounts.filter((v) => v !== a); if (accounts.length && !accounts.some((v) => v.default)) accounts[0].default = true; save(); await dropAccountMail(a); return json(res, 200, { accounts: list() }); }
   }
   throw httpError(404, 'Unknown mailbox route');
 }

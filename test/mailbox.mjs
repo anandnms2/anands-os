@@ -32,8 +32,12 @@ try {
   await t('wrong password is refused with a clear message', async () => { const r = await api('/api/mailboxes', { method: 'POST', json: acct('nope') }); assert.equal(r.s, 401); assert.match(r.j.error || r.j.message || '', /app password|accept/); });
   await t('add an account: syncs inbox and sent into the Email app folders', async () => {
     const r = await api('/api/mailboxes', { method: 'POST', json: acct('secret') }); assert.equal(r.s, 201, JSON.stringify(r.j)); assert.equal(r.j.account.count, 2);
-    const dir = path.join(data, 'fs', '.mail'); const o = fs.readdirSync(path.join(dir, 'objects')), s = fs.readdirSync(path.join(dir, 'sent'));
-    assert.equal(o.length, 2); assert.equal(s.length, 1); assert.match(fs.readFileSync(path.join(dir, 'objects', o[0]), 'utf8'), /Subject: Hello/);
+    const dir = path.join(data, 'fs', '.mail'); const walk = (b) => fs.readdirSync(path.join(dir, b)).flatMap((d) => fs.readdirSync(path.join(dir, b, d)).map((f) => ({ d, f, p: path.join(dir, b, d, f) })));
+    const o = walk('objects'), sn = walk('sent'); assert.equal(o.length, 2); assert.equal(sn.length, 1);
+    for (const x of [...o, ...sn]) { assert.match(x.d, /^2026-06-01$/); assert.match(x.f, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}--[A-Za-z0-9_-]+$/, x.f); }
+    const subj = Buffer.from(o[0].f.split('--')[1], 'base64url').toString(); assert.match(subj, /^Hello \d$/); assert.match(fs.readFileSync(o[0].p, 'utf8'), /Subject: Hello/);
+    const id = (await api('/api/mailboxes')).j.accounts[0].id; assert.equal(o[0].f.slice(24, 32), id);
+    await api('/api/mailboxes/' + id + '/sync', { method: 'POST' }); assert.equal(walk('objects').length, 2, 'a re-sync does not duplicate');
   });
   await t('list never exposes the password; default account is set', async () => { const r = await api('/api/mailboxes'); assert.equal(r.j.accounts.length, 1); assert.ok(r.j.accounts[0].default); assert.ok(!JSON.stringify(r.j).includes('secret')); });
   await t('duplicate is refused', async () => { assert.equal((await api('/api/mailboxes', { method: 'POST', json: acct('secret') })).s, 409); });
