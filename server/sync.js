@@ -8,7 +8,7 @@ import { DATA, effective } from './config.js';
 import { httpError } from './util.js';
 
 const DIRS = ['fs', 'kv'];
-const FILES = ['settings.json', 'profile.json', 'prefs.json', 'desk.json', 'household.json', 'money.json', 'contacts-map.json', 'mailboxes.json', 'mail-sent.json', 'avatar.bin', 'gdrive.json', 'rates.json'];
+const FILES = ['settings.json', 'profile.json', 'prefs.json', 'desk.json', 'household.json', 'money.json', 'contacts-map.json', 'devstate.json', 'mailboxes.json', 'mail-sent.json', 'avatar.bin', 'gdrive.json', 'rates.json'];
 /* settings.json for the desktop = what the web server actually uses: saved settings plus values that only come from environment variables
  * (API keys and tokens set in the host's environment never appear in the saved file). Web address and sign-in setup are left out. */
 const SKIP = new Set(['public', 'oidc']);

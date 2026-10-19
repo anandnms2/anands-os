@@ -129,14 +129,37 @@ function requireConnection() {
     w.on('closed', () => { if (gateResolve) app.quit(); });
   });
 }
+/* ---- Open with: files from this computer open in the matching Suite app ---- */
+const OPEN_EXT = /\.(pdf|docx?|odt|xlsx?|csv|pptx?|jpe?g|png|webp|gif|svg|mp4|mov|mp3|wav)$/i;
+let pendingOpen = [], uiReady = false;
+const fileArgs = (argv) => argv.slice(1).filter((a) => a && !a.startsWith('-') && OPEN_EXT.test(a) && fs.existsSync(a));
+function importFile(src) {
+  const dir = path.join(dataDir(), 'fs', 'Opened from PC'); fs.mkdirSync(dir, { recursive: true });
+  const ext = path.extname(src), stem = path.basename(src, ext), st = fs.statSync(src); let name = stem + ext, n = 2;
+  while (fs.existsSync(path.join(dir, name))) { const o = fs.statSync(path.join(dir, name)); if (o.size === st.size && Math.abs(o.mtimeMs - st.mtimeMs) < 2000) break; name = stem + ' (' + n++ + ')' + ext; }
+  const dest = path.join(dir, name); if (!fs.existsSync(dest)) { fs.copyFileSync(src, dest); fs.utimesSync(dest, st.atime, st.mtime); }
+  return '/Opened from PC/' + name;
+}
+async function openFromPc(files) {
+  for (const f of files) {
+    let p; try { p = importFile(f); } catch { continue; }
+    if (win) { if (win.isMinimized()) win.restore(); win.focus(); }
+    for (let i = 0; i < 100; i++) { try { if (await win.webContents.executeJavaScript('!!(window.AOS && AOS.openPath && AOS.openPath(' + JSON.stringify(p) + '))')) break; } catch {} await new Promise((r) => setTimeout(r, 300)); }
+  }
+}
+function queueOpen(files) { if (!files.length) return; if (uiReady) openFromPc(files); else pendingOpen.push(...files); }
+if (!app.requestSingleInstanceLock()) { app.quit(); }
+app.on('second-instance', (e, argv) => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } queueOpen(fileArgs(argv)); });
+app.on('open-file', (e, f) => { e.preventDefault(); queueOpen([f]); });
 async function main() {
-  menu();
+  menu(); pendingOpen.push(...fileArgs(process.argv));
   if (!readWeb()) await requireConnection();
   const password = await startServer(); await signIn(password);
   win = new BrowserWindow({ width: 1360, height: 860, minWidth: 900, minHeight: 600, backgroundColor: '#121212', title: 'Anands OS', icon: path.join(__dirname, 'icon.png'), autoHideMenuBar: true, webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false } });
   win.webContents.setWindowOpenHandler(({ url }) => { if (url.startsWith(base)) return { action: 'allow' }; shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e, url) => { if (!url.startsWith(base)) { e.preventDefault(); shell.openExternal(url); } });
   await win.loadURL(base + '/');
+  uiReady = true; if (pendingOpen.length) { const l = pendingOpen.splice(0); openFromPc(l); }
   runSync(false, false); setInterval(() => runSync(false, true), 15 * 60 * 1000);
 }
 app.whenReady().then(() => main().catch((e) => { dialog.showErrorBox('Anands OS could not start', String(e.message || e)); app.quit(); }));

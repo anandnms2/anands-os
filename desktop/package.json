@@ -75,6 +75,33 @@
       ],
       "category": "Utility",
       "icon": "icon.png"
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "pdf",
+          "doc",
+          "docx",
+          "odt",
+          "xls",
+          "xlsx",
+          "csv",
+          "ppt",
+          "pptx",
+          "jpg",
+          "jpeg",
+          "png",
+          "webp",
+          "gif",
+          "svg",
+          "mp4",
+          "mov",
+          "mp3",
+          "wav"
+        ],
+        "name": "Document",
+        "role": "Editor"
+      }
+    ]
   }
 }

@@ -21,4 +21,13 @@ try {
   await t('the periodic files-only sync leaves app data alone', async () => { w('kv/calendar.json', '{"e":2}'); w('fs/Docs/c.txt', 'c'); const r = await sync({ filesOnly: true }); assert.equal(rd('fs/Docs/c.txt'), 'c'); assert.equal(rd('kv/calendar.json'), '{"e":1}'); assert.equal(r.appData, false); });
   await t('wrong password and offline give clear errors', async () => { await assert.rejects(sync({ password: 'nope' }), /not accepted/); await assert.rejects(syncFromWeb({ url: 'http://127.0.0.1:9', password: 'x', dataDir: pc }), /fetch failed|ECONN/); });
   await t('the endpoints need a session and refuse path tricks', async () => { assert.equal((await fetch(B + '/api/sync/manifest', { headers: { 'x-aos': '1' } })).status, 401); const r = await fetch(B + '/auth/password', { method: 'POST', headers: { 'content-type': 'application/json', 'x-aos': '1' }, body: JSON.stringify({ password: 'webpw' }) }); const ck = r.headers.getSetCookie().map((c) => c.split(';')[0]).join('; '); for (const q of ['sessions.json', 'fs/../secret', 'secret', '../x']) assert.equal((await fetch(B + '/api/sync/file?p=' + encodeURIComponent(q), { headers: { 'x-aos': '1', cookie: ck } })).status, 400, q); });
+  await t('layout and wallpaper kept in the browser are stored, merged, and reach the desktop; Vault keys never do', async () => {
+    const r = await fetch(B + '/auth/password', { method: 'POST', headers: { 'content-type': 'application/json', 'x-aos': '1' }, body: JSON.stringify({ password: 'webpw' }) }); const ck = r.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
+    const H = { 'x-aos': '1', cookie: ck, 'content-type': 'application/json' };
+    assert.equal((await fetch(B + '/api/devstate', { method: 'PUT', headers: H, body: JSON.stringify({ set: { 'aos.deskwall': '"custom"', 'aos.deskwallimg': 'data:image/jpeg;base64,AAAA', 'aos.vault.cred': 'SECRET', 'aos.capq': '[]', 'evil': 'x' } }) })).status, 200);
+    assert.equal((await fetch(B + '/api/devstate', { method: 'PUT', headers: H, body: JSON.stringify({ set: { 'aos.deskpins': '["pdf"]' }, del: ['aos.capq'] }) })).status, 200);
+    const j = await (await fetch(B + '/api/devstate', { headers: H })).json(); assert.deepEqual(Object.keys(j.items).sort(), ['aos.deskpins', 'aos.deskwall', 'aos.deskwallimg']);
+    assert.equal((await fetch(B + '/api/devstate', { headers: { 'x-aos': '1' } })).status, 401);
+    await sync(); const d = JSON.parse(rd('devstate.json')); assert.equal(d.items['aos.deskwall'], '"custom"'); assert.ok(!JSON.stringify(d).includes('SECRET'));
+  });
 } finally { p.kill(); console.log(`${pass} passed${bad ? ', ' + bad + ' failed' : ''}`); setTimeout(() => process.exit(bad ? 1 : 0), 100); }

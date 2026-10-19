@@ -7,7 +7,8 @@ var SH = { meta: null, install: null };
 
 /* ---------- offline ---------- */
 var bar = document.createElement('div'); bar.id = 'offbar'; bar.hidden = true; bar.setAttribute('role', 'status'); bar.textContent = 'You are offline. Showing what was saved on this device. Notes and tasks you add will be filed when you are back online.'; document.body.appendChild(bar);
-function net() { bar.hidden = navigator.onLine; document.documentElement.classList.toggle('offline', !navigator.onLine); }
+var desktopApp = /Electron\//.test(navigator.userAgent); // the desktop app is meant to work offline: no bar
+function net() { var off = !navigator.onLine && !desktopApp; bar.hidden = !off; document.documentElement.classList.toggle('offline', off); }
 window.addEventListener('online', net); window.addEventListener('offline', net); net();
 function tellSw(msg) { if (!('serviceWorker' in navigator)) return; navigator.serviceWorker.ready.then(function (r) { if (r.active) r.active.postMessage(msg); }).catch(function () {}); }
 function offlineOn() { return LS.get('offline', true) !== false; }
