@@ -25,6 +25,18 @@ Open with: Spreadsheet (csv/xlsx), Documents (.docx only), PDF, Presentation, Vi
 
 Limits: tested against a mock WebDAV server only; uploads up to 200 MB are buffered; folders cannot be copied between local storage and Drive.
 
+## Design Studio (a Canva alternative)
+
+Built into the OS (Creative Tools > Design Studio, source in `suite/own/design-studio`). Templates, text with effects and curves, shapes, drawing, charts, tables, QR codes, brand kit, multi-page designs, magic resize and present mode. Designs autosave as `.design` files in `Files > Designs`; opening one from Files launches the studio.
+
+- **Remove background**: runs in the browser with onnxruntime-web (MIT) and the u2netp model (Apache-2.0). The first use makes the server download the runtime and the 4.5 MB model from jsDelivr/unpkg and GitHub into `DATA_DIR/bgdata`; after that it works offline. Set `BG_ORT_BASE` / `BG_MODEL_URL` to mirror them.
+- **Animation**: enter, exit and loop effects per layer, page length per page. Export as MP4 (WebM where the browser cannot make MP4) or GIF; Present plays them.
+- **Stock photos**: free Pexels and/or Unsplash keys in Settings > Stock photos (or `PEXELS_API_KEY`, `UNSPLASH_ACCESS_KEY`). Searches and image downloads go through this server, so the keys never reach the browser, and only the two photo CDNs can be fetched.
+- **Share links**: Download > Create link stores the export on the server at `/d/<random token>`, public to anyone who has the link, expiring in 7 days to a year, removable under My links. Anyone with the link can view it, so share only what you mean to.
+- **Vector export**: SVG keeps text, shapes and plain photos as vectors (effects and filters are embedded as pictures; text uses the font name). "PDF (vector)" opens the print window; choose Save as PDF. The plain "PDF" option is image-based.
+
+Limits: Magic (AI) uses the assistant model from Settings; Google Fonts load from fonts.googleapis.com, so text falls back to a system font offline; MP4 needs a browser built with H.264 (Chrome and Edge are, Electron builds without it fall back to WebM).
+
 ## Vault (Vaultwarden)
 
 Set the Vaultwarden address (for example `https://pass.example.com`) in Settings, or `VAULT_URL`. The Vault screen asks for your email and master password on each unlock. The key is derived and the vault decrypted in your browser (PBKDF2 or Argon2id, as your account uses). The server only relays Bitwarden's prelogin, token and sync calls as ciphertext; the master password, keys and decrypted items are never stored or logged, and the assistant cannot see them. It auto-locks after 5 minutes idle. Supported: master-password accounts, authenticator or email two-step codes, TOTP codes, folders, favourites, per-item keys. Not supported: shared-organization items are not editable and SSO-only accounts without a master password, security-key two-step, shared organization items, cards and identities (listed as not shown). You can add, edit and delete logins and notes (encrypted in the browser, then sent through the relay; deletes go to the Vault trash). The clipboard is cleared 30 seconds after a copy.

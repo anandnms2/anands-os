@@ -62,5 +62,18 @@ for a in apps:
 json.dump(apps,open(f"{out}/apps.json","w"),indent=2)
 print("built",len(built),"failed",failed.split() or "none")
 PY
+# Apps written in this repo (suite/own/<slug>/): copied as they are, with their icon, and listed after the upstream ones.
+for d in "$HERE"/own/*/; do
+  [ -f "${d}index.html" ] && [ -f "${d}app.json" ] || continue
+  s="$(basename "$d")"; rm -rf "$OUT/apps/$s"; mkdir -p "$OUT/apps/$s"
+  (cd "$d" && tar cf - --exclude=app.json --exclude=icon-128.png .) | (cd "$OUT/apps/$s" && tar xf -)
+  [ -f "${d}icon-128.png" ] && cp "${d}icon-128.png" "$OUT/_icons/$s.png"
+  python3 - "$OUT/apps.json" "${d}app.json" <<'PY'
+import json,sys
+p,a=sys.argv[1],json.load(open(sys.argv[2]))
+apps=[x for x in json.load(open(p)) if x["slug"]!=a["slug"]]; apps.append(a); apps.sort(key=lambda x:x["slug"])
+json.dump(apps,open(p,"w"),indent=2)
+PY
+done
 # One flaky app must not sink the image; fail only if most of the suite is missing.
 [ ${#ok[@]} -ge "${MIN_BUILT:-20}" ] || { echo "only ${#ok[@]} apps built"; exit 1; }

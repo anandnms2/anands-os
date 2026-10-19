@@ -15,6 +15,7 @@ import { sessionOf, userFromSession } from './session.js';
 import { allowed } from './team.js';
 import { json, readJson, httpError } from './util.js';
 import { llmChat } from './chat.js';
+import { handleDesign } from './design.js';
 import * as dav from './webdav.js';
 import * as gfs from './gfs.js';
 import * as pcfs from './pcfs.js';
@@ -183,6 +184,7 @@ export async function handleLocal(req, res, url) {
   if (user.home && (p.startsWith('/workers/') || p.startsWith('/mail-service/') || p.startsWith('/mail/'))) throw httpError(403, 'Only the owner can use this', 'forbidden');
   if (p === '/auth/user' && req.method === 'GET') return json(res, 200, { ...user, email: user.home ? (user.email || null) : (mailbox.defaultAddress() || user.email || effective().mail.from || null) });
   if (p === '/fs/get' && req.method === 'GET') { if (driveRel(url.searchParams.get('path'), user) !== null) return driveFs(p, req, res, url, {}, user); const { abs } = resolve(url.searchParams.get('path'), user); let st; try { st = await fsp.stat(abs); } catch { throw notFound(); } if (st.isDirectory()) throw httpError(400, 'Is a directory'); return sendFile(res, abs, st, req); }
+  if (p.startsWith('/design/') || p.startsWith('/bgdata/')) return handleDesign(req, res, url, p, s);
   if (req.method !== 'POST') throw httpError(405, 'Method not allowed');
   const app = slug(req.headers['x-app']);
   const kvApp = user.home ? ('m' + user.mid + '-' + app).slice(0, 60) : app;
