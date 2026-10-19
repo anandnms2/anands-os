@@ -75,7 +75,7 @@ function resolve(p, user) {
 }
 /* Mail keeps messages in <home>/.mail. Nothing delivers into it here, so create the folders on first look instead of showing a permission gate that can never pass. */
 async function ensureMailDirs({ abs, rel }) {
-  if (/^\/\.mail(\/(objects|sent|archive|trash|drafts))?$/.test(rel)) { try { await fsp.mkdir(abs, { recursive: true }); if (rel === '/.mail') for (const d of ['objects', 'sent', 'archive', 'trash']) await fsp.mkdir(path.join(abs, d), { recursive: true }); } catch {} }
+  if (/^\/\.mail(\/(objects|sent|archive|trash|drafts|promotions|social|updates|forums|allmail|lbl-[a-z0-9-]+))?$/.test(rel)) { try { await fsp.mkdir(abs, { recursive: true }); if (rel === '/.mail') for (const d of ['objects', 'sent', 'archive', 'trash']) await fsp.mkdir(path.join(abs, d), { recursive: true }); } catch {} }
 }
 const notFound = () => httpError(404, 'Not found', 'subject_does_not_exist');
 

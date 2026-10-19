@@ -91,57 +91,95 @@ export function mailName(a, tag, uid, raw, date) {
 async function put(box, a, tag, uid, body, date) { const { day, name } = mailName(a, tag, uid, body, date), dir = path.join(MAIL, box, day); await fsp.mkdir(dir, { recursive: true }); const f = path.join(dir, name); await fsp.writeFile(f, body); try { await fsp.utimes(f, date, date); } catch {} return { day, name }; }
 /* Older versions saved flat acc-<id>-<uid>.eml files, which the Email app cannot see. */
 async function dropLegacy(a) { for (const d of ['objects', 'sent']) { try { for (const f of await fsp.readdir(path.join(MAIL, d))) if (f.startsWith('acc-' + a.id + '-')) await fsp.rm(path.join(MAIL, d, f), { force: true }); } catch {} } }
-async function dropAccountMail(a) { for (const d of ['objects', 'sent', 'archive', 'trash']) { let days = []; try { days = await fsp.readdir(path.join(MAIL, d)); } catch { continue; } for (const day of days) { const dd = path.join(MAIL, d, day); let fl = []; try { fl = await fsp.readdir(dd); } catch { continue; } for (const f of fl) if (/^[0-9a-f-]{36}--/.test(f) && f.slice(24, 32) === a.id) await fsp.rm(path.join(dd, f), { force: true }); try { await fsp.rmdir(dd); } catch {} } } await dropLegacy(a); }
+async function dropAccountMail(a) { let dirs = ['objects', 'sent', 'archive', 'trash']; try { dirs = (await fsp.readdir(MAIL)).filter((x) => x !== 'drafts'); } catch {} for (const d of dirs) { let days = []; try { days = await fsp.readdir(path.join(MAIL, d)); } catch { continue; } for (const day of days) { const dd = path.join(MAIL, d, day); let fl = []; try { fl = await fsp.readdir(dd); } catch { continue; } for (const f of fl) if (/^[0-9a-f-]{36}--/.test(f) && f.slice(24, 32) === a.id) await fsp.rm(path.join(dd, f), { force: true }); try { await fsp.rmdir(dd); } catch {} } } await dropLegacy(a); }
 
-/* ---------- Gmail: labels become the Email app's folders ----------
- * Gmail keeps one copy of each message in All Mail and tags it with labels. Inbox label -> Inbox, no Inbox label -> Archive ("Done"),
- * Sent -> Sent, Trash -> Trash; other labels are written into an X-Gmail-Labels header on the message. Spam and drafts are skipped.
- * Moving a message to Archive or Trash in the Email app removes it from the Gmail inbox (or trashes it) on the next check. */
+/* ---------- Gmail: the same folders and labels you see in Gmail ----------
+ * Gmail keeps one copy of each message in All Mail and tags it with labels. Here that becomes:
+ *   Inbox (Primary tab), Promotions, Social, Updates, Forums  -> mail with the Inbox label, by its Gmail tab
+ *   Sent, Archive (= Done: no Inbox label), Trash             -> as in Gmail
+ *   one folder per label you made, and All Mail               -> extra links to the same message
+ * Spam and drafts are skipped. Done (Archive) and Delete in the Email app are written back to Gmail on the next check, and label or
+ * tab changes made in Gmail move the message here. */
 const SYS = new Set(['inbox', 'sent', 'trash', 'spam', 'draft', 'drafts', 'starred', 'important', 'unread', 'muted', 'opened', 'seen', 'chat']);
+const CATS = [['promotions', 'Promotions', 'bell'], ['social', 'Social', 'user'], ['updates', 'Updates', 'info'], ['forums', 'Forums', 'mail']];
+const INBOXISH = ['objects', ...CATS.map((c) => c[0])], ALLBOX = [...INBOXISH, 'archive', 'trash', 'sent'];
 const lab = (t) => String(t).replace(/^\\+/, '');
+const slug = (l) => 'lbl-' + (String(l).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30) || 'x') + '-' + crypto.createHash('sha1').update(String(l)).digest('hex').slice(0, 4);
 function parseMeta(txt) {
   const m = /X-GM-LABELS \(((?:[^()"]|"(?:[^"\\]|\\.)*")*)\)/.exec(txt), labels = m ? [...m[1].matchAll(/"((?:[^"\\]|\\.)*)"|(\S+)/g)].map((x) => (x[1] !== undefined ? x[1].replace(/\\(.)/g, '$1') : x[2])) : [];
   const f = /FLAGS \(([^)]*)\)/.exec(txt); return { labels, flags: f ? f[1] : '' };
 }
-function boxFor(labels) { const k = new Set(labels.map((l) => lab(l).toLowerCase())); if (k.has('spam') || (k.has('draft') || k.has('drafts')) && !k.has('inbox')) return null; if (k.has('trash')) return 'trash'; if (k.has('inbox')) return 'objects'; if (k.has('sent')) return 'sent'; return 'archive'; }
-const userLabels = (labels) => labels.map(lab).filter((l) => !SYS.has(l.toLowerCase()));
+function boxFor(labels, cat) { const k = new Set(labels.map((l) => lab(l).toLowerCase())); if (k.has('spam') || ((k.has('draft') || k.has('drafts')) && !k.has('inbox'))) return null; if (k.has('trash')) return 'trash'; if (k.has('inbox')) return cat && CATS.some((c) => c[0] === cat) ? cat : 'objects'; if (k.has('sent')) return 'sent'; return 'archive'; }
+const userLabels = (labels) => labels.map(lab).filter((l) => !SYS.has(l.toLowerCase()) && !/^category_/i.test(l));
 const withLabels = (raw, labels, starred) => { const ls = [...labels.map(lab), ...(starred ? ['Starred'] : [])]; return ls.length ? Buffer.concat([Buffer.from('X-Gmail-Labels: ' + ls.join(',').replace(/[\r\n]/g, ' ') + '\r\n'), raw]) : raw; };
 async function allMailFolder(cmd) { for (const line of (await cmd('LIST "" "*"')).toString('latin1').split('\r\n')) { const m = /^\* LIST \(([^)]*)\) (?:"[^"]*"|NIL) (.+)$/.exec(line); if (m && /\\All/i.test(m[1])) return m[2].replace(/^"|"$/g, ''); } return null; }
 const imapDate = (d) => `${String(d.getUTCDate()).padStart(2, '0')}-${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()]}-${d.getUTCFullYear()}`;
 const exists = async (f) => { try { await fsp.access(f); return true; } catch { return false; } };
 const where = (box, e) => path.join(MAIL, box, e.d, e.n);
 async function relocate(e, to) { const from = where(e.b, e), dir = path.join(MAIL, to, e.d); try { await fsp.mkdir(dir, { recursive: true }); await fsp.rename(from, path.join(dir, e.n)); e.b = to; return true; } catch { return false; } }
+/* Extra folders (one per label, plus All Mail) hold hard links to the same message file. */
+async function setLinks(e, wanted) {
+  const have = new Set(e.k || []), want = new Set(wanted), src = where(e.b, e);
+  for (const k of have) if (!want.has(k)) await fsp.rm(path.join(MAIL, k, e.d, e.n), { force: true });
+  for (const k of want) { const dst = path.join(MAIL, k, e.d, e.n); if (have.has(k) && await exists(dst)) continue; try { await fsp.mkdir(path.dirname(dst), { recursive: true }); await fsp.rm(dst, { force: true }); try { await fsp.link(src, dst); } catch { await fsp.copyFile(src, dst); } } catch {} }
+  e.k = [...want];
+}
+const wantedLinks = (e) => (e.b === 'trash' ? [] : ['allmail', ...(e.L || []).map(slug)]);
 async function gmailSync(cmd, a, full) {
   const all = await allMailFolder(cmd); if (!all) return null;
   await cmd('SELECT ' + q(all)); const idx = (a.idx ||= {}); let count = 0;
   /* 1. what you did in the Email app goes back to Gmail */
   for (const [uid, e] of Object.entries(idx)) {
-    if (e.b !== 'objects' || await exists(where('objects', e))) continue;
-    for (const to of ['archive', 'trash']) if (await exists(where(to, e))) {
-      try { await cmd(to === 'archive' ? `UID STORE ${uid} -X-GM-LABELS (\\Inbox)` : `UID STORE ${uid} +X-GM-LABELS (\\Trash)`); e.b = to; } catch {}
-      break;
-    }
+    let to = null; for (const box of ALLBOX) if (box !== e.b && await exists(where(box, e))) { to = box; break; }
+    if (!to) continue;   // untouched (or deleted outright: left alone)
+    if (await exists(where(e.b, e))) { await fsp.rm(where(e.b, e), { force: true }); for (const k of e.k || []) await fsp.rm(path.join(MAIL, k, e.d, e.n), { force: true }); }   // moved from a label folder: drop the main copy
+    try {
+      if (INBOXISH.includes(e.b) && to === 'archive') await cmd(`UID STORE ${uid} -X-GM-LABELS (\\Inbox)`);
+      else if (to === 'trash' && e.b !== 'trash') await cmd(`UID STORE ${uid} +X-GM-LABELS (\\Trash)`);
+      else if (!INBOXISH.includes(e.b) && INBOXISH.includes(to)) { if (e.b === 'trash') await cmd(`UID STORE ${uid} -X-GM-LABELS (\\Trash)`); await cmd(`UID STORE ${uid} +X-GM-LABELS (\\Inbox)`); }
+      else if (e.b === 'trash' && to === 'archive') await cmd(`UID STORE ${uid} -X-GM-LABELS (\\Trash)`);
+      else if (INBOXISH.includes(e.b) && INBOXISH.includes(to)) { /* moved between tabs: nothing to tell Gmail */ }
+      e.b = to; e.k = [];
+    } catch {}
   }
-  /* 2. new mail, with its labels */
-  const after = full ? 0 : Number(a.gseen || 0);
+  /* 2. which Gmail tab each message is on */
+  const keys0 = Object.keys(idx).map(Number), after = full ? 0 : Number(a.gseen || 0), floor = Math.min(...(keys0.length ? keys0 : [0]), after ? after + 1 : 0) || 1, catOf = new Map();
+  for (const [c] of CATS) { const r = (await cmd(`UID SEARCH UID ${floor}:* X-GM-RAW "category:${c}"`).catch(() => Buffer.alloc(0))).toString('latin1'); for (const u of ((/\* SEARCH([\d ]*)/.exec(r) || [])[1] || '').trim().split(/\s+/).filter(Boolean)) catOf.set(Number(u), c); }
+  /* 3. new mail, with its labels */
   const sr = (await cmd(after ? `UID SEARCH UID ${after + 1}:*` : `UID SEARCH SINCE ${imapDate(new Date(Date.now() - 30 * 864e5))}`)).toString('latin1');
   const uids = ((/\* SEARCH([\d ]*)/.exec(sr) || [])[1] || '').trim().split(/\s+/).filter(Boolean).map(Number).filter((u) => u > after).slice(-(after ? 500 : 200));
   for (const uid of uids) {
     const raw = await cmd(`UID FETCH ${uid} (BODY.PEEK[] INTERNALDATE FLAGS X-GM-LABELS)`); const head = raw.subarray(0, 2000).toString('latin1'); const m = /\{(\d+)\}\r\n/.exec(head); if (!m) continue;
     const start = m.index + m[0].length, body = raw.subarray(start, start + Number(m[1])), tail = raw.subarray(start + Number(m[1])).toString('latin1'), meta = parseMeta(head.slice(0, m.index) + ' ' + tail);
-    const box = boxFor(meta.labels); a.gseen = Math.max(a.gseen || 0, uid); if (!box) continue;
+    const box = boxFor(meta.labels, catOf.get(uid)); a.gseen = Math.max(a.gseen || 0, uid); if (!box) continue;
     const d = /INTERNALDATE "([^"]+)"/.exec(head) || /INTERNALDATE "([^"]+)"/.exec(tail); let when = d ? new Date(d[1]) : null; if (!when || isNaN(when)) { const dh = /^date:[ \t]*(.+)$/im.exec(body.subarray(0, 8192).toString('latin1')); when = dh ? new Date(dh[1]) : null; } if (!when || isNaN(when)) when = new Date();
-    const prev = idx[uid]; if (prev && prev.b !== box) await fsp.rm(where(prev.b, prev), { force: true });
-    const at = await put(box, a, 'g', uid, withLabels(body, userLabels(meta.labels), /\\Flagged/.test(meta.flags)), when); idx[uid] = { b: box, d: at.day, n: at.name }; if (box === 'objects') count++;
+    const prev = idx[uid]; if (prev) { await fsp.rm(where(prev.b, prev), { force: true }); for (const k of prev.k || []) await fsp.rm(path.join(MAIL, k, prev.d, prev.n), { force: true }); }
+    const at = await put(box, a, 'g', uid, withLabels(body, userLabels(meta.labels), /\\Flagged/.test(meta.flags)), when);
+    const e = (idx[uid] = { b: box, d: at.day, n: at.name, L: userLabels(meta.labels), k: [] }); await setLinks(e, wantedLinks(e)); if (INBOXISH.includes(box)) count++;
   }
-  /* 3. label changes made in Gmail on mail we already hold (archived, trashed, moved to Inbox) */
+  /* 4. label, tab and Inbox changes made in Gmail on mail we already hold */
   const keys = Object.keys(idx).map(Number).sort((x, y) => x - y);
   if (keys.length) {
     const txt = (await cmd(`UID FETCH ${keys[0]}:* (FLAGS X-GM-LABELS)`)).toString('latin1');
-    for (const chunk of txt.split(/\r\n(?=\* \d+ FETCH)/)) { const u = /UID (\d+)/.exec(chunk); const e = u && idx[u[1]]; if (!e) continue; const box = boxFor(parseMeta(chunk).labels); if (box && box !== e.b && await exists(where(e.b, e))) await relocate(e, box); }
+    for (const chunk of txt.split(/\r\n(?=\* \d+ FETCH)/)) {
+      const u = /UID (\d+)/.exec(chunk); const e = u && idx[u[1]]; if (!e || !(await exists(where(e.b, e)))) continue;
+      const meta = parseMeta(chunk), box = boxFor(meta.labels, catOf.get(Number(u[1]))), L = userLabels(meta.labels);
+      if (!box) continue; if (box !== e.b) await relocate(e, box);
+      if (box !== e.b || JSON.stringify(L) !== JSON.stringify(e.L || []) || !(e.k || []).length) { e.L = L; await setLinks(e, wantedLinks(e)); }
+    }
     if (keys.length > 1500) for (const k of keys.slice(0, keys.length - 1500)) delete idx[k];
   }
   return count;
+}
+/* What the Email app should show in its sidebar, read by the Email app overlay before it starts. */
+export function boxesFor() {
+  const gm = accounts.filter((a) => a.gm && a.idx); if (!gm.length) return { main: [], labels: [], dirs: {}, acts: {} };
+  const used = new Set(), names = new Map(); for (const a of gm) for (const e of Object.values(a.idx)) { if (INBOXISH.includes(e.b)) used.add(e.b); for (const l of e.L || []) names.set(slug(l), l); }
+  const main = CATS.filter((c) => used.has(c[0]) || true).map(([id, label, icon]) => ({ id, label, icon, box: id })), dirs = {}, acts = {};
+  for (const m of main) { dirs[m.id] = m.id; acts[m.id] = ['archive', 'trash']; }
+  const labels = [...names].sort((x, y) => x[1].localeCompare(y[1])).map(([id, label]) => ({ id, label, icon: 'folder', box: id })); labels.unshift({ id: 'allmail', label: 'All Mail', icon: 'folder', box: 'allmail' });
+  for (const l of labels) { dirs[l.id] = l.id; acts[l.id] = []; }
+  return { main, labels, dirs, acts };
 }
 const syncing = new Set();
 export async function syncOne(a, full = false) {
@@ -172,6 +210,7 @@ const sec = (v, d) => (['ssl', 'starttls', 'none'].includes(v) ? v : d);
 export async function handleMailboxes(req, res, url) {
   const p = url.pathname, m = req.method; let x;
   if (p === '/api/mailboxes' && m === 'GET') return json(res, 200, { accounts: list() });
+  if (p === '/api/mailboxes/boxes' && m === 'GET') return json(res, 200, boxesFor());
   if (p === '/api/mailboxes' && m === 'POST') {
     const b = await readJson(req, 8192); const address = String(b.address || '').trim(), user = String(b.user || address).trim(), pass = String(b.pass || '');
     if (!validEmail(address)) throw httpError(400, 'Enter a valid email address', 'bad_address'); if (!pass) throw httpError(400, 'Enter the password', 'bad_password');

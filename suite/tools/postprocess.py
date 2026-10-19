@@ -100,6 +100,30 @@ if os.path.exists(ov) and os.path.exists(ci):
         open(ci, "w", encoding="utf-8", errors="surrogateescape").write(t)
     print("postprocess: Card Scan overlay added to Contacts")
 
+# Email: Gmail-style folders (tabs + labels) via an overlay script and three small patches to the app bundle
+ov = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "overlays", "email-boxes.js")
+ei = os.path.join(root, "email", "index.html")
+if os.path.exists(ov) and os.path.exists(ei):
+    import shutil, glob
+    shutil.copy(ov, os.path.join(root, "email", "boxes-overlay.js"))
+    t = open(ei, encoding="utf-8", errors="surrogateescape").read()
+    if "boxes-overlay.js" not in t:
+        t = t.replace("<head>", '<head><script src="./boxes-overlay.js"></script>', 1)
+        open(ei, "w", encoding="utf-8", errors="surrogateescape").write(t)
+    patches = [
+        ("zr={inbox:`objects`,", "zr={...(window.__aosDirs||{}),inbox:`objects`,"),
+        ("{id:`archive`,label:`Archive`,icon:`archive`,box:`archive`},{id:`trash`,label:`Trash`,icon:`trash`,box:`trash`}]",
+         "...(window.__aosBoxes?.main||[]),{id:`archive`,label:`Archive`,icon:`archive`,box:`archive`},{id:`trash`,label:`Trash`,icon:`trash`,box:`trash`},...(window.__aosBoxes?.labels||[])]"),
+        ("f={inbox:[`archive`,`trash`],", "f={...(window.__aosActs||{}),inbox:[`archive`,`trash`],"),
+    ]
+    for bf in glob.glob(os.path.join(root, "email", "assets", "index-*.js")):
+        t = open(bf, encoding="utf-8", errors="surrogateescape").read()
+        for x, y in patches:
+            if x in t: t = t.replace(x, y, 1)
+            elif y not in t: print("postprocess: WARNING email bundle snippet not found:", x[:50])
+        open(bf, "w", encoding="utf-8", errors="surrogateescape").write(t)
+    print("postprocess: Gmail folders overlay added to Email")
+
 # verify: nothing that loads or calls the SDK from puter.com remains
 left = 0
 for dp, _, files in os.walk(root):

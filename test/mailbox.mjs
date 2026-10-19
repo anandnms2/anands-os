@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 // Anands Email accounts: add a mailbox over IMAP (mock server), sync into the Email app's folders, send through the account's SMTP.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -24,7 +25,7 @@ const imap = net.createServer((s) => {
 await new Promise((r) => imap.listen(0, '127.0.0.1', r)); const ip = imap.address().port;
 
 /* A Gmail-like server: one All Mail folder, labels per message, X-GM-EXT-1. */
-const gmsgs = [{ uid: 1, labels: ['\\Inbox', 'Work'] }, { uid: 2, labels: ['Receipts'] }, { uid: 3, labels: ['\\Sent'] }, { uid: 4, labels: ['\\Spam'] }]; const glog = [];
+const gmsgs = [{ uid: 1, labels: ['\\Inbox', 'Work'] }, { uid: 2, labels: ['Receipts'] }, { uid: 3, labels: ['\\Sent'] }, { uid: 4, labels: ['\\Spam'] }, { uid: 5, labels: ['\\Inbox'], cat: 'promotions' }]; const glog = [];
 const gbody = (m) => `From: Bob <bob@x.test>\r\nTo: me@x.test\r\nSubject: Gmail ${m.uid}\r\nDate: Mon, 01 Jun 2026 10:00:00 +0000\r\n\r\nBody ${m.uid}\r\n`;
 const lbl = (m) => 'X-GM-LABELS (' + m.labels.map((l) => (/^\\/.test(l) ? l : '"' + l + '"')).join(' ') + ')';
 const gm = net.createServer((s) => {
@@ -34,6 +35,7 @@ const gm = net.createServer((s) => {
     else if (/^CAPABILITY/i.test(cmd)) s.write(`* CAPABILITY IMAP4rev1 X-GM-EXT-1\r\n${tag} OK c\r\n`);
     else if (/^LIST/i.test(cmd)) s.write(`* LIST (\\HasNoChildren) "/" "INBOX"\r\n* LIST (\\HasNoChildren \\All) "/" "[Gmail]/All Mail"\r\n* LIST (\\HasNoChildren \\Sent) "/" "[Gmail]/Sent Mail"\r\n${tag} OK l\r\n`);
     else if (/^SELECT/i.test(cmd)) s.write(`* ${gmsgs.length} EXISTS\r\n${tag} OK sel\r\n`);
+    else if ((x = /^UID SEARCH UID \d+:\* X-GM-RAW "category:(\w+)"/i.exec(cmd))) s.write(`* SEARCH ${gmsgs.filter((m) => m.cat === x[1]).map((m) => m.uid).join(' ')}\r\n${tag} OK s\r\n`);
     else if (/^UID SEARCH/i.test(cmd)) s.write(`* SEARCH ${gmsgs.map((m) => m.uid).join(' ')}\r\n${tag} OK s\r\n`);
     else if ((x = /^UID FETCH (\d+):\* /i.exec(cmd))) s.write(gmsgs.filter((m) => m.uid >= Number(x[1])).map((m, n) => `* ${n + 1} FETCH (UID ${m.uid} FLAGS (\\Seen) ${lbl(m)})\r\n`).join('') + `${tag} OK f\r\n`);
     else if ((x = /^UID FETCH (\d+) /i.exec(cmd))) { const m = gmsgs.find((v) => v.uid === Number(x[1])), b = gbody(m); s.write(`* 1 FETCH (UID ${m.uid} INTERNALDATE "01-Jun-2026 10:00:00 +0000" FLAGS (\\Seen) ${lbl(m)} BODY[] {${Buffer.byteLength(b)}}\r\n${b})\r\n${tag} OK f\r\n`); }
@@ -64,7 +66,8 @@ try {
   await t('Gmail: labels become folders (Inbox, Archive, Sent), spam is skipped, other labels are kept in a header', async () => {
     const r = await api('/api/mailboxes', { method: 'POST', json: { address: 'g@x.test', pass: 'secret', imapHost: '127.0.0.1', imapPort: gp, imapSecurity: 'none' } }); assert.equal(r.s, 201, JSON.stringify(r.j));
     const dir = path.join(data, 'fs', '.mail'); const walk = (b) => { try { return fs.readdirSync(path.join(dir, b)).flatMap((d) => fs.readdirSync(path.join(dir, b, d)).map((f) => ({ d, f, p: path.join(dir, b, d, f) }))); } catch { return []; } };
-    assert.equal(walk('objects').length, 1); assert.equal(walk('archive').length, 1); assert.equal(walk('sent').length, 1); assert.equal(walk('trash').length, 0);
+    assert.equal(walk('objects').length, 1); assert.equal(walk('archive').length, 1); assert.equal(walk('sent').length, 1); assert.equal(walk('trash').length, 0); assert.equal(walk('promotions').length, 1); assert.equal(walk('allmail').length, 4); assert.equal(walk('lbl-work-' + crypto.createHash('sha1').update('Work').digest('hex').slice(0, 4)).length, 1);
+    const bx = (await api('/api/mailboxes/boxes')).j; assert.ok(bx.main.some((m) => m.id === 'promotions')); assert.ok(bx.labels.some((l) => l.label === 'Work')); assert.ok(bx.labels.some((l) => l.id === 'allmail'));
     assert.match(fs.readFileSync(walk('objects')[0].p, 'utf8'), /^X-Gmail-Labels: Work\r?\n/); assert.match(fs.readFileSync(walk('archive')[0].p, 'utf8'), /^X-Gmail-Labels: Receipts/);
   });
   await t('Gmail: Done in the Email app archives in Gmail; changes made in Gmail move the message here', async () => {
