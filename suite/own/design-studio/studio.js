@@ -1123,9 +1123,9 @@ function pMagic(b){
   b.append(el('h3',{class:'ph'},'Magic'));b.append(el('div',{class:'sec'},el('h4',{},'Magic Studio'),el('div',{class:'grid2'},el('button',{class:'btn',html:ic('image',16)+' Magic Media',onclick:()=>openMagicMedia()}),el('button',{class:'btn',html:ic('bg',16)+' BG Generator',onclick:()=>openBgGenerator()})),el('p',{class:'note'},'Select a picture in your design to also use Magic Eraser, Magic Edit, Upscale, Magic Layers and Image to video.')));
   const status=el('p',{class:'note'},'');
   const note=(t)=>status.textContent=t;
-  aiSample().then(s=>{if(!s)note('AI actions need an AI model. Add one in Anands OS Settings. Everything else works without it.')});
+  aiSample().then(s=>{if(!s)note('Connect your AI in Settings to use these. Everything else works offline.')});
   const prompt=el('textarea',{class:'f',rows:3,placeholder:'e.g. Summer menu poster for a beach café, warm colours'});
-  const run=async(fn)=>{if(aiBusy)return;const s=await aiSample();if(!s){note('Magic needs an AI model. Add one in Anands OS Settings.');return}aiBusy=true;note('Thinking…');try{await fn(s)}catch(e){note(e&&e.code==='ai_off'?(e.message||'AI is not set up'):'That did not work — try rephrasing.')}aiBusy=false};
+  const run=async(fn)=>{if(aiBusy)return;const s=await aiSample();if(!s){note('Connect your AI (or add an Anthropic key) in Settings to use Magic.');return}aiBusy=true;note('Thinking…');try{await fn(s)}catch(e){note(e&&e.code==='ai_off'?(e.message||'AI is not set up'):'That did not work — try rephrasing.')}aiBusy=false};
   b.append(el('div',{class:'sec'},el('h4',{},'Magic design'),prompt,el('button',{class:'btn pri wide',html:ic('sparkle',16)+' Generate a design',onclick:()=>{const t=prompt.value.trim();if(!t){note('Describe what you want first.');return}run(async s=>{
     const ask=`You are a graphic designer. Create ONE design for a ${D.w}x${D.h}px canvas. Reply with ONLY JSON: {"bg":"#hex" or {"c1":"#hex","c2":"#hex","a":0-360},"objs":[...]}. Each obj is either {"type":"text","text":"..","x":0-100,"y":0-100,"w":10-100,"size":2-30,"font":one of ${JSON.stringify(FONTS)},"color":"#hex","bold":bool,"align":"left|center|right","upper":bool} or {"type":"shape","kind":one of rect|ellipse|tri|diamond|hex|star|heart|blob|burst|ring|pent,"x":-20-100,"y":-20-100,"w":1-120,"h":1-120,"fill":"#hex","r":0-50,"op":0-1}. x,y,w,h are percents of canvas width/height; size is percent of the canvas shorter side. Put shapes first (back to front), then text. 6-14 objects, strong contrast, margins of at least 6%, real wording not placeholders. Brief: ${t}`;
     const r=await s.json(ask,{modelTier:'default',cache:false});applyAI(r);note('Done — everything is editable. Undo with Ctrl+Z.')})}}),status));
@@ -3606,9 +3606,14 @@ function present(){presentShow()}
 
 /* ---------- Magic (AI) through the OS's own AI settings ---------- */
 function jsonOf(t){const m=String(t).match(/[\[{][\s\S]*[\]}]/);if(!m)throw new Error('The AI did not answer with data');return JSON.parse(m[0])}
+let aiStatusCache=null;
 async function aiSample(){
-  if(!PUT()||!PUT().ai)return null;
+  if(!aiStatusCache||Date.now()-aiStatusCache.t>30000){try{const r=await api('/design/aistatus');aiStatusCache={t:Date.now(),text:r.text,stt:r.stt}}catch(e){aiStatusCache={t:Date.now(),text:{ready:false}}}}
+  const server=aiStatusCache.text&&aiStatusCache.text.ready;
+  if(!server&&(!PUT()||!PUT().ai))return null;
   const s=async(input)=>{
+    if(server){const prompt=Array.isArray(input)?input.map(m=>typeof m==='string'?m:(m.role?m.role+': ':'')+(typeof m.content==='string'?m.content:JSON.stringify(m.content))).join('\n\n'):String(input);
+      try{const r=await api('/design/aichat',{prompt});return {text:r.text,truncated:false}}catch(e){throw Object.assign(new Error((e&&e.message)||'AI is not available'),{code:e&&e.code==='rate_limited'?'rate_limited':'ai_off'})}}
     try{const msgs=Array.isArray(input)?input:String(input);const r=await PUT().ai.chat(msgs);const text=typeof r==='string'?r:(r&&r.message&&(typeof r.message.content==='string'?r.message.content:(r.message.content||[]).map(c=>c.text||'').join('')))||(r&&r.text)||String(r);return {text,truncated:false}}
     catch(e){throw Object.assign(new Error((e&&e.message)||'AI is not available'),{code:'ai_off'})}};
   s.json=async(input)=>jsonOf((await s(input)).text);

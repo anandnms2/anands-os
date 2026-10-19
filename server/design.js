@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import { DATA, effective } from './config.js';
 import { json, readBody, readJson, httpError, clientIp } from './util.js';
 import * as mail from './mail.js';
+import { llmChat } from './chat.js';
 import { isOwner } from './team.js';
 
 /* ---------- background remover files: fetched once, then served from the data folder ---------- */
@@ -203,10 +204,39 @@ export async function publicSite(req, res, p) {
   res.end(req.method === 'HEAD' ? undefined : html);
 }
 
+
+/* ---------- AI text (Magic Write) and speech to text: the built-in AI gateway by default, or your own Anthropic key ---------- */
+const aiHits = new Map();
+function aiLimit(who) { const now = Date.now(), a = (aiHits.get(who) || []).filter((t) => now - t < 600000); if (a.length >= 60) throw httpError(429, 'Too many AI requests. Try again in a few minutes.', 'rate_limited'); a.push(now); aiHits.set(who, a); }
+export function aiProvider() {
+  const e = effective(), a = e.ai || {}, hasGw = !!(e.llm && e.llm.base), hasAn = !!a.key;
+  const want = a.provider || 'auto'; const use = want === 'builtin' ? (hasGw ? 'builtin' : '') : want === 'anthropic' ? (hasAn ? 'anthropic' : '') : (hasGw ? 'builtin' : hasAn ? 'anthropic' : '');
+  return { provider: use, want, ready: !!use, model: use === 'anthropic' ? a.model : use === 'builtin' ? e.llm.model : '', reason: use ? '' : want === 'anthropic' ? 'Add your Anthropic key in Settings › AI for Design Studio' : 'Connect your AI in Settings › Assistant, or add an Anthropic key in Settings › AI for Design Studio' };
+}
+export async function aiText(system, user, { maxTokens = 1200, fetcher = fetch } = {}) {
+  const st = aiProvider(); if (!st.ready) throw httpError(400, st.reason, 'no_ai');
+  if (st.provider === 'builtin') { const r = await llmChat([{ role: 'system', content: system }, { role: 'user', content: user }], { temperature: 0.7, max_tokens: maxTokens }); return { text: String(r.text || '').trim(), provider: 'builtin', model: r.model }; }
+  const a = effective().ai; let r;
+  try { r = await fetcher((process.env.ANTHROPIC_API_BASE || 'https://api.anthropic.com') + '/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': a.key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model: a.model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }), signal: AbortSignal.timeout(60000) }); } catch { throw httpError(502, 'Could not reach Anthropic. Check this server can reach the internet.'); }
+  if (r.status === 401 || r.status === 403) throw httpError(502, 'Anthropic did not accept the key'); if (r.status === 429) throw httpError(502, 'Anthropic is limiting requests right now. Try again in a minute.');
+  if (!r.ok) { let m = ''; try { m = (await r.json()).error?.message || ''; } catch {} throw httpError(502, 'Anthropic could not answer' + (m ? ': ' + clip(m, 160) : ' (' + r.status + ')')); }
+  const j = await r.json(); const text = (j.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('').trim(); if (!text) throw httpError(502, 'Anthropic sent an empty answer');
+  return { text, provider: 'anthropic', model: j.model || a.model };
+}
+const AI_SYS = 'You help people make designs, documents and websites. Reply with only the requested text, no preface, no quotes, no markdown unless asked. Match the language of the input. Keep it natural and specific.';
+const AI_TASKS = {
+  write: (b) => ['Write ' + clip(b.kind || 'text', 40) + ' for this request. ' + (b.length ? 'Length: ' + clip(b.length, 40) + '. ' : '') + (b.tone ? 'Tone: ' + clip(b.tone, 40) + '.' : ''), clip(b.prompt, 2000)],
+  rewrite: (b) => ['Rewrite the text as instructed. Keep the meaning and facts. Instruction: ' + clip(b.instruction || 'improve the writing', 200), clip(b.text, 8000)],
+  translate: (b) => ['Translate the text into ' + clip(b.language || 'English', 40) + '. Keep line breaks.', clip(b.text, 8000)],
+  summarize: (b) => ['Summarize the text in a few short bullet points starting with "- ".', clip(b.text, 12000)],
+  headline: (b) => ['Write 5 short headline options for the topic, one per line, no numbering.', clip(b.prompt || b.text, 1000)],
+  json: (b) => ['You edit website copy. The user message has a JSON object of text fields. Return ONLY a JSON object with exactly the same keys, with the text rewritten for this request: ' + clip(b.instruction, 400) + '. Keep each value about the same length as the original unless asked. Do not add keys.', JSON.stringify(b.fields || {}).slice(0, 8000)]
+};
+
 /* ---------- routes under /_local ---------- */
 /* ---------- AI images (Magic Edit, BG Generator): Pollinations (no key), any OpenAI-compatible endpoint, or Hugging Face ---------- */
 const POLL = (process.env.POLLINATIONS_BASE || 'https://image.pollinations.ai').replace(/\/+$/, ''), HF = (process.env.HF_API_BASE || 'https://api-inference.huggingface.co').replace(/\/+$/, '');
-export const imageStatus = () => { const i = effective().image || {}; const prov = i.provider || 'pollinations'; const ok = prov === 'pollinations' || (prov === 'openai' && !!i.url) || (prov === 'huggingface' && !!i.key); return { provider: prov, ready: ok, edit: prov === 'openai' && !!i.url, reason: ok ? '' : prov === 'openai' ? 'Add the image service address in Settings › Design Studio AI images' : 'Add a Hugging Face token in Settings › Design Studio AI images' }; };
+export const imageStatus = () => { const i = effective().image || {}; const prov = i.provider || 'pollinations'; const gw = !!(effective().llm || {}).base; const ok = prov === 'pollinations' || (prov === 'openai' && !!i.url) || (prov === 'gateway' && gw) || (prov === 'huggingface' && !!i.key); return { provider: prov, ready: ok, edit: (prov === 'openai' && !!i.url) || (prov === 'gateway' && gw), reason: ok ? '' : prov === 'openai' ? 'Add the image service address in Settings › Design Studio AI images' : prov === 'gateway' ? 'Connect your AI gateway in Settings › Assistant first' : 'Add a Hugging Face token in Settings › Design Studio AI images' }; };
 const imgHits = new Map();
 function imgLimit(who) { const now = Date.now(), a = (imgHits.get(who) || []).filter((t) => now - t < 600000); if (a.length >= 40) throw httpError(429, 'Too many AI image requests. Try again in a few minutes.', 'rate_limited'); a.push(now); imgHits.set(who, a); }
 const dataUrl = (buf, type) => 'data:' + type + ';base64,' + buf.toString('base64');
@@ -232,14 +262,14 @@ export async function imageGen(body, who, fetcher = fetch) {
       return { image: await fetchImg(r, 'Hugging Face'), provider: 'huggingface' };
     }
     // OpenAI-compatible
-    const base = i.url, model = i.model || 'gpt-image-1', size = Math.abs(w / h - 1) < .2 ? '1024x1024' : w > h ? '1536x1024' : '1024x1536';
+    const gwc = i.provider === 'gateway' ? effective().llm : null; const base = gwc ? (gwc.base.replace(/\/+$/, '').replace(/\/v1$/, '') + '/v1') : i.url, model = i.model || 'gpt-image-1', i_key = gwc ? gwc.key : i.key, size = Math.abs(w / h - 1) < .2 ? '1024x1024' : w > h ? '1536x1024' : '1024x1536';
     let r;
     if (edit) {
       const im = parseData(body.image, 8e6), mk = parseData(body.mask, 8e6), fd = new FormData();
       fd.append('model', model); fd.append('prompt', prompt); fd.append('size', size); fd.append('n', '1');
       fd.append('image', new Blob([im.buf], { type: im.type }), 'image.' + im.type.slice(6)); fd.append('mask', new Blob([mk.buf], { type: mk.type }), 'mask.' + mk.type.slice(6));
-      r = await fetcher(base + '/images/edits', { method: 'POST', headers: { ...(i.key ? { authorization: 'Bearer ' + i.key } : {}), 'user-agent': UA }, body: fd, signal: AbortSignal.timeout(120000) });
-    } else r = await fetcher(base + '/images/generations', { method: 'POST', headers: { ...(i.key ? { authorization: 'Bearer ' + i.key } : {}), 'content-type': 'application/json', 'user-agent': UA }, body: JSON.stringify({ model, prompt, size, n: 1 }), signal: AbortSignal.timeout(120000) });
+      r = await fetcher(base + '/images/edits', { method: 'POST', headers: { ...(i_key ? { authorization: 'Bearer ' + i_key } : {}), 'user-agent': UA }, body: fd, signal: AbortSignal.timeout(120000) });
+    } else r = await fetcher(base + '/images/generations', { method: 'POST', headers: { ...(i_key ? { authorization: 'Bearer ' + i_key } : {}), 'content-type': 'application/json', 'user-agent': UA }, body: JSON.stringify({ model, prompt, size, n: 1 }), signal: AbortSignal.timeout(120000) });
     if (!r.ok) return { image: await fetchImg(r, 'The image service'), provider: 'openai' };
     const j = await r.json().catch(() => ({})), d = j && j.data && j.data[0];
     if (d && d.b64_json) return { image: dataUrl(Buffer.from(d.b64_json, 'base64'), 'image/png'), provider: 'openai' };
@@ -269,6 +299,18 @@ export async function handleDesign(req, res, url, p, s) {
     const t = crypto.randomBytes(24).toString('base64url'); await fsp.mkdir(SF, { recursive: true, mode: 0o700 }); await fsp.writeFile(path.join(SF, t), body, { mode: 0o600 });
     idx[t] = { name: clip(q.get('name') || 'design', 60).replace(/[^\w\- ]/g, '').trim() || 'design', ext, by: who(s), at: Date.now(), exp: Date.now() + days * 864e5, size: body.length }; writeIdx(idx);
     return json(res, 200, { token: t, path: '/d/' + t, exp: idx[t].exp });
+  }
+  if (p === '/design/aistatus') { const e = effective(); return json(res, 200, { text: aiProvider(), image: imageStatus(), stt: { ready: !!(e.llm && e.llm.base) } }); }
+  if (p === '/design/aichat') { const b = await readJson(req, 128 * 1024); aiLimit(who(s)); const pr = clip(b.prompt, 60000).trim(); if (!pr) throw httpError(400, 'Nothing to ask'); return json(res, 200, await aiText(clip(b.system, 4000) || 'Follow the instructions exactly. When asked for JSON, reply with only JSON.', pr, { maxTokens: 3500 })); }
+  if (p === '/design/aitext') { const b = await readJson(req, 64 * 1024); aiLimit(who(s)); const f = AI_TASKS[b.task]; if (!f) throw httpError(400, 'Unknown AI task'); const [sys, usr] = f(b); if (!String(usr).trim() || usr === '{}') throw httpError(400, 'Write or select some text first');
+    const r = await aiText(AI_SYS + ' ' + sys, usr, { maxTokens: b.task === 'write' ? 1600 : 1200 }); return json(res, 200, r); }
+  if (p === '/design/transcribe') {
+    const b = await readJson(req, 34 * 1024 * 1024); aiLimit(who(s)); const e = effective(); if (!(e.llm && e.llm.base)) throw httpError(400, 'Automatic captions need your AI gateway with speech-to-text (Settings › Assistant). Anthropic does not transcribe audio. You can type captions or import an .srt file instead.', 'no_stt');
+    const m = /^data:(audio\/[\w.+-]+|video\/[\w.+-]+);base64,([A-Za-z0-9+/=]+)$/.exec(String(b.audio || '')); if (!m) throw httpError(400, 'That sound could not be read'); const buf = Buffer.from(m[2], 'base64'); if (!buf.length || buf.length > 24e6) throw httpError(400, 'That sound is too large. Use a clip under 24 MB.');
+    const fd = new FormData(); fd.append('file', new Blob([buf], { type: m[1] }), 'audio.' + (m[1].split('/')[1] || 'webm').replace(/[^a-z0-9]/gi, '')); fd.append('model', e.ai.sttModel || 'whisper-1'); fd.append('response_format', 'verbose_json'); if (b.language) fd.append('language', clip(b.language, 8).replace(/[^a-z-]/gi, ''));
+    let r; try { r = await fetch(e.llm.base.replace(/\/+$/, '').replace(/\/v1$/, '') + '/v1/audio/transcriptions', { method: 'POST', headers: e.llm.key ? { authorization: 'Bearer ' + e.llm.key } : {}, body: fd, signal: AbortSignal.timeout(180000) }); } catch { throw httpError(502, 'Could not reach your AI gateway'); }
+    if (!r.ok) { let t = ''; try { t = (await r.json()).error?.message || ''; } catch {} throw httpError(502, 'Your AI gateway could not transcribe that' + (t ? ': ' + clip(t, 160) : ' (' + r.status + ')') + '. It needs a speech-to-text model such as whisper-1; set the model name in Settings › AI for Design Studio.', 'stt_failed'); }
+    const j = await r.json(); const segs = (j.segments || []).map((x) => ({ start: +x.start || 0, end: +x.end || 0, text: clip(x.text, 300).trim() })).filter((x) => x.text); return json(res, 200, { text: clip(j.text, 20000), segments: segs.length ? segs : (j.text ? [{ start: 0, end: +j.duration || 5, text: clip(j.text, 300) }] : []) });
   }
   if (p === '/design/publish') {
     const b = await readJson(req, 30 * 1024 * 1024), pages = {}; let n = 0, total = 0;

@@ -29,11 +29,16 @@ const imgHost = await listen((req, res) => { const b = []; req.on('data', (d) =>
   res.writeHead(404); res.end(); }); });
 const bgHost = await listen((req, res) => { hits.bg.push(req.url); if (req.url.endsWith('ort.min.js')) { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('/* fake ort */'.padEnd(2000, ' ')); } res.writeHead(404); res.end(); });
 
+const aiCalls = []; const an = await listen((req, res) => { const b = []; req.on('data', (d) => b.push(d)); req.on('end', () => { const j = JSON.parse(Buffer.concat(b).toString() || '{}'); aiCalls.push({ who: 'anthropic', key: req.headers['x-api-key'], ver: req.headers['anthropic-version'], model: j.model, sys: j.system, user: j.messages && j.messages[0].content }); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ model: j.model, content: [{ type: 'text', text: 'ANTHROPIC: ' + String(j.messages[0].content).slice(0, 60) }] })); }); });
+const gw = await listen((req, res) => { const b = []; req.on('data', (d) => b.push(d)); req.on('end', () => { const raw = Buffer.concat(b); if (req.url === '/v1/audio/transcriptions') { aiCalls.push({ who: 'stt', ct: String(req.headers['content-type']).split(';')[0], auth: req.headers.authorization, has: raw.toString('latin1').includes('whisper-1') }); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ text: 'Hello world. Second line.', duration: 4, segments: [{ start: 0, end: 2, text: ' Hello world.' }, { start: 2, end: 4, text: ' Second line.' }] })); }
+  const j = JSON.parse(raw.toString() || '{}'); const msgs = j.messages || []; const last = String(msgs.at(-1)?.content || ''); aiCalls.push({ who: 'gateway', model: j.model, last: last.slice(0, 80), auth: req.headers.authorization });
+  res.writeHead(200, { 'content-type': 'application/json' }); let text = 'GATEWAY: ' + last.slice(0, 40); if (/same keys/.test(String(msgs[0]?.content))) { try { const f = JSON.parse(last); text = JSON.stringify(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v + ' (ai)']))); } catch {} } res.end(JSON.stringify({ model: 'gw-model', choices: [{ message: { content: text } }] })); }); });
+
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-ds-')), suite = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-suite-'));
 fs.mkdirSync(suite + '/apps', { recursive: true }); fs.cpSync(root + '/suite/own/design-studio', suite + '/apps/design-studio', { recursive: true }); fs.mkdirSync(suite + '/_icons');
 fs.writeFileSync(suite + '/apps.json', JSON.stringify([{ slug: 'design-studio', name: 'Design Studio', alternativeTo: 'Canva', category: 'Creative Tools', hasSource: true }]));
 const port = 20000 + Math.floor(Math.random() * 20000), B = `http://127.0.0.1:${port}`;
-const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', PEXELS_API_BASE: `http://127.0.0.1:${px.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, PIXABAY_API_BASE: `http://127.0.0.1:${pb.address().port}`, OPENVERSE_API_BASE: `http://127.0.0.1:${ov.address().port}`, WIKIMEDIA_API_BASE: `http://127.0.0.1:${wk.address().port}/w/api.php`, PIXABAY_API_KEY: '', BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '', POLLINATIONS_BASE: `http://127.0.0.1:${imgHost.address().port}` } });
+const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', ANTHROPIC_API_BASE: `http://127.0.0.1:${an.address().port}`, PEXELS_API_BASE: `http://127.0.0.1:${px.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, PIXABAY_API_BASE: `http://127.0.0.1:${pb.address().port}`, OPENVERSE_API_BASE: `http://127.0.0.1:${ov.address().port}`, WIKIMEDIA_API_BASE: `http://127.0.0.1:${wk.address().port}/w/api.php`, PIXABAY_API_KEY: '', BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '', POLLINATIONS_BASE: `http://127.0.0.1:${imgHost.address().port}` } });
 for (let i = 0; i < 60; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
 let pass = 0, failed = 0; const t = async (n, f) => { try { await f(); pass++; console.log('ok   ' + n); } catch (e) { failed++; console.log('FAIL ' + n + '\n     ' + String(e.stack || e).split('\n').slice(0, 5).join('\n     ')); } };
 const browser = await chromium.launch({ args: ['--no-sandbox'] }); const errs = [];
@@ -460,6 +465,37 @@ try {
     assert.ok(Math.abs(r.w - r.h) <= 1 && r.w < 400 && r.w > 100, JSON.stringify(r)); assert.ok(r.px[2] > 150 && r.px[0] < 80, 'blue: ' + JSON.stringify(r)); assert.ok(Math.abs(r.ow - r.oh) < 1);
     await p.close();
   });
+  await t('AI: connected AI by default, Anthropic when chosen, speech-to-text through the gateway', async () => {
+    const H = { 'x-aos': '1' };
+    let st = (await post('/design/aistatus')).j; assert.equal(st.text.ready, false); assert.match(st.text.reason, /Settings/);
+    assert.equal((await post('/design/aitext', { task: 'write', prompt: 'hi' })).s, 400);
+    // Anthropic only
+    assert.ok((await ctx.request.put(B + '/api/settings', { data: { ai: { provider: 'auto', key: 'sk-ant-test' } }, headers: H })).ok());
+    st = (await post('/design/aistatus')).j; assert.equal(st.text.provider, 'anthropic'); assert.equal(st.text.model, 'claude-sonnet-5-5');
+    let r = (await post('/design/aitext', { task: 'rewrite', text: 'good morning', instruction: 'make it shorter' })).j; assert.match(r.text, /^ANTHROPIC:/); const ac = aiCalls.filter((c) => c.who === 'anthropic').at(-1); assert.equal(ac.key, 'sk-ant-test'); assert.equal(ac.ver, '2023-06-01'); assert.equal(ac.model, 'claude-sonnet-5-5'); assert.match(ac.user, /good morning/);
+    assert.ok(!JSON.stringify((await (await ctx.request.get(B + '/api/settings')).json())).includes('sk-ant-test'), 'key never returned');
+    assert.equal((await post('/design/transcribe', { audio: 'data:audio/webm;base64,AAAA' })).s, 400); // Anthropic cannot transcribe
+    // connected AI wins in automatic mode
+    assert.ok((await ctx.request.put(B + '/api/settings', { data: { llm: { base: `http://127.0.0.1:${gw.address().port}/v1`, key: 'gw-key', model: 'gw-model' } }, headers: H })).ok());
+    st = (await post('/design/aistatus')).j; assert.equal(st.text.provider, 'builtin'); assert.equal(st.stt.ready, true);
+    r = (await post('/design/aitext', { task: 'write', prompt: 'a poster title' })).j; assert.match(r.text, /^GATEWAY:/); assert.equal(aiCalls.filter((c) => c.who === 'gateway').at(-1).auth, 'Bearer gw-key');
+    assert.ok((await ctx.request.put(B + '/api/settings', { data: { ai: { provider: 'anthropic' } }, headers: H })).ok()); r = (await post('/design/aitext', { task: 'write', prompt: 'x' })).j; assert.match(r.text, /^ANTHROPIC:/);
+    assert.ok((await ctx.request.put(B + '/api/settings', { data: { ai: { provider: 'auto' } }, headers: H })).ok());
+    const tr = (await post('/design/transcribe', { audio: 'data:audio/webm;base64,AAAAAAAA' })).j; assert.equal(tr.segments.length, 2); assert.equal(tr.segments[0].text, 'Hello world.'); const sc = aiCalls.find((c) => c.who === 'stt'); assert.ok(sc.has && sc.ct === 'multipart/form-data' && sc.auth === 'Bearer gw-key');
+    assert.equal((await post('/design/aitext', { task: 'bogus' })).s, 400);
+  });
+  await t('AI in the editors: Docs rewrites the selection, Websites rewrites a section and a whole page, Magic uses the server AI', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/docs.html'); await p.waitForFunction(() => typeof sanitize === 'function' && document.querySelector('#page'));
+    await p.evaluate(() => { page.innerHTML = '<h1>Memo</h1><p id="tgt">hello there friend</p>'; const r = document.createRange(); r.selectNodeContents(document.getElementById('tgt')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); page.focus(); });
+    await p.click('#bAI'); await p.waitForSelector('#aiUse'); await p.click('.chip:has-text("Make it shorter")'); await p.waitForFunction(() => /GATEWAY/.test(document.querySelector('.dlg textarea[aria-label="Result"]').value)); await p.click('#aiUse'); await p.waitForTimeout(400);
+    assert.match(await p.textContent('#page'), /GATEWAY/); assert.equal(await p.locator('#page p').count(), 1); assert.equal(await p.textContent('#page h1'), 'Memo');
+    await p.goto(B + '/apps/design-studio/site.html'); await p.waitForFunction(() => typeof S !== 'undefined' && S && document.querySelector('#frame').contentDocument.querySelector('h1[data-f]'));
+    await p.frameLocator('#frame').locator('h1[data-f="title"]').click(); await p.fill('#aiBrief', 'a coffee shop'); await p.click('#aiSection'); await p.waitForFunction(() => /\(ai\)/.test(S.pages[0].blocks.find((b) => b.type === 'hero').d.title), null, { timeout: 8000 });
+    await p.fill('#aiPageBrief', 'a coffee shop'); await p.click('#aiPage'); await p.waitForFunction(() => /\(ai\)/.test(S.pages[0].blocks.find((b) => b.type === 'features').d.title), null, { timeout: 8000 });
+    assert.ok(!/\(ai\)/.test(await p.evaluate(() => S.pages[0].blocks.find((b) => b.type === 'nav').d.logo)), 'nav logo untouched');
+    await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof aiSample === 'function'); const mg = await p.evaluate(async () => { const s = await aiSample(); const r = await s('say hi'); return r.text; }); assert.match(mg, /^GATEWAY/);
+    await p.close();
+  });
   await t('right-click menu text is readable in dark mode', async () => {
     const p = await ctx.newPage(); await p.emulateMedia({ colorScheme: 'dark' }); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof ctxMenu === 'function');
     const c = await p.evaluate(() => { ctxMenu(100, 100, [{ label: 'Open', go() {} }]); const b = document.querySelector('.ctx button'), m = document.querySelector('.ctx'); return [getComputedStyle(b).color, getComputedStyle(m).backgroundColor]; });
@@ -471,5 +507,5 @@ try {
     assert.deepEqual(miss, []);
   });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
-} finally { await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }
+} finally { an.close(); gw.close(); await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }
 console.log(`${pass} passed${failed ? ', ' + failed + ' failed' : ''}`); process.exit(failed ? 1 : 0);

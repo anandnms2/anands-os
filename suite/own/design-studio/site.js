@@ -135,7 +135,7 @@ function secMenu(x,y,id){const b=blk(id),i=idx(id);ctxMenu(x,y,[{label:'Move up'
 /* ---------- left panel ---------- */
 const lbody=$('#lbody');
 function leftPanel(){$$('#lp .tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===tab));lbody.innerHTML='';
-  if(tab==='add'){lbody.append(el('h3',{},'Add a section'),el('div',{class:'blocks'},...Object.entries(BL).map(([k,v])=>el('button',{title:'Add '+v.label,'data-add':k,onclick:()=>{addBlock(k);$('#lp').classList.remove('open')}},el('span',{},v.icon),v.label))))}
+  if(tab==='add'){const pq=el('input',{class:'f',id:'aiPageBrief',placeholder:'e.g. a family bakery in Arusha',maxlength:200}),pst=el('p',{class:'note',role:'status'},'');lbody.append(el('h3',{},'Write this page with AI'),pq,el('button',{class:'btn',id:'aiPage',onclick:()=>{const t=pq.value.trim();if(!t){pst.textContent='Say what the website is about first.';return}aiCopy(page().blocks.filter(x=>!['spacer','video','nav','footer'].includes(x.type)),'Write all of this page\'s text for: '+t+'. Make the sections fit together.',pst)}},'✨ Write the text'),pst,el('h3',{},'Add a section'),el('div',{class:'blocks'},...Object.entries(BL).map(([k,v])=>el('button',{title:'Add '+v.label,'data-add':k,onclick:()=>{addBlock(k);$('#lp').classList.remove('open')}},el('span',{},v.icon),v.label))))}
   else if(tab==='pages'){lbody.append(el('h3',{},'Pages'),...S.pages.map((p,i)=>el('div',{class:'item'+(i===curPage?' on':'')},el('span',{class:'grow',onclick:()=>goPage(i)},p.title+(i===0?'  · home':'')),el('button',{title:'Rename','aria-label':'Rename '+p.title,onclick:()=>askText('Page name',p.title,'Rename',v=>{p.title=v;if(i)p.slug=uniqSlug(slugOf(v),p);changedS();leftPanel();pageSel()})},'✎'),el('button',{title:'Delete','aria-label':'Delete '+p.title,disabled:S.pages.length<2||i===0,onclick:()=>askSure('Delete the page “'+p.title+'”?','Delete',()=>{S.pages.splice(i,1);curPage=Math.min(curPage,S.pages.length-1);fixLinks();ed.queue();render(false);leftPanel();pageSel();rightPanel()})},'🗑'))),
     el('button',{class:'btn pri',id:'addPage',onclick:()=>askText('New page name','','Add page',v=>{const slug=uniqSlug(slugOf(v));const nav=page().blocks.find(b=>b.type==='nav'),ft=page().blocks.find(b=>b.type==='footer');S.pages.push({id:uid(),title:v,slug,desc:'',blocks:[nav&&JSON.parse(JSON.stringify(nav)),mkBlock('text',{d:{title:v,text:'Write about this page.'}}),ft&&JSON.parse(JSON.stringify(ft))].filter(Boolean).map(b=>(b.id=uid(),b))});goPage(S.pages.length-1);ed.queue()})},'+ Add a page'),
     el('p',{class:'note'},'Pages appear in the menu and footer automatically. The first page is your home page.'),
@@ -153,6 +153,17 @@ $('#pagesel').onchange=e=>goPage(+e.target.value);
 function goPage(i){curPage=i;selB=null;pageSel();render(false);rightPanel();if(tab==='pages')leftPanel()}
 $$('#vbar [data-w]').forEach(b=>b.onclick=()=>{frame.className=b.dataset.w;$$('#vbar [data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
 
+
+/* ---------- AI copy: rewrite the text of a section, or of the whole page, from a short brief ---------- */
+const SKIP=/(Link|img|photo|icon|url|formTo|email|phone|hl|logo)$/;
+function flatten(v,p,out){if(typeof v==='string'){if(!SKIP.test(p.split('.').pop()))out[p]=v}else if(Array.isArray(v))v.forEach((x,i)=>flatten(x,p+(p?'.':'')+i,out));else if(v&&typeof v==='object')Object.keys(v).forEach(k=>flatten(v[k],p+(p?'.':'')+k,out));return out}
+async function aiCopy(blocks,instruction,status){const st=await aiReady();if(!st.text||!st.text.ready){toast((st.text&&st.text.reason)||'Connect your AI in Settings first',4500);return false}
+  const fields={};blocks.forEach(b=>{const f=flatten(b.d,'',{});Object.keys(f).forEach(k=>fields[b.id+'|'+k]=f[k])});if(!Object.keys(fields).length){toast('This section has no text to write');return false}
+  if(status)status.textContent='Writing…';
+  try{const r=await aiCall('json',{fields,instruction});let j;try{j=JSON.parse((r.text.match(/\{[\s\S]*\}/)||[''])[0])}catch(e){throw new Error('The AI did not return usable text. Try again.')}
+    let n=0;blocks.forEach(b=>Object.keys(fields).forEach(key=>{if(!key.startsWith(b.id+'|'))return;const v=j[key];if(typeof v==='string'&&v.trim()){set(b.d,key.slice(b.id.length+1),v.trim().slice(0,600));n++}}));
+    if(!n)throw new Error('The AI did not change anything. Try again.');ed.queue();render();rightPanel();if(status)status.textContent='Done. Undo by editing the text, or press Ctrl+Z in a text box.';return true}
+  catch(e){if(status)status.textContent=e.message;else toast(e.message,4000);return false}}
 /* ---------- right panel ---------- */
 const rbody=$('#rbody');
 function linkOptions(){return [['','No link'],...S.pages.map(p=>['page:'+p.slug,'Page: '+p.title]),['https://','Another website…']]}
@@ -161,7 +172,9 @@ function linkField(b,key,label){const v=b.d[key]||'';const known=linkOptions().s
 function rightPanel(){rbody.innerHTML='';const b=selB&&blk(selB);
   if(!b){rbody.append(el('p',{class:'note'},'Click any section in the preview to edit it. Click text to type; click a picture to replace it.'),el('p',{class:'note'},'Tip: right-click a section for quick actions.'));return}
   const T=BL[b.type],i=idx(b.id);
+  const aiq=el('input',{class:'f',id:'aiBrief',placeholder:'e.g. for a Dar es Salaam coffee shop',maxlength:200}),aist=el('p',{class:'note',role:'status'},'');
   rbody.append(el('h3',{},T.label),el('div',{class:'row'},el('button',{class:'btn sm','aria-label':'Move up',disabled:i<=0,onclick:()=>moveBlock(b.id,-1)},'↑'),el('button',{class:'btn sm','aria-label':'Move down',disabled:i>=page().blocks.length-1,onclick:()=>moveBlock(b.id,1)},'↓'),el('button',{class:'btn sm',onclick:()=>dupBlock(b.id)},'Duplicate'),el('button',{class:'btn sm danger',id:'delSec',onclick:()=>delBlock(b.id)},'Delete')));
+  if(!['spacer','video'].includes(b.type))rbody.append(el('label',{class:'lab'},'Write with AI',aiq,el('button',{class:'btn sm',id:'aiSection',onclick:()=>{const t=aiq.value.trim();if(!t){aist.textContent='Say what the site is about first.';return}aiCopy([b],'Rewrite this section\'s text for: '+t,aist)}},'✨ Rewrite this section'),aist));
   if(T.variants.length>1)rbody.append(el('label',{class:'lab'},'Layout',el('select',{class:'f',onchange:e=>{b.v=e.target.value;changedS()}},...T.variants.map(([v,l])=>el('option',{value:v,selected:b.v===v},l)))));
   if(!['nav','footer','spacer'].includes(b.type))rbody.append(el('label',{class:'lab'},'Background',el('select',{class:'f',onchange:e=>{b.bg=e.target.value;changedS()}},...[['bg','Page colour'],['alt','Soft panel'],['primary','Accent colour'],['dark','Dark']].map(([v,l])=>el('option',{value:v,selected:(b.bg||'bg')===v},l)))));
   Object.keys(b.d).filter(k=>/Link$/.test(k)).forEach(k=>rbody.append(linkField(b,k,(k==='btnLink'?'Button link':k==='btn2Link'?'Second button link':'Link'))));

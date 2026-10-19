@@ -45,3 +45,7 @@ async function trashEditor(ed,kind){const home={doc:'docs',board:'boards',site:'
   const k=home,base=path.split('/').pop();const j=JSON.parse(JSON.stringify(rec));j._trash={kind:k,from:path,at:Date.now()};if(j.pub){try{await unpublish(j.pub.token)}catch(e){}delete j.pub}
   await PUT().fs.write('/Designs/.trash-ed/'+k+'__'+base,JSON.stringify(j),{createMissingParents:true,overwrite:true});await PUT().fs.delete(path);location.href='./#'+home}
 const askTrash=(ed,kind,name)=>askSure('Move “'+name+'” to the trash? You can restore it from Home for 30 days.','Move to trash',()=>trashEditor(ed,kind).catch(()=>toast('Could not move it')));
+
+/* AI helpers shared by Docs and Websites: the server uses your connected AI by default, or your Anthropic key. */
+async function aiCall(task,body){const r=await fetch('/_local/design/aitext',{method:'POST',credentials:'same-origin',headers:{'x-aos':'1','content-type':'application/json'},body:JSON.stringify({task,...body})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'The AI did not answer');return j}
+async function aiReady(){try{const r=await fetch('/_local/design/aistatus',{method:'POST',credentials:'same-origin',headers:{'x-aos':'1','content-type':'application/json'},body:'{}'});return await r.json()}catch(e){return {text:{ready:false,reason:'Could not check the AI'}}}}
