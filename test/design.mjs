@@ -559,6 +559,8 @@ try {
     const res = await p.evaluate(() => siteCheck().map((x) => x.msg)); assert.ok(res.some((m) => /no page title/.test(m)) && res.some((m) => /no description/.test(m)) && res.some((m) => /Low contrast for text on the page background/.test(m)), res.join(' | '));
     await p.evaluate(() => { S.pages[0].title = 'Kahawa Corner coffee house'; S.pages[0].desc = 'Single-origin coffee, fresh pastries and a quiet corner to work, in the middle of town.'; S.theme.tx = '#111111'; S.theme.alt = '#f5f5f5'; S.theme.p = '#1a4fa0'; });
     const html = await p.evaluate(() => pageHTML(S.pages[0], 'pub', { hrefFor: (x) => x })); assert.match(html, /property="og:title" content="Kahawa Corner coffee house"/);
+    const nb = await p.evaluate(() => { ['whatsapp', 'qr', 'blog'].forEach((ty) => page().blocks.push(mkBlock(ty))); const h = pageHTML(page(), 'pub', { hrefFor: (x) => x }); return { wa: /href="https:\/\/wa\.me\/255700000000\?text=Hello/.test(h), qr: /class="qr" src="data:image\/svg\+xml;base64,/.test(h), posts: (h.match(/<article class="post">/g) || []).length }; });
+    assert.deepEqual(nb, { wa: true, qr: true, posts: 3 });
     await p.click('#bDl'); await p.click('text=Check my site'); await p.waitForSelector('#chkSum'); await p.click('.dlg >> text=Close');
     const d = await ctx.newPage(); await d.goto(B + '/apps/design-studio/docs.html'); await d.waitForSelector('#page'); await d.waitForFunction(() => document.querySelector('#title'));
     await d.fill('#title', 'History test'); await d.click('#page'); await d.keyboard.type('First version text'); await d.waitForFunction(() => /Saved/.test(document.querySelector('#st').textContent), null, { timeout: 8000 }); await d.waitForTimeout(600);
