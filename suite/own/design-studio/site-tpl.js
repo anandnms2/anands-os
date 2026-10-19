@@ -57,3 +57,36 @@ function buildCategorySite(ci,v){
   pages.forEach(p=>p.blocks.forEach(b=>{if(b.type==='gallery'&&!b.d.title)delete b.d.title}));
   return {v:1,type:'site',id:uid(),name:C.n,desc:C.h[1],theme:th,pages}}
 const TEMPLATES=[];CATS.forEach((C,ci)=>LOOKS.forEach((L0,v)=>TEMPLATES.push({id:C.id+'-'+L0.toLowerCase(),name:C.tag+' · '+L0,group:C.g,ci,v,words:(C.tag+' '+C.g+' '+C.n+' '+L0).toLowerCase()})));
+
+/* ---------- hand-designed templates (added in batches: site-tpl-b01.js, b02 ...) ----------
+   Each one has its own palette, fonts, layout and copy. Write them with the short helpers below. */
+const BESPOKE=[];
+const a_=(scene,seed)=>`art:${scene}:${seed}`;
+const B_={
+ nav:(logo,btn,v='left',link='page:contact')=>['nav',{logo,btn,btnLink:link},{v,bg:'bg'}],
+ hero:(v,eyebrow,title,sub,btn,btn2,imgs=[],bg='bg')=>['hero',{eyebrow,title,sub,btn,btnLink:'page:contact',btn2:btn2||'',btn2Link:'',img:imgs[0]||'',img2:imgs[1]||'',img3:imgs[2]||''},{v,bg}],
+ feats:(eyebrow,title,sub,items,v='cards',bg='bg')=>['features',{eyebrow,title,sub,items:items.map(([icon,title,text])=>({icon,title,text}))},{v,bg}],
+ split:(v,eyebrow,title,text,btn,img,bg='bg',link='page:contact')=>['split',{eyebrow,title,text,btn,btnLink:link,img},{v,bg}],
+ gal:(v,title,imgs,bg='bg')=>['gallery',title?{title,items:imgs.map(img=>({img}))}:{items:imgs.map(img=>({img}))},{v,bg}],
+ stats:(items,bg='primary')=>['stats',{items:items.map(([num,label])=>({num,label}))},{bg}],
+ quotes:(title,items,bg='alt')=>['testimonials',{title,items:items.map(([quote,name,role])=>({quote,name,role}))},{bg}],
+ price:(eyebrow,title,sub,items,bg='bg')=>['pricing',{eyebrow,title,sub,items:items.map(([name,price,per,features,hl])=>({name,price,per,features,btn:'Choose '+name,btnLink:'page:contact',hl:!!hl}))},{bg}],
+ faq:(title,items,bg='bg')=>['faq',{title,items:items.map(([q,a])=>({q,a}))},{bg}],
+ cta:(title,sub,btn,bg='primary')=>['cta',{title,sub,btn,btnLink:'page:contact'},{bg}],
+ contact:(title,sub,email,phone,address,btn='Send message',bg='alt')=>['contact',{title,sub,email,phone,address,formTo:'',btn},{bg}],
+ footer:(brand,text,bg='dark')=>['footer',{brand,text,copy:'© 2026 '+brand+'. All rights reserved.'},{bg}],
+ team:(title,items,bg='bg')=>['team',{title,items:items.map(([name,role,seed])=>({name,role,photo:a_('person',seed)}))},{bg}],
+ cards:(v,eyebrow,title,sub,items,bg='bg')=>['cards',{eyebrow,title,sub,items:items.map(([img,title,text])=>({img,title,text}))},{v,bg}],
+ menu:(title,sub,items,bg='bg')=>['menu',{title,sub,items:items.map(([name,desc,price])=>({name,desc,price}))},{bg}],
+ steps:(eyebrow,title,items,bg='bg')=>['steps',{eyebrow,title,items:items.map(([title,text])=>({title,text}))},{bg}],
+ text:(title,text,v='narrow',bg='bg')=>['text',{title,text},{v,bg}],
+ logos:(title,names,bg='bg')=>['logos',{title,items:names.map(name=>({name}))},{bg}],
+ blog:(title,sub,items,v='cards',bg='bg')=>['blog',{title,sub,items:items.map(([title,date,text])=>({title,date,text}))},{v,bg}],
+ wa:(title,sub,btn,phone,msg,bg='alt')=>['whatsapp',{title,sub,btn,phone,msg},{bg}],
+ pg:(title,slug,blocks)=>[title,slug,blocks]};
+function addBespoke(spec){spec.b=BESPOKE.length;BESPOKE.push(spec);TEMPLATES.push({id:spec.id,name:spec.tag+' · '+spec.name,group:spec.g,b:spec.b,v:-1,words:(spec.tag+' '+spec.g+' '+spec.name+' '+(spec.kw||'')).toLowerCase()})}
+function buildBespoke(spec){const mk=(type,d,over={})=>{const b=mkBlock(type);b.d=Object.assign({},b.d,d);Object.assign(b,over);return b};
+  const pages=spec.pages.map(([title,slug,blocks])=>({id:uid(),title,slug,desc:'',blocks:blocks.map(([type,d,o])=>mk(type,d,o))}));
+  pages.forEach(p=>p.blocks.forEach(b=>{if(b.type==='gallery'&&!b.d.title)delete b.d.title}));
+  return {v:1,type:'site',id:uid(),name:spec.name,desc:spec.desc||'',theme:Object.assign({radius:14},spec.th),pages}}
+const buildSiteTemplate=t=>t.b!=null?buildBespoke(BESPOKE[t.b]):buildCategorySite(t.ci,t.v);
