@@ -22,13 +22,18 @@ const un = await listen((req, res) => { hits.unsplash.push({ u: req.url, auth: r
 const pb = await listen((req, res) => { hits.pixabay.push(req.url); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ hits: [{ id: 5, webformatURL: 'https://pixabay.com/get/w.jpg', largeImageURL: 'https://pixabay.com/get/l.jpg', imageWidth: 3000, imageHeight: 2000, user: 'Cy', pageURL: 'https://pixabay.com/photos/5/', tags: 'sea, wave' }] })); });
 const ov = await listen((req, res) => { hits.openverse.push(req.url); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ results: [{ id: 'o1', title: 'Forest', creator: 'Di', thumbnail: 'https://api.openverse.org/v1/images/o1/thumb/', width: 800, height: 600, license: 'by', license_version: '4.0', foreign_landing_url: 'https://example.org/o1' }] })); });
 const wk = await listen((req, res) => { hits.wiki.push(req.url); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ query: { pages: { 22: { pageid: 22, index: 2, title: 'File:Old_mill.jpg', imageinfo: [{ mime: 'image/jpeg', width: 4000, height: 3000, thumburl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Old_mill.jpg/1280px-Old_mill.jpg', descriptionurl: 'https://commons.wikimedia.org/wiki/File:Old_mill.jpg', extmetadata: { Artist: { value: '<a href="x">Eva &amp; Co</a>' }, LicenseShortName: { value: 'CC BY-SA 4.0' } } }] }, 21: { pageid: 21, index: 1, title: 'File:Doc.pdf', imageinfo: [{ mime: 'application/pdf', thumburl: 'https://upload.wikimedia.org/x.png' }] } } } })); });
+const PNG1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'); const imgCalls = [];
+const imgHost = await listen((req, res) => { const b = []; req.on('data', (d) => b.push(d)); req.on('end', () => { imgCalls.push({ u: req.url, ct: String(req.headers['content-type'] || '').split(';')[0], auth: req.headers.authorization });
+  if (req.url.startsWith('/prompt/')) { res.writeHead(200, { 'content-type': 'image/png' }); return res.end(PNG1); }
+  if (req.url === '/v1/images/generations' || req.url === '/v1/images/edits') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ data: [{ b64_json: PNG1.toString('base64') }] })); }
+  res.writeHead(404); res.end(); }); });
 const bgHost = await listen((req, res) => { hits.bg.push(req.url); if (req.url.endsWith('ort.min.js')) { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('/* fake ort */'.padEnd(2000, ' ')); } res.writeHead(404); res.end(); });
 
 const data = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-ds-')), suite = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-suite-'));
 fs.mkdirSync(suite + '/apps', { recursive: true }); fs.cpSync(root + '/suite/own/design-studio', suite + '/apps/design-studio', { recursive: true }); fs.mkdirSync(suite + '/_icons');
 fs.writeFileSync(suite + '/apps.json', JSON.stringify([{ slug: 'design-studio', name: 'Design Studio', alternativeTo: 'Canva', category: 'Creative Tools', hasSource: true }]));
 const port = 20000 + Math.floor(Math.random() * 20000), B = `http://127.0.0.1:${port}`;
-const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', PEXELS_API_BASE: `http://127.0.0.1:${px.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, PIXABAY_API_BASE: `http://127.0.0.1:${pb.address().port}`, OPENVERSE_API_BASE: `http://127.0.0.1:${ov.address().port}`, WIKIMEDIA_API_BASE: `http://127.0.0.1:${wk.address().port}/w/api.php`, PIXABAY_API_KEY: '', BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '' } });
+const srv = spawn('node', ['server/index.js'], { cwd: root, stdio: 'ignore', env: { ...process.env, PORT: String(port), DATA_DIR: data, SUITE_DIR: suite, APP_PASSWORD: 'pw', PEXELS_API_BASE: `http://127.0.0.1:${px.address().port}`, UNSPLASH_API_BASE: `http://127.0.0.1:${un.address().port}`, PIXABAY_API_BASE: `http://127.0.0.1:${pb.address().port}`, OPENVERSE_API_BASE: `http://127.0.0.1:${ov.address().port}`, WIKIMEDIA_API_BASE: `http://127.0.0.1:${wk.address().port}/w/api.php`, PIXABAY_API_KEY: '', BG_ORT_BASE: `http://127.0.0.1:${bgHost.address().port}/dist/`, PEXELS_API_KEY: '', UNSPLASH_ACCESS_KEY: '', POLLINATIONS_BASE: `http://127.0.0.1:${imgHost.address().port}` } });
 for (let i = 0; i < 60; i++) { try { if ((await fetch(B + '/healthz')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
 let pass = 0, failed = 0; const t = async (n, f) => { try { await f(); pass++; console.log('ok   ' + n); } catch (e) { failed++; console.log('FAIL ' + n + '\n     ' + String(e.stack || e).split('\n').slice(0, 5).join('\n     ')); } };
 const browser = await chromium.launch({ args: ['--no-sandbox'] }); const errs = [];
@@ -37,6 +42,7 @@ try {
   assert.ok((await ctx.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } })).ok());
   const H = { 'x-aos': '1' }; const post = async (p, d) => { const r = await ctx.request.post(B + '/_local' + p, { data: d || {}, headers: H }); return { s: r.status(), j: await r.json().catch(() => ({})) }; };
 
+  const without = (o, k) => { const c = { ...o }; delete c[k]; return c; };
   await t('every Design Studio route needs the sign-in; POSTs need the x-aos header', async () => {
     for (const p of ['/_local/design/stockstatus', '/_local/design/shares']) assert.equal((await fetch(B + p, { method: 'POST', headers: H })).status, 401);
     assert.equal((await fetch(B + '/_local/bgdata/u2netp.onnx')).status, 401);
@@ -50,12 +56,12 @@ try {
     const w = await ctx.request.get(B + '/_local/bgdata/ort-wasm.wasm'); assert.equal(w.status(), 502); assert.match((await w.json()).error, /Could not download/);
   });
   await t('stock photos: no key gives a clear message; keys stay on the server', async () => {
-    assert.deepEqual((await post('/design/stockstatus')).j, { pexels: false, unsplash: false, pixabay: false, openverse: true, wikimedia: true });
+    assert.deepEqual(without((await post('/design/stockstatus')).j, 'image'), { pexels: false, unsplash: false, pixabay: false, openverse: true, wikimedia: true });
     const r = await post('/design/stock', { q: 'lake', source: 'pexels' }); assert.equal(r.s, 400); assert.equal(r.j.code, 'no_key');
     const free = (await post('/design/stock', { q: 'lake' })).j; assert.equal(free.source, 'openverse'); assert.equal(free.items.length, 1);
     const put = await ctx.request.put(B + '/api/settings', { data: { stock: { pexels: 'px-key', unsplash: 'un-key', pixabay: 'pb-key' } }, headers: H }); assert.ok(put.ok());
     const s = await (await ctx.request.get(B + '/api/settings')).json(); assert.deepEqual(s.stock, { pexelsSet: true, unsplashSet: true, pixabaySet: true }); assert.ok(!JSON.stringify(s).includes('px-key'));
-    assert.deepEqual((await post('/design/stockstatus')).j, { pexels: true, unsplash: true, pixabay: true, openverse: true, wikimedia: true });
+    assert.deepEqual(without((await post('/design/stockstatus')).j, 'image'), { pexels: true, unsplash: true, pixabay: true, openverse: true, wikimedia: true });
   });
   await t('stock photos: Pexels and Unsplash results are normalised; bad keys and junk are handled', async () => {
     const a = (await post('/design/stock', { q: 'lake', source: 'pexels' })).j; assert.equal(a.source, 'pexels'); assert.equal(a.items.length, 1); assert.equal(a.items[0].by, 'Ana'); assert.match(a.items[0].full, /l\.jpg$/);
@@ -148,6 +154,56 @@ try {
   await t('present mode runs animated frames without errors', async () => {
     await page.evaluate(() => present()); await page.waitForSelector('#present canvas'); await page.waitForTimeout(500); await page.keyboard.press('Escape'); await page.waitForTimeout(200); assert.equal(await page.$('#present'), null);
   });
+  const DURL = 'data:image/png;base64,' + PNG1.toString('base64');
+  await t('AI images: generates with the free default, refuses edit there, validates input', async () => {
+    let r = await post('/design/genimage', { prompt: 'a diya', w: 1024, h: 1024 }); assert.equal(r.s, 200); assert.equal(r.j.provider, 'pollinations'); assert.match(r.j.image, /^data:image\/png/);
+    r = await post('/design/genimage', { prompt: 'x', mode: 'edit', image: DURL, mask: DURL }); assert.equal(r.s, 400); assert.equal(r.j.code, 'no_edit');
+    assert.equal((await post('/design/genimage', { prompt: '' })).s, 400);
+    assert.equal((await post('/design/genimage', { prompt: 'x', mode: 'edit', image: 'data:text/html;base64,AAAA', mask: DURL })).s, 400);
+    assert.equal((await ctx.request.post(B + '/_local/design/genimage', { data: { prompt: 'x' } })).status(), 403);
+    assert.equal((await fetch(B + '/_local/design/genimage', { method: 'POST', headers: { 'x-aos': '1', 'content-type': 'application/json' }, body: '{"prompt":"x"}' })).status, 401);
+  });
+  await t('AI images: an OpenAI-compatible service supports edit with a mask; the key never leaks', async () => {
+    let r = await ctx.request.put(B + '/api/settings', { data: { image: { provider: 'openai', url: `http://127.0.0.1:${imgHost.address().port}/v1`, model: 'gpt-image-1', key: 'sk-secret-1' } }, headers: H }); assert.equal(r.status(), 200);
+    let s = await post('/design/stockstatus'); assert.equal(s.j.image.provider, 'openai'); assert.equal(s.j.image.edit, true);
+    r = await post('/design/genimage', { prompt: 'marigolds', mode: 'edit', image: DURL, mask: DURL }); assert.equal(r.s, 200);
+    const last = imgCalls.at(-1); assert.equal(last.u, '/v1/images/edits'); assert.equal(last.ct, 'multipart/form-data'); assert.equal(last.auth, 'Bearer sk-secret-1');
+    assert.equal((await post('/design/genimage', { prompt: 'gen', w: 1024, h: 1024 })).s, 200); assert.equal(imgCalls.at(-1).u, '/v1/images/generations');
+    assert.equal((await ctx.request.put(B + '/api/settings', { data: { image: { provider: 'bogus' } }, headers: H })).status(), 400);
+    const pub = await (await ctx.request.get(B + '/api/settings')).text(); assert.ok(!pub.includes('sk-secret-1'));
+    await ctx.request.put(B + '/api/settings', { data: { image: { provider: 'pollinations', key: '' } }, headers: H });
+  });
+  await t('templates: 300+ across the categories, every festival group present, no blank or duplicate names', async () => {
+    const d = await page.evaluate(() => { const names = TEMPLATES.map((x) => x.n), dup = names.filter((n, i) => names.indexOf(n) !== i); const cats = {}; TEMPLATES.forEach((x) => cats[x.c] = (cats[x.c] || 0) + 1); const bad = [];
+      TEMPLATES.forEach((x) => { try { const r = buildTemplate(x, (x.s || [1080, 1080])[0], (x.s || [1080, 1080])[1]); if (!r || !Array.isArray(r.objs) || !r.objs.length) bad.push(x.n); } catch (e) { bad.push(x.n + ': ' + e.message); } });
+      return { n: TEMPLATES.length, dup, cats, bad, groups: [...new Set(TEMPLATES.filter((x) => x.c === 'Festivals').map((x) => x.g))] }; });
+    assert.ok(d.n >= 300, 'only ' + d.n); assert.deepEqual(d.dup, []); assert.deepEqual(d.bad, []); assert.ok(Object.keys(d.cats).length >= 14); assert.ok(d.cats.Festivals >= 100);
+    for (const f of ['Diwali', 'Holi', 'Eid al-Fitr', 'Navratri', 'Ganesh Chaturthi', 'Pongal', 'Onam', 'Christmas', 'Raksha Bandhan']) assert.ok(d.groups.includes(f), 'missing ' + f);
+  });
+  await t('design types: grouped list with 40+ sizes', async () => { const n = await page.evaluate(() => ({ n: SIZES.length, g: [...new Set(SIZES.map((x) => x.g))].length })); assert.ok(n.n >= 40 && n.g >= 5, JSON.stringify(n)); });
+  await t('a template applies to a fresh design and keeps its pictures in the design (not Uploads)', async () => {
+    const d = await page.evaluate(async () => { const tp = TEMPLATES.find((x) => x.g === 'Diwali'); newDoc && 0; await applyTemplate(tp); const arts = P().objs.filter((o) => o.type === 'image').length; return { arts, assets: Object.keys(D.assets).length, up: (typeof uploads !== 'undefined' ? uploads.length : 0) }; });
+    assert.ok(d.arts >= 1 && d.assets >= 1 && d.up === 0, JSON.stringify(d));
+  });
+  await t('Magic Eraser fills a painted area from its surroundings; Upscale doubles the size', async () => {
+    const r = await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 400; c.height = 300; const x = c.getContext('2d'); const g = x.createLinearGradient(0, 0, 400, 300); g.addColorStop(0, '#2b6cb0'); g.addColorStop(1, '#f6ad55'); x.fillStyle = g; x.fillRect(0, 0, 400, 300); const ref = x.getImageData(200, 150, 1, 1).data.slice(0, 3); x.fillStyle = '#d00'; x.beginPath(); x.arc(200, 150, 45, 0, 7); x.fill();
+      const m = document.createElement('canvas'); m.width = 400; m.height = 300; const mx = m.getContext('2d'); mx.fillStyle = '#f35'; mx.beginPath(); mx.arc(200, 150, 55, 0, 7); mx.fill();
+      const er = await eraseObjects(c.toDataURL('image/png'), m), im = await imgOf(er), ec = document.createElement('canvas'); ec.width = 400; ec.height = 300; ec.getContext('2d').drawImage(im, 0, 0); const px = ec.getContext('2d').getImageData(200, 150, 1, 1).data;
+      const up = await upscaleCanvas(c, 2); return { diff: Math.hypot(px[0] - ref[0], px[1] - ref[1], px[2] - ref[2]), up: [up.canvas.width, up.canvas.height] }; });
+    assert.ok(r.diff < 40, 'eraser left a visible patch: ' + r.diff); assert.deepEqual(r.up, [800, 600]);
+  });
+  await t('Image to video: a camera move changes the frame over time and the dialog offers every move', async () => {
+    const r = await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 400; c.height = 300; const x = c.getContext('2d'); x.fillStyle = '#246'; x.fillRect(0, 0, 400, 300); x.fillStyle = '#fc0'; x.fillRect(100, 80, 120, 90);
+      const id = newAsset(c.toDataURL('image/png')), o = mkImage(id, 400, 300); addObj(o); Object.assign(o, { x: 0, y: 0, w: D.w, h: D.h }); getImg(id); o.an = { l: 'kbin', ka: 0.2, d: 0 };
+      const mk = (tt) => { const cv = document.createElement('canvas'); cv.width = 300; cv.height = 200; const cx = cv.getContext('2d'); cx.fillStyle = '#000'; cx.fillRect(0, 0, 300, 200); cx.scale(300 / D.w, 300 / D.w); drawAnimObj(cx, o, tt, 6, D.w, D.h, { s: 300 / D.w }); return cx.getImageData(0, 0, 300, 200).data; };
+      mk(0); await new Promise((r) => setTimeout(r, 500)); const a = mk(0), b = mk(3); let diff = 0; for (let i = 0; i < a.length; i += 4) diff += Math.abs(a[i] - b[i]); sel = [o.id]; selChanged(); openImageToVideo(); await new Promise((r) => setTimeout(r, 400));
+      const names = [...document.querySelectorAll('#modal .chip')].map((b) => b.textContent); closeModal(); return { diff, names }; });
+    assert.ok(r.diff > 1000, 'frames identical'); for (const n of ['Slow zoom in', 'Pan left', 'Parallax depth']) assert.ok(r.names.includes(n), 'missing ' + n);
+  });
+  await t('BG Generator: instant backdrops need no AI and land behind the picture', async () => {
+    const r = await page.evaluate(async () => { const o = objs().find((x) => x.type === 'image'); sel = [o.id]; selChanged(); const n0 = objs().length; openBgGenerator(); await new Promise((r) => setTimeout(r, 400)); const cells = document.querySelectorAll('#modal .cell'); cells[1].click(); await new Promise((r) => setTimeout(r, 300)); return { cells: cells.length, added: objs().length - n0, bottom: objs()[0].name }; });
+    assert.ok(r.cells >= 8 && r.added === 1 && r.bottom === 'Backdrop', JSON.stringify(r));
+  });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
-} finally { await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); }
+} finally { await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }
 console.log(`${pass} passed${failed ? ', ' + failed + ' failed' : ''}`); process.exit(failed ? 1 : 0);

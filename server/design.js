@@ -111,6 +111,50 @@ export async function publicShare(req, res, p) {
 }
 
 /* ---------- routes under /_local ---------- */
+/* ---------- AI images (Magic Edit, BG Generator): Pollinations (no key), any OpenAI-compatible endpoint, or Hugging Face ---------- */
+const POLL = (process.env.POLLINATIONS_BASE || 'https://image.pollinations.ai').replace(/\/+$/, ''), HF = (process.env.HF_API_BASE || 'https://api-inference.huggingface.co').replace(/\/+$/, '');
+export const imageStatus = () => { const i = effective().image || {}; const prov = i.provider || 'pollinations'; const ok = prov === 'pollinations' || (prov === 'openai' && !!i.url) || (prov === 'huggingface' && !!i.key); return { provider: prov, ready: ok, edit: prov === 'openai' && !!i.url, reason: ok ? '' : prov === 'openai' ? 'Add the image service address in Settings › Design Studio AI images' : 'Add a Hugging Face token in Settings › Design Studio AI images' }; };
+const imgHits = new Map();
+function imgLimit(who) { const now = Date.now(), a = (imgHits.get(who) || []).filter((t) => now - t < 600000); if (a.length >= 40) throw httpError(429, 'Too many AI image requests. Try again in a few minutes.', 'rate_limited'); a.push(now); imgHits.set(who, a); }
+const dataUrl = (buf, type) => 'data:' + type + ';base64,' + buf.toString('base64');
+const parseData = (d, max) => { const m = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(d || '')); if (!m) throw httpError(400, 'That image could not be read'); const b = Buffer.from(m[2], 'base64'); if (!b.length || b.length > max) throw httpError(400, 'That image is too large'); return { type: m[1], buf: b }; };
+const safeHttps = (u) => { try { const x = new URL(u); if (x.protocol !== 'https:') return false; const h = x.hostname; if (/^(localhost|.*\.local|.*\.internal)$/i.test(h) || /^[\d.]+$/.test(h) || h.includes(':')) return false; return true; } catch { return false; } };
+async function fetchImg(r, name) { if (!r.ok) { if (r.status === 401 || r.status === 403) throw httpError(502, name + ' did not accept the key'); if (r.status === 429) throw httpError(502, name + ' is limiting requests right now. Try again in a minute.'); let m = ''; try { m = (await r.json()).error?.message || ''; } catch {} throw httpError(502, name + ' could not make that image' + (m ? ': ' + clip(m, 160) : ' (' + r.status + ')')); } const type = (r.headers.get('content-type') || '').split(';')[0]; if (!/^image\/(png|jpeg|webp)$/.test(type)) throw httpError(502, name + ' sent something that is not an image'); const b = Buffer.from(await r.arrayBuffer()); if (b.length > 12e6) throw httpError(502, 'That image is too large'); return dataUrl(b, type); }
+export async function imageGen(body, who, fetcher = fetch) {
+  imgLimit(who);
+  const i = effective().image || {}, st = imageStatus(); if (!st.ready) throw httpError(400, st.reason, 'no_image_ai');
+  const prompt = clip(body.prompt, 900).trim(); if (!prompt) throw httpError(400, 'Describe what you want first');
+  const w = Math.max(256, Math.min(1536, Math.round((parseInt(body.w, 10) || 1024) / 64) * 64)), h = Math.max(256, Math.min(1536, Math.round((parseInt(body.h, 10) || 1024) / 64) * 64)), seed = parseInt(body.seed, 10) || Math.floor(Math.random() * 1e9);
+  const edit = body.mode === 'edit';
+  try {
+    if (i.provider === 'pollinations') {
+      if (edit) throw httpError(400, 'Pollinations makes new images but cannot edit one. Choose an OpenAI-compatible image service in Settings for true Magic Edit.', 'no_edit');
+      const u = POLL + '/prompt/' + encodeURIComponent(prompt) + '?width=' + w + '&height=' + h + '&seed=' + seed + '&nologo=true&model=' + encodeURIComponent(i.model || 'flux') + '&private=true';
+      const r = await fetcher(u, { headers: { 'user-agent': UA, ...(i.key ? { authorization: 'Bearer ' + i.key } : {}) }, signal: AbortSignal.timeout(90000) });
+      return { image: await fetchImg(r, 'Pollinations'), provider: 'pollinations' };
+    }
+    if (i.provider === 'huggingface') {
+      if (edit) throw httpError(400, 'Hugging Face text-to-image cannot edit an image. Choose an OpenAI-compatible image service for Magic Edit.', 'no_edit');
+      const r = await fetcher(HF + '/models/' + (i.model || 'black-forest-labs/FLUX.1-schnell'), { method: 'POST', headers: { authorization: 'Bearer ' + i.key, 'content-type': 'application/json', accept: 'image/png', 'user-agent': UA }, body: JSON.stringify({ inputs: prompt, parameters: { width: w, height: h, seed } }), signal: AbortSignal.timeout(90000) });
+      return { image: await fetchImg(r, 'Hugging Face'), provider: 'huggingface' };
+    }
+    // OpenAI-compatible
+    const base = i.url, model = i.model || 'gpt-image-1', size = Math.abs(w / h - 1) < .2 ? '1024x1024' : w > h ? '1536x1024' : '1024x1536';
+    let r;
+    if (edit) {
+      const im = parseData(body.image, 8e6), mk = parseData(body.mask, 8e6), fd = new FormData();
+      fd.append('model', model); fd.append('prompt', prompt); fd.append('size', size); fd.append('n', '1');
+      fd.append('image', new Blob([im.buf], { type: im.type }), 'image.' + im.type.slice(6)); fd.append('mask', new Blob([mk.buf], { type: mk.type }), 'mask.' + mk.type.slice(6));
+      r = await fetcher(base + '/images/edits', { method: 'POST', headers: { ...(i.key ? { authorization: 'Bearer ' + i.key } : {}), 'user-agent': UA }, body: fd, signal: AbortSignal.timeout(120000) });
+    } else r = await fetcher(base + '/images/generations', { method: 'POST', headers: { ...(i.key ? { authorization: 'Bearer ' + i.key } : {}), 'content-type': 'application/json', 'user-agent': UA }, body: JSON.stringify({ model, prompt, size, n: 1 }), signal: AbortSignal.timeout(120000) });
+    if (!r.ok) return { image: await fetchImg(r, 'The image service'), provider: 'openai' };
+    const j = await r.json().catch(() => ({})), d = j && j.data && j.data[0];
+    if (d && d.b64_json) return { image: dataUrl(Buffer.from(d.b64_json, 'base64'), 'image/png'), provider: 'openai' };
+    if (d && d.url && safeHttps(d.url)) { const r2 = await fetcher(d.url, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(60000) }); return { image: await fetchImg(r2, 'The image service'), provider: 'openai' }; }
+    throw httpError(502, 'The image service sent something unexpected');
+  } catch (e) { if (e && e.status) throw e; throw httpError(502, 'Could not reach the image service'); }
+}
+
 export async function handleDesign(req, res, url, p, s) {
   if (p.startsWith('/bgdata/')) {
     if (req.method !== 'GET' && req.method !== 'HEAD') throw httpError(405, 'Method not allowed');
@@ -121,7 +165,8 @@ export async function handleDesign(req, res, url, p, s) {
   }
   if (p === '/design/stockimg' && req.method === 'GET') return stockImage(res, url.searchParams.get('u') || '');
   if (req.method !== 'POST') throw httpError(405, 'Method not allowed');
-  if (p === '/design/stockstatus') return json(res, 200, stockStatus());
+  if (p === '/design/stockstatus') return json(res, 200, { ...stockStatus(), image: imageStatus() });
+  if (p === '/design/genimage') { const b = await readJson(req, 20 * 1024 * 1024); return json(res, 200, await imageGen(b, who(s))); }
   if (p === '/design/stock') { const b = await readJson(req, 4096); return json(res, 200, await stockSearch(b.q, b.page, b.source)); }
   if (p === '/design/stockuse') { const b = await readJson(req, 4096), k = effective().stock || {}; try { const u = new URL(b.dl); if (u.hostname === 'api.unsplash.com' && k.unsplash) await fetch(u, { headers: { authorization: 'Client-ID ' + k.unsplash }, signal: AbortSignal.timeout(8000) }); } catch {} return json(res, 200, { ok: true }); }
   if (p === '/design/share') {

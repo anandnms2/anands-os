@@ -75,8 +75,14 @@ const ic=(n,s)=>`<svg class="i" viewBox="0 0 24 24"${s?` style="width:${s}px;hei
 function toast(m,ms=2200){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),ms)}
 
 /* ---------- constants ---------- */
-const FONTS=['Instrument Sans','Poppins','Montserrat','Raleway','Work Sans','Nunito','Quicksand','Fredoka','Oswald','Playfair Display','Lora','Merriweather','Roboto Slab','Cormorant Garamond','DM Serif Display','Abril Fatface','Anton','Bebas Neue','Archivo Black','Bricolage Grotesque','Righteous','Bangers','Pacifico','Lobster','Caveat','Dancing Script','Satisfy','Permanent Marker','Space Mono'];
-const SIZES=[{n:'Instagram post',w:1080,h:1080},{n:'Instagram story',w:1080,h:1920},{n:'Facebook post',w:1200,h:630},{n:'YouTube thumbnail',w:1280,h:720},{n:'Presentation 16:9',w:1920,h:1080},{n:'X / Twitter post',w:1600,h:900},{n:'LinkedIn banner',w:1584,h:396},{n:'Pinterest pin',w:1000,h:1500},{n:'A4 document',w:1240,h:1754},{n:'US Letter',w:1275,h:1650},{n:'Flyer A5',w:874,h:1240},{n:'Poster 18×24 in',w:1800,h:2400},{n:'Business card',w:1050,h:600},{n:'Logo',w:800,h:800},{n:'Invitation 5×7 in',w:1050,h:1470},{n:'Desktop wallpaper',w:1920,h:1080}];
+const FONTS=['Rozha One','Tiro Devanagari Hindi','Yatra One','Great Vibes','Cinzel Decorative','Kalam','Hind','Teko','Noto Sans Tamil','Noto Sans Telugu','Noto Sans Malayalam','Noto Sans Bengali','Noto Sans Gurmukhi','Noto Sans Gujarati','Instrument Sans','Poppins','Montserrat','Raleway','Work Sans','Nunito','Quicksand','Fredoka','Oswald','Playfair Display','Lora','Merriweather','Roboto Slab','Cormorant Garamond','DM Serif Display','Abril Fatface','Anton','Bebas Neue','Archivo Black','Bricolage Grotesque','Righteous','Bangers','Pacifico','Lobster','Caveat','Dancing Script','Satisfy','Permanent Marker','Space Mono'];
+const SIZES=[
+{g:'Social media',n:'Instagram post',w:1080,h:1080},{g:'Social media',n:'Instagram portrait',w:1080,h:1350},{g:'Social media',n:'Instagram story',w:1080,h:1920},{g:'Social media',n:'WhatsApp status',w:1080,h:1920},{g:'Social media',n:'Facebook post',w:1200,h:630},{g:'Social media',n:'Facebook cover',w:1640,h:624},{g:'Social media',n:'Facebook ad',w:1200,h:628},{g:'Social media',n:'LinkedIn post',w:1200,h:1200},{g:'Social media',n:'LinkedIn banner',w:1584,h:396},{g:'Social media',n:'X / Twitter post',w:1600,h:900},{g:'Social media',n:'X / Twitter header',w:1500,h:500},{g:'Social media',n:'Pinterest pin',w:1000,h:1500},{g:'Social media',n:'YouTube thumbnail',w:1280,h:720},{g:'Social media',n:'YouTube channel art',w:2560,h:1440},{g:'Social media',n:'Twitch banner',w:1200,h:480},{g:'Social media',n:'Instagram highlight cover',w:1080,h:1920},{g:'Social media',n:'Podcast cover',w:1800,h:1800},
+{g:'Video & presentations',n:'Presentation 16:9',w:1920,h:1080},{g:'Video & presentations',n:'Presentation 4:3',w:1600,h:1200},{g:'Video & presentations',n:'Video',w:1920,h:1080},{g:'Video & presentations',n:'Mobile video / Reel',w:1080,h:1920},{g:'Video & presentations',n:'Zoom background',w:1920,h:1080},{g:'Video & presentations',n:'Desktop wallpaper',w:1920,h:1080},{g:'Video & presentations',n:'Phone wallpaper',w:1170,h:2532},
+{g:'Cards & invitations',n:'Invitation 5×7 in',w:1050,h:1470},{g:'Cards & invitations',n:'Wedding invitation',w:1050,h:1470},{g:'Cards & invitations',n:'Greeting card',w:1050,h:1470},{g:'Cards & invitations',n:'Postcard',w:1200,h:800},{g:'Cards & invitations',n:'Business card',w:1050,h:600},{g:'Cards & invitations',n:'Thank-you card',w:1050,h:750},{g:'Cards & invitations',n:'Gift certificate',w:1800,h:800},{g:'Cards & invitations',n:'Event ticket',w:1650,h:600},{g:'Cards & invitations',n:'Name tag',w:900,h:1200},{g:'Cards & invitations',n:'Bookmark',w:600,h:1800},
+{g:'Print & documents',n:'A4 document',w:1240,h:1754},{g:'Print & documents',n:'A4 landscape',w:1754,h:1240},{g:'Print & documents',n:'US Letter',w:1275,h:1650},{g:'Print & documents',n:'Resume',w:1240,h:1754},{g:'Print & documents',n:'Invoice',w:1240,h:1754},{g:'Print & documents',n:'Letterhead',w:1240,h:1754},{g:'Print & documents',n:'Certificate',w:1754,h:1240},{g:'Print & documents',n:'Menu',w:1240,h:1754},{g:'Print & documents',n:'Brochure',w:1754,h:1240},{g:'Print & documents',n:'Flyer A5',w:874,h:1240},{g:'Print & documents',n:'Flyer A4',w:1240,h:1754},{g:'Print & documents',n:'Poster A3',w:1754,h:2480},{g:'Print & documents',n:'Poster 18×24 in',w:1800,h:2400},{g:'Print & documents',n:'Wall calendar',w:1240,h:1754},{g:'Print & documents',n:'Planner page',w:1240,h:1754},{g:'Print & documents',n:'Worksheet',w:1240,h:1754},{g:'Print & documents',n:'Infographic',w:800,h:2000},{g:'Print & documents',n:'Book cover',w:1600,h:2560},{g:'Print & documents',n:'Album cover',w:1800,h:1800},{g:'Print & documents',n:'Banner 2:1',w:2400,h:1200},
+{g:'Marketing & brand',n:'Logo',w:800,h:800},{g:'Marketing & brand',n:'Sticker',w:1000,h:1000},{g:'Marketing & brand',n:'Label',w:900,h:900},{g:'Marketing & brand',n:'T-shirt print',w:2400,h:2880},{g:'Marketing & brand',n:'Mug wrap',w:2700,h:1100},{g:'Marketing & brand',n:'Photo collage',w:1080,h:1080},{g:'Marketing & brand',n:'Mood board',w:1920,h:1080},{g:'Marketing & brand',n:'Email header',w:1200,h:400},{g:'Marketing & brand',n:'Website hero',w:1920,h:800},{g:'Marketing & brand',n:'Web banner 728×90',w:728,h:90},{g:'Marketing & brand',n:'Etsy shop banner',w:3360,h:840}
+];
 const SWATCH=['#000000','#545454','#a6a6a6','#d9d9d9','#ffffff','#e03131','#f76707','#f59f00','#ffd43b','#94d82d','#2f9e44','#12b886','#1098ad','#1971c2','#4263eb','#7048e8','#ae3ec9','#d6336c','#e8590c','#fff3bf','#d3f9d8','#d0ebff','#e5dbff','#ffdeeb'];
 const GRADS=[['#ff7a29','#d6336c',135],['#4263eb','#12b886',135],['#7048e8','#ae3ec9',45],['#f59f00','#e03131',90],['#0b132b','#3a506b',160],['#fdf6e3','#f4c7a1',180],['#a8edea','#fed6e3',135],['#141e30','#243b55',90],['#ff9a9e','#fad0c4',45],['#43e97b','#38f9d7',135]];
 const EMOJI={Faces:'😀😁😂🤣😊😍🥰😎🤩🥳😇🤔😴😭😡🤯🙌👏👍👎🙏💪✌️🤝👀🔥',Nature:'🌸🌼🌻🌹🌿🍀🌴🌵🍁🌈☀️🌙⭐✨⚡❄️🌊🐶🐱🦊🐼🦋🐝🐢🦄',Food:'🍎🍊🍋🍉🍓🍍🥑🍕🍔🍟🌮🍣🍩🍪🎂🍰☕🍷🍺🥂',Objects:'🎉🎁🎈🎯🏆💡📌📎🔔📣💼📈💰🛍️🏷️🔑📷🎧🎮🚀✈️🚗🏠❤️💙💚💛💜🖤',Symbols:'✅❌⚠️❓❗➕➖✔️➡️⬅️⬆️⬇️🔄♻️💯🆕🆓🔝🔴🟠🟡🟢🔵🟣⚫⚪'};
@@ -791,7 +797,7 @@ function renderInsp(){
   b.append(el('div',{class:'row'},el('h3',{class:'ph',style:'flex:1'},one?typeName(one):so.length+' selected'),el('button',{class:'btn sm',onclick:()=>{sel=[];selChanged()}},'Done')));
   if(types.has('text'))b.append(...textInsp());
   if(types.has('shape'))b.append(...shapeInsp());
-  if(types.has('image'))b.append(...imageInsp(),...(one&&one.type==='image'?[bgInsp(one)]:[]));
+  if(types.has('image'))b.append(...imageInsp(),...(one&&one.type==='image'?[bgInsp(one),magicInsp(one)]:[]));
   if(types.has('path'))b.append(sec('Stroke',row('Color',colorBtn(()=>first(['path']).stroke,c=>each(o=>o.stroke=c,['path']))),slider('Opacity',()=>(first(['path']).op??1)*100,v=>each(o=>o.op=v/100,['path']),{min:5,max:100,suffix:'%'})));
   if(types.has('qr'))b.append(...qrInsp());
   if(types.has('chart'))b.append(...chartInsp());
@@ -966,22 +972,7 @@ const TEMPLATES=[
  {n:'Flyer',c:'Print',b:(W,H,u)=>({bg:{t:'solid',c:'#ffffff'},objs:[SH('rect',0,0,W,H*.42,'#12b886'),SH('ellipse',W*.62,-u*14,u*60,u*60,'#0ca678'),TX('GRAND\nOPENING',W*.08,H*.07,W*.8,u*15,{font:'Anton',color:'#fff',lh:1}),TX('Fresh bakes. Warm coffee. Good neighbours.',W*.08,H*.5,W*.8,u*6,{bold:true,lh:1.3}),TX('Saturday 20 September · 9am–5pm\n12 Market Street',W*.08,H*.68,W*.8,u*4.6,{color:'#6f685f',lh:1.6}),SH('rect',W*.08,H*.84,W*.5,u*9,'#1f1c19',{r:u*4.5}),TX('Free coffee for the first 50',W*.08,H*.84+u*2.4,W*.5,u*4,{color:'#fff',align:'center',bold:true})]})}
 ];
 function buildTemplate(t,W,H){const u=Math.min(W,H)/100;const r=t.b(W,H,u);r.objs.forEach(o=>{o.id=uid();if(o.type==='text')layoutText(o)});return r}
-let tplCat='All';
-function pTemplates(b){
-  b.append(el('h3',{class:'ph'},'Templates'));
-  const cats=['All','Social','Slides','Print'];
-  b.append(el('div',{class:'chips'},cats.map(c=>el('button',{class:'chip','aria-pressed':tplCat===c,onclick:()=>{tplCat=c;renderPanel()}},c))));
-  b.append(el('p',{class:'note'},'Applies to the current page and adapts to your canvas size.'));
-  const g=el('div',{class:'grid2'});
-  TEMPLATES.filter(t=>tplCat==='All'||t.c===tplCat).forEach(t=>{
-    const built=buildTemplate(t,D.w,D.h);const pg={bg:built.bg,objs:built.objs};
-    const sc=200/Math.max(D.w,D.h);const c=document.createElement('canvas');c.width=Math.round(D.w*sc);c.height=Math.round(D.h*sc);const ctx=c.getContext('2d');ctx.scale(sc,sc);drawPageContent(ctx,pg,D.w,D.h,{s:sc});
-    g.append(el('button',{class:'tpl','aria-label':'Apply template '+t.n,onclick:()=>applyTemplate(t)},c,el('span',{},t.n)));
-  });
-  b.append(g);
-}
-function applyTemplate(t){const built=buildTemplate(t,D.w,D.h);P().bg=built.bg;P().objs=built.objs;sel=[];touch();selChanged();toast('Template applied — everything is editable')}
-let fontsT=0;try{document.fonts.addEventListener('loadingdone',()=>{if(tab!=='tpl')return;clearTimeout(fontsT);fontsT=setTimeout(renderPanel,250)})}catch(e){}
+let tplCat="All";let fontsT=0;try{document.fonts.addEventListener('loadingdone',()=>{if(tab!=='tpl')return;clearTimeout(fontsT);fontsT=setTimeout(renderPanel,250)})}catch(e){}
 
 /* ---------- elements ---------- */
 function shapeIcon(k){return k==='rect'?'<svg viewBox="0 0 100 100"><rect x="8" y="8" width="84" height="84" rx="6" fill="currentColor"/></svg>':`<svg viewBox="-4 -4 108 108"><path d="${SP[k]}" fill="currentColor" fill-rule="evenodd"/></svg>`}
@@ -1114,7 +1105,7 @@ function pBrand(b){
 /* ---------- magic (AI) ---------- */
 let aiBusy=false;
 function pMagic(b){
-  b.append(el('h3',{class:'ph'},'Magic'));
+  b.append(el('h3',{class:'ph'},'Magic'));b.append(el('div',{class:'sec'},el('h4',{},'Magic Studio'),el('div',{class:'grid2'},el('button',{class:'btn',html:ic('image',16)+' Magic Media',onclick:()=>openMagicMedia()}),el('button',{class:'btn',html:ic('bg',16)+' BG Generator',onclick:()=>openBgGenerator()})),el('p',{class:'note'},'Select a picture in your design to also use Magic Eraser, Magic Edit, Upscale, Magic Layers and Image to video.')));
   const status=el('p',{class:'note'},'');
   const note=(t)=>status.textContent=t;
   aiSample().then(s=>{if(!s)note('AI actions need an AI model. Add one in Anands OS Settings. Everything else works without it.')});
@@ -1172,9 +1163,12 @@ function newDesign(w,h,name){
 }
 function openNew(){
   const cw=el('input',{class:'f',type:'number',value:1080,min:20,max:8000,'aria-label':'Width'}),ch=el('input',{class:'f',type:'number',value:1080,min:20,max:8000,'aria-label':'Height'});
-  openModal(el('div',{style:'display:grid;gap:16px'},dlgHead('Create a design'),
-    el('div',{class:'sizes'},SIZES.map(s=>el('button',{onclick:()=>newDesign(s.w,s.h,s.n)},el('b',{},s.n),el('small',{},`${s.w} × ${s.h} px`)))),
+  const q=el('input',{class:'f',type:'search',placeholder:'Search design types, e.g. resume, story, certificate','aria-label':'Search design types'}),list=el('div',{style:'display:grid;gap:14px;max-height:52vh;overflow:auto;padding-right:4px'});
+  const draw=()=>{list.innerHTML='';const s=q.value.trim().toLowerCase();const groups=[...new Set(SIZES.map(x=>x.g))];groups.forEach(g=>{const items=SIZES.filter(x=>x.g===g&&(!s||x.n.toLowerCase().includes(s)||g.toLowerCase().includes(s)));if(!items.length)return;list.append(el('div',{},el('h4',{class:'sh'},g),el('div',{class:'sizes'},items.map(x=>el('button',{onclick:()=>newDesign(x.w,x.h,x.n)},el('b',{},x.n),el('small',{},`${x.w} × ${x.h} px`))))))});if(!list.children.length)list.append(el('p',{class:'note'},'No design type matches that. Use a custom size below.'))};
+  q.addEventListener('input',draw);draw();
+  openModal(el('div',{style:'display:grid;gap:16px'},dlgHead('Create a design'),q,list,
     el('div',{class:'row'},el('label',{style:'flex:0 0 auto'},'Custom size'),cw,el('span',{},'×'),ch,el('button',{class:'btn pri',onclick:()=>newDesign(clamp(+cw.value||1080,20,8000),clamp(+ch.value||1080,20,8000),'Custom design')},'Create'))));
+  setTimeout(()=>q.focus(),30);
 }
 
 /* ---------- help ---------- */
@@ -1198,6 +1192,837 @@ $('#hint').textContent='Double-click text to edit · Space+drag to pan · Ctrl+s
 
 window.addEventListener('beforeunload',()=>{commit();saveDoc()});
 document.fonts&&document.fonts.ready.then(()=>{render();renderStrip()});
+
+/* ---------- illustration library: parametric SVG art used by templates ---------- */
+const ART={},ARTAR={};
+const f2=n=>Math.round(n*100)/100;
+const rot=(a,cx,cy)=>`transform="rotate(${a} ${cx} ${cy})"`;
+function prng(seed){let s=seed>>>0||1;return()=>{s^=s<<13;s>>>=0;s^=s>>>17;s^=s<<5;s>>>=0;return s/4294967296}}
+function petalPath(cx,cy,r1,r2,wd){return `M${cx} ${cy-r1} C${cx+wd} ${cy-r1-(r2-r1)*.15} ${cx+wd*.7} ${cy-r2+(r2-r1)*.3} ${cx} ${cy-r2} C${cx-wd*.7} ${cy-r2+(r2-r1)*.3} ${cx-wd} ${cy-r1-(r2-r1)*.15} ${cx} ${cy-r1}Z`}
+function ring(n,fn){let s='';for(let i=0;i<n;i++)s+=fn(360/n*i,i);return s}
+const DEF=(id,stops,type='radial',extra='')=>`<${type}Gradient id="${id}" ${extra}>${stops.map(([o,c,op])=>`<stop offset="${o}" stop-color="${c}"${op!=null?` stop-opacity="${op}"`:''}/>`).join('')}</${type}Gradient>`;
+function reg(name,ar,fn){ART[name]=fn;ARTAR[name]=ar}
+
+reg('mandala',1,c=>{const [a,b,l]=c;let s='';
+  s+=`<circle cx="50" cy="50" r="49" fill="none" stroke="${a}" stroke-width=".6"/><circle cx="50" cy="50" r="46.5" fill="none" stroke="${a}" stroke-width=".3" stroke-dasharray="1 1.6"/>`;
+  s+=ring(36,(g)=>`<circle cx="50" cy="3.5" r=".9" fill="${b}" ${rot(g,50,50)}/>`);
+  s+=ring(24,(g)=>`<path d="${petalPath(50,50,38,49,5)}" fill="none" stroke="${a}" stroke-width=".7" ${rot(g,50,50)}/>`);
+  s+=ring(16,(g)=>`<path d="${petalPath(50,50,28,43,7.5)}" fill="${b}" fill-opacity=".9" stroke="${a}" stroke-width=".5" ${rot(g,50,50)}/>`);
+  s+=ring(16,(g)=>`<circle cx="50" cy="19" r="1.5" fill="${l}" ${rot(g,50,50)}/>`);
+  s+=ring(12,(g)=>`<path d="${petalPath(50,50,17,33,8)}" fill="${a}" ${rot(g,50,50)}/>`);
+  s+=ring(12,(g)=>`<path d="${petalPath(50,50,22,29,3)}" fill="${l}" ${rot(g,50,50)}/>`);
+  s+=ring(8,(g)=>`<path d="${petalPath(50,50,8,22,6)}" fill="${l}" stroke="${b}" stroke-width=".5" ${rot(g,50,50)}/>`);
+  s+=`<circle cx="50" cy="50" r="8" fill="${b}"/><circle cx="50" cy="50" r="5" fill="${a}"/><circle cx="50" cy="50" r="2" fill="${l}"/>`;
+  return s});
+reg('rangoli',1,c=>{let s='';const n=c.length;
+  s+=ring(40,(g)=>`<circle cx="50" cy="2.5" r="1.1" fill="${c[0]}" ${rot(g,50,50)}/>`);
+  s+=ring(20,(g,i)=>`<path d="${petalPath(50,50,36,48,6)}" fill="${c[i%n]}" ${rot(g,50,50)}/>`);
+  s+=ring(20,(g,i)=>`<circle cx="50" cy="13" r="1.6" fill="${c[(i+2)%n]}" ${rot(g,50,50)}/>`);
+  s+=ring(12,(g,i)=>`<path d="${petalPath(50,50,22,38,9)}" fill="${c[(i+1)%n]}" stroke="#fff" stroke-opacity=".5" stroke-width=".4" ${rot(g,50,50)}/>`);
+  s+=ring(12,(g,i)=>`<path d="${petalPath(50,50,26,34,3.5)}" fill="${c[(i+3)%n]}" ${rot(g,50,50)}/>`);
+  s+=ring(8,(g,i)=>`<path d="${petalPath(50,50,8,24,7)}" fill="${c[(i+2)%n]}" ${rot(g,50,50)}/>`);
+  s+=ring(8,(g,i)=>`<circle cx="50" cy="38" r="1.7" fill="#fff" fill-opacity=".85" ${rot(g,50,50)}/>`);
+  s+=`<circle cx="50" cy="50" r="7" fill="${c[0]}"/><circle cx="50" cy="50" r="4" fill="${c[n-1]}"/><circle cx="50" cy="50" r="1.6" fill="#fff"/>`;return s});
+reg('diya',.82,c=>{const [fl,body,glow]=c,dk='#00000030';
+  return `<defs>${DEF('g',[[0,glow,.95],[1,glow,0]])}${DEF('f',[[0,'#fff6c8'],[.5,fl],[1,fl,.9]],'linear','x1="0" y1="1" x2="0" y2="0"')}</defs>
+  <circle cx="50" cy="26" r="26" fill="url(#g)"/>
+  <path d="M50 4C60 18 66 28 50 40 34 28 40 18 50 4Z" fill="url(#f)"/><path d="M50 18c4 7 6 11 0 17-6-6-4-10 0-17Z" fill="#fffbe6" opacity=".95"/>
+  <path d="M49 38h2v6h-2z" fill="#4a2c18"/>
+  <path d="M6 46C12 46 18 52 22 56 30 66 40 72 50 72 60 72 70 66 78 56 82 52 88 46 94 46 92 64 74 78 50 78 26 78 8 64 6 46Z" fill="${body}"/>
+  <path d="M6 46C12 46 18 52 22 56 30 66 40 72 50 72 60 72 70 66 78 56 82 52 88 46 94 46 92 64 74 78 50 78 26 78 8 64 6 46Z" fill="${dk}"/>
+  <ellipse cx="50" cy="48" rx="36" ry="7" fill="${body}"/><ellipse cx="50" cy="48" rx="31" ry="5" fill="#2b1608"/><ellipse cx="50" cy="47" rx="28" ry="3.6" fill="${fl}" opacity=".55"/>
+  ${[26,38,50,62,74].map(x=>`<circle cx="${x}" cy="67" r="1.7" fill="${fl}"/>`).join('')}`});
+reg('lotus',.72,c=>{const [a,b,l]=c;let s='';
+  const pet=(ang,len,wd,fill,op)=>`<path d="M50 70C${50-wd} ${70-len*.35} ${50-wd*.7} ${70-len*.8} 50 ${70-len} ${50+wd*.7} ${70-len*.8} ${50+wd} ${70-len*.35} 50 70Z" fill="${fill}" fill-opacity="${op}" stroke="${l}" stroke-width=".5" ${rot(ang,50,70)}/>`;
+  [-72,72].forEach(g=>s+=pet(g,48,17,b,.95));[-48,48].forEach(g=>s+=pet(g,56,17,a,.95));[-24,24].forEach(g=>s+=pet(g,62,16,b,1));s+=pet(0,66,16,a,1);
+  [-14,14].forEach(g=>s+=pet(g,40,10,l,.9));s+=`<ellipse cx="50" cy="70" rx="16" ry="3.5" fill="${a}"/>`;
+  s+=`<path d="M18 71c10 5 22 7 32 7s22-2 32-7c-6 8-18 12-32 12s-26-4-32-12Z" fill="#3aa86b"/>`;return s});
+reg('toran',.17,c=>{const [m,y,g]=c;let s=`<path d="M0 3C50 12 150 12 200 3" fill="none" stroke="${g}" stroke-width="1.4"/>`;
+  for(let i=0;i<11;i++){const x=9+i*18,yy=3+Math.sin((x/200)*Math.PI)*8.4;
+    s+=`<path d="M${x} ${yy+1}v4" stroke="${g}" stroke-width=".6"/>`;
+    [0,1].forEach(k=>s+=`<circle cx="${x}" cy="${yy+7+k*5.4}" r="${3.5-k*.4}" fill="${k%2?y:m}"/><circle cx="${x}" cy="${yy+7+k*5.4}" r="1.3" fill="${k%2?m:y}"/>`);
+    s+=`<path d="M${x} ${yy+16}c-3 2-3 7 0 10 3-3 3-8 0-10Z" fill="${g}"/>`}
+  return s});
+reg('kite',1.7,c=>{const [a,b,t]=c;return `<path d="M30 2 58 36 30 70 2 36Z" fill="${a}"/><path d="M30 2 58 36 30 36Z" fill="${b}"/><path d="M2 36 30 36 30 70Z" fill="${b}"/><path d="M30 2V70M2 36H58" stroke="#fff" stroke-opacity=".7" stroke-width=".9"/><path d="M30 2 58 36 30 70 2 36Z" fill="none" stroke="#00000033" stroke-width=".8"/>
+  <path d="M30 70c-8 8 8 12 0 20s8 8 0 14" fill="none" stroke="${t}" stroke-width="1"/>${[78,90,102].map((y,i)=>`<path d="M${i%2?33:27} ${y}l${i%2?5:-5} -3v6z" fill="${i%2?a:b}"/>`).join('')}`});
+reg('firework',1,c=>{const [a,b,l]=c;let s='';
+  s+=ring(18,(g,i)=>`<path d="M50 14V${i%2?24:30}" stroke="${a}" stroke-width="1.6" stroke-linecap="round" ${rot(g,50,50)}/><circle cx="50" cy="${i%2?9:7}" r="1.8" fill="${a}" ${rot(g,50,50)}/>`);
+  s+=ring(18,(g,i)=>`<path d="M50 34V${i%2?40:43}" stroke="${b}" stroke-width="1.3" stroke-linecap="round" ${rot(g+10,50,50)}/>`);
+  s+=ring(9,(g)=>`<circle cx="50" cy="${22}" r="1.4" fill="${l}" ${rot(g+20,50,50)}/>`);return s+`<circle cx="50" cy="50" r="3" fill="${l}"/>`});
+reg('paisley',1.3,c=>{const [a,b,l]=c;return `<path d="M30 76C6 70 2 40 22 24 32 16 34 8 30 2 46 8 58 28 52 48 48 64 40 74 30 76Z" fill="${a}"/><path d="M30 66C14 62 12 42 24 32 32 26 36 22 36 16 44 24 46 40 42 52 40 60 36 65 30 66Z" fill="none" stroke="${l}" stroke-width="1.1"/>${[[24,46],[30,52],[36,46],[30,40],[30,60]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="1.7" fill="${b}"/>`).join('')}<circle cx="30" cy="30" r="3.5" fill="${b}"/>`});
+reg('kalash',1.18,c=>{const [pot,band,leaf]=c;let s='';
+  s+=ring(7,(g)=>`<path d="M50 40C36 26 40 10 50 4 60 10 64 26 50 40Z" fill="${leaf}" stroke="#00000022" stroke-width=".5" ${rot(g-90+90,50,44)}/>`).replace(/rotate\((-?\d+(\.\d+)?)/g,(m,x)=>`rotate(${f2(+x*0.42-76)}`);
+  s+=`<circle cx="50" cy="32" r="12" fill="#a8672f"/><circle cx="50" cy="32" r="12" fill="url(#cn)" opacity=".4"/><circle cx="46" cy="29" r="1.4" fill="#4a2c18"/><circle cx="54" cy="29" r="1.4" fill="#4a2c18"/><circle cx="50" cy="35" r="1.4" fill="#4a2c18"/>`;
+  s+=`<path d="M36 46h28l-2 8c10 4 18 14 18 26 0 16-14 26-30 26S20 96 20 80c0-12 8-22 18-26Z" fill="${pot}"/><path d="M34 54h32" stroke="${band}" stroke-width="3"/><path d="M22 80h56" stroke="${band}" stroke-width="3"/>`;
+  s+=ring(9,(g)=>`<path d="${petalPath(50,92,0,10,3.4)}" fill="${band}" ${rot(g*.0,50,92)} transform="translate(${f2(Math.sin(g*Math.PI/180)*0)} 0)"/>`).slice(0,0);
+  s+=[30,40,50,60,70].map((x,i)=>`<circle cx="${x}" cy="${i%2?64:68}" r="2.4" fill="${band}"/>`).join('');
+  s+=`<path d="M38 46c4-4 20-4 24 0v4H38Z" fill="#c1121f"/>`;return `<defs>${DEF('cn',[[0,'#fff',.7],[1,'#000',0]])}</defs>`+s});
+reg('crescent',1,c=>{const [a,b]=c;const st=(cx,cy,R,r)=>{let p='';for(let i=0;i<10;i++){const rr=i%2?r:R,an=-Math.PI/2+i*Math.PI/5;p+=(i?'L':'M')+f2(cx+Math.cos(an)*rr)+' '+f2(cy+Math.sin(an)*rr)}return p+'Z'};
+  return `<defs>${DEF('cg',[[0,b],[1,a]],'linear','x1="0" y1="0" x2="1" y2="1"')}</defs><path d="M64 10A42 42 0 1 0 64 90 34 34 0 1 1 64 10Z" fill="url(#cg)"/><path d="${st(70,42,12,5)}" fill="${b}"/><circle cx="84" cy="64" r="2" fill="${b}"/><circle cx="26" cy="20" r="1.4" fill="${b}"/><circle cx="88" cy="22" r="1.4" fill="${b}"/>`});
+reg('lantern',1.7,c=>{const [a,b,l]=c;return `<path d="M30 2v10" stroke="${l}" stroke-width="1.4"/><circle cx="30" cy="3" r="2" fill="${l}"/><path d="M18 14h24l-3-4H21Z" fill="${l}"/><path d="M16 14h28c8 12 8 36 0 48H16C8 50 8 26 16 14Z" fill="${a}"/><path d="M30 14c-8 12-8 36 0 48 8-12 8-36 0-48Z" fill="${b}" fill-opacity=".85"/><path d="M23 14c-6 12-6 36 0 48M37 14c6 12 6 36 0 48" fill="none" stroke="${l}" stroke-width=".8"/><path d="M16 62h28v5H16Z" fill="${l}"/><path d="M30 67v14" stroke="${l}" stroke-width="1.2"/><path d="M26 81h8l-2 12h-4Z" fill="${b}"/><circle cx="30" cy="38" r="6" fill="#fff6c8" opacity=".9"/>`});
+reg('gulal',1,(c,seed=7)=>{const r=prng(seed);let s='';const pts=[[34,36,24],[66,32,20],[50,60,26],[24,68,16],[78,64,17],[50,24,14],[62,82,12],[16,40,11]];
+  pts.forEach(([x,y,R],i)=>{s+=`<circle cx="${x}" cy="${y}" r="${R}" fill="${c[i%c.length]}" fill-opacity=".72"/>`});
+  for(let i=0;i<90;i++){const an=r()*6.283,d=18+r()*34;s+=`<circle cx="${f2(50+Math.cos(an)*d)}" cy="${f2(50+Math.sin(an)*d)}" r="${f2(.5+r()*1.7)}" fill="${c[(i+1)%c.length]}"/>`}return s});
+reg('xtree',1.2,c=>{const [g1,g2,st]=c;let s='';
+  s+=`<rect x="44" y="102" width="12" height="14" fill="#7a4a21"/>`;
+  [[8,66,92,52],[16,44,84,40],[24,24,76,34],[32,6,68,28]].slice(0,0);
+  s+=`<path d="M50 14 80 50H64l22 28H66l26 28H8l26-28H14l22-28H20Z" fill="${g1}"/><path d="M50 14 80 50H64l22 28H66l26 28H50Z" fill="${g2}" fill-opacity=".55"/>`;
+  s+=`<path d="M50 2l3.4 7.4 8 .8-6 5.4 1.8 7.8L50 19l-7.2 4.4 1.8-7.8-6-5.4 8-.8Z" fill="${st}"/>`;
+  [[40,52,'#e63946'],[60,60,'#ffd166'],[34,80,'#ffd166'],[56,86,'#e63946'],[70,96,'#90e0ef'],[26,98,'#e63946'],[48,70,'#fff']].forEach(([x,y,f])=>s+=`<circle cx="${x}" cy="${y}" r="3.4" fill="${f}"/><circle cx="${x-1}" cy="${y-1.2}" r="1" fill="#fff" opacity=".7"/>`);return s});
+reg('snow',1,c=>{const [a]=c;let s='';s+=ring(6,(g)=>`<g ${rot(g,50,50)} stroke="${a}" stroke-width="2.4" stroke-linecap="round" fill="none"><path d="M50 50V6"/><path d="M50 18 40 8M50 18 60 8M50 32 38 22M50 32 62 22"/></g>`);return s+`<circle cx="50" cy="50" r="4" fill="${a}"/>`});
+reg('balloons',1.3,c=>{const [a,b,d]=c;const bl=(x,y,col,rx,ry)=>`<path d="M${x} ${y+ry}C${x-10} ${y+ry+10} ${x-6} ${y+ry+22} ${x} ${y+ry+34}" fill="none" stroke="#888" stroke-width=".7"/><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${col}"/><path d="M${x-2} ${y+ry}l2 3.4 2-3.4Z" fill="${col}"/><ellipse cx="${x-rx*.35}" cy="${y-ry*.4}" rx="${rx*.2}" ry="${ry*.3}" fill="#fff" fill-opacity=".45" transform="rotate(-25 ${x-rx*.35} ${y-ry*.4})"/>`;
+  return bl(30,34,a,19,24)+bl(66,28,b,19,24)+bl(50,60,d,19,24)});
+reg('gift',1,c=>{const [a,b,r]=c;return `<rect x="12" y="42" width="76" height="50" rx="3" fill="${a}"/><rect x="8" y="30" width="84" height="18" rx="3" fill="${b}"/><rect x="44" y="30" width="12" height="62" fill="${r}"/><path d="M50 30C36 6 14 18 28 28 36 32 46 30 50 30ZM50 30C64 6 86 18 72 28 64 32 54 30 50 30Z" fill="${r}"/><circle cx="50" cy="29" r="5" fill="${r}"/>`});
+reg('cake',.95,c=>{const [a,b,cr]=c;return `<rect x="26" y="8" width="3" height="18" fill="#ffe8a3"/><rect x="48.5" y="8" width="3" height="18" fill="#ffe8a3"/><rect x="71" y="8" width="3" height="18" fill="#ffe8a3"/>${[27.5,50,72.5].map(x=>`<path d="M${x} 1c3 5 3 7 0 8-3-1-3-3 0-8Z" fill="#ff9f1c"/>`).join('')}<rect x="14" y="26" width="72" height="22" rx="4" fill="${a}"/><path d="M14 36c6 6 10-4 16 2s10-4 16 2 10-4 16 2 10-4 16 2 8-2 8-2v-6H14Z" fill="${cr}"/><rect x="6" y="48" width="88" height="30" rx="5" fill="${b}"/><path d="M6 58c8 6 12-4 20 2s12-4 20 2 12-4 20 2 12-4 20 2 8-2 8-2v-8H6Z" fill="${cr}"/><rect x="2" y="78" width="96" height="9" rx="4" fill="${a}"/>${[22,40,58,76].map(x=>`<circle cx="${x}" cy="68" r="2.4" fill="${cr}"/>`).join('')}`});
+reg('arch',1.4,c=>{const [a,b]=c;const p=(m,col,w)=>`<path d="M${m} 140V${58-m*.2}C${m} ${34-m*.2} ${m+26} ${22} 50 ${2+m*.8} ${74-m-26} 22 ${100-m} ${34-m*.2} ${100-m} ${58-m*.2}V140" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round"/>`;
+  let s=p(3,a,2.6)+p(8,b,.9)+p(12,a,.9);
+  for(let i=1;i<14;i++){const t=i/14,x=t*100,y=58-Math.sin(t*Math.PI)*44+(Math.abs(t-.5)<.1?0:0);if(i%2)s+=`<circle cx="${f2(x)}" cy="${f2(y+9)}" r="1.1" fill="${b}"/>`}
+  return s+`<path d="M50 -1l2.4 4-2.4 4-2.4-4Z" fill="${b}"/>`});
+reg('feather',2.6,c=>{const [a,b,l]=c;return `<path d="M20 130C22 100 18 70 20 40" fill="none" stroke="${l}" stroke-width="1.6"/><ellipse cx="20" cy="36" rx="17" ry="30" fill="${b}"/><ellipse cx="20" cy="36" rx="13" ry="25" fill="${a}"/><ellipse cx="20" cy="33" rx="9" ry="16" fill="${l}"/><ellipse cx="20" cy="33" rx="6" ry="11" fill="${b}"/><ellipse cx="20" cy="32" rx="3.2" ry="6" fill="#0b2a4a"/>${ring(12,(g)=>`<path d="M20 36L20 8" stroke="${l}" stroke-width=".5" ${rot(g*.6-30,20,36)}/>`)}`});
+reg('chakra',1,c=>{const [a]=c;let s=`<circle cx="50" cy="50" r="46" fill="none" stroke="${a}" stroke-width="3.4"/><circle cx="50" cy="50" r="8" fill="${a}"/>`;
+  s+=ring(24,(g)=>`<path d="M50 50V6" stroke="${a}" stroke-width="1.4" ${rot(g,50,50)}/><circle cx="50" cy="12" r="1.7" fill="${a}" ${rot(g+7.5,50,50)}/>`);return s+ring(24,(g)=>`<path d="M48.4 10 50 6l1.6 4Z" fill="${a}" ${rot(g,50,50)}/>`)});
+reg('flag',.67,c=>`<path d="M0 6C16 -2 26 14 42 6S74 -2 90 6V30C74 22 58 38 42 30S16 22 0 30Z" fill="#FF9933"/><path d="M0 30C16 22 26 38 42 30S74 22 90 30V54C74 46 58 62 42 54S16 46 0 54Z" fill="#fff"/><path d="M0 54C16 46 26 62 42 54S74 46 90 54V78C74 70 58 86 42 78S16 70 0 78Z" fill="#138808"/><g transform="translate(26 24) scale(.32)" stroke="#000080" fill="#000080"><circle cx="50" cy="50" r="44" fill="none" stroke-width="5"/>${ring(24,g=>`<path d="M50 50V8" stroke-width="2" ${rot(g,50,50)}/>`)}<circle cx="50" cy="50" r="7" stroke="none"/></g>`);
+reg('sun',1,c=>{const [a,b]=c;let s=ring(16,(g,i)=>`<path d="M50 2l${i%2?4:6} 14h-${i%2?8:12}Z" fill="${a}" ${rot(g,50,50)}/>`);return s+`<circle cx="50" cy="50" r="28" fill="${b}"/><circle cx="50" cy="50" r="22" fill="${a}" fill-opacity=".35"/>`});
+reg('pot',1,c=>{const [pot,band,foam]=c;return `${[[30,26,12],[44,20,14],[58,22,13],[70,28,11],[50,28,10]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${foam}"/>`).join('')}<path d="M18 36h64l-2 4c10 6 14 16 14 28 0 18-18 28-44 28S6 86 6 68c0-12 4-22 14-28Z" fill="${pot}"/><ellipse cx="50" cy="38" rx="32" ry="5" fill="${band}"/><path d="M12 66h76M14 76h72" stroke="${band}" stroke-width="2.6"/>${ring(8,(g)=>'').slice(0,0)}${[24,36,48,60,72].map(x=>`<path d="M${x} 56l4 4-4 4-4-4Z" fill="${band}"/>`).join('')}<path d="M22 14c-8-8 4-12 0-20M50 8c-8-8 4-12 0-20" stroke="#fff" stroke-opacity=".5" fill="none" stroke-width="1.4"/>`});
+reg('cane',2,c=>{const [a,l]=c;return [0,1,2].map(i=>{const x=20+i*30;return `<rect x="${x-5}" y="10" width="10" height="190" rx="4" fill="${a}"/>${[40,80,120,160].map(y=>`<rect x="${x-6}" y="${y}" width="12" height="4" rx="2" fill="#00000030"/>`).join('')}<path d="M${x} 30c-20-14-30-26-34-34M${x} 50c22-12 30-20 34-30" fill="none" stroke="${l}" stroke-width="3.4" transform="translate(0 ${i*8})"/>`}).join('')});
+reg('kolam',1,c=>{const [a,b]=c;let s='';const rows=[1,3,5,3,1];rows.forEach((n,r)=>{for(let i=0;i<n;i++)s+=`<circle cx="${50+(i-(n-1)/2)*14}" cy="${22+r*14}" r="1.9" fill="${b}"/>`});
+  s+=ring(4,(g)=>`<ellipse cx="50" cy="50" rx="30" ry="13" fill="none" stroke="${a}" stroke-width="1.6" ${rot(g*.5,50,50)}/>`);
+  s+=ring(4,(g)=>`<path d="M50 22c-18 6-18 22 0 28 18-6 18-22 0-28Z" fill="none" stroke="${a}" stroke-width="1.4" ${rot(g,50,50)}/>`);return s});
+reg('jaali',1,(c,W=100,H=100)=>{const [a]=c,t=16,n=Math.ceil(W/t)+1,m=Math.ceil(H/t)+1;let d='';return `<defs><pattern id="jp" width="${t}" height="${t}" patternUnits="userSpaceOnUse"><path d="M8 0 12 4 16 8 12 12 8 16 4 12 0 8 4 4Z" fill="none" stroke="${a}" stroke-width=".7"/><path d="M8 3.6 12.4 8 8 12.4 3.6 8Z" fill="${a}" fill-opacity=".5"/><circle cx="0" cy="0" r="1.2" fill="${a}"/><circle cx="16" cy="16" r="1.2" fill="${a}"/></pattern></defs><rect width="${W}" height="${H}" fill="url(#jp)"/>`});
+reg('dots',1,(c,W=100,H=100)=>{const [a,b]=c;return `<defs><pattern id="dp" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="1.5" fill="${a}"/><circle cx="9" cy="9" r="1.5" fill="${b||a}"/></pattern></defs><rect width="${W}" height="${H}" fill="url(#dp)"/>`});
+reg('vine',.1,c=>{const [a,b]=c;let s=`<path d="M0 5C12 -1 25 11 37 5S62 -1 75 5 88 11 100 5" fill="none" stroke="${a}" stroke-width="1"/>`;
+  for(let i=0;i<4;i++){const x=12.5+i*25;const up=i%2;s+=`<path d="M${x} ${up?8:2}c-4 ${up?5:-5} 2 ${up?9:-9} 6 ${up?4:-4}" fill="none" stroke="${b}" stroke-width=".8"/><path d="M${x} ${up?8:2}c2 ${up?-1:1} 5 ${up?6:-6} 0 ${up?8:-8}-5 ${up?-2:2}-3 ${up?-6:6} 0 ${up?-8:8}Z" fill="${b}"/>`}
+  return s});
+reg('rings',1.2,c=>{const [a,b]=c;return `<circle cx="38" cy="64" r="26" fill="none" stroke="${a}" stroke-width="5"/><circle cx="62" cy="64" r="26" fill="none" stroke="${b}" stroke-width="5"/><path d="M50 44.6a26 26 0 0 1 0 38.8" fill="none" stroke="${a}" stroke-width="5"/><path d="M50 14l8 10-8 10-8-10Z" fill="${b}"/><path d="M42 24h16" stroke="#fff" stroke-opacity=".7" stroke-width="1"/>`});
+reg('heart',.92,c=>{const [a,b]=c;return `<path d="M50 90C14 62 2 40 12 22 22 6 42 10 50 26 58 10 78 6 88 22 98 40 86 62 50 90Z" fill="${a}"/><path d="M26 24c4-6 12-7 18-2" stroke="${b}" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-opacity=".7"/>`});
+reg('sparkle',1,c=>{const [a,b]=c;const sp=(x,y,r,f)=>`<path d="M${x} ${y-r}C${x+r*.1} ${y-r*.1} ${x+r*.1} ${y-r*.1} ${x+r} ${y}C${x+r*.1} ${y+r*.1} ${x+r*.1} ${y+r*.1} ${x} ${y+r}C${x-r*.1} ${y+r*.1} ${x-r*.1} ${y+r*.1} ${x-r} ${y}C${x-r*.1} ${y-r*.1} ${x-r*.1} ${y-r*.1} ${x} ${y-r}Z" fill="${f}"/>`;return sp(46,52,40,a)+sp(82,20,14,b)+sp(80,84,10,a)+sp(14,16,8,b)});
+reg('confetti',1,(c,W=100,H=100,seed=3)=>{const r=prng(seed);let s='';for(let i=0;i<Math.round(W*H/160);i++){const x=r()*W,y=r()*H,col=c[i%c.length],k=r();s+=k<.4?`<rect x="${f2(x)}" y="${f2(y)}" width="${f2(1.4+r()*1.6)}" height="${f2(3+r()*3)}" fill="${col}" transform="rotate(${f2(r()*360)} ${f2(x)} ${f2(y)})"/>`:k<.75?`<circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(.9+r()*1.3)}" fill="${col}"/>`:`<path d="M${f2(x)} ${f2(y)}l2 3.4 -4 0z" fill="${col}" transform="rotate(${f2(r()*360)} ${f2(x)} ${f2(y)})"/>`}return s});
+reg('book',.8,c=>{const [a,b,l]=c;return `<path d="M50 20C36 10 18 10 4 16v64c14-6 32-6 46 4Z" fill="${a}"/><path d="M50 20c14-10 32-10 46-4v64c-14-6-32-6-46 4Z" fill="${b}"/><path d="M50 20v64" stroke="${l}" stroke-width="1.4"/>${[28,38,48,58].map(y=>`<path d="M12 ${y}c10-3 24-3 32 2M88 ${y}c-10-3-24-3-32 2" stroke="${l}" stroke-width="1.2" stroke-opacity=".6" fill="none"/>`).join('')}`});
+reg('cap',.72,c=>{const [a,b]=c;return `<path d="M50 6 96 28 50 50 4 28Z" fill="${a}"/><path d="M22 40v20c8 8 20 12 28 12s20-4 28-12V40L50 54Z" fill="${b}"/><path d="M90 31v26" stroke="${a}" stroke-width="2.4"/><circle cx="90" cy="60" r="3.4" fill="${b}"/>`});
+reg('bulb',1.2,c=>{const [a,b]=c;return `<path d="M50 4C28 4 16 20 16 38c0 12 6 20 12 28 4 6 6 10 6 16h32c0-6 2-10 6-16 6-8 12-16 12-28C84 20 72 4 50 4Z" fill="${a}"/><path d="M38 46l8 10 4-14 4 14 8-10" fill="none" stroke="${b}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><rect x="34" y="86" width="32" height="8" rx="3" fill="${b}"/><rect x="38" y="97" width="24" height="7" rx="3" fill="${b}"/>`});
+reg('rocket',1.5,c=>{const [a,b,f]=c;return `<path d="M50 4C70 22 72 56 64 84H36C28 56 30 22 50 4Z" fill="${a}"/><circle cx="50" cy="40" r="9" fill="${b}" stroke="#fff" stroke-width="3"/><path d="M36 60 16 82 16 98 36 84ZM64 60 84 82 84 98 64 84Z" fill="${b}"/><path d="M38 88h24l-6 22H44Z" fill="${f}"/><path d="M44 110l6 30 6-30Z" fill="#ffd166"/>`});
+reg('laptop',.66,c=>{const [a,b]=c;return `<rect x="14" y="6" width="72" height="46" rx="4" fill="${a}"/><rect x="19" y="11" width="62" height="36" rx="2" fill="${b}"/><path d="M4 56h92l-6 8H10Z" fill="${a}"/><path d="M24 36l10-10 8 8 14-16 14 18" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>`});
+reg('bars',.7,c=>{const [a,b,l]=c;return `<path d="M6 66H96" stroke="${l}" stroke-width="1.6"/>${[[10,34],[34,22],[58,44],[78,8]].map(([x,h],i)=>`<rect x="${x}" y="${66-h}" width="14" height="${h}" rx="2.5" fill="${i%2?b:a}"/>`).join('')}`});
+reg('cup',.95,c=>{const [a,b]=c;return `<path d="M14 30h60v30c0 14-12 24-30 24S14 74 14 60Z" fill="${a}"/><path d="M74 38h8c10 0 10 20 0 20h-8" fill="none" stroke="${a}" stroke-width="5"/><path d="M26 18c-6-6 6-8 0-14M44 18c-6-6 6-8 0-14M62 18c-6-6 6-8 0-14" stroke="${b}" stroke-width="2.4" fill="none" stroke-linecap="round"/><ellipse cx="44" cy="30" rx="30" ry="4" fill="${b}"/>`});
+reg('leaf',1,c=>{const [a,b]=c;return `<path d="M10 90C6 40 40 8 92 8c2 52-30 84-82 82Z" fill="${a}"/><path d="M12 88C34 60 56 38 84 16" stroke="${b}" stroke-width="2" fill="none"/>${[[28,70,40,52],[40,58,58,52],[52,46,70,38],[24,56,34,40]].map(([x,y,x2,y2])=>`<path d="M${x} ${y}L${x2} ${y2}" stroke="${b}" stroke-width="1.2"/>`).join('')}`});
+reg('house',.9,c=>{const [a,b,l]=c;return `<path d="M50 6 4 46h12v42h68V46h12Z" fill="${a}"/><rect x="40" y="56" width="20" height="32" rx="2" fill="${b}"/><rect x="22" y="52" width="14" height="14" fill="${l}"/><rect x="64" y="52" width="14" height="14" fill="${l}"/><path d="M50 6 4 46h92Z" fill="${b}" fill-opacity=".35"/>`});
+reg('building',1.4,c=>{const [a,b,l]=c;let s=`<rect x="10" y="4" width="44" height="136" fill="${a}"/><rect x="54" y="40" width="36" height="100" fill="${b}"/>`;for(let y=0;y<10;y++){for(let x=0;x<3;x++)s+=`<rect x="${16+x*12}" y="${12+y*13}" width="7" height="8" fill="${l}" fill-opacity="${(x+y)%3?.9:.35}"/>`;if(y<7)for(let x=0;x<2;x++)s+=`<rect x="${60+x*14}" y="${48+y*13}" width="8" height="8" fill="${l}" fill-opacity="${(x+y)%2?.9:.4}"/>`}return s});
+reg('dumbbell',.72,c=>{const [a,b]=c;return `<rect x="6" y="26" width="12" height="40" rx="3" fill="${a}"/><rect x="18" y="12" width="12" height="56" rx="3" fill="${a}"/><rect x="30" y="34" width="40" height="12" fill="${b}"/><rect x="70" y="12" width="12" height="56" rx="3" fill="${a}"/><rect x="82" y="20" width="12" height="40" rx="3" fill="${a}"/>`});
+reg('pulse',.5,c=>{const [a,b]=c;return `<path d="M2 28H28L36 8 50 48 62 18 70 28H98" fill="none" stroke="${a}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`});
+reg('plane',.8,c=>{const [a,b]=c;return `<path d="M96 10 8 44l24 8 8 28 12-16 20 14Z" fill="${a}"/><path d="M96 10 32 52l10 28 4-14Z" fill="${b}" fill-opacity=".85"/><path d="M96 10 42 62" stroke="#fff" stroke-width="1.2" stroke-opacity=".7"/>`});
+reg('camera',.78,c=>{const [a,b,l]=c;return `<path d="M30 8h30l6 10h22a8 8 0 0 1 8 8v44a8 8 0 0 1-8 8H8a8 8 0 0 1-8-8V26a8 8 0 0 1 8-8h16Z" fill="${a}"/><circle cx="47" cy="48" r="22" fill="${b}"/><circle cx="47" cy="48" r="15" fill="${l}"/><circle cx="47" cy="48" r="9" fill="${b}"/><circle cx="82" cy="28" r="3" fill="${l}"/>`});
+reg('gem',.9,c=>{const [a,b,l]=c;return `<path d="M26 8h48l22 28L50 92 4 36Z" fill="${a}"/><path d="M4 36h92M26 8l14 28L50 92M74 8 60 36 50 92M40 36 50 8 60 36" fill="none" stroke="${l}" stroke-width="1.6" stroke-linejoin="round"/><path d="M26 8 40 36 4 36ZM74 8 60 36 96 36Z" fill="${b}" fill-opacity=".7"/>`});
+reg('thali',1,c=>{const [pl,a,b]=c;let s=`<circle cx="50" cy="50" r="48" fill="${pl}"/><circle cx="50" cy="50" r="44" fill="none" stroke="#ffffff66" stroke-width="1.6"/><circle cx="50" cy="50" r="38" fill="none" stroke="#ffffff33" stroke-width="1"/>`;
+  [[50,26],[72,38],[72,62],[50,74],[28,62],[28,38]].forEach(([x,y],i)=>s+=`<circle cx="${x}" cy="${y}" r="11" fill="#ffffff55"/><circle cx="${x}" cy="${y}" r="9" fill="${[a,b,'#e76f51','#2a9d8f','#f4a261','#e9c46a'][i]}"/><circle cx="${x-2}" cy="${y-2}" r="3" fill="#fff" fill-opacity=".35"/>`);return s+`<circle cx="50" cy="50" r="12" fill="#f8edd2"/><circle cx="46" cy="46" r="2.4" fill="#fff"/>`});
+reg('bag',.95,c=>{const [a,b]=c;return `<path d="M14 30h72l6 62H8Z" fill="${a}"/><path d="M34 40V24c0-12 32-12 32 0v16" fill="none" stroke="${b}" stroke-width="5" stroke-linecap="round"/><circle cx="34" cy="40" r="3.6" fill="${b}"/><circle cx="66" cy="40" r="3.6" fill="${b}"/>`});
+reg('pin',1.4,c=>{const [a,b]=c;return `<path d="M50 4C28 4 12 20 12 42c0 28 38 60 38 60s38-32 38-60C88 20 72 4 50 4Z" fill="${a}"/><circle cx="50" cy="42" r="14" fill="${b}"/>`});
+reg('trophy',1.1,c=>{const [a,b]=c;return `<path d="M26 8h48v30c0 16-10 26-24 26S26 54 26 38Z" fill="${a}"/><path d="M26 16H10c0 22 8 30 20 32M74 16h16c0 22-8 30-20 32" fill="none" stroke="${a}" stroke-width="5"/><rect x="44" y="62" width="12" height="18" fill="${b}"/><rect x="28" y="80" width="44" height="12" rx="3" fill="${a}"/><path d="M40 20c0 14 4 22 10 26" stroke="#fff" stroke-opacity=".5" stroke-width="3" fill="none"/>`});
+reg('seal',1.3,c=>{const [a,b]=c;let s=`<path d="M30 70 18 128l22-12 12 14L58 70Z" fill="${b}"/><path d="M70 70l12 58-22-12-12 14-6-60Z" fill="${b}"/>`;
+  s+=ring(24,(g)=>`<circle cx="50" cy="12" r="6.4" fill="${a}" ${rot(g,50,50)}/>`)+`<circle cx="50" cy="50" r="40" fill="${a}"/><circle cx="50" cy="50" r="32" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.6"/><path d="M50 30l5.6 11.6 12.6 1.8-9.2 9 2.2 12.6L50 59l-11.2 6 2.2-12.6-9.2-9 12.6-1.8Z" fill="#fff" fill-opacity=".9"/>`;return s});
+reg('crown',.75,c=>{const [a,b]=c;return `<path d="M6 76 2 22l26 24L50 8l22 38 26-24-4 54Z" fill="${a}"/><rect x="6" y="76" width="88" height="10" rx="3" fill="${b}"/>${[[2,22],[50,8],[98,22]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4" fill="${b}"/>`).join('')}`});
+reg('bell',1.1,c=>{const [a,b]=c;return `<circle cx="50" cy="8" r="5" fill="${b}"/><path d="M50 12C28 12 20 30 20 50c0 14-6 22-12 28h84c-6-6-12-14-12-28 0-20-8-38-30-38Z" fill="${a}"/><path d="M40 84a10 10 0 0 0 20 0Z" fill="${b}"/>`});
+reg('bokeh',1,(c,W=100,H=100,seed=11)=>{const r=prng(seed);let s='';for(let i=0;i<26;i++){const x=r()*W,y=r()*H,R=4+r()*Math.min(W,H)*.1;s+=`<circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(R)}" fill="${c[i%c.length]}" fill-opacity="${f2(.12+r()*.25)}"/>`}return s});
+reg('stars',1,(c,W=100,H=100,seed=5)=>{const r=prng(seed);let s='';for(let i=0;i<Math.round(W*H/140);i++){const x=r()*W,y=r()*H,R=.5+r()*1.4;s+=`<circle cx="${f2(x)}" cy="${f2(y)}" r="${f2(R)}" fill="${c[i%c.length]}" fill-opacity="${f2(.4+r()*.6)}"/>`}return s});
+reg('wave',.22,c=>{const [a,b]=c;return `<path d="M0 8C16 -2 34 -2 50 8S84 18 100 8V22H0Z" fill="${b}" fill-opacity=".55"/><path d="M0 14C18 4 34 4 50 14S84 24 100 14V22H0Z" fill="${a}"/>`});
+reg('blobbg',1,c=>{const [a]=c;return `<path d="M82 20C98 40 96 70 74 86 52 100 20 90 8 66 -4 42 14 14 40 8 58 4 72 8 82 20Z" fill="${a}"/>`});
+
+reg('rakhi',1.35,c=>{const [a,b,l]=c;let s=`<path d="M38 52C14 38 4 52 8 66S28 80 40 62" fill="none" stroke="${b}" stroke-width="2.4"/><path d="M62 52C86 38 96 52 92 66S72 80 60 62" fill="none" stroke="${b}" stroke-width="2.4"/><path d="M42 56C26 56 20 66 28 74M58 56C74 56 80 66 72 74" fill="none" stroke="${l}" stroke-width="1.2" stroke-dasharray="1.2 2.4"/>`;
+  s+=[[10,60],[7,68],[14,73],[90,60],[93,68],[86,73]].map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="3" fill="${i%2?a:l}"/>`).join('');
+  s+=ring(12,(g)=>`<circle cx="50" cy="30" r="6" fill="${a}" ${rot(g,50,50)}/>`).replace(/cy="30"/g,'cy="22"');
+  return s.replace(/rotate\((-?[\d.]+) 50 50\)/g,'rotate($1 50 50)')+`<circle cx="50" cy="50" r="22" fill="${b}"/><circle cx="50" cy="50" r="17" fill="${a}"/><circle cx="50" cy="50" r="11" fill="${l}"/><circle cx="50" cy="50" r="5" fill="${b}"/>`});
+reg('flame',1.1,c=>{const [a,b,l]=c;return `<rect x="8" y="88" width="84" height="9" rx="4" fill="#6b3f1d" transform="rotate(-6 50 92)"/><rect x="8" y="88" width="84" height="9" rx="4" fill="#8a5326" transform="rotate(7 50 92)"/><path d="M50 4C62 26 86 38 82 66 80 82 66 92 50 92S20 82 18 66C16 44 36 36 50 4Z" fill="${a}"/><path d="M50 26C58 42 72 50 70 68 68 80 60 88 50 88S32 80 30 68C28 52 42 46 50 26Z" fill="${b}"/><path d="M50 52C55 62 62 66 60 74 58 82 54 84 50 84S42 82 40 74C38 66 45 62 50 52Z" fill="${l}"/>`});
+reg('wheat',2,c=>{const [a,b]=c;let s=`<path d="M50 200C48 150 52 90 50 22" fill="none" stroke="${b}" stroke-width="2.4"/>`;for(let i=0;i<9;i++){const y=30+i*14;s+=`<ellipse cx="42" cy="${y+6}" rx="4" ry="9" fill="${a}" transform="rotate(-28 42 ${y+6})"/><ellipse cx="58" cy="${y+6}" rx="4" ry="9" fill="${a}" transform="rotate(28 58 ${y+6})"/>`}return s+`<ellipse cx="50" cy="14" rx="4" ry="10" fill="${a}"/>`});
+reg('dandiya',2.4,c=>{const [a,b,l]=c;const st=(r)=>`<g transform="rotate(${r} 50 120)"><rect x="46" y="10" width="8" height="220" rx="4" fill="${a}"/>${[30,60,90,170,200].map((y,i)=>`<rect x="45" y="${y}" width="10" height="6" fill="${i%2?l:b}"/>`).join('')}${[120,130,140].map(y=>`<circle cx="50" cy="${y}" r="2.4" fill="${b}"/>`).join('')}</g>`;return st(-18)+st(18)});
+reg('moon',1,c=>{const [a,b]=c;return `<defs>${DEF('mn',[[0,'#fff'],[1,a]])}</defs><circle cx="50" cy="50" r="46" fill="${b}" fill-opacity=".25"/><circle cx="50" cy="50" r="38" fill="url(#mn)"/><circle cx="38" cy="40" r="6" fill="#00000012"/><circle cx="60" cy="56" r="9" fill="#00000010"/><circle cx="48" cy="68" r="4" fill="#00000012"/>`});
+reg('ribbon',.28,c=>{const [a,b]=c;return `<path d="M0 8h100l-8 12 8 12H0l8-12Z" fill="${a}"/><path d="M0 8l8 12-8 12" fill="none" stroke="${b}" stroke-width="1.4"/>`});
+reg('leafrow',.14,c=>{const [a,b]=c;let s='';for(let i=0;i<12;i++){const x=4+i*8.2;s+=`<path d="M${x} 12c4-6 4-12 0-12-4 0-4 6 0 12Z" fill="${i%2?a:b}"/>`}return s});
+reg('frame',1,(c,W=100,H=100)=>{const [a,b]=c,m=Math.min(W,H)*.04;const rr=(i,col,w)=>`<rect x="${f2(m+i)}" y="${f2(m+i)}" width="${f2(W-2*(m+i))}" height="${f2(H-2*(m+i))}" fill="none" stroke="${col}" stroke-width="${w}"/>`;
+  let s=rr(0,a,.9)+rr(m*.35,b,.4);const cs=[[m,m,0],[W-m,m,90],[W-m,H-m,180],[m,H-m,270]];cs.forEach(([x,y,r])=>s+=`<g transform="translate(${f2(x)} ${f2(y)}) rotate(${r})"><path d="M0 0h${f2(m*3)}v${f2(m*.35)}H${f2(m*.35)}v${f2(m*3)}H0Z" fill="${a}"/><circle cx="${f2(m*.6)}" cy="${f2(m*.6)}" r="${f2(m*.5)}" fill="${b}"/></g>`);return s});
+const svgURI=(name,cols,W,H,seed)=>{const ar=ARTAR[name];const vw=100,vh=(W&&H)?100*H/W:ar*100;
+  const body=ART[name](cols,vw,vh,seed);return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vw} ${f2(vh)}">${body}</svg>`)};
+/* an image layer drawn from the library; width w, height follows the art's own proportions (or h when W/H pattern art) */
+function AI(name,x,y,w,cols,o={}){
+  const pat=!!o.fill,h=pat?o.fill:w*ARTAR[name];const src=svgURI(name,cols,pat?w:0,pat?h:0,o.seed);
+  const r=Object.assign({id:uid(),type:'image',src,x,y,w,h,rot:0,fit:'cover',z:1,ox:0,oy:0,mask:'none',r:0,sw:0,stroke:'#fff',flt:{},fp:'none',fpv:100,vig:0,op:1,name:o.nm||name,nw:1000,nh:Math.round(1000*h/w),art:name},o);delete r.fill;delete r.seed;delete r.nm;return r}
+
+const TCATS=['Festivals','Wedding & Events','Birthday & Party','Business','Social','Slides','Print','Resume & Docs','Education','Food','Real estate','Fitness','Fashion & Jewellery','YouTube','Travel','Logos'];
+/* ---------- template engine: festival layouts + design families ---------- */
+const DC={diya:['#ffb703','#c8553d','#ffd166'],kalash:['#c8793a','#ffd166','#2f9e44'],lotus:['#f783ac','#e64980','#fff0f6'],kite:['#e03131','#ffd43b','#555555'],crescent:['#e9b949','#fff3bf'],lantern:['#e03131','#ffd166','#c99700'],gulal:['#e03131','#f59f00','#7048e8','#2f9e44','#1c7ed6','#d6336c'],rangoli:['#e03131','#f59f00','#7048e8','#2f9e44','#1c7ed6','#d6336c'],xtree:['#1b7f4a','#0f5d33','#ffd43b'],snow:['#ffffff'],gift:['#e03131','#2f9e44','#ffd43b'],balloons:['#e03131','#ffd43b','#339af0'],cake:['#f783ac','#a5d8ff','#ffffff'],feather:['#1098ad','#1864ab','#2f9e44'],chakra:['#000080'],flag:[],sun:['#ffb703','#fb8500'],pot:['#c8793a','#ffd166','#ffffff'],cane:['#7048e8','#2f9e44'],kolam:['#ffffff','#ffd166'],firework:['#ffd166','#ff5d8f','#ffffff'],heart:['#e03131','#ffffff'],sparkle:['#ffd43b','#ff8787'],bell:['#ffd43b','#e8590c'],rakhi:['#ffd166','#e03131','#fff3bf'],flame:['#e8590c','#ffb703','#fff3bf'],wheat:['#e9b949','#7a8f2a'],dandiya:['#c8553d','#ffd166','#2f9e44'],moon:['#ffe9a8','#ffffff'],book:['#4263eb','#f59f00','#ffffff'],cap:['#1f1c19','#e8590c'],bulb:['#ffd43b','#1f1c19'],trophy:['#ffd43b','#e8590c'],gem:['#339af0','#74c0fc','#ffffff'],rings:['#ffd166','#e9b949'],crown:['#ffd43b','#e8590c'],cup:['#7a4a21','#bbbbbb'],leaf:['#2f9e44','#b2f2bb'],paisley:['#c2410c','#ffd166','#fff3bf'],feathers:['#1098ad'],thali:['#cfcfcf','#e03131','#ffd43b'],leafrow:['#2f9e44','#74c69d'],toran:['#fb8500','#ffd60a','#2d9d4f'],vine:['#2f9e44','#c99700'],ribbon:['#e03131','#ffd166'],plane:['#4263eb','#1b3a8a'],pin:['#e03131','#ffffff'],camera:['#343a40','#4263eb','#ffffff'],cap2:['#1f1c19','#e8590c'],bag:['#e8590c','#ffffff'],house:['#4263eb','#1b3a8a','#ffd43b'],building:['#4263eb','#1b3a8a','#ffffff'],dumbbell:['#e8590c','#333333'],pulse:['#e03131'],laptop:['#343a40','#4263eb'],bars:['#4263eb','#e8590c','#999999'],rocket:['#e8590c','#4263eb','#e03131'],seal:['#c99700','#e03131'],arch:['#c99700','#ffd166'],wave:['#4263eb','#74c0fc']};
+const colA=(F,n)=>(F&&F.hc&&F.hc[n])||((n==='mandala'||n==='jaali'||n==='dots'||n==='frame'||n==='stars'||n==='bokeh'||n==='confetti')&&F&&F.p?F.p:DC[n]||['#ffd166','#e8590c','#fff3bf']);
+const fitA=(n,mw,mh)=>{const ar=ARTAR[n];let w=mw,h=w*ar;if(h>mh){h=mh;w=h/ar}return [w,h]};
+function artAt(F,n,cx,cy,mw,mh,o={},cols){const [w,h]=fitA(n,mw,mh);return AI(n,cx-w/2,cy-h/2,w,cols||colA(F,n),o)}
+const T_=(t,x,y,w,s,o)=>{const e=TX(t,x,y,w,s,o);layoutText(e);return e};
+function flowT(x,w,y,items,u,limit){let k=1,res;
+  const build=k=>{const out=[];let cy=y;for(const it of items){if(typeof it==='number'){cy+=it*u*k;continue}const [t,sz,o]=it;const e=T_(t,x,cy,w,sz*k,Object.assign({align:'center'},o||{}));out.push(e);cy+=e.h}return {o:out,end:cy}};
+  for(let i=0;i<3;i++){res=build(k);if(!limit||res.end<=limit)break;k=Math.max(.5,k*(limit-y)/(res.end-y)*.97)}return res}
+const bgOf=F=>F.lt?{t:'grad',k:'lin',c1:F.d[0],c2:F.d[1]||F.d[0],a:170}:{t:'grad',k:'lin',c1:F.d[0],c2:F.d[1]||F.d[0],a:165};
+const inkOf=F=>F.lt?(F.k||'#2b2118'):'#ffffff';
+function heroCluster(F,o,cx,cy,s){
+  const H=F.H||['diya'];const [m,l,r]=H;
+  if(l)o.push(artAt(F,l,cx-s*.66,cy+s*.2,s*.5,s*.62,{rot:-9}));
+  if(r)o.push(artAt(F,r,cx+s*.66,cy+s*.2,s*.5,s*.62,{rot:9}));
+  o.push(artAt(F,m,cx,cy,s,s*1.05));
+}
+function bgDecor(F,o,W,H,u){
+  if(F.lt)o.push(AI(F.pat||'jaali',0,0,W,[F.p[0]],{fill:H,op:F.pat==='dots'?.09:.07,nm:'Pattern'}));
+  else o.push(AI('stars',0,0,W,[F.p[2],F.p[0]],{fill:H,seed:(F.n.length*7)+3,op:.75,nm:'Sparkle field'}));
+}
+const natF=(F,u,sz)=>F.hi?{t:F.hi,f:F.hf||'Rozha One',s:sz||(F.hi.length>18?8:F.hi.length>12?10.5:13)}:null;
+
+const LAY={
+ center:F=>(W,H,u)=>{const o=[],cx=W/2,ink=inkOf(F);bgDecor(F,o,W,H,u);
+  o.push(AI(F.M||'mandala',cx-W*.6,H*.47-W*.6,W*1.2,colA(F,F.M||'mandala'),{op:F.lt?.16:.18,nm:'Mandala'}));
+  if(F.top)o.push(AI(F.top,0,0,W,colA(F,F.top),{nm:'Garland'}));
+  const hs=u*33;heroCluster(F,o,cx,H*.33,hs);
+  const nf=natF(F,u),items=[];
+  if(nf)items.push([nf.t,u*nf.s,{font:nf.f,color:F.p[0],lh:1.1}],1.2);
+  items.push([F.en,u*(F.en.length>14?9:12),{font:F.script||'Great Vibes',color:ink,lh:1.05}],1.8,[F.msg,u*3.3,{color:ink,op:.88,lh:1.45,font:'Poppins'}]);
+  const fl=flowT(W*.1,W*.8,H*.54,items,u,H*.9);o.push(...fl.o);
+  o.push(SH('rect',cx-u*8,H*.93,u*16,u*.5,F.p[0]),T_('With best wishes',0,H*.945,W,u*3,{align:'center',color:ink,op:.75,ls:14,upper:true,font:'Poppins'}));
+  return {bg:bgOf(F),objs:o}},
+ frame:F=>(W,H,u)=>{const o=[],cx=W/2,ink=inkOf(F);bgDecor(F,o,W,H,u);
+  o.push(AI('frame',0,0,W,[F.p[0],F.p[1]],{fill:H,nm:'Border'}));
+  if(F.top)o.push(AI(F.top,W*.1,H*.055,W*.8,colA(F,F.top),{nm:'Garland'}));
+  heroCluster(F,o,cx,H*.3,u*30);
+  const nf=natF(F,u,F.hi&&F.hi.length>14?7.4:10.5),items=[];
+  if(nf)items.push([nf.t,u*nf.s,{font:nf.f,color:F.p[0],lh:1.1}],1);
+  items.push([F.en.toUpperCase(),u*(F.en.length>14?4.6:6),{font:'Cinzel Decorative',bold:true,color:ink,ls:6,lh:1.2}],1.6,[F.msg,u*3.2,{color:ink,op:.85,lh:1.5,font:'Lora',italic:true}]);
+  const fl=flowT(W*.14,W*.72,H*.5,items,u,H*.82);o.push(...fl.o);
+  o.push(AI('ribbon',W*.5-u*18,H*.84,u*36,[F.p[0],F.p[2]],{}),T_('FROM: YOUR NAME',W*.5-u*18,H*.84+u*2.6,u*36,u*2.8,{align:'center',color:F.lt?'#ffffff':'#1f1c19',bold:true,ls:10,font:'Poppins'}));
+  return {bg:bgOf(F),objs:o}},
+ story:F=>(W,H,u)=>{const o=[],cx=W/2,ink=inkOf(F);bgDecor(F,o,W,H,u);
+  o.push(AI(F.M||'mandala',cx-W*.8,H*.64-W*.8,W*1.6,colA(F,F.M||'mandala'),{op:F.lt?.15:.2,nm:'Mandala'}));
+  if(F.top)o.push(AI(F.top,0,0,W,colA(F,F.top),{nm:'Garland'}));
+  heroCluster(F,o,cx,H*.26,W*.62);
+  const nf=natF(F,u,F.hi&&F.hi.length>16?9:13),items=[];
+  if(nf)items.push([nf.t,u*nf.s,{font:nf.f,color:F.p[0],lh:1.1}],1.4);
+  items.push([F.en,u*(F.en.length>14?10:13),{font:F.script||'Great Vibes',color:ink,lh:1.05}],2,[F.msg,u*3.4,{color:ink,op:.88,lh:1.5,font:'Poppins'}]);
+  const fl=flowT(W*.09,W*.82,H*.48,items,u,H*.86);o.push(...fl.o);
+  o.push(SH('rect',W*.2,H*.88,W*.6,u*10,F.p[0],{r:u*5}),T_('Your name · Your brand',W*.2,H*.88+u*2.6,W*.6,u*4,{align:'center',bold:true,color:F.lt?'#ffffff':'#1f1c19',font:'Poppins'}));
+  return {bg:bgOf(F),objs:o}},
+ sale:F=>(W,H,u)=>{const o=[],ink=inkOf(F);bgDecor(F,o,W,H,u);
+  o.push(AI(F.M||'mandala',W*.38,H*.3,W*.9,colA(F,F.M||'mandala'),{op:.5,nm:'Mandala'}));
+  heroCluster(F,o,W*.74,H*.66,u*36);
+  o.push(T_(F.n.toUpperCase(),W*.08,H*.1,W*.8,u*4.4,{bold:true,color:F.p[0],ls:30,font:'Poppins'}));
+  const a=T_(F.hd||'FESTIVE\nSALE',W*.08,H*.15,W*.84,u*(F.hd?14:20),{font:'Anton',color:ink,lh:.98});o.push(a);
+  const y=a.y+a.h+u*3;o.push(SH('rect',W*.08,y,u*58,u*13,F.p[0],{r:u*3}),T_(F.off||'FLAT 50% OFF',W*.08,y+u*2.6,u*58,u*7.4,{font:'Anton',color:F.lt?'#ffffff':'#1f1c19',align:'center',ls:2}));
+  o.push(T_(F.hd?F.msg:'On all products · '+F.en+'!',W*.08,y+u*17,W*.5,u*3.4,{color:ink,op:.85,lh:1.5,font:'Poppins'}));
+  o.push(SH('rect',W*.08,H*.88,u*36,u*8.4,ink,{r:u*4.2}),T_(F.cta||'SHOP NOW',W*.08,H*.88+u*2,u*36,u*4.4,{bold:true,align:'center',color:F.lt?'#ffffff':F.d[0],ls:6,font:'Poppins'}));
+  return {bg:bgOf(F),objs:o}},
+ invite:F=>(W,H,u)=>{const o=[],cx=W/2,ink=inkOf(F);bgDecor(F,o,W,H,u);
+  o.push(AI('arch',W*.08,H*.05,W*.84,[F.p[0],F.p[1]],{nm:'Arch'}));
+  o.push(artAt(F,F.H[0],cx,H*.2,W*.36,H*.17));
+  const nf=natF(F,u,F.hi&&F.hi.length>16?5.6:8),items=[[F.kick||'YOU ARE INVITED TO',u*2.6,{color:ink,op:.8,ls:22,font:'Poppins',bold:true}],1.2];
+  if(nf)items.push([nf.t,u*nf.s,{font:nf.f,color:F.p[0],lh:1.15}],.8);
+  items.push([F.en,u*(F.en.length>14?7:9),{font:F.script||'Great Vibes',color:ink,lh:1.05}],2.4,[F.when||'SATURDAY · 12 NOVEMBER · 7 PM',u*2.8,{color:F.p[0],bold:true,ls:10,font:'Poppins'}],1,[F.where||'Your Venue Name, City',u*3,{color:ink,op:.85,font:'Lora',italic:true}],1.6,[F.line||'Join us for an evening of lights, music and sweets.',u*2.8,{color:ink,op:.8,lh:1.5,font:'Poppins'}]);
+  const fl=flowT(W*.18,W*.64,H*.36,items,u,H*.86);o.push(...fl.o);
+  o.push(SH('rect',cx-u*15,H*.88,u*30,u*7,F.p[0],{r:u*3.5}),T_(F.rsvp||'RSVP · +00 000 000 000',cx-u*15,H*.88+u*1.9,u*30,u*3,{align:'center',bold:true,color:F.lt?'#ffffff':'#1f1c19',font:'Poppins'}));
+  return {bg:bgOf(F),objs:o}},
+ banner:F=>(W,H,u)=>{const o=[],ink=inkOf(F);bgDecor(F,o,W,H,u);
+  o.push(AI(F.M||'mandala',W*.56,-H*.4,H*1.8,colA(F,F.M||'mandala'),{op:.35,nm:'Mandala'}));
+  heroCluster(F,o,W*.8,H*.52,H*.66);
+  const nf=natF(F,u),items=[];if(nf)items.push([nf.t,H*(F.hi.length>16?.12:.17),{font:nf.f,color:F.p[0],align:'left',lh:1.1}],.4);
+  items.push([F.en,H*(F.en.length>14?.15:.19),{font:F.script||'Great Vibes',color:ink,align:'left',lh:1.05}],.5,[F.msg,H*.052,{color:ink,op:.88,align:'left',lh:1.45,font:'Poppins'}]);
+  const fl=flowT(W*.06,W*.5,H*.14,items,H/100,H*.9);o.push(...fl.o);return {bg:bgOf(F),objs:o}},
+ poster:F=>(W,H,u)=>{const o=[],cx=W/2,ink=inkOf(F);bgDecor(F,o,W,H,u);
+  o.push(AI(F.M||'mandala',cx-W*.7,H*.34-W*.7,W*1.4,colA(F,F.M||'mandala'),{op:.2,nm:'Mandala'}));
+  if(F.top)o.push(AI(F.top,0,0,W,colA(F,F.top),{nm:'Garland'}));
+  heroCluster(F,o,cx,H*.3,W*.5);
+  const nf=natF(F,u,F.hi&&F.hi.length>16?8:12),items=[];
+  if(nf)items.push([nf.t,u*nf.s,{font:nf.f,color:F.p[0],lh:1.1}],1);
+  items.push([F.en.toUpperCase(),u*(F.en.length>14?7:10),{font:'Anton',color:ink,ls:4,lh:1}],2,[F.msg,u*2.8,{color:ink,op:.88,lh:1.5,font:'Poppins'}]);
+  const fl=flowT(W*.1,W*.8,H*.54,items,u,H*.84);o.push(...fl.o);
+  o.push(SH('rect',W*.1,H*.86,W*.8,u*.35,F.p[0]),T_('Your Business Name',W*.1,H*.875,W*.5,u*3.2,{bold:true,color:ink,font:'Poppins'}),T_('www.yourwebsite.com  ·  +00 000 000 000',W*.1,H*.905,W*.8,u*2.6,{color:ink,op:.75,font:'Poppins'}));
+  return {bg:bgOf(F),objs:o}},
+ minimal:F=>(W,H,u)=>{const o=[],cx=W/2,ink=inkOf(F);
+  o.push(SH('rect',0,0,W,H,F.lt?F.d[0]:F.d[0]));o.push(AI(F.pat||'dots',0,0,W,[F.p[0],F.p[1]],{fill:H,op:F.lt?.12:.18}));
+  o.push(AI('wave',0,H*.78,W,[F.p[0],F.p[1]],{nm:'Wave',h:W*.3,fit:'cover',op:.9}));
+  o.push(artAt(F,F.H[0],cx,H*.18,W*.24,H*.2));
+  const nf=natF(F,u,F.hi&&F.hi.length>16?10:16),items=[];
+  if(nf)items.push([nf.t,u*nf.s,{font:nf.f,color:F.p[0],lh:1.15}],2);
+  items.push([F.en.toUpperCase(),u*4.6,{font:'Poppins',bold:true,color:ink,ls:14}],2,[F.msg,u*3.2,{color:ink,op:.85,lh:1.5,font:'Lora',italic:true}]);
+  const fl=flowT(W*.1,W*.8,H*.32,items,u,H*.76);o.push(...fl.o);return {bg:{t:'solid',c:F.d[0]},objs:o}}
+};
+
+const FEST=[
+ {n:'Diwali',en:'Happy Diwali',hi:'शुभ दीपावली',msg:'May the festival of lights fill your home with joy, prosperity and endless sweetness.',d:['#2b0a4e','#0d0220'],p:['#ffb703','#fb8500','#ffe8a3'],H:['diya','diya','diya'],top:'toran',M:'mandala',big:1},
+ {n:'Dhanteras',en:'Happy Dhanteras',hi:'शुभ धनतेरस',msg:'May Goddess Lakshmi bless you with wealth, health and happiness.',d:['#5c0a14','#1f0207'],p:['#ffc300','#ff9f1c','#fff0b3'],H:['kalash','gem','diya'],top:'toran',M:'mandala'},
+ {n:'Bhai Dooj',en:'Happy Bhai Dooj',hi:'भाई दूज की शुभकामनाएं',msg:'For the bond that never breaks — a tilak of love, a promise of protection.',d:['#fff0f5','#ffd6e6'],lt:1,k:'#6b0f3a',p:['#c2255c','#f06595','#ffd6e6'],H:['diya','sparkle','gift'],top:'vine',M:'rangoli'},
+ {n:'Holi',en:'Happy Holi',hi:'होली की शुभकामनाएं',msg:'May your life be painted in the brightest colours of love, laughter and joy.',d:['#ffffff','#fff3d9'],lt:1,k:'#2b1b4b',p:['#d6336c','#7048e8','#f59f00'],H:['gulal','sparkle','balloons'],M:'rangoli',pat:'dots',big:1,hc:{gulal:['#e03131','#f59f00','#7048e8','#2f9e44','#1c7ed6','#d6336c']}},
+ {n:'Navratri',en:'Happy Navratri',hi:'शुभ नवरात्रि',msg:'Nine nights of devotion, dance and divine blessings. Jai Mata Di!',d:['#7a0c1e','#2a0309'],p:['#ffc300','#ff6b35','#ffe8a3'],H:['rangoli','dandiya','diya'],top:'toran',M:'rangoli',big:1},
+ {n:'Dussehra',en:'Happy Dussehra',hi:'शुभ विजयादशमी',msg:'May good always triumph over evil. Wishing you victory in everything you do.',d:['#3b0a0a','#150303'],p:['#ff9f1c','#e63946','#ffe0b2'],H:['flame','bell','firework'],top:'toran',M:'mandala'},
+ {n:'Durga Puja',en:'Shubho Durga Puja',hi:'दुर्गा पूजा की शुभकामनाएं',msg:'May Maa Durga bless you with strength, courage and endless happiness.',d:['#fff7f0','#ffe1d0'],lt:1,k:'#7a0c1e',p:['#c1121f','#e85d04','#ffd6a5'],H:['lotus','bell','diya'],top:'vine',M:'mandala',big:1},
+ {n:'Ganesh Chaturthi',en:'Ganpati Bappa Morya',hi:'गणपति बप्पा मोरया',msg:'May Lord Ganesha remove all obstacles and bless your home with wisdom and joy.',d:['#ff9f1c','#e85d04'],p:['#fffbe6','#7a0c1e','#ffe8a3'],H:['kalash','lotus','bell'],top:'toran',M:'mandala',big:1},
+ {n:'Raksha Bandhan',en:'Happy Raksha Bandhan',hi:'रक्षाबंधन की शुभकामनाएं',msg:'For the thread of love that binds hearts forever. Happy Rakhi!',d:['#fff3e0','#ffd9a8'],lt:1,k:'#7a2e00',p:['#e03131','#f59f00','#fff3bf'],H:['rakhi','sparkle','gift'],top:'vine',M:'mandala'},
+ {n:'Janmashtami',en:'Happy Janmashtami',hi:'जन्माष्टमी की शुभकामनाएं',msg:'May Lord Krishna fill your life with love, music and blessings.',d:['#0b2a5b','#04122b'],p:['#ffd60a','#4cc9f0','#fff3bf'],H:['feather','pot','lotus'],M:'mandala',hc:{feather:['#1098ad','#1864ab','#2f9e44']}},
+ {n:'Karwa Chauth',en:'Happy Karwa Chauth',hi:'करवा चौथ की शुभकामनाएं',msg:'For love that waits under the moon — blessings of a lifetime together.',d:['#5c0a2f','#220413'],p:['#ffd166','#ef476f','#ffe8a3'],H:['moon','diya','sparkle'],M:'mandala',top:'toran'},
+ {n:'Maha Shivaratri',en:'Maha Shivaratri',hi:'महाशिवरात्रि की शुभकामनाएं',msg:'Om Namah Shivaya. May the night of Shiva bring peace, power and light.',d:['#0f1b4d','#050a24'],p:['#8ecae6','#e0aaff','#e0f4ff'],H:['crescent','lotus','bell'],M:'mandala'},
+ {n:'Ram Navami',en:'Happy Ram Navami',hi:'राम नवमी की शुभकामनाएं',msg:'Jai Shri Ram. May the values of Lord Ram guide your every step.',d:['#ffb703','#f77f00'],p:['#7a0c1e','#fffbe6','#ffe8a3'],H:['sun','bell','diya'],top:'toran',M:'mandala'},
+ {n:'Hanuman Jayanti',en:'Hanuman Jayanti',hi:'हनुमान जयंती की शुभकामनाएं',msg:'May the strength and devotion of Hanuman ji be with you always.',d:['#d62828','#7a0c1e'],p:['#ffd166','#fffbe6','#ffe8a3'],H:['sun','bell','flame'],M:'mandala',top:'toran'},
+ {n:'Makar Sankranti',en:'Happy Makar Sankranti',hi:'मकर संक्रांति की शुभकामनाएं',msg:'Let your dreams soar high like a kite. Til-gul ghya, god god bola!',d:['#a5d8ff','#e7f5ff'],lt:1,k:'#0b3d91',p:['#e8590c','#f59f00','#fff3bf'],H:['kite','kite','sun'],M:'mandala',pat:'dots',big:1,hc:{kite:['#e03131','#ffd43b','#444444']}},
+ {n:'Lohri',en:'Happy Lohri',hi:'ਲੋਹੜੀ ਦੀਆਂ ਲੱਖ ਲੱਖ ਵਧਾਈਆਂ',hf:'Noto Sans Gurmukhi',msg:'Warmth of the bonfire, sweetness of gajak, joy of dance. Happy Lohri!',d:['#3b0d0d','#140404'],p:['#ff9f1c','#ffd166','#fff0b3'],H:['flame','wheat','sparkle'],M:'mandala'},
+ {n:'Pongal',en:'Happy Pongal',hi:'இனிய பொங்கல் நல்வாழ்த்துக்கள்',hf:'Noto Sans Tamil',msg:'May the harvest bring overflowing happiness. Pongalo Pongal!',d:['#fff8e1','#ffe9a8'],lt:1,k:'#4a2c0b',p:['#e8590c','#2f9e44','#ffe9a8'],H:['pot','cane','sun'],top:'leafrow',M:'kolam',big:1},
+ {n:'Baisakhi',en:'Happy Baisakhi',hi:'ਵਿਸਾਖੀ ਦੀਆਂ ਵਧਾਈਆਂ',hf:'Noto Sans Gurmukhi',msg:'A golden harvest, a new beginning. Wishing you joy and abundance.',d:['#fff3bf','#ffd43b'],lt:1,k:'#5c3a00',p:['#e8590c','#2f9e44','#fff3bf'],H:['wheat','sun','wheat'],M:'mandala',pat:'dots'},
+ {n:'Onam',en:'Happy Onam',hi:'ഓണാശംസകൾ',hf:'Noto Sans Malayalam',msg:'May Maveli bring you prosperity, a feast of joy and a pookalam of smiles.',d:['#fffaf0','#ffe8b3'],lt:1,k:'#5a2d0c',p:['#e8590c','#2f9e44','#ffe8b3'],H:['rangoli','lotus','diya'],top:'leafrow',M:'rangoli',big:1},
+ {n:'Ugadi',en:'Happy Ugadi',hi:'ఉగాది శుభాకాంక్షలు',hf:'Noto Sans Telugu',msg:'A new year, new hopes. May it taste of sweet, sour and everything in between.',d:['#fff8e1','#ffe0b2'],lt:1,k:'#4a2c0b',p:['#e8590c','#2f9e44','#ffe0b2'],H:['kalash','leaf','sparkle'],top:'leafrow',M:'mandala'},
+ {n:'Gudi Padwa',en:'Happy Gudi Padwa',hi:'गुढीपाडव्याच्या हार्दिक शुभेच्छा',msg:'May the Gudi of victory bring joy and prosperity to your home.',d:['#ff9f1c','#e85d04'],p:['#fffbe6','#7a0c1e','#ffe8a3'],H:['kalash','leaf','sun'],top:'toran',M:'mandala'},
+ {n:'Vishu',en:'Happy Vishu',hi:'വിഷു ആശംസകൾ',hf:'Noto Sans Malayalam',msg:'May the Vishukkani bring a year full of light and plenty.',d:['#fff7cc','#ffe066'],lt:1,k:'#4a2c0b',p:['#e8590c','#2f9e44','#fff7cc'],H:['kalash','diya','sparkle'],top:'vine',M:'mandala'},
+ {n:'Poila Boishakh',en:'Shubho Noboborsho',hi:'শুভ নববর্ষ',hf:'Noto Sans Bengali',msg:'Wishing you a new year of peace, prosperity and sweet beginnings.',d:['#ffffff','#ffe3e3'],lt:1,k:'#7a0c1e',p:['#d62828','#f77f00','#ffe3e3'],H:['rangoli','sun','diya'],top:'vine',M:'kolam'},
+ {n:'Guru Nanak Jayanti',en:'Guru Nanak Jayanti',hi:'ਗੁਰਪੁਰਬ ਦੀਆਂ ਲੱਖ ਲੱਖ ਵਧਾਈਆਂ',hf:'Noto Sans Gurmukhi',msg:'Waheguru ji ka Khalsa, Waheguru ji ki Fateh. Wishing you peace and light.',d:['#0a3d91','#041a45'],p:['#ffd60a','#ffffff','#fff3bf'],H:['sun','diya','sparkle'],M:'mandala'},
+ {n:'Buddha Purnima',en:'Happy Buddha Purnima',hi:'बुद्ध पूर्णिमा की शुभकामनाएं',msg:'May the light of Buddha guide you to peace, compassion and wisdom.',d:['#2a1b4d','#0d0722'],p:['#ffd166','#e0aaff','#fff3bf'],H:['moon','lotus','lotus'],M:'mandala'},
+ {n:'Mahavir Jayanti',en:'Mahavir Jayanti',hi:'महावीर जयंती की शुभकामनाएं',msg:'Live and let live. May Lord Mahavir’s teachings guide you.',d:['#fff7e0','#ffe9b0'],lt:1,k:'#5c3a00',p:['#e8590c','#c99700','#ffe9b0'],H:['lotus','lotus','sparkle'],top:'vine',M:'mandala'},
+ {n:'Eid al-Fitr',en:'Eid Mubarak',hi:'ईद मुबारक',msg:'May Allah accept your prayers and fill your life with peace and happiness.',d:['#06402b','#021d13'],p:['#ffd166','#80ed99','#fff3bf'],H:['crescent','lantern','lantern'],M:'mandala',big:1},
+ {n:'Eid al-Adha',en:'Eid al-Adha Mubarak',hi:'ईद-उल-अज़हा मुबारक',msg:'May the spirit of sacrifice and sharing bless you and your family.',d:['#0b3c5d','#04192a'],p:['#ffd166','#8ecae6','#fff3bf'],H:['crescent','lantern','moon'],M:'mandala'},
+ {n:'Ramadan',en:'Ramadan Kareem',hi:'रमज़ान मुबारक',msg:'A month of mercy, reflection and togetherness. Ramadan Mubarak.',d:['#1b2a49','#080e1f'],p:['#ffd166','#c7f9cc','#fff3bf'],H:['lantern','crescent','lantern'],M:'mandala'},
+ {n:'Christmas',en:'Merry Christmas',hi:'मेरी क्रिसमस',hf:'Yatra One',msg:'Wishing you peace, joy and a season full of warmth and wonder.',d:['#7a0c14','#33040a'],p:['#ffd43b','#ffffff','#fff3bf'],H:['xtree','gift','bell'],M:'mandala',pat:'dots',big:1,script:'Pacifico'},
+ {n:'New Year',en:'Happy New Year',hi:'नव वर्ष की शुभकामनाएं',msg:'New dreams, new goals, new memories. Cheers to a brighter year ahead!',d:['#0b1a3b','#02050f'],p:['#ffd166','#ff5d8f','#ffffff'],H:['firework','sparkle','firework'],M:'mandala',big:1},
+ {n:'Republic Day',en:'Happy Republic Day',hi:'गणतंत्र दिवस की शुभकामनाएं',msg:'Proud of our Constitution, proud to be Indian. Jai Hind!',d:['#ffffff','#f1fff0'],lt:1,k:'#0a2a66',p:['#FF9933','#138808','#000080'],H:['chakra','flag','chakra'],M:'mandala',pat:'dots',big:1,hc:{mandala:['#FF9933','#138808','#000080']}},
+ {n:'Independence Day',en:'Happy Independence Day',hi:'स्वतंत्रता दिवस की शुभकामनाएं',msg:'Freedom is a responsibility we carry with pride. Jai Hind!',d:['#ffffff','#fff1e0'],lt:1,k:'#0a2a66',p:['#FF9933','#138808','#000080'],H:['flag','chakra','kite'],M:'mandala',pat:'dots',big:1,hc:{mandala:['#FF9933','#138808','#000080']}},
+ {n:'Gandhi Jayanti',en:'Gandhi Jayanti',hi:'गांधी जयंती',msg:'Be the change you wish to see in the world.',d:['#fbf3e0','#efe0b8'],lt:1,k:'#3a2d12',p:['#c2410c','#138808','#efe0b8'],H:['chakra','leaf','sparkle'],M:'mandala'},
+ {n:'Teachers’ Day',en:'Happy Teachers’ Day',hi:'शिक्षक दिवस की शुभकामनाएं',msg:'Thank you for lighting the path to knowledge. You shape the future.',d:['#e7f5ff','#c5e4ff'],lt:1,k:'#0b2a5b',p:['#1c7ed6','#f59f00','#e7f5ff'],H:['book','cap','bulb'],M:'mandala',pat:'dots',hc:{book:['#4263eb','#f59f00','#ffffff']}},
+ {n:'Children’s Day',en:'Happy Children’s Day',hi:'बाल दिवस की शुभकामनाएं',msg:'Stay curious, stay joyful, stay young at heart!',d:['#e3fafc','#fff3bf'],lt:1,k:'#0b3d4a',p:['#f06595','#339af0','#ffd43b'],H:['balloons','kite','sparkle'],M:'rangoli',pat:'dots',script:'Pacifico'},
+ {n:'Women’s Day',en:'Happy Women’s Day',hi:'अंतर्राष्ट्रीय महिला दिवस की शुभकामनाएं',msg:'Here’s to strong women. May we know them, be them, raise them.',d:['#fff0f6','#fcc2d7'],lt:1,k:'#6b0f3a',p:['#c2255c','#7048e8','#ffd6e6'],H:['lotus','crown','heart'],top:'vine',M:'mandala'},
+ {n:'Mother’s Day',en:'Happy Mother’s Day',hi:'मातृ दिवस की शुभकामनाएं',msg:'For the love that never asks for anything in return. Thank you, Maa.',d:['#fff0f6','#ffc9de'],lt:1,k:'#6b0f3a',p:['#e03177','#f783ac','#ffe3ef'],H:['heart','lotus','sparkle'],top:'vine',M:'mandala'},
+ {n:'Father’s Day',en:'Happy Father’s Day',hi:'पितृ दिवस की शुभकामनाएं',msg:'Thank you for being my strength, my guide and my hero.',d:['#102a43','#061826'],p:['#ffd166','#4cc9f0','#ffffff'],H:['trophy','cup','sparkle'],M:'mandala'},
+ {n:'Valentine’s Day',en:'Happy Valentine’s Day',hi:'',msg:'You are my today and all of my tomorrows.',d:['#7a0c3a','#2b0416'],p:['#ff8fab','#ffd6e0','#ffffff'],H:['heart','rings','sparkle'],M:'mandala',script:'Great Vibes'},
+ {n:'Friendship Day',en:'Happy Friendship Day',hi:'मित्रता दिवस की शुभकामनाएं',msg:'Friends are the family we choose. Thank you for being mine.',d:['#fff4e6','#ffd8a8'],lt:1,k:'#6a2c00',p:['#e8590c','#7048e8','#ffd43b'],H:['balloons','sparkle','heart'],M:'rangoli',pat:'dots'},
+ {n:'Akshaya Tritiya',en:'Happy Akshaya Tritiya',hi:'अक्षय तृतीया की शुभकामनाएं',msg:'May your prosperity never diminish. Blessings of gold, growth and good fortune.',d:['#4a0d0d','#1a0404'],p:['#ffc300','#ff9f1c','#fff0b3'],H:['kalash','gem','sparkle'],top:'toran',M:'mandala'},
+ {n:'Basant Panchami',en:'Happy Basant Panchami',hi:'बसंत पंचमी की शुभकामनाएं',msg:'May Maa Saraswati bless you with wisdom, art and knowledge.',d:['#fff3bf','#ffe066'],lt:1,k:'#5c3a00',p:['#e8590c','#f59f00','#fff3bf'],H:['lotus','book','sparkle'],top:'vine',M:'mandala',hc:{lotus:['#ffffff','#f59f00','#fff7cc']}}
+];
+const FEST_LAYOUTS=['center','frame','story','sale'],BIG_EXTRA=['invite','banner','poster'];
+const LAYSZ={center:[1080,1080],frame:[1080,1080],story:[1080,1920],sale:[1080,1080],invite:[1050,1470],banner:[1640,624],poster:[1240,1754],minimal:[1080,1080]};
+const LAYNAME={center:'Greeting',frame:'Classic card',story:'Story',sale:'Festive offer',invite:'Invitation',banner:'Facebook cover',poster:'Poster',minimal:'Minimal'};
+FEST.forEach((F,i)=>{const L=FEST_LAYOUTS.slice();L[(i%2)?1:3]=L[(i%2)?1:3];if(i%3===0)L.push('minimal');if(F.big)L.push(...BIG_EXTRA);
+  L.forEach(l=>TEMPLATES.push({n:`${F.n} ${LAYNAME[l]}`,c:'Festivals',g:F.n,tag:`indian festival ${F.n} ${F.en} greeting wishes`,s:LAYSZ[l],b:LAY[l](F)}))});
+
+const tplSize=t=>t.s||(t.n==='Business card'?[1050,600]:t.c==='Slides'?[1920,1080]:t.n==='Flyer'||t.n==='Event poster'?[1240,1754]:[1080,1080]);
+const tplThumbs=new Map(),tplDrawn=new Set();
+const fontsOf=objs=>{const s=new Set();objs.forEach(o=>{if(o.type==='text'&&o.font)s.add(`${o.bold?700:400} 40px "${o.font}"`)});return [...s]};
+const waitImgs=(objs,ms)=>Promise.race([Promise.all(objs.filter(o=>o.type==='image'&&o.src).map(o=>new Promise(res=>{const i=getImg(o.src);if(i.complete&&i.naturalWidth)return res();i.addEventListener('load',res,{once:true});i.addEventListener('error',res,{once:true})}))),new Promise(r=>setTimeout(r,ms))]);
+async function paintThumb(c,t){
+  const [W,H]=tplSize(t);let built;try{built=buildTemplate(t,W,H)}catch(e){return}
+  try{await Promise.race([Promise.all(fontsOf(built.objs).map(f=>document.fonts.load(f,'Aa आ'))),new Promise(r=>setTimeout(r,1500))])}catch(e){}
+  await waitImgs(built.objs,2500);
+  try{built=buildTemplate(t,W,H);const k=c.width/W,x=c.getContext('2d');x.setTransform(1,0,0,1,0,0);x.clearRect(0,0,c.width,c.height);x.scale(k,k);x.fillStyle='#fff';x.fillRect(0,0,W,H);drawPageContent(x,built,W,H,{s:k});tplDrawn.add(c)}catch(e){}
+}
+let thumbIO=null;
+function tplThumb(t){
+  let c=tplThumbs.get(t);if(c)return c;
+  const [W,H]=tplSize(t),k=Math.min(2,(devicePixelRatio||1))*300/Math.max(W,H);c=document.createElement('canvas');c.width=Math.round(W*k);c.height=Math.round(H*k);c.title=t.n;c.style.aspectRatio=W+'/'+H;
+  tplThumbs.set(t,c);c._t=t;
+  if('IntersectionObserver' in window){if(!thumbIO)thumbIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){thumbIO.unobserve(e.target);paintThumb(e.target,e.target._t)}}),{rootMargin:'300px'});thumbIO.observe(c)}else paintThumb(c,t);
+  return c;
+}
+/* ---------- editor side panel + applying a template ---------- */
+function adoptArt(objs){const m=new Map(),walk=l=>l.forEach(o=>{if(o.type==='image'&&typeof o.src==='string'&&o.src.startsWith('data:')){let id=m.get(o.src);if(!id){id='a_'+uid();D.assets[id]=o.src;m.set(o.src,id)}o.src=id}if(o.kids)walk(o.kids)});walk(objs)}
+function applyTemplate(t){const built=buildTemplate(t,D.w,D.h);adoptArt(built.objs);P().bg=built.bg;P().objs=built.objs;sel=[];touch();selChanged();toast('Template applied — everything is editable')}
+let tplQ='';
+function pTemplates(b){
+  b.append(el('h3',{class:'ph'},'Templates'));
+  const q=searchBox('Search: Diwali, wedding, resume…',v=>{tplQ=v;draw()});$('input',q).value=tplQ;b.append(q);
+  const cats=['All',...TCATS.filter(c=>TEMPLATES.some(t=>t.c===c))];
+  b.append(el('div',{class:'chips'},cats.map(c=>el('button',{class:'chip','aria-pressed':tplCat===c,onclick:()=>{tplCat=c;renderPanel()}},c))));
+  b.append(el('p',{class:'note'},'Applies to the current page and adapts to your canvas size.'));
+  const g=el('div',{class:'grid2'});b.append(g);
+  function draw(){g.innerHTML='';const s=tplQ.trim().toLowerCase();TEMPLATES.filter(t=>(tplCat==='All'||t.c===tplCat)&&(!s||(t.n+' '+t.c+' '+(t.g||'')+' '+(t.tag||'')).toLowerCase().includes(s))).slice(0,150).forEach(t=>{const [w,h]=tplSize(t);g.append(el('button',{class:'tpl','aria-label':'Apply template '+t.n,onclick:()=>applyTemplate(t)},el('div',{style:'display:grid;place-items:center;height:128px;width:100%'},tplThumb(t)),el('span',{},t.n)))});if(!g.children.length)g.append(el('p',{class:'note'},'No templates match.'))}
+  draw();
+}
+
+/* ---------- more template families: events, business, slides, print, social ---------- */
+const add=(c,n,s,b,tag)=>TEMPLATES.push({n,c,s,b,tag:tag||''});
+const dkInk='#1f1c19';
+const pill=(x,y,w,h,fill,txt,tc,u,o={})=>[SH('rect',x,y,w,h,fill,{r:h/2}),T_(txt,x,y+(h-u*4.2)/2-u*.2,w,u*4.2,Object.assign({align:'center',bold:true,color:tc,font:'Poppins'},o))];
+
+/* ---- events & weddings: reuse the festival layouts with event wording ---- */
+const EVENTS=[
+ {c:'Wedding & Events',n:'Royal wedding',en:'Rahul & Priya',hi:'शुभ विवाह',kick:'TOGETHER WITH THEIR FAMILIES',when:'SUNDAY · 14 DECEMBER 2026 · 6 PM',where:'The Grand Palace, Udaipur',line:'request the pleasure of your company at the wedding ceremony.',msg:'Together with their families, request the pleasure of your company at the wedding.',d:['#4a0e1c','#1d040a'],p:['#e9b949','#ffd166','#fff0c2'],H:['rings','paisley','paisley'],top:'vine',M:'mandala',script:'Great Vibes',L:['invite','frame','story'],tag:'shaadi vivah marriage'},
+ {c:'Wedding & Events',n:'Floral wedding',en:'Aarav & Meera',hi:'शुभ विवाह',kick:'SAVE THE DATE',when:'SATURDAY · 21 FEBRUARY 2027',where:'Kochi, Kerala',line:'Join us as we begin our forever.',msg:'Join us as we begin our forever.',d:['#fff5f7','#ffdfe8'],lt:1,k:'#6b2442',p:['#c2255c','#e599b4','#ffe3ec'],H:['lotus','heart','leaf'],top:'vine',M:'rangoli',script:'Great Vibes',L:['invite','frame'],tag:'shaadi marriage'},
+ {c:'Wedding & Events',n:'Save the date',en:'Save the Date',hi:'',kick:'WE ARE GETTING MARRIED',when:'12 · 12 · 2026',where:'Ananya & Karthik',line:'Formal invitation to follow.',msg:'Formal invitation to follow.',d:['#0f3d3e','#05191a'],p:['#e9c46a','#2a9d8f','#fff3c4'],H:['rings','sparkle','sparkle'],M:'mandala',script:'Great Vibes',L:['invite','center'],tag:'wedding'},
+ {c:'Wedding & Events',n:'Haldi ceremony',en:'Haldi Ceremony',hi:'हल्दी की रस्म',kick:'YOU ARE INVITED TO THE',when:'FRIDAY · 11 DECEMBER · 10 AM',where:'Sharma Residence, Delhi',line:'Dress in yellow and come ready to play.',msg:'Dress in yellow. Come ready to celebrate with turmeric, music and joy.',d:['#fff3a8','#ffd43b'],lt:1,k:'#5c3a00',p:['#e8590c','#2f9e44','#fff7cc'],H:['sun','sparkle','leaf'],top:'leafrow',M:'rangoli',pat:'dots',script:'Pacifico',L:['invite','story'],tag:'wedding ceremony'},
+ {c:'Wedding & Events',n:'Mehendi night',en:'Mehendi Night',hi:'मेहंदी की रात',kick:'YOU ARE INVITED TO',when:'FRIDAY · 11 DECEMBER · 6 PM',where:'Garden Lawn, Jaipur',line:'An evening of henna, folk songs and good food.',msg:'An evening of henna, music and laughter.',d:['#0f3b1e','#04170a'],p:['#ffd166','#80ed99','#f1fbd9'],H:['paisley','lotus','paisley'],top:'vine',M:'rangoli',script:'Great Vibes',L:['invite','center'],tag:'wedding ceremony henna'},
+ {c:'Wedding & Events',n:'Sangeet night',en:'Sangeet Night',hi:'संगीत की शाम',kick:'DANCE · MUSIC · CELEBRATION',when:'FRIDAY · 11 DECEMBER · 8 PM',where:'The Ballroom, Mumbai',line:'Bring your best dance moves!',msg:'Dance, music and celebration — bring your best moves!',d:['#3b0a5c','#12021f'],p:['#ff5d8f','#ffd166','#ffffff'],H:['firework','sparkle','balloons'],M:'mandala',script:'Pacifico',L:['invite','story','sale'],tag:'wedding ceremony'},
+ {c:'Wedding & Events',n:'Engagement',en:'We’re Engaged!',hi:'सगाई',kick:'YOU ARE INVITED TO OUR',when:'SUNDAY · 6 SEPTEMBER · 5 PM',where:'Taj Banquet Hall, Pune',line:'Celebrate our engagement with us.',msg:'Celebrate our engagement with us.',d:['#1b2a49','#08101f'],p:['#e9c46a','#f4a261','#fff3c4'],H:['rings','sparkle','sparkle'],M:'mandala',script:'Great Vibes',L:['invite','frame'],tag:'ring ceremony'},
+ {c:'Wedding & Events',n:'Reception',en:'Wedding Reception',hi:'',kick:'DINNER · MUSIC · CELEBRATION',when:'MONDAY · 15 DECEMBER · 7:30 PM',where:'The Leela Palace',line:'Join us to celebrate the newlyweds.',msg:'Join us to celebrate the newlyweds.',d:['#fff9f0','#f5e6cc'],lt:1,k:'#4a3320',p:['#b8860b','#d4a017','#f5e6cc'],H:['rings','crown','sparkle'],top:'vine',M:'mandala',script:'Great Vibes',L:['invite','frame'],tag:'wedding'},
+ {c:'Wedding & Events',n:'Anniversary',en:'Happy Anniversary',hi:'',kick:'CELEBRATING',when:'25 YEARS OF LOVE',where:'Raj & Sunita',line:'',msg:'Here’s to love that grows deeper with every year.',d:['#5c0a2f','#220413'],p:['#ffd166','#ff8fab','#fff0f5'],H:['heart','rings','sparkle'],M:'mandala',script:'Great Vibes',L:['center','frame'],tag:'wedding'},
+ {c:'Wedding & Events',n:'Baby shower',en:'Baby Shower',hi:'गोद भराई',kick:'PLEASE JOIN US FOR A',when:'SATURDAY · 10 OCTOBER · 4 PM',where:'Home of Neha & Varun',line:'Little feet are on the way!',msg:'Little feet are on the way! Join us for games, blessings and cake.',d:['#e3f6fc','#c9ecf7'],lt:1,k:'#0b4f6c',p:['#1c9ac8','#f06595','#ffd43b'],H:['balloons','gift','sparkle'],pat:'dots',M:'rangoli',script:'Pacifico',L:['invite','center'],tag:'godh bharai baby'},
+ {c:'Wedding & Events',n:'Naming ceremony',en:'Naamkaran',hi:'नामकरण संस्कार',kick:'YOU ARE INVITED TO THE',when:'SUNDAY · 18 OCTOBER · 11 AM',where:'Nair Residence, Kochi',line:'Bless our little one as we welcome a name.',msg:'Bless our little one as we choose a name.',d:['#fff3e0','#ffe0b2'],lt:1,k:'#5c3a00',p:['#e8590c','#2f9e44','#ffe0b2'],H:['diya','lotus','sparkle'],top:'toran',M:'mandala',script:'Great Vibes',L:['invite','frame'],tag:'baby ceremony cradle'},
+ {c:'Wedding & Events',n:'Griha Pravesh',en:'Griha Pravesh',hi:'गृह प्रवेश',kick:'YOU ARE INVITED TO OUR',when:'THURSDAY · 5 NOVEMBER · 9 AM',where:'New Home, Sector 21',line:'Join us for puja and lunch at our new home.',msg:'Join us for puja and lunch at our new home.',d:['#ffb703','#f77f00'],p:['#7a0c1e','#fffbe6','#ffe8a3'],H:['kalash','diya','house'],top:'toran',M:'mandala',L:['invite','frame'],tag:'housewarming house warming new home'},
+ {c:'Birthday & Party',n:'Kids birthday',en:'It’s My Birthday!',hi:'',kick:'YOU ARE INVITED TO MY',when:'SATURDAY · 7 NOVEMBER · 4 PM',where:'Fun Zone Play Park',line:'Games, cake and loads of fun!',msg:'Games, cake and loads of fun!',d:['#fff3bf','#ffd8a8'],lt:1,k:'#7a2e00',p:['#e8590c','#339af0','#f06595'],H:['balloons','cake','gift'],pat:'dots',M:'rangoli',script:'Pacifico',L:['invite','center','story'],tag:'birthday kids party'},
+ {c:'Birthday & Party',n:'First birthday',en:'1st Birthday',hi:'',kick:'JOIN US TO CELEBRATE',when:'SUNDAY · 22 NOVEMBER · 5 PM',where:'Garden Banquet',line:'One year of smiles and giggles.',msg:'One year of smiles, giggles and sleepless nights!',d:['#e7f5ff','#d0ebff'],lt:1,k:'#0b3d91',p:['#1c7ed6','#fcc419','#f06595'],H:['cake','balloons','sparkle'],pat:'dots',M:'rangoli',script:'Pacifico',L:['invite','center'],tag:'birthday baby'},
+ {c:'Birthday & Party',n:'Golden birthday',en:'Happy Birthday',hi:'',kick:'CELEBRATING',when:'50 GLORIOUS YEARS',where:'',line:'',msg:'Cheers to many more years of health, love and happiness.',d:['#0a0a0a','#2a2200'],p:['#ffd700','#ffb703','#fff3b0'],H:['cake','balloons','firework'],M:'mandala',script:'Great Vibes',L:['center','frame','story'],tag:'birthday milestone'},
+ {c:'Birthday & Party',n:'Pastel birthday',en:'Happy Birthday',hi:'',kick:'',when:'',where:'',line:'',msg:'Wishing you a day filled with love, laughter and cake.',d:['#ffe3ec','#e6e0ff'],lt:1,k:'#5b2a86',p:['#f06595','#7048e8','#ffd43b'],H:['balloons','gift','cake'],pat:'dots',M:'rangoli',script:'Pacifico',L:['center','story','minimal'],tag:'birthday wishes'},
+ {c:'Birthday & Party',n:'Retirement party',en:'Happy Retirement',hi:'',kick:'JOIN US TO CELEBRATE',when:'FRIDAY · 30 OCTOBER · 6 PM',where:'Club House',line:'Thirty-five years of dedication.',msg:'Thirty-five years of dedication. Time for the next chapter!',d:['#14213d','#050a18'],p:['#fca311','#e5e5e5','#ffffff'],H:['trophy','cup','sparkle'],M:'mandala',script:'Great Vibes',L:['invite','center'],tag:'party farewell'},
+ {c:'Birthday & Party',n:'Graduation party',en:'Congratulations Graduate',hi:'',kick:'JOIN US TO CELEBRATE',when:'SATURDAY · 6 JUNE · 5 PM',where:'Home',line:'The tassel was worth the hassle!',msg:'The tassel was worth the hassle!',d:['#1f2a44','#0a0f1d'],p:['#ffd43b','#e8590c','#ffffff'],H:['cap','book','sparkle'],M:'mandala',script:'Pacifico',L:['center','invite'],tag:'party convocation'},
+ {c:'Birthday & Party',n:'Party night',en:'Party Night',hi:'',kick:'ONE NIGHT ONLY',when:'SATURDAY · 10 PM TILL LATE',where:'The Rooftop Lounge',line:'DJ · Dance · Drinks',msg:'DJ · Dance · Drinks. Free entry before 11 PM.',d:['#12002e','#33005c'],p:['#ff2bd6','#00e5ff','#ffffff'],H:['firework','sparkle','balloons'],M:'mandala',script:'Righteous',L:['sale','story','poster'],tag:'club dj night'},
+ {c:'Birthday & Party',n:'Diwali party',en:'Diwali Party',hi:'दिवाली मिलन',kick:'YOU ARE INVITED TO OUR',when:'SATURDAY · 7 NOVEMBER · 7 PM',where:'Our Home, Bandra',line:'Lights, cards, food and fireworks.',msg:'Lights, cards, food and fireworks. Dress up in your best!',d:['#2b0a4e','#0d0220'],p:['#ffb703','#fb8500','#ffe8a3'],H:['diya','lantern','firework'],top:'toran',M:'mandala',L:['invite','story'],tag:'festival diwali milan card party'}
+];
+EVENTS.forEach(E=>{E.hd=E.hd||E.n.toUpperCase().replace(' ','\n');E.off=E.off||(E.when||'').split(' · ').slice(1,3).join(' · ')||'JOIN US';E.cta='RSVP NOW'});
+EVENTS.forEach(E=>E.L.forEach(l=>add(E.c,`${E.n} ${l==='invite'?'invitation':l==='frame'?'card':l==='story'?'story':l==='center'?'post':l==='sale'?'flyer':l==='poster'?'poster':'minimal'}`,LAYSZ[l]||[1080,1080],LAY[l](E),E.tag)));
+
+/* ---- business & marketing promos ---- */
+function promo(sp){return (W,H,u)=>{const o=[],ink=sp.ink||'#fff',bg=sp.bg2?{t:'grad',k:'lin',c1:sp.bg,c2:sp.bg2,a:sp.ang||150}:{t:'solid',c:sp.bg};
+  if(sp.pat)o.push(AI(sp.pat,0,0,W,[sp.a,sp.a2||sp.a],{fill:H,op:sp.patop||.12,nm:'Pattern'}));
+  const ac=sp.artc||undefined,L=sp.layout||'left',fd=sp.font||'Anton';
+  if(L==='left'){
+    if(sp.art)o.push(artAt(null,sp.art,W*.79,H*.6,W*.42,H*.6,{},ac));
+    const fl=flowT(W*.08,W*.52,H*.12,[[sp.kick||'LIMITED TIME',u*3,{bold:true,color:sp.a,ls:18,align:'left',font:'Poppins'}],1.4,[sp.big,u*(sp.bs||15),{font:fd,color:ink,align:'left',lh:1}],2,[sp.sub||'',u*3.5,{color:ink,op:.85,align:'left',lh:1.45,font:'Poppins'}]],u,H*.76);o.push(...fl.o);
+    o.push(...pill(W*.08,H*.8,u*38,u*10.5,sp.a,sp.cta||'SHOP NOW',sp.cc||'#fff',u,{ls:6}));
+  }else if(L==='center'){
+    if(sp.art)o.push(artAt(null,sp.art,W/2,H*.2,W*.34,H*.28,{},ac));
+    const fl=flowT(W*.08,W*.84,H*.36,[[sp.kick||'LIMITED TIME',u*3.4,{bold:true,color:sp.a,ls:22,font:'Poppins'}],1.4,[sp.big,u*(sp.bs||14),{font:fd,color:ink,lh:1}],2,[sp.sub||'',u*3.8,{color:ink,op:.85,lh:1.45,font:'Poppins'}]],u,H*.8);o.push(...fl.o);
+    o.push(...pill(W/2-u*19,H*.84,u*38,u*10.5,sp.a,sp.cta||'SHOP NOW',sp.cc||'#fff',u,{ls:6}));
+  }else if(L==='badge'){
+    o.push(SH('burst2',W*.58,H*.06,W*.36,W*.36,sp.a,{rot:12}),T_(sp.badge||'50%\nOFF',W*.58,H*.06+W*.12,W*.36,u*(sp.bb||10),{font:'Anton',color:sp.cc||'#fff',align:'center',lh:.95,rot:12}));
+    if(sp.art)o.push(artAt(null,sp.art,W*.76,H*.66,W*.4,H*.4,{},ac));
+    const fl=flowT(W*.08,W*.5,H*.1,[[sp.kick||'MEGA SALE',u*3,{bold:true,color:sp.a,ls:18,align:'left',font:'Poppins'}],1.2,[sp.big,u*(sp.bs||12),{font:fd,color:ink,align:'left',lh:1}],1.6,[sp.sub||'',u*3.3,{color:ink,op:.85,align:'left',lh:1.45,font:'Poppins'}]],u,H*.78);o.push(...fl.o);
+    o.push(...pill(W*.08,H*.82,u*34,u*9.6,sp.a,sp.cta||'SHOP NOW',sp.cc||'#fff',u,{ls:6}));
+  }else{
+    o.push(SH('rect',0,0,W,H*.58,sp.a),AI('wave',0,H*.58-W*.2,W,[sp.bg,sp.bg],{h:W*.22,fit:'cover'}));
+    if(sp.art)o.push(artAt(null,sp.art,W*.8,H*.3,W*.34,H*.38,{},ac));
+    const fl=flowT(W*.08,W*.55,H*.1,[[sp.kick||'NEW',u*3,{bold:true,color:sp.cc||'#fff',ls:18,align:'left',font:'Poppins'}],1,[sp.big,u*(sp.bs||13),{font:fd,color:sp.cc||'#fff',align:'left',lh:1}]],u,H*.5);o.push(...fl.o);
+    o.push(T_(sp.sub||'',W*.08,H*.66,W*.84,u*3.8,{color:ink,op:.9,lh:1.5,font:'Poppins',align:'left'}),...pill(W*.08,H*.82,u*38,u*10.5,sp.a,sp.cta||'LEARN MORE',sp.cc||'#fff',u,{ls:6}));
+  }
+  return {bg,objs:o}}}
+const PROMOS=[
+ ['Flash sale',{bg:'#1f1c19',a:'#e8590c',kick:'24 HOURS ONLY',big:'FLASH\nSALE',sub:'Up to 70% off sitewide. Ends midnight.',art:'bag',artc:['#e8590c','#ffffff'],layout:'left',pat:'dots'}],
+ ['Mega discount',{bg:'#d6336c',bg2:'#7048e8',a:'#ffd43b',cc:'#1f1c19',kick:'MEGA SALE',big:'BIG\nSAVINGS',sub:'Your favourites, now at unbeatable prices.',art:'gift',layout:'badge',badge:'60%\nOFF'}],
+ ['New arrivals',{bg:'#f1ece4',a:'#1f1c19',ink:'#1f1c19',kick:'JUST LANDED',big:'New\nArrivals',font:'Playfair Display',bs:16,sub:'Fresh styles for the new season are here.',art:'bag',artc:['#e8590c','#ffffff'],cta:'EXPLORE',layout:'left'}],
+ ['Grand opening',{bg:'#12b886',bg2:'#0b7285',a:'#ffd43b',cc:'#1f1c19',kick:'WE’RE OPEN',big:'GRAND\nOPENING',sub:'Join us this Saturday for gifts, snacks and surprises.',art:'balloons',layout:'center',cta:'VISIT US'}],
+ ['We are hiring',{bg:'#364fc7',a:'#ffd43b',cc:'#1f1c19',kick:'JOIN OUR TEAM',big:'WE’RE\nHIRING',sub:'Send your CV to careers@yourcompany.com',art:'laptop',artc:['#ffffff','#4263eb'],layout:'left',cta:'APPLY NOW',pat:'dots'}],
+ ['Product showcase',{bg:'#fff3e0',a:'#e8590c',ink:'#3b2a1a',kick:'INTRODUCING',big:'Fresh\nBrew',font:'Playfair Display',bs:17,sub:'Small-batch coffee roasted for you.',art:'cup',layout:'left',cta:'ORDER NOW'}],
+ ['Coupon code',{bg:'#2b8a3e',a:'#ffd43b',cc:'#1f1c19',kick:'EXCLUSIVE',big:'EXTRA 20%\nOFF',sub:'Use code WELCOME20 at checkout.',art:'gift',layout:'badge',badge:'CODE\nWELCOME20',bb:6.5}],
+ ['Free delivery',{bg:'#fff',a:'#e8590c',ink:'#1f1c19',kick:'THIS WEEKEND',big:'FREE\nDELIVERY',sub:'On all orders above ₹499. No code needed.',art:'pin',layout:'center',cta:'ORDER NOW'}],
+ ['Weekend offer',{bg:'#7048e8',bg2:'#d6336c',a:'#ffd43b',cc:'#1f1c19',kick:'ONLY THIS WEEKEND',big:'BUY 1\nGET 1',sub:'On selected items. Hurry, while stocks last.',art:'sparkle',layout:'split',cta:'GRAB IT'}],
+ ['Announcement',{bg:'#0b7285',a:'#ffd43b',cc:'#1f1c19',kick:'BIG NEWS',big:'WE’VE\nMOVED',sub:'Find us at our new, bigger store on MG Road.',art:'pin',layout:'split',cta:'GET DIRECTIONS'}],
+ ['Black sale',{bg:'#0a0a0a',a:'#ffd700',cc:'#0a0a0a',kick:'THE BIGGEST SALE',big:'BLACK\nFRIDAY',sub:'Up to 80% off. Everything must go.',art:'bag',artc:['#ffd700','#0a0a0a'],layout:'left',pat:'dots',patop:.07}],
+ ['Summer sale',{bg:'#ffd43b',bg2:'#ff922b',a:'#1f1c19',ink:'#1f1c19',cc:'#ffffff',kick:'HOT DEALS',big:'SUMMER\nSALE',sub:'Cool prices on everything you love.',art:'sun',layout:'left',cta:'SHOP NOW'}],
+ ['Monsoon offer',{bg:'#1971c2',bg2:'#0b3d91',a:'#ffd43b',cc:'#1f1c19',kick:'RAIN OR SHINE',big:'MONSOON\nOFFER',sub:'Stay dry. Save big.',art:'leaf',layout:'center',cta:'SHOP NOW'}],
+ ['Clearance',{bg:'#e03131',a:'#ffffff',cc:'#e03131',kick:'FINAL DAYS',big:'CLEARANCE\nSALE',sub:'Everything under ₹999. No returns.',art:'gift',layout:'badge',badge:'UP TO\n80%'}],
+ ['Webinar',{bg:'#10141f',a:'#4dabf7',cc:'#10141f',kick:'FREE LIVE WEBINAR',big:'GROW YOUR\nBUSINESS',sub:'Thursday 7 PM IST · Register free',art:'laptop',artc:['#4263eb','#ffffff'],layout:'left',cta:'REGISTER',font:'Bricolage Grotesque',pat:'dots',patop:.08}],
+ ['Workshop',{bg:'#fff4e6',a:'#e8590c',ink:'#3b1f0a',kick:'JOIN US LIVE',big:'Design\nWorkshop',font:'Playfair Display',bs:15,sub:'Sunday 11 AM · Limited seats',art:'bulb',layout:'center',cta:'BOOK A SEAT'}],
+ ['Open now',{bg:'#e64980',a:'#fff3bf',cc:'#e64980',kick:'COME ON IN',big:'WE’RE\nOPEN',sub:'Mon–Sat · 10 AM – 9 PM',art:'cup',layout:'left',cta:'VISIT US'}],
+ ['Thank you customers',{bg:'#fff0f6',a:'#d6336c',ink:'#6b0f3a',kick:'FROM ALL OF US',big:'Thank\nYou!',font:'Pacifico',bs:15,sub:'For being part of our journey. We couldn’t do it without you.',art:'heart',layout:'center',cta:'SEE OFFERS'}],
+ ['Gift voucher',{bg:'#2b2d42',a:'#ffd166',cc:'#2b2d42',kick:'THE PERFECT GIFT',big:'GIFT\nVOUCHER',sub:'Worth ₹2,000 · Valid 12 months',art:'gift',layout:'left',cta:'BUY NOW'}],
+ ['App launch',{bg:'#4263eb',bg2:'#7048e8',a:'#ffd43b',cc:'#1f1c19',kick:'NOW AVAILABLE',big:'GET THE\nAPP',sub:'Download free on iOS and Android.',art:'rocket',layout:'split',cta:'DOWNLOAD',font:'Bricolage Grotesque'}],
+ ['Subscribe',{bg:'#f03e3e',a:'#ffffff',cc:'#f03e3e',kick:'DON’T MISS OUT',big:'SUBSCRIBE\nNOW',sub:'New videos every week.',art:'bell',artc:['#ffd43b','#ffffff'],layout:'center',cta:'FOLLOW'}]
+];
+PROMOS.forEach(([n,sp])=>{add('Business',n,[1080,1080],promo(sp),'sale offer marketing promo '+sp.kick);});
+PROMOS.slice(0,8).forEach(([n,sp])=>{add('Business',n+' story',[1080,1920],promo(Object.assign({},sp,{layout:sp.layout==='left'?'center':sp.layout})),'story sale offer')});
+
+/* ---- quotes & good-morning style wishes ---- */
+function quote(sp){return (W,H,u)=>{const o=[],bg=sp.bg2?{t:'grad',k:'lin',c1:sp.bg,c2:sp.bg2,a:sp.ang||160}:{t:'solid',c:sp.bg};
+  if(sp.pat)o.push(AI(sp.pat,0,0,W,[sp.a,sp.a],{fill:H,op:.1}));
+  if(sp.art)o.push(artAt(null,sp.art,W*(sp.ax||.5),H*(sp.ay||.18),W*(sp.aw||.3),H*.22,{op:sp.ao||1},sp.artc));
+  if(sp.frame)o.push(AI('frame',0,0,W,[sp.a,sp.a],{fill:H,op:.9}));
+  const fl=flowT(W*.12,W*.76,H*(sp.y||.34),[[sp.q,u*(sp.qs||8),{font:sp.font||'Playfair Display',color:sp.ink||'#fff',lh:1.25,italic:!!sp.it}],3,['— '+(sp.by||'Your Name'),u*3.6,{color:sp.a,bold:true,font:'Poppins',ls:8,upper:true}]],u,H*.88);o.push(...fl.o);return {bg,objs:o}}}
+const QUOTES=[
+ ['Quote · dark',{bg:'#10141f',a:'#e8590c',q:'Do something today that your future self will thank you for.',art:'sparkle',artc:['#e8590c','#ffd43b'],pat:'dots'}],
+ ['Quote · cream',{bg:'#f4ece1',a:'#c2410c',ink:'#2b2118',q:'Make something people want to come back to.',art:'leaf',artc:['#c2410c','#e8a87c'],frame:1}],
+ ['Quote · sunrise',{bg:'#ff922b',bg2:'#d6336c',a:'#fff3bf',q:'Every morning is a fresh chance to begin again.',art:'sun',artc:['#ffd43b','#fff3bf'],aw:.28,ao:.9}],
+ ['Quote · ocean',{bg:'#0b7285',bg2:'#1864ab',a:'#ffd43b',q:'Calm seas never made a skilled sailor.',art:'wave',artc:['#74c0fc','#a5d8ff'],ay:.9,aw:1,ax:.5}],
+ ['Quote · bold',{bg:'#ffd43b',a:'#1f1c19',ink:'#1f1c19',q:'DREAM BIG.\nWORK HARD.\nSTAY HUMBLE.',font:'Anton',qs:11,y:.28}],
+ ['Quote · lotus',{bg:'#fff0f6',a:'#c2255c',ink:'#6b0f3a',q:'Rise above the mud. Bloom with grace.',art:'lotus',artc:['#f783ac','#e64980','#fff0f6'],aw:.34,pat:'jaali'}]
+];
+QUOTES.forEach(([n,sp])=>add('Social',n,[1080,1080],quote(sp),'quote motivation'));
+const GM=[
+ ['Good morning · sunrise',{bg:'#ffb703',bg2:'#fb8500',a:'#ffffff',q:'Good Morning!\nHave a beautiful day.',art:'sun',artc:['#fff3bf','#ffd43b'],aw:.5,ay:.2,font:'Pacifico',qs:9,y:.38,by:'Your Name'}],
+ ['Good morning · lotus',{bg:'#ffe3ec',bg2:'#ffc9de',a:'#c2255c',ink:'#6b0f3a',q:'सुप्रभात!\nआपका दिन शुभ हो',art:'lotus',artc:['#f783ac','#e64980','#fff0f6'],aw:.5,ay:.2,font:'Yatra One',qs:10,y:.4,by:'Your Name'}],
+ ['Good night · moon',{bg:'#0b1a3b',bg2:'#1d2f66',a:'#ffd166',q:'Good Night\nSweet dreams',art:'moon',artc:['#ffe9a8','#ffffff'],aw:.4,ay:.22,font:'Pacifico',qs:10,y:.42,by:'Your Name',pat:'stars'}],
+ ['Happy weekend',{bg:'#7048e8',bg2:'#d6336c',a:'#ffd43b',q:'Happy\nWeekend!',art:'balloons',aw:.34,ay:.2,font:'Pacifico',qs:11,y:.4,by:'Enjoy every moment'}]
+];
+GM.forEach(([n,sp])=>add('Social',n,[1080,1920],quote(sp),'whatsapp status wishes good morning'));
+
+/* ---------- slides, print, resumes, thumbnails, banners, logos and industry sets ---------- */
+const LS_=[1920,1080];
+function slideT(sp){return (W,H,u)=>{const o=[],ink=sp.ink||'#fff',K=sp.kind,a=sp.a,bg=sp.bg2?{t:'grad',k:'lin',c1:sp.bg,c2:sp.bg2,a:sp.ang||135}:{t:'solid',c:sp.bg};
+  const T=(t,x,y,w,s,oo)=>{const e=T_(t,x,y,w,s,Object.assign({color:ink,font:sp.font||'Bricolage Grotesque',align:'left'},oo||{}));o.push(e);return e};
+  if(sp.pat)o.push(AI(sp.pat,0,0,W,[a,a],{fill:H,op:.1}));
+  if(K==='title'){if(sp.art)o.push(artAt(null,sp.art,W*.78,H*.5,W*.4,H*.7,{},sp.artc));o.push(SH('rect',W*.07,H*.3,u*1.4,H*.34,a));T(sp.t,W*.1,H*.28,W*.6,u*11,{bold:true,lh:1.05});T(sp.s||'',W*.1,H*.72,W*.6,u*4,{font:'Poppins',op:.8})}
+  else if(K==='agenda'){T('Agenda',W*.08,H*.1,W*.5,u*11,{bold:true});o.push(SH('rect',W*.08,H*.1+u*14,u*14,u*1,a));T(sp.items.join('\n'),W*.08,H*.38,W*.52,u*6,{list:'num',lh:1.75,font:'Poppins'});o.push(SH('rect',W*.7,0,W*.3,H,a));T('01',W*.7,H*.32,W*.3,u*28,{font:'Anton',align:'center',color:sp.cc||'#fff'})}
+  else if(K==='stat'){T(sp.big,0,H*.2,W,u*34,{font:'Anton',align:'center',color:a});T(sp.t,W*.15,H*.62,W*.7,u*6,{align:'center',font:'Poppins',lh:1.35})}
+  else if(K==='two'){T(sp.t,W*.07,H*.1,W*.86,u*9,{bold:true});[0,1].forEach(i=>{const x=W*.07+i*W*.45;o.push(SH('rect',x,H*.34,W*.4,H*.5,i?a:'#ffffff',{r:u*3,op:i?1:.1}));T(sp.cols[i][0],x+u*3,H*.38,W*.4-u*6,u*5,{bold:true,color:i?sp.cc||'#fff':ink,font:'Poppins'});T(sp.cols[i][1],x+u*3,H*.5,W*.4-u*6,u*3.6,{color:i?sp.cc||'#fff':ink,font:'Poppins',lh:1.5,op:.9})})}
+  else if(K==='team'){T('Meet the team',W*.07,H*.1,W*.7,u*9,{bold:true});['Aarav','Meera','Rohan','Ananya'].forEach((n,i)=>{const x=W*.07+i*W*.225;o.push(SH('ellipse',x+W*.02,H*.34,W*.17,W*.17,i%2?a:'#adb5bd',{op:1}),T_(n,x,H*.34+W*.19,W*.21,u*4.2,{align:'center',bold:true,color:ink,font:'Poppins'}),T_(['CEO','Design','Engineering','Marketing'][i],x,H*.34+W*.19+u*6,W*.21,u*3,{align:'center',color:ink,op:.7,font:'Poppins'}))})}
+  else if(K==='pricing'){T('Pricing',W*.07,H*.08,W*.6,u*9,{bold:true});[['Starter','₹499'],['Growth','₹1,499'],['Scale','₹3,999']].forEach(([n,p],i)=>{const x=W*.07+i*W*.3,hl=i===1;o.push(SH('rect',x,H*.28,W*.27,H*.6,hl?a:'#ffffff',{r:u*3,op:hl?1:.1}),T_(n,x,H*.33,W*.27,u*4.4,{align:'center',bold:true,color:hl?sp.cc||'#fff':ink,font:'Poppins'}),T_(p,x,H*.43,W*.27,u*9,{align:'center',font:'Anton',color:hl?sp.cc||'#fff':ink}),T_('per month\n5 projects\nEmail support',x,H*.62,W*.27,u*3.4,{align:'center',color:hl?sp.cc||'#fff':ink,op:.85,lh:1.7,font:'Poppins'}))})}
+  else if(K==='timeline'){T('Roadmap',W*.07,H*.1,W*.6,u*9,{bold:true});o.push(SH('rect',W*.07,H*.52,W*.86,u*.8,a));['Q1','Q2','Q3','Q4'].forEach((q,i)=>{const x=W*.07+i*W*.27;o.push(SH('ellipse',x,H*.52-u*2,u*5,u*5,a),T_(q,x-u*2,H*.4,u*9,u*4.4,{bold:true,color:ink,font:'Poppins'}),T_(['Research','Prototype','Launch','Scale'][i],x-u*2,H*.62,W*.22,u*4,{color:ink,font:'Poppins'}),T_('Key milestone and notes go here.',x-u*2,H*.7,W*.22,u*3,{color:ink,op:.7,font:'Poppins',lh:1.4}))})}
+  else if(K==='quote'){o.push(AI('sparkle',W*.07,H*.1,u*16,[a,a],{}));T(sp.t,W*.12,H*.3,W*.76,u*8.4,{font:'Playfair Display',lh:1.3,italic:true});T('— '+(sp.by||'Name Surname'),W*.12,H*.76,W*.7,u*3.8,{color:a,bold:true,font:'Poppins'})}
+  else if(K==='thanks'){if(sp.art)o.push(artAt(null,sp.art,W*.5,H*.28,W*.2,H*.3,{},sp.artc));T('Thank you',0,H*.42,W,u*17,{align:'center',bold:true,font:sp.font||'Bricolage Grotesque'});T('hello@yourcompany.com  ·  +91 00000 00000',0,H*.7,W,u*3.6,{align:'center',font:'Poppins',op:.85})}
+  else if(K==='section'){T('02',W*.08,H*.12,W*.3,u*30,{font:'Anton',color:a});T(sp.t,W*.08,H*.56,W*.7,u*10,{bold:true});T(sp.s||'',W*.08,H*.76,W*.6,u*3.8,{font:'Poppins',op:.8})}
+  return {bg,objs:o}}}
+const SLIDES=[
+ ['Title · dark',{kind:'title',bg:'#10141f',a:'#e8590c',t:'Quarterly\nBusiness Review',s:'Q3 2026 · Growth, product and what’s next',art:'bars',artc:['#e8590c','#4263eb','#555555']}],
+ ['Title · gradient',{kind:'title',bg:'#4263eb',bg2:'#7048e8',a:'#ffd43b',t:'Product\nStrategy 2027',s:'Prepared by the Strategy team',art:'rocket'}],
+ ['Title · warm',{kind:'title',bg:'#fff4e6',a:'#e8590c',ink:'#3b1f0a',t:'Annual\nReport',s:'FY 2025–26 highlights',art:'building',artc:['#e8590c','#9c3a06','#ffd43b'],font:'Playfair Display'}],
+ ['Title · Indian festival',{kind:'title',bg:'#3b0a5c',bg2:'#12021f',a:'#ffb703',t:'Festive\nCampaign Plan',s:'Diwali season · Marketing strategy',art:'diya',pat:'jaali'}],
+ ['Agenda',{kind:'agenda',bg:'#fdf6e3',a:'#e8590c',ink:'#2b2118',items:['Where we are','What we learned','What we’re building next','How you can help']}],
+ ['Agenda · dark',{kind:'agenda',bg:'#10141f',a:'#4dabf7',cc:'#10141f',items:['Overview','Market','Product','Roadmap','Ask']}],
+ ['Big number',{kind:'stat',bg:'#10141f',a:'#ffd43b',big:'₹120 Cr',t:'in revenue this year — up 48% year on year'}],
+ ['Big number · light',{kind:'stat',bg:'#e7f5ff',a:'#1c7ed6',ink:'#0b2a5b',big:'3.2M',t:'customers trust us across 14 states'}],
+ ['Comparison',{kind:'two',bg:'#10141f',a:'#e8590c',t:'Before and after',cols:[['Before','Manual processes\nSlow approvals\nLost leads'],['After','Automated workflows\nSame-day approvals\nEvery lead tracked']]}],
+ ['Team',{kind:'team',bg:'#fff',a:'#e8590c',ink:'#1f1c19'}],
+ ['Pricing',{kind:'pricing',bg:'#10141f',a:'#e8590c'}],
+ ['Roadmap',{kind:'timeline',bg:'#f8f9fa',a:'#4263eb',ink:'#1f1c19'}],
+ ['Quote slide',{kind:'quote',bg:'#0b7285',a:'#ffd43b',t:'The best way to predict the future is to create it.',by:'Peter Drucker'}],
+ ['Section break',{kind:'section',bg:'#d6336c',bg2:'#7048e8',a:'#ffd43b',t:'Our Strategy',s:'How we plan to win in the next 12 months'}],
+ ['Thank you slide',{kind:'thanks',bg:'#10141f',a:'#e8590c',art:'heart',artc:['#e8590c','#ffffff']}],
+ ['Thank you · warm',{kind:'thanks',bg:'#fff4e6',ink:'#3b1f0a',a:'#e8590c',art:'lotus',artc:['#f783ac','#e64980','#fff0f6'],font:'Playfair Display'}]
+];
+SLIDES.forEach(([n,sp])=>add('Slides',n,LS_,slideT(sp),'presentation deck pitch slide'));
+
+/* ---- business cards ---- */
+function bcard(sp){return (W,H,u)=>{const o=[],ink=sp.ink||'#fff',a=sp.a,bg={t:'solid',c:sp.bg};const T=(t,x,y,w,s,oo)=>{const e=T_(t,x,y,w,s,Object.assign({color:ink,font:'Poppins',align:'left'},oo||{}));o.push(e);return e};
+  const L=sp.layout;
+  if(L==='band'){o.push(SH('rect',0,0,W*.34,H,a),AI(sp.art||'mandala',-W*.1,H*.2,W*.5,[ink,ink,ink],{op:.2}));o.push(artAt(null,sp.art||'diya',W*.17,H*.5,W*.22,H*.4,{},sp.artc));T(sp.nm,W*.4,H*.2,W*.55,u*10,{font:sp.font||'Playfair Display',bold:true});T(sp.role,W*.4,H*.2+u*13,W*.55,u*4.4,{color:a,bold:true});T('hello@example.com\n+91 00000 00000\nwww.example.com',W*.4,H*.62,W*.55,u*4.2,{lh:1.6,op:.85})}
+  else if(L==='center'){o.push(AI('frame',0,0,W,[a,a],{fill:H,op:.9}));o.push(artAt(null,sp.art||'lotus',W*.5,H*.25,W*.16,H*.3,{},sp.artc));T(sp.nm,0,H*.4,W,u*9,{font:sp.font||'Playfair Display',bold:true,align:'center'});T(sp.role,0,H*.4+u*12,W,u*3.8,{color:a,align:'center',bold:true,ls:12,upper:true});T('hello@example.com  ·  +91 00000 00000',0,H*.78,W,u*3.4,{align:'center',op:.85})}
+  else if(L==='split'){o.push(SH('rect',0,0,W,H*.5,a),AI('wave',0,H*.4,W,[a,sp.bg],{h:W*.14,fit:'cover'}));T(sp.nm,W*.07,H*.14,W*.8,u*10,{font:sp.font||'Bricolage Grotesque',bold:true,color:sp.cc||'#fff'});T(sp.role,W*.07,H*.14+u*13,W*.8,u*4.2,{color:sp.cc||'#fff',op:.9});T('hello@example.com\n+91 00000 00000\nwww.example.com',W*.07,H*.62,W*.6,u*4,{lh:1.6});o.push(artAt(null,sp.art||'laptop',W*.82,H*.76,W*.2,H*.34,{},sp.artc))}
+  else{o.push(SH('ellipse',W*.66,-H*.35,H*1.3,H*1.3,a,{op:.9}));T(sp.nm,W*.07,H*.2,W*.6,u*10,{font:sp.font||'Bricolage Grotesque',bold:true});T(sp.role,W*.07,H*.2+u*13,W*.6,u*4.2,{color:a,bold:true});T('hello@example.com\n+91 00000 00000\nwww.example.com',W*.07,H*.62,W*.6,u*4,{lh:1.6,op:.85});o.push(artAt(null,sp.art||'gem',W*.83,H*.5,W*.18,H*.5,{},sp.artc))}
+  return {bg,objs:o}}}
+[['Indian · Gold',{bg:'#2a0a14',a:'#e9b949',layout:'band',nm:'Rajesh Kumar',role:'Director',art:'diya'}],['Lotus · Classic',{bg:'#fff8ec',ink:'#3b2a1a',a:'#c2410c',layout:'center',nm:'Priya Nair',role:'Interior designer',art:'lotus',artc:['#f783ac','#e64980','#fff0f6']}],['Modern · Split',{bg:'#ffffff',ink:'#1f1c19',a:'#4263eb',layout:'split',nm:'Aarav Mehta',role:'Software engineer'}],['Bold circle',{bg:'#1f1c19',a:'#e8590c',layout:'circle',nm:'Meera Iyer',role:'Founder',art:'gem'}],['Green · Eco',{bg:'#f1fbf1',ink:'#14532d',a:'#2f9e44',layout:'band',nm:'Sandeep Rao',role:'Organic farmer',art:'leaf',artc:['#2f9e44','#b2f2bb'],font:'Lora'}],['Teal · Medical',{bg:'#ffffff',ink:'#073b4c',a:'#06a77d',layout:'split',nm:'Dr. Ananya Sen',role:'Cardiologist',art:'pulse',artc:['#ffffff']}]].forEach(([n,sp])=>add('Print','Business card · '+n,[1050,600],bcard(sp),'business card visiting card'));
+
+/* ---- certificates ---- */
+function cert(sp){return (W,H,u)=>{const o=[],ink=sp.ink,a=sp.a;o.push(AI('frame',0,0,W,[a,sp.b||a],{fill:H}),AI(sp.pat||'jaali',0,0,W,[a],{fill:H,op:.05}));
+  o.push(artAt(null,'seal',W*.5,H*.2,W*.1,H*.2,{},[a,sp.b||'#c1121f']));
+  const fl=flowT(W*.1,W*.8,H*.32,[[sp.t,u*(sp.ts||9),{font:'Cinzel Decorative',bold:true,color:ink,ls:4}],1.4,['THIS CERTIFICATE IS PROUDLY PRESENTED TO',u*2.6,{color:ink,op:.75,ls:14,font:'Poppins'}],2,['Recipient Name',u*10,{font:'Great Vibes',color:a}],1,[sp.m,u*2.8,{color:ink,op:.85,lh:1.6,font:'Lora',italic:true}]],u,H*.8);o.push(...fl.o);
+  o.push(SH('rect',W*.14,H*.84,W*.24,u*.3,ink),T_('DATE',W*.14,H*.85,W*.24,u*2.4,{align:'center',color:ink,ls:12,font:'Poppins'}),SH('rect',W*.62,H*.84,W*.24,u*.3,ink),T_('SIGNATURE',W*.62,H*.85,W*.24,u*2.4,{align:'center',color:ink,ls:12,font:'Poppins'}));
+  return {bg:{t:'solid',c:sp.bg},objs:o}}}
+[['Achievement · Gold',{bg:'#fffaf0',ink:'#3b2a1a',a:'#b8860b',t:'Certificate of Achievement',m:'in recognition of outstanding performance, dedication and excellence.'}],['Appreciation · Royal',{bg:'#0f1b4d',ink:'#ffffff',a:'#ffd166',b:'#e9b949',t:'Certificate of Appreciation',m:'with sincere gratitude for your valuable contribution and support.'}],['Participation · Modern',{bg:'#ffffff',ink:'#1f1c19',a:'#e8590c',t:'Certificate of Participation',m:'for active participation and enthusiasm shown in the programme.'}],['Completion · Green',{bg:'#f1fbf1',ink:'#14532d',a:'#2f9e44',b:'#e9b949',t:'Certificate of Completion',m:'has successfully completed the course with distinction.'}],['Merit · Indian',{bg:'#fff3e0',ink:'#5c1a0a',a:'#c2410c',b:'#e9b949',t:'Certificate of Merit',m:'awarded for exemplary academic and extracurricular excellence.',pat:'jaali'}]].forEach(([n,sp])=>add('Education','Certificate · '+n,[1754,1240],cert(sp),'certificate award'));
+
+/* ---- resumes ---- */
+function resume(sp){return (W,H,u)=>{const o=[],a=sp.a,bg={t:'solid',c:'#ffffff'};const T=(t,x,y,w,s,oo)=>{const e=T_(t,x,y,w,s,Object.assign({color:'#1f1c19',font:'Poppins',align:'left'},oo||{}));o.push(e);return e};
+  const sec=(x,y,w,t,body)=>{T(t.toUpperCase(),x,y,w,u*2.2,{bold:true,color:a,ls:14});o.push(SH('rect',x,y+u*3.4,w,u*.2,a,{op:.4}));return T(body,x,y+u*4.6,w,u*2.2,{lh:1.55,color:'#3a3a3a'})};
+  const exp='Senior Manager · Company Name  2021 – Present\nLed a team of 12, improved delivery times by 30%.\n\nManager · Previous Company  2017 – 2021\nOwned operations across three regions.';
+  if(sp.layout==='side'){o.push(SH('rect',0,0,W*.34,H,a));o.push(SH('ellipse',W*.17-u*9,H*.045,u*18,u*18,'#ffffff',{op:.9}));
+    T('YOUR NAME',W*.04,H*.2,W*.27,u*4.6,{bold:true,color:'#fff',lh:1.15,font:sp.font||'Poppins'});T('Job Title',W*.04,H*.26,W*.27,u*2.6,{color:'#fff',op:.85});
+    T('CONTACT',W*.04,H*.38,W*.27,u*2.2,{bold:true,color:'#fff',ls:14});T('+91 00000 00000\nname@email.com\nCity, India',W*.04,H*.41,W*.27,u*2.1,{color:'#fff',lh:1.7,op:.9});
+    T('SKILLS',W*.04,H*.58,W*.27,u*2.2,{bold:true,color:'#fff',ls:14});T('Operations\nLeadership\nAnalytics\nNegotiation',W*.04,H*.61,W*.27,u*2.1,{color:'#fff',lh:1.7,op:.9});
+    T('PROFILE',W*.4,H*.07,W*.54,u*2.2,{bold:true,color:a,ls:14});T('Results-driven professional with 10+ years of experience building teams and delivering outcomes.',W*.4,H*.1,W*.54,u*2.2,{lh:1.55,color:'#3a3a3a'});
+    sec(W*.4,H*.2,W*.54,'Experience',exp);sec(W*.4,H*.5,W*.54,'Education','MBA · University Name  2015\nB.Com · College Name  2013');sec(W*.4,H*.66,W*.54,'Achievements','Won Best Manager Award 2023\nReduced costs by ₹1.2 Cr')}
+  else if(sp.layout==='top'){o.push(SH('rect',0,0,W,H*.17,a));T('YOUR NAME',W*.07,H*.04,W*.6,u*7,{bold:true,color:'#fff',font:sp.font||'Bricolage Grotesque'});T('Job Title  ·  City, India',W*.07,H*.04+u*9.5,W*.6,u*2.8,{color:'#fff',op:.9});T('+91 00000 00000\nname@email.com\nlinkedin.com/in/name',W*.66,H*.045,W*.28,u*2.3,{color:'#fff',lh:1.6,align:'right'});
+    sec(W*.07,H*.21,W*.86,'Profile','Results-driven professional with 10+ years of experience building teams and delivering outcomes.');sec(W*.07,H*.33,W*.86,'Experience',exp);sec(W*.07,H*.62,W*.4,'Education','MBA · University Name  2015\nB.Com · College Name  2013');sec(W*.53,H*.62,W*.4,'Skills','Operations · Leadership\nAnalytics · Negotiation\nExcel · SAP')}
+  else{T('YOUR NAME',W*.08,H*.06,W*.84,u*8.4,{bold:true,font:sp.font||'Playfair Display'});o.push(SH('rect',W*.08,H*.06+u*11.5,u*18,u*.8,a));T('Job Title  ·  +91 00000 00000  ·  name@email.com',W*.08,H*.06+u*13.5,W*.84,u*2.4,{color:'#555'});
+    sec(W*.08,H*.2,W*.84,'Summary','Results-driven professional with 10+ years of experience building teams and delivering outcomes.');sec(W*.08,H*.32,W*.84,'Experience',exp);sec(W*.08,H*.6,W*.84,'Education','MBA · University Name  2015\nB.Com · College Name  2013');sec(W*.08,H*.76,W*.84,'Skills','Operations · Leadership · Analytics · Negotiation · Excel · SAP')}
+  return {bg,objs:o}}}
+[['Sidebar · Orange',{layout:'side',a:'#e8590c'}],['Sidebar · Navy',{layout:'side',a:'#1c3d6e'}],['Header · Teal',{layout:'top',a:'#0b7285'}],['Header · Plum',{layout:'top',a:'#862e9c'}],['Classic',{layout:'clean',a:'#1f1c19'}],['Classic · Green',{layout:'clean',a:'#2f9e44',font:'Lora'}]].forEach(([n,sp])=>add('Resume & Docs','Resume · '+n,[1240,1754],resume(sp),'resume cv curriculum vitae job'));
+
+/* ---- documents: invoice, letterhead, menu, flyer ---- */
+add('Resume & Docs','Invoice · Clean',[1240,1754],(W,H,u)=>{const o=[],a='#e8590c',T=(t,x,y,w,s,oo)=>{const e=T_(t,x,y,w,s,Object.assign({color:'#1f1c19',font:'Poppins',align:'left'},oo||{}));o.push(e);return e};
+  o.push(SH('rect',0,0,W,u*3,a));T('INVOICE',W*.08,H*.06,W*.5,u*8,{bold:true,font:'Bricolage Grotesque'});T('Invoice No: 0001\nDate: 01 Nov 2026\nDue: 15 Nov 2026',W*.62,H*.065,W*.3,u*2.3,{lh:1.7,align:'right'});
+  T('BILLED TO',W*.08,H*.16,W*.4,u*2.2,{bold:true,color:a,ls:14});T('Client Name\nClient Address, City\nGSTIN: 00AAAAA0000A1Z5',W*.08,H*.185,W*.4,u*2.3,{lh:1.6});T('FROM',W*.55,H*.16,W*.37,u*2.2,{bold:true,color:a,ls:14});T('Your Business\nYour Address, City\nGSTIN: 00BBBBB0000B1Z5',W*.55,H*.185,W*.37,u*2.3,{lh:1.6});
+  o.push(SH('rect',W*.08,H*.3,W*.84,u*6,'#1f1c19'));T('DESCRIPTION',W*.1,H*.3+u*1.7,W*.4,u*2.2,{color:'#fff',bold:true,ls:8});T('QTY',W*.55,H*.3+u*1.7,W*.1,u*2.2,{color:'#fff',bold:true});T('RATE',W*.66,H*.3+u*1.7,W*.1,u*2.2,{color:'#fff',bold:true});T('AMOUNT',W*.78,H*.3+u*1.7,W*.12,u*2.2,{color:'#fff',bold:true,align:'right'});
+  [['Design services','2','₹10,000','₹20,000'],['Development','1','₹35,000','₹35,000'],['Hosting (1 year)','1','₹5,000','₹5,000']].forEach((r,i)=>{const y=H*.3+u*8+i*u*7;o.push(SH('rect',W*.08,y+u*5.6,W*.84,u*.15,'#cccccc'));T(r[0],W*.1,y,W*.4,u*2.4,{});T(r[1],W*.55,y,W*.1,u*2.4,{});T(r[2],W*.66,y,W*.12,u*2.4,{});T(r[3],W*.78,y,W*.12,u*2.4,{align:'right'})});
+  o.push(SH('rect',W*.58,H*.55,W*.34,u*10,a,{r:u*1.4}));T('TOTAL',W*.6,H*.55+u*3,W*.14,u*2.6,{color:'#fff',bold:true,ls:8});T('₹60,000',W*.7,H*.55+u*2.6,W*.2,u*4,{color:'#fff',bold:true,align:'right'});
+  T('Payment: Bank transfer · A/c 0000 0000 0000 · IFSC XXXX0000000\nThank you for your business!',W*.08,H*.9,W*.84,u*2.2,{color:'#666',lh:1.6});return {bg:{t:'solid',c:'#fff'},objs:o}},'invoice bill gst');
+add('Resume & Docs','Letterhead · Classic',[1240,1754],(W,H,u)=>{const o=[];o.push(SH('rect',0,0,W,u*2.4,'#4263eb'),AI('wave',0,H-W*.18,W,['#4263eb','#74c0fc'],{h:W*.18,fit:'cover'}),artAt(null,'building',W*.12,H*.07,W*.08,H*.06,{},['#4263eb','#1b3a8a','#fff']),T_('YOUR COMPANY',W*.2,H*.045,W*.5,u*4.4,{bold:true,font:'Bricolage Grotesque',color:'#1b3a8a'}),T_('Tagline goes here',W*.2,H*.045+u*6.4,W*.5,u*2.4,{color:'#777',font:'Poppins'}),T_('Date: __________\n\nTo,\n\n\nDear Sir/Madam,',W*.1,H*.2,W*.6,u*2.4,{color:'#333',lh:1.7,font:'Poppins'}),T_('www.yourcompany.com   ·   hello@yourcompany.com   ·   +91 00000 00000',W*.1,H*.93,W*.8,u*2.2,{color:'#fff',font:'Poppins',align:'center'}));return {bg:{t:'solid',c:'#fff'},objs:o}},'letterhead letter');
+function menuT(sp){return (W,H,u)=>{const o=[],ink=sp.ink||'#fff',a=sp.a;if(sp.pat)o.push(AI(sp.pat,0,0,W,[a,a],{fill:H,op:.07}));o.push(AI('frame',0,0,W,[a,a],{fill:H}));
+  if(sp.art)o.push(artAt(null,sp.art,W*.5,H*.12,W*.2,H*.16,{},sp.artc));
+  const items=sp.items;const T=(t,x,y,w,s,oo)=>{const e=T_(t,x,y,w,s,Object.assign({color:ink,font:'Poppins',align:'center'},oo||{}));o.push(e);return e};
+  T(sp.t,0,H*.2,W,u*8,{font:sp.font||'Playfair Display',bold:true,color:a});T(sp.sub||'',0,H*.2+u*10.4,W,u*2.8,{ls:16,upper:true,op:.8});
+  items.forEach(([h,list],i)=>{const col=i%2,row=Math.floor(i/2),x=W*(.1+col*.43),y=H*(.34+row*.28);T(h,x,y,W*.37,u*3.6,{bold:true,color:a,align:'left',ls:10,upper:true});o.push(SH('rect',x,y+u*5.4,W*.37,u*.2,a,{op:.6}));T(list,x,y+u*6.8,W*.37,u*2.6,{align:'left',lh:1.8})});
+  return {bg:{t:'solid',c:sp.bg},objs:o}}}
+[['Restaurant · Dark',{bg:'#1f1c19',a:'#e9b949',t:'The Spice Table',sub:'Modern Indian Kitchen',art:'diya',items:[['Starters','Paneer Tikka  ·  ₹320\nHara Bhara Kebab  ·  ₹280\nChicken 65  ·  ₹360'],['Mains','Butter Chicken  ·  ₹420\nDal Makhani  ·  ₹320\nLamb Rogan Josh  ·  ₹520'],['Breads & Rice','Garlic Naan  ·  ₹80\nTandoori Roti  ·  ₹40\nBiryani  ·  ₹380'],['Desserts','Gulab Jamun  ·  ₹140\nRasmalai  ·  ₹180\nKulfi  ·  ₹120']]}],
+ ['Thali · Warm',{bg:'#fff3e0',ink:'#4a2c0b',a:'#c2410c',t:'Maharaja Thali',sub:'Pure vegetarian · Since 1985',art:'thali',artc:['#d0d0d0','#e03131','#ffd43b'],pat:'jaali',items:[['Thali','Dal · Sabzi · Raita\nRoti · Rice · Papad\nSweet of the day  ·  ₹380'],['Special thali','Paneer · Kofta · Kadhi\nNaan · Pulao · Salad\nGulab Jamun  ·  ₹520'],['Drinks','Masala Chaas  ·  ₹60\nLassi  ·  ₹90\nNimbu Pani  ·  ₹50'],['Sweets','Jalebi  ·  ₹80\nKheer  ·  ₹100\nHalwa  ·  ₹90']],font:'Rozha One'}],
+ ['Cafe · Pastel',{bg:'#fff0f6',ink:'#5a2a3f',a:'#d6336c',t:'Sunday Café',sub:'Coffee · Bakes · Brunch',art:'cup',artc:['#7a4a21','#d6336c'],items:[['Coffee','Espresso  ·  ₹120\nCappuccino  ·  ₹180\nCold Brew  ·  ₹200'],['Bakes','Croissant  ·  ₹140\nBrownie  ·  ₹120\nCheesecake  ·  ₹220'],['Brunch','Avocado Toast  ·  ₹320\nPancakes  ·  ₹280\nOmelette  ·  ₹240'],['Cold drinks','Iced Tea  ·  ₹150\nSmoothie  ·  ₹220\nLemonade  ·  ₹120']],font:'Pacifico'}],
+ ['Sweet shop',{bg:'#7a0c1e',a:'#ffd166',t:'Mithai Ghar',sub:'Festive sweets & snacks',art:'kalash',pat:'jaali',items:[['Mithai','Kaju Katli  ·  ₹900/kg\nMotichoor Laddu  ·  ₹600/kg\nSoan Papdi  ·  ₹500/kg'],['Bengali','Rasgulla  ·  ₹40/pc\nSandesh  ·  ₹50/pc\nMishti Doi  ·  ₹60'],['Namkeen','Bhujia  ·  ₹320/kg\nChakli  ·  ₹360/kg\nMathri  ·  ₹300/kg'],['Gift boxes','Diwali Box  ·  ₹1,200\nPremium Box  ·  ₹2,500\nCustom hamper']],font:'Rozha One'}]].forEach(([n,sp])=>add('Food','Menu · '+n,[1240,1754],menuT(sp),'menu restaurant food'));
+
+/* ---- YouTube thumbnails + wide banners ---- */
+function thumbT(sp){return (W,H,u)=>{const o=[],bg=sp.bg2?{t:'grad',k:'lin',c1:sp.bg,c2:sp.bg2,a:sp.ang||120}:{t:'solid',c:sp.bg};
+  if(sp.pat)o.push(AI(sp.pat,0,0,W,[sp.a,sp.a],{fill:H,op:.14}));
+  o.push(SH('ellipse',W*.5,-H*.2,H*1.4,H*1.4,sp.a,{op:.25}));
+  if(sp.art)o.push(artAt(null,sp.art,W*.78,H*.52,W*.42,H*.88,{},sp.artc));
+  const e1=T_(sp.t,W*.04,H*.1,W*.6,u*(sp.ts||17),{font:sp.font||'Anton',color:'#fff',lh:.98,fx:'outline',fxc:'#000000',fxv:60});o.push(e1);
+  const e2=T_(sp.t2||'',W*.04,e1.y+e1.h+u*1.2,W*.6,u*(sp.ts2||12),{font:sp.font||'Anton',color:sp.a,lh:1,fx:'shadow'});o.push(e2);
+  const bw=u*Math.max(30,8+(sp.badge||'').length*3.3);if(sp.badge)o.push(SH('rect',W*.04,H*.84,bw,u*8,sp.a,{r:u*2}),T_(sp.badge,W*.04,H*.84+u*1.4,bw,u*5,{font:'Poppins',bold:true,color:sp.cc||'#fff',align:'center',ls:4}));
+  return {bg,objs:o}}}
+[['How to · Bold',{bg:'#10141f',bg2:'#273469',a:'#ffd43b',t:'HOW TO',t2:'GROW FAST',art:'rocket',badge:'FULL GUIDE',cc:'#1f1c19'}],['Tech review',{bg:'#0b7285',bg2:'#10141f',a:'#ffd43b',t:'HONEST',t2:'REVIEW',art:'laptop',artc:['#ffffff','#4263eb'],badge:'WORTH IT?',cc:'#1f1c19'}],['Vlog · Travel',{bg:'#e8590c',bg2:'#d6336c',a:'#ffd43b',t:'MY INDIA',t2:'TRIP',art:'plane',badge:'EPIC VLOG',cc:'#1f1c19'}],['Cooking',{bg:'#c2410c',bg2:'#7a0c1e',a:'#ffd43b',t:'EASY',t2:'BIRYANI',art:'thali',artc:['#d0d0d0','#e03131','#ffd43b'],badge:'IN 20 MINUTES',cc:'#1f1c19',pat:'jaali'}],['Fitness',{bg:'#10141f',bg2:'#e03131',a:'#ffd43b',t:'30 DAY',t2:'CHALLENGE',art:'dumbbell',artc:['#ffd43b','#ffffff'],badge:'NO EQUIPMENT',cc:'#1f1c19'}],['Finance',{bg:'#0b3d2e',bg2:'#10141f',a:'#69db7c',t:'MAKE',t2:'₹1 LAKH',art:'bars',artc:['#69db7c','#ffd43b','#cccccc'],badge:'STEP BY STEP',cc:'#10141f'}],['Education',{bg:'#364fc7',bg2:'#7048e8',a:'#ffd43b',t:'LEARN',t2:'FAST',art:'bulb',badge:'TOP 5 TIPS',cc:'#1f1c19'}],['Diwali special',{bg:'#2b0a4e',bg2:'#0d0220',a:'#ffb703',t:'DIWALI',t2:'SPECIAL',art:'diya',badge:'HOME DECOR IDEAS',cc:'#1f1c19',pat:'jaali'}]].forEach(([n,sp])=>add('YouTube','YouTube thumbnail · '+n,[1280,720],thumbT(sp),'thumbnail youtube video'));
+function wideT(sp){return (W,H,u)=>{const o=[],bg=sp.bg2?{t:'grad',k:'lin',c1:sp.bg,c2:sp.bg2,a:sp.ang||110}:{t:'solid',c:sp.bg},s=H;
+  if(sp.pat)o.push(AI(sp.pat,0,0,W,[sp.a,sp.a],{fill:H,op:.1}));o.push(SH('ellipse',W*.62,-H*.6,H*2.2,H*2.2,sp.a,{op:.18}));
+  if(sp.art)o.push(artAt(null,sp.art,W*.84,H*.5,W*.22,H*.86,{},sp.artc));
+  const fl=flowT(W*.06,W*.58,H*.2,[[sp.t,s*.22,{font:sp.font||'Bricolage Grotesque',bold:true,color:sp.ink||'#fff',align:'left',lh:1.05}],.5,[sp.s,s*.075,{font:'Poppins',color:sp.ink||'#fff',op:.85,align:'left',lh:1.4}]],H/100,H*.9);o.push(...fl.o);return {bg,objs:o}}}
+[['LinkedIn',[1584,396],{bg:'#0b2a5b',bg2:'#1c7ed6',a:'#ffd43b',t:'Helping businesses grow',s:'Strategy · Operations · Technology',art:'bars',artc:['#ffd43b','#ffffff','#cccccc']}],['LinkedIn · Warm',[1584,396],{bg:'#fff4e6',a:'#e8590c',ink:'#3b1f0a',t:'Your Name · Consultant',s:'Building teams and processes that scale',art:'building',artc:['#e8590c','#9c3a06','#ffd43b'],font:'Playfair Display'}],['Facebook cover',[1640,624],{bg:'#364fc7',bg2:'#7048e8',a:'#ffd43b',t:'Welcome to our page',s:'Follow for offers, news and updates',art:'sparkle'}],['Facebook cover · Shop',[1640,624],{bg:'#e03131',bg2:'#c2255c',a:'#ffd43b',t:'Festive Collection is here',s:'Shop the season’s best',art:'bag',artc:['#ffd43b','#ffffff']}],['Twitter header',[1500,500],{bg:'#10141f',bg2:'#273469',a:'#4dabf7',t:'Thoughts on tech & business',s:'Daily · Opinions are my own',art:'laptop',artc:['#4263eb','#ffffff']}],['YouTube channel art',[2560,1440],{bg:'#10141f',bg2:'#d6336c',a:'#ffd43b',t:'Your Channel Name',s:'New videos every week',art:'camera',artc:['#ffffff','#e03131','#ffd43b']}],['Twitch banner',[1200,480],{bg:'#2b1055',bg2:'#7048e8',a:'#ffd43b',t:'Live every night',s:'Games · Chill · Community',art:'sparkle'}],['Email header',[1200,400],{bg:'#e8590c',bg2:'#d6336c',a:'#ffd43b',t:'This week’s newsletter',s:'News, tips and offers',art:'bell',artc:['#ffd43b','#ffffff']}],['Website hero',[1920,800],{bg:'#fff4e6',a:'#e8590c',ink:'#3b1f0a',t:'We make beautiful things',s:'Design · Branding · Websites',art:'rocket',font:'Playfair Display'}]].forEach(([n,s,sp])=>add('Social',n,s,wideT(sp),'banner cover header'));
+
+/* ---------- logos + industry sets ---------- */
+function logoT(sp){return (W,H,u)=>{const o=[],bg={t:'solid',c:sp.bg||'#ffffff'},cx=W/2,ink=sp.ink||'#1f1c19',a=sp.a;
+  const mono=(ch,x,y,r,fill,tc)=>[SH('ellipse',x-r,y-r,r*2,r*2,fill),T_(ch,x-r,y-r*.56,r*2,r*1.15,{font:sp.font||'Bricolage Grotesque',bold:true,color:tc,align:'center',lh:1})];
+  if(sp.kind==='mono'){o.push(...mono(sp.m,cx,H*.38,W*.2,a,sp.cc||'#fff'));o.push(T_(sp.nm,0,H*.65,W,u*9,{font:sp.font||'Bricolage Grotesque',bold:true,color:ink,align:'center'}),T_(sp.tag,0,H*.65+u*11,W,u*3.2,{font:'Poppins',color:ink,op:.7,align:'center',ls:18,upper:true}))}
+  else if(sp.kind==='icon'){o.push(artAt(null,sp.art,cx,H*.38,W*.42,H*.4,{},sp.artc),T_(sp.nm,0,H*.65,W,u*9.4,{font:sp.font||'Playfair Display',bold:true,color:ink,align:'center'}),T_(sp.tag,0,H*.65+u*11.6,W,u*3.2,{font:'Poppins',color:a,bold:true,align:'center',ls:18,upper:true}))}
+  else if(sp.kind==='badge'){o.push(SH('ellipse',W*.1,H*.1,W*.8,W*.8,a),SH('ellipse',W*.14,H*.14,W*.72,W*.72,null,{stroke:'#ffffff',sw:u*.8,op:.8}),artAt(null,sp.art,cx,H*.38,W*.34,H*.3,{},sp.artc),T_(sp.nm,W*.14,H*.56,W*.72,u*6.4,{font:'Anton',color:'#fff',align:'center',ls:6}),T_(sp.tag,W*.14,H*.56+u*8.2,W*.72,u*2.8,{font:'Poppins',color:'#fff',align:'center',ls:14,upper:true,op:.9}))}
+  else{o.push(SH('rect',W*.1,H*.12,W*.8,H*.76,a,{r:u*4}),artAt(null,sp.art,cx,H*.38,W*.3,H*.3,{},sp.artc),T_(sp.nm,W*.1,H*.6,W*.8,u*8,{font:sp.font||'Bricolage Grotesque',bold:true,color:sp.cc||'#fff',align:'center'}),T_(sp.tag,W*.1,H*.6+u*10,W*.8,u*3,{font:'Poppins',color:sp.cc||'#fff',op:.9,align:'center',ls:14,upper:true}))}
+  return {bg,objs:o}}}
+[['Monogram · Orange',{kind:'mono',a:'#e8590c',m:'A',nm:'Anand & Co.',tag:'Consulting'}],['Monogram · Navy',{kind:'mono',a:'#1b3a8a',m:'S',nm:'Sharma Group',tag:'Since 1992'}],['Lotus spa',{kind:'icon',art:'lotus',artc:['#f783ac','#e64980','#fff0f6'],a:'#c2255c',nm:'Padma Spa',tag:'Wellness & Ayurveda'}],['Diya brand',{kind:'icon',art:'diya',a:'#c2410c',nm:'Deepam',tag:'Handmade Candles'}],['Leaf organic',{kind:'icon',art:'leaf',artc:['#2f9e44','#b2f2bb'],a:'#2f9e44',nm:'Green Roots',tag:'Organic Store',font:'Lora'}],['Coffee badge',{kind:'badge',art:'cup',artc:['#fff3e0','#ffd8a8'],a:'#7a4a21',nm:'FILTER KAAPI',tag:'Chennai · Est. 1998'}],['Tech tile',{kind:'tile',art:'rocket',a:'#4263eb',nm:'Launchpad',tag:'Startup studio'}],['Gem jeweller',{kind:'icon',art:'gem',a:'#1c7ed6',nm:'Ratna Jewels',tag:'Fine jewellery',font:'Playfair Display'}]].forEach(([n,sp])=>add('Logos','Logo · '+n,[800,800],logoT(sp),'logo brand identity'));
+
+/* ---- industry sets built on the promo/quote engines ---- */
+const IND=[
+ ['Education','Admissions open',{bg:'#4263eb',bg2:'#7048e8',a:'#ffd43b',cc:'#1f1c19',kick:'ADMISSIONS 2026–27',big:'ENROL\nNOW',sub:'Classes 1–12 · Limited seats · Call +91 00000 00000',art:'cap',layout:'left',cta:'APPLY TODAY',font:'Bricolage Grotesque'}],
+ ['Education','Tuition classes',{bg:'#fff3bf',a:'#e8590c',ink:'#3b1f0a',kick:'BOARD EXAM BATCH',big:'MATHS &\nSCIENCE',sub:'Expert teachers · Small batches · Doubt classes',art:'book',layout:'left',cta:'JOIN BATCH',font:'Anton'}],
+ ['Education','Online course',{bg:'#0b2a5b',bg2:'#1c7ed6',a:'#ffd43b',cc:'#1f1c19',kick:'LIVE ONLINE',big:'LEARN\nPYTHON',sub:'8 weeks · Certificate · Weekend batches',art:'laptop',artc:['#ffffff','#4263eb'],layout:'center',cta:'ENROL'}],
+ ['Education','Study timetable',{bg:'#e7f5ff',a:'#1c7ed6',ink:'#0b2a5b',kick:'WEEKLY PLAN',big:'STUDY\nPLANNER',sub:'Plan · Focus · Revise',art:'bulb',layout:'split',cta:'GET STARTED'}],
+ ['Real estate','For sale',{bg:'#10141f',a:'#ffd43b',cc:'#1f1c19',kick:'JUST LISTED',big:'DREAM HOME\nFOR SALE',sub:'3 BHK · 1,450 sq ft · Prime location',art:'house',layout:'left',cta:'BOOK A VISIT',bs:12}],
+ ['Real estate','Open house',{bg:'#fff',a:'#e8590c',ink:'#1f1c19',kick:'OPEN HOUSE',big:'SUNDAY\n11 AM – 4 PM',sub:'Tour the show flat. Refreshments served.',art:'building',artc:['#4263eb','#1b3a8a','#ffffff'],layout:'center',cta:'RSVP',bs:12}],
+ ['Real estate','Property launch',{bg:'#0b3d2e',bg2:'#10141f',a:'#ffd43b',cc:'#1f1c19',kick:'PRE-LAUNCH OFFER',big:'LUXURY\nAPARTMENTS',sub:'Starting ₹85 Lakh* · RERA registered',art:'building',artc:['#69db7c','#2b8a3e','#ffffff'],layout:'left',cta:'ENQUIRE',bs:12}],
+ ['Real estate','Rent',{bg:'#e64980',a:'#fff3bf',cc:'#e64980',kick:'AVAILABLE NOW',big:'FLAT\nFOR RENT',sub:'2 BHK · Fully furnished · Near metro',art:'house',artc:['#fff3bf','#ffffff','#e64980'],layout:'badge',badge:'₹25K\n/MONTH',bb:8}],
+ ['Fitness','Gym membership',{bg:'#10141f',a:'#e8590c',kick:'NEW YEAR OFFER',big:'GET FIT\nTHIS YEAR',sub:'Flat 40% off on annual membership.',art:'dumbbell',artc:['#e8590c','#ffffff'],layout:'left',cta:'JOIN NOW',pat:'dots',patop:.08}],
+ ['Fitness','Yoga day',{bg:'#e7f5ff',bg2:'#d0ebff',a:'#1c7ed6',ink:'#0b2a5b',kick:'21 JUNE',big:'INTERNATIONAL\nYOGA DAY',sub:'Join our free community session at 6 AM.',art:'lotus',layout:'center',cta:'REGISTER',font:'Bricolage Grotesque',bs:10}],
+ ['Fitness','Workout plan',{bg:'#364fc7',a:'#ffd43b',cc:'#1f1c19',kick:'7-DAY PLAN',big:'FULL BODY\nWORKOUT',sub:'No equipment. 20 minutes a day.',art:'pulse',artc:['#ffd43b'],layout:'split',cta:'START NOW'}],
+ ['Fitness','Healthy eating',{bg:'#ebfbee',a:'#2f9e44',ink:'#14532d',kick:'EAT WELL',big:'HEALTHY\nMEAL PLAN',sub:'Balanced diets made simple. Free consultation.',art:'leaf',layout:'left',cta:'BOOK NOW',font:'Playfair Display'}],
+ ['Food','Biryani special',{bg:'#7a0c1e',bg2:'#3b0409',a:'#ffd43b',cc:'#1f1c19',kick:'TODAY ONLY',big:'BIRYANI\nSPECIAL',sub:'Hyderabadi dum biryani · Free raita',art:'thali',artc:['#d0d0d0','#e03131','#ffd43b'],layout:'left',cta:'ORDER NOW',pat:'jaali',patop:.08}],
+ ['Food','Cafe offer',{bg:'#fff3e0',a:'#7a4a21',ink:'#3b2a1a',kick:'MORNING DEAL',big:'COFFEE +\nCROISSANT',sub:'₹199 only · 8 AM to 11 AM',art:'cup',layout:'center',cta:'VISIT US',font:'Playfair Display',bs:11}],
+ ['Food','Sweets box',{bg:'#5c0a14',a:'#ffc300',cc:'#1f1c19',kick:'FESTIVE GIFTING',big:'MITHAI\nHAMPERS',sub:'Hand-packed boxes. Free delivery above ₹999.',art:'gift',layout:'left',cta:'ORDER',font:'Rozha One',pat:'jaali',patop:.08}],
+ ['Food','Pizza night',{bg:'#e03131',bg2:'#c2255c',a:'#ffd43b',cc:'#1f1c19',kick:'EVERY FRIDAY',big:'PIZZA\nNIGHT',sub:'Buy 1 get 1 free on all large pizzas.',art:'sparkle',layout:'badge',badge:'BUY 1\nGET 1',bb:9}],
+ ['Fashion & Jewellery','Saree collection',{bg:'#7a0c1e',bg2:'#33040a',a:'#ffd166',cc:'#1f1c19',kick:'NEW COLLECTION',big:'SILK\nSAREES',sub:'Kanjivaram · Banarasi · Chanderi',art:'paisley',artc:['#ffd166','#e03131','#fff3bf'],layout:'left',cta:'EXPLORE',font:'Rozha One',pat:'jaali',patop:.07}],
+ ['Fashion & Jewellery','Gold jewellery',{bg:'#10141f',a:'#ffc300',cc:'#10141f',kick:'AKSHAYA TRITIYA',big:'GOLD\nOFFER',sub:'Zero making charges on select designs.',art:'gem',layout:'left',cta:'VISIT STORE',font:'Playfair Display',bs:16}],
+ ['Fashion & Jewellery','Fashion sale',{bg:'#f1ece4',a:'#1f1c19',ink:'#1f1c19',cc:'#ffffff',kick:'END OF SEASON',big:'UP TO\n70% OFF',sub:'Men · Women · Kids',art:'bag',artc:['#1f1c19','#ffffff'],layout:'left',cta:'SHOP NOW',font:'Playfair Display',bs:13}],
+ ['Fashion & Jewellery','Salon offer',{bg:'#fff0f6',a:'#d6336c',ink:'#6b0f3a',kick:'BEAUTY SALON',big:'GLOW UP\nPACKAGE',sub:'Facial · Hair spa · Manicure · ₹1,999',art:'sparkle',layout:'center',cta:'BOOK NOW',font:'Playfair Display',bs:11}],
+ ['Travel','Incredible India',{bg:'#e8590c',bg2:'#d6336c',a:'#ffd43b',cc:'#1f1c19',kick:'EXPLORE',big:'INCREDIBLE\nINDIA',sub:'Kerala · Rajasthan · Goa · Himachal',art:'plane',layout:'left',cta:'PLAN A TRIP',bs:12}],
+ ['Travel','Holiday package',{bg:'#0b7285',bg2:'#1864ab',a:'#ffd43b',cc:'#1f1c19',kick:'HOLIDAY PACKAGE',big:'GOA\n4D / 3N',sub:'Hotel · Breakfast · Sightseeing · ₹12,999',art:'sun',layout:'badge',badge:'₹12,999',bb:8}],
+ ['Travel','Weekend getaway',{bg:'#fff3bf',a:'#2b8a3e',ink:'#1f3d2b',kick:'ESCAPE THE CITY',big:'WEEKEND\nGETAWAY',sub:'Hill stations within 5 hours of your city.',art:'pin',layout:'center',cta:'BOOK NOW'}],
+ ['Social','Podcast cover · Bold',{bg:'#1f1c19',a:'#e8590c',kick:'EPISODE 01',big:'THE\nCONVERSATION',sub:'Hosted by Your Name',art:'bell',layout:'center',cta:'LISTEN',bs:11}],
+ ['Social','Pinterest tips',{bg:'#fff0f6',a:'#d6336c',ink:'#6b0f3a',kick:'SAVE THIS',big:'10 TIPS FOR\nBETTER SKIN',sub:'Simple habits that make a big difference.',art:'heart',layout:'center',cta:'READ MORE',bs:10,font:'Playfair Display'}],
+ ['Social','Carousel cover',{bg:'#10141f',a:'#4dabf7',cc:'#10141f',kick:'SWIPE →',big:'5 MISTAKES\nTO AVOID',sub:'A quick guide for first-time founders.',art:'bulb',layout:'left',cta:'SWIPE',bs:12,font:'Bricolage Grotesque'}],
+ ['Business','Testimonial',{bg:'#fff4e6',a:'#e8590c',ink:'#3b1f0a',kick:'HAPPY CLIENT',big:'“Best decision\nwe made.”',sub:'— Client Name, CEO, Company',art:'heart',layout:'center',cta:'READ STORY',font:'Playfair Display',bs:10}],
+ ['Business','Tips list',{bg:'#364fc7',a:'#ffd43b',cc:'#1f1c19',kick:'TIPS & TRICKS',big:'5 WAYS TO\nSAVE TIME',sub:'1. Plan ahead  2. Batch tasks  3. Say no\n4. Automate  5. Take breaks',art:'bulb',layout:'left',cta:'SAVE THIS',bs:12}]
+];
+IND.forEach(([c,n,sp])=>add(c,n,[1080,1080],promo(sp),'offer poster '+(sp.kick||'')));
+add('Print','Poster · Concert',[1240,1754],(W,H,u)=>({bg:{t:'grad',k:'lin',c1:'#12002e',c2:'#33005c',a:160},objs:[AI('stars',0,0,W,['#ffffff','#ff2bd6'],{fill:H,op:.8}),SH('ellipse',W*.1,H*.2,W*.8,W*.8,'#ff2bd6',{op:.18}),artAt(null,'firework',W/2,H*.3,W*.8,H*.34,{},['#ffd166','#ff2bd6','#ffffff']),T_('LIVE IN CONCERT',0,H*.52,W,u*3.4,{align:'center',font:'Poppins',bold:true,color:'#ffd166',ls:30}),T_('NIGHT OF\nMUSIC',W*.08,H*.56,W*.84,u*15,{align:'center',font:'Righteous',color:'#ffffff',lh:1,fx:'neon',fxc:'#ff2bd6',fxv:70}),T_('SAT · 12 DEC · 7 PM\nNehru Stadium, New Delhi',W*.08,H*.83,W*.84,u*3.6,{align:'center',font:'Poppins',color:'#ffffff',bold:true,lh:1.6}),T_('Tickets on yourticketsite.com',W*.08,H*.92,W*.84,u*2.6,{align:'center',font:'Poppins',color:'#ffffffaa'})]}),'poster concert event music');
+add('Print','Poster · Sale',[1240,1754],promo({bg:'#e8590c',bg2:'#c2255c',a:'#ffd43b',cc:'#1f1c19',kick:'BIGGEST SALE OF THE YEAR',big:'FLAT 50%\nOFF',sub:'Everything in store · This week only',art:'bag',layout:'center',cta:'VISIT US',bs:20}),'poster sale');
+add('Print','Flyer · Clean',[1240,1754],(W,H,u)=>({bg:{t:'solid',c:'#fff'},objs:[SH('rect',0,0,W,H*.42,'#12b886'),AI('wave',0,H*.36,W,['#ffffff','#e6fcf5'],{h:W*.16,fit:'cover'}),T_('GRAND\nOPENING',W*.08,H*.07,W*.8,u*15,{font:'Anton',color:'#fff',lh:1}),T_('Fresh bakes. Warm coffee. Good neighbours.',W*.08,H*.5,W*.8,u*5.4,{bold:true,lh:1.3,font:'Poppins'}),T_('Saturday 20 September · 9am–5pm\n12 Market Street',W*.08,H*.68,W*.8,u*4,{color:'#6f685f',lh:1.6,font:'Poppins'}),...pill(W*.08,H*.84,W*.5,u*9,'#1f1c19','Free coffee for the first 50','#fff',u)]}),'flyer');
+add('Print','Brochure cover',[1754,1240],(W,H,u)=>({bg:{t:'grad',k:'lin',c1:'#0b2a5b',c2:'#1c7ed6',a:130},objs:[AI('dots',0,0,W,['#ffffff','#ffffff'],{fill:H,op:.08}),artAt(null,'building',W*.78,H*.5,W*.3,H*.86,{},['#ffd43b','#e8590c','#ffffff']),T_('COMPANY PROFILE 2026',W*.07,H*.2,W*.6,u*3.2,{font:'Poppins',bold:true,color:'#ffd43b',ls:22}),T_('Building a\nbetter tomorrow',W*.07,H*.27,W*.6,u*12,{font:'Bricolage Grotesque',bold:true,color:'#fff',lh:1.05}),T_('Your Company Name · www.yourcompany.com',W*.07,H*.78,W*.6,u*3,{font:'Poppins',color:'#ffffffcc'})]}),'brochure company profile');
+add('Print','Tri-fold brochure',[1754,1240],(W,H,u)=>({bg:{t:'solid',c:'#ffffff'},objs:[SH('rect',0,0,W/3,H,'#e8590c'),SH('rect',W/3,0,W/3,H,'#fff4e6'),SH('rect',W*2/3,0,W/3,H,'#ffffff'),artAt(null,'lotus',W/6,H*.3,W*.2,H*.3,{},['#ffffff','#ffd8a8','#fff0f6']),T_('Wellness\nRetreat',W*.03,H*.5,W*.3,u*9,{font:'Playfair Display',bold:true,color:'#fff',align:'center',lh:1.05}),T_('About us',W*.37,H*.12,W*.26,u*5,{font:'Playfair Display',bold:true,color:'#3b1f0a'}),T_('Write a short introduction here. Describe who you are, what you do and why customers choose you.',W*.37,H*.24,W*.26,u*2.2,{font:'Poppins',color:'#3b1f0a',lh:1.7}),T_('Contact',W*.71,H*.12,W*.26,u*5,{font:'Playfair Display',bold:true,color:'#3b1f0a'}),T_('Your Address, City\n+91 00000 00000\nhello@yourcompany.com',W*.71,H*.24,W*.26,u*2.4,{font:'Poppins',color:'#3b1f0a',lh:1.8})]}),'brochure trifold');
+
+/* ---------- Magic Studio: Eraser, Edit, Upscale, Layers, BG Generator, Image to video ---------- */
+const yieldUI=()=>new Promise(r=>setTimeout(r,0));
+const canvasOf=(w,h)=>{const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w));c.height=Math.max(1,Math.round(h));return c};
+const urlOfCanvas=(c,type)=>c.toDataURL(type||'image/png');
+const imgOf=async url=>{const i=new Image();i.src=url;await i.decode();return i};
+async function aiStatus(){try{const r=await api('/design/stockstatus');return r.image||{ready:false,reason:'AI images are not set up'}}catch(e){return {ready:false,reason:e.message}}}
+async function aiImage(body){return api('/design/genimage',body)}
+function setImageSrc(o,url){const id=newAsset(url);if(!o.orig)o.orig=o.src;o.src=id;touch();renderInsp();renderPanel();return id}
+
+/* ---- inpainting: multi-scale push-pull fill plus matched grain (works on this device, nothing is uploaded) ---- */
+function inpaintCanvas(src,mask,opts={}){
+  const W=src.width,H=src.height,sx=src.getContext('2d').getImageData(0,0,W,H),md=mask.getContext('2d').getImageData(0,0,W,H).data;
+  const N=W*H,known=new Float32Array(N),wasHole=new Uint8Array(N);let holes=0;
+  for(let i=0;i<N;i++){const h=md[i*4+3]>40;wasHole[i]=h?1:0;if(h)holes++;known[i]=h?0:1}
+  if(!holes)return src;
+  // grow the hole a little so object edges and halos go too
+  const grow=opts.grow==null?3:opts.grow;let cur=wasHole;
+  for(let g=0;g<grow;g++){const nx=new Uint8Array(cur);for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const p=y*W+x;if(cur[p]||cur[p-1]||cur[p+1]||cur[p-W]||cur[p+W])nx[p]=1}cur=nx}
+  for(let i=0;i<N;i++){known[i]=cur[i]?0:1}
+  // pyramid: each cell keeps the average colour of its known pixels and the fraction that is known
+  const lv=[];{const c=new Float32Array(N*3);for(let i=0;i<N;i++){c[i*3]=sx.data[i*4];c[i*3+1]=sx.data[i*4+1];c[i*3+2]=sx.data[i*4+2]}lv.push({w:W,h:H,c,k:Float32Array.from(known)})}
+  while(lv[lv.length-1].w>1||lv[lv.length-1].h>1){const a=lv[lv.length-1],w=Math.max(1,a.w>>1),h=Math.max(1,a.h>>1),c=new Float32Array(w*h*3),k=new Float32Array(w*h);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){let r=0,g=0,b=0,s=0,n=0;for(let dy=0;dy<2;dy++)for(let dx=0;dx<2;dx++){const xx=Math.min(a.w-1,x*2+dx),yy=Math.min(a.h-1,y*2+dy),p=yy*a.w+xx,kk=a.k[p];r+=a.c[p*3]*kk;g+=a.c[p*3+1]*kk;b+=a.c[p*3+2]*kk;s+=kk;n++}
+      const o=y*w+x;if(s>1e-6){c[o*3]=r/s;c[o*3+1]=g/s;c[o*3+2]=b/s}k[o]=s/n}
+    lv.push({w,h,c,k})}
+  // pull up from the coarsest level: known cells keep their colour, unknown cells take the blurrier level above
+  let up=null;for(let L=lv.length-1;L>=0;L--){const a=lv[L],oc=new Float32Array(a.w*a.h*3);
+    for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++){const p=y*a.w+x,kk=Math.min(1,a.k[p]*1.0);let r=127,g=127,b=127;
+      if(up){const px=Math.min(up.w-1,x>>1),py=Math.min(up.h-1,y>>1),q=(py*up.w+px)*3;r=up.c[q];g=up.c[q+1];b=up.c[q+2]}
+      oc[p*3]=a.c[p*3]*kk+r*(1-kk);oc[p*3+1]=a.c[p*3+1]*kk+g*(1-kk);oc[p*3+2]=a.c[p*3+2]*kk+b*(1-kk)}
+    up={w:a.w,h:a.h,c:oc}}
+  const f=up;
+  // grain matched to the surroundings so the patch does not look plastic
+  let sd=0,cnt=0;{const ring=new Uint8Array(N);const RR=Math.max(6,Math.round(Math.min(W,H)*.02));for(let y=RR;y<H-RR;y+=2)for(let x=RR;x<W-RR;x+=2){const p=y*W+x;if(cur[p])continue;let near=false;for(let d=-RR;d<=RR&&!near;d+=RR)for(let e=-RR;e<=RR;e+=RR)if(cur[(y+d)*W+x+e]){near=true;break}if(!near)continue;const l=(q)=>sx.data[q*4]*.3+sx.data[q*4+1]*.59+sx.data[q*4+2]*.11;const m=(l(p-1)+l(p+1)+l(p-W)+l(p+W))/4;sd+=(l(p)-m)*(l(p)-m);cnt++}}
+  const grain=cnt>20?Math.min(14,Math.sqrt(sd/cnt)*.9):0;
+  let seed=1234567;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+  const res=sx;
+  for(let i=0;i<N;i++){if(!cur[i])continue;const n=grain?((rnd()+rnd()+rnd()-1.5)*2)*grain:0;res.data[i*4]=Math.max(0,Math.min(255,f.c[i*3]+n));res.data[i*4+1]=Math.max(0,Math.min(255,f.c[i*3+1]+n));res.data[i*4+2]=Math.max(0,Math.min(255,f.c[i*3+2]+n));res.data[i*4+3]=255}
+  // feather the seam: blend 2px at the border of the fill with the original
+  const outC=canvasOf(W,H),oc=outC.getContext('2d');oc.putImageData(res,0,0);return outC;
+}
+/* mask painted on a working canvas -> full-resolution inpaint, blended back through the painted shape only */
+async function eraseObjects(url,mask){
+  const full=await dataToCanvas(url,2600),W=full.width,H=full.height;
+  const m=canvasOf(W,H);m.getContext('2d').drawImage(mask,0,0,W,H);
+  const work=Math.min(1,1400/Math.max(W,H));let res;
+  if(work<1){const sw=Math.round(W*work),sh=Math.round(H*work),s=canvasOf(sw,sh),sm=canvasOf(sw,sh);s.getContext('2d').drawImage(full,0,0,sw,sh);sm.getContext('2d').drawImage(m,0,0,sw,sh);await yieldUI();const filled=inpaintCanvas(s,sm,{grow:3});
+    // detail from the original outside the hole, fill from the working pass inside it
+    res=canvasOf(W,H);const rc=res.getContext('2d');rc.drawImage(full,0,0);const hole=canvasOf(W,H),hc=hole.getContext('2d');hc.filter='blur('+Math.max(1,Math.round(2/work))+'px)';hc.drawImage(m,0,0);hc.filter='none';hc.globalCompositeOperation='source-in';hc.imageSmoothingQuality='high';hc.drawImage(filled,0,0,W,H);rc.drawImage(hole,0,0)}
+  else res=inpaintCanvas(full,m,{grow:3});
+  return urlOfCanvas(res);
+}
+
+/* ---- Lanczos upscale + gentle sharpen ---- */
+function lanczosKernel(x,a){if(x===0)return 1;if(Math.abs(x)>=a)return 0;const px=Math.PI*x;return a*Math.sin(px)*Math.sin(px/a)/(px*px)}
+async function upscaleCanvas(src,factor,progress){
+  const sw=src.width,sh=src.height;let k=factor;const MAXSIDE=8192,MAXPX=36e6;
+  while(k>1&&(sw*k>MAXSIDE||sh*k>MAXSIDE||sw*k*sh*k>MAXPX))k-=.25;
+  if(k<=1.01)throw new Error('This picture is already very large — no room to upscale further');
+  const dw=Math.round(sw*k),dh=Math.round(sh*k),A=3,sc=src.getContext('2d').getImageData(0,0,sw,sh).data;
+  // horizontal pass
+  const tmp=new Float32Array(dw*sh*4);const scaleX=sw/dw,supX=Math.max(1,scaleX);
+  const wx=[];for(let x=0;x<dw;x++){const c=(x+.5)*scaleX-.5,l=Math.max(0,Math.ceil(c-A*supX)),r=Math.min(sw-1,Math.floor(c+A*supX));let ws=[],s=0;for(let i=l;i<=r;i++){const w=lanczosKernel((i-c)/supX,A);ws.push(w);s+=w}wx.push({l,ws:ws.map(w=>w/s)})}
+  for(let y=0;y<sh;y++){for(let x=0;x<dw;x++){const {l,ws}=wx[x];let r=0,g=0,b=0,a=0;for(let i=0;i<ws.length;i++){const p=((y*sw)+l+i)*4,w=ws[i];r+=sc[p]*w;g+=sc[p+1]*w;b+=sc[p+2]*w;a+=sc[p+3]*w}const q=(y*dw+x)*4;tmp[q]=r;tmp[q+1]=g;tmp[q+2]=b;tmp[q+3]=a}if(y%64===0){progress&&progress(.45*y/sh);await yieldUI()}}
+  // vertical pass
+  const out=canvasOf(dw,dh),oc=out.getContext('2d'),od=oc.createImageData(dw,dh),scaleY=sh/dh,wy=[];
+  for(let y=0;y<dh;y++){const c=(y+.5)*scaleY-.5,l=Math.max(0,Math.ceil(c-A)),r=Math.min(sh-1,Math.floor(c+A));let ws=[],s=0;for(let i=l;i<=r;i++){const w=lanczosKernel(i-c,A);ws.push(w);s+=w}wy.push({l,ws:ws.map(w=>w/s)})}
+  for(let y=0;y<dh;y++){const {l,ws}=wy[y];for(let x=0;x<dw;x++){let r=0,g=0,b=0,a=0;for(let i=0;i<ws.length;i++){const p=((l+i)*dw+x)*4,w=ws[i];r+=tmp[p]*w;g+=tmp[p+1]*w;b+=tmp[p+2]*w;a+=tmp[p+3]*w}const q=(y*dw+x)*4;od.data[q]=r<0?0:r>255?255:r;od.data[q+1]=g<0?0:g>255?255:g;od.data[q+2]=b<0?0:b>255?255:b;od.data[q+3]=a<0?0:a>255?255:a}if(y%48===0){progress&&progress(.45+.4*y/dh);await yieldUI()}}
+  oc.putImageData(od,0,0);
+  // unsharp mask (box-blur approximation, 2 passes)
+  const id=oc.getImageData(0,0,dw,dh),d=id.data,bl=new Float32Array(d.length);
+  const R=Math.max(1,Math.round(k*.6));const boxH=(srcA,dst)=>{for(let y=0;y<dh;y++){for(let c=0;c<3;c++){let acc=0;const row=y*dw;for(let x=-R;x<=R;x++)acc+=srcA[(row+Math.min(dw-1,Math.max(0,x)))*4+c];for(let x=0;x<dw;x++){dst[(row+x)*4+c]=acc/(2*R+1);acc+=srcA[(row+Math.min(dw-1,x+R+1))*4+c]-srcA[(row+Math.max(0,x-R))*4+c]}}}};
+  const boxV=(srcA,dst)=>{for(let x=0;x<dw;x++){for(let c=0;c<3;c++){let acc=0;for(let y=-R;y<=R;y++)acc+=srcA[(Math.min(dh-1,Math.max(0,y))*dw+x)*4+c];for(let y=0;y<dh;y++){dst[(y*dw+x)*4+c]=acc/(2*R+1);acc+=srcA[(Math.min(dh-1,y+R+1)*dw+x)*4+c]-srcA[(Math.max(0,y-R)*dw+x)*4+c]}}}};
+  const t1=new Float32Array(d.length);boxH(d,t1);boxV(t1,bl);progress&&progress(.95);await yieldUI();
+  const amt=.55;for(let i=0;i<d.length;i+=4){for(let c=0;c<3;c++){const v=d[i+c]+(d[i+c]-bl[i+c])*amt;d[i+c]=v<0?0:v>255?255:v}}
+  oc.putImageData(id,0,0);return {canvas:out,k};
+}
+
+/* ---- brush editor shared by Magic Eraser and Magic Edit ---- */
+function maskEditor({title,intro,prompt,confirm,onRun}){
+  const imgObj=first();const holder=el('div',{class:'mkh'});
+  let base=null,mask=null,scale=1,brush=34,erase=false,busy=false,drawing=false,last=null;
+  const status=el('p',{class:'note',role:'status'},'Loading…');
+  const bc=el('canvas',{class:'mkb'}),mc=el('canvas',{class:'mkm'});holder.append(bc,mc);
+  const pr=prompt?el('input',{class:'f',placeholder:prompt,'aria-label':'What should appear'}):null;
+  const sz=el('input',{type:'range',min:6,max:120,value:brush,'aria-label':'Brush size',oninput:e=>{brush=+e.target.value}});
+  const run=el('button',{class:'btn pri grow',html:ic('sparkle',16)+' '+confirm,onclick:async()=>{
+    if(busy)return;const has=mask.getContext('2d').getImageData(0,0,mask.width,mask.height).data.some((v,i)=>i%4===3&&v>0);
+    if(!has){status.textContent='Paint over the area first.';return}
+    if(pr&&!pr.value.trim()){status.textContent='Describe what should appear there.';pr.focus();return}
+    busy=true;run.disabled=true;status.textContent='Working…';
+    try{const url=await onRun({mask,prompt:pr&&pr.value.trim(),status:t=>status.textContent=t,base});setImageSrc(imgObj,url);closeModal();toast('Done — undo with Ctrl+Z')}catch(e){status.textContent=(e&&e.message)||'That did not work';busy=false;run.disabled=false}}});
+  const paint=(x,y)=>{const c=mask.getContext('2d');c.globalCompositeOperation=erase?'destination-out':'source-over';c.fillStyle='rgba(255,60,90,1)';c.strokeStyle='rgba(255,60,90,1)';c.lineCap='round';c.lineJoin='round';c.lineWidth=brush/scale;c.beginPath();if(last){c.moveTo(last[0],last[1]);c.lineTo(x,y);c.stroke()}else{c.arc(x,y,brush/scale/2,0,7);c.fill()}last=[x,y];const m=mc.getContext('2d');m.clearRect(0,0,mc.width,mc.height);m.globalAlpha=.55;m.drawImage(mask,0,0);m.globalAlpha=1};
+  const pos=e=>{const r=mc.getBoundingClientRect();return [(e.clientX-r.left)/r.width*mask.width,(e.clientY-r.top)/r.height*mask.height]};
+  mc.addEventListener('pointerdown',e=>{if(!mask)return;e.preventDefault();mc.setPointerCapture(e.pointerId);drawing=true;last=null;paint(...pos(e))});
+  mc.addEventListener('pointermove',e=>{if(drawing)paint(...pos(e))});
+  ['pointerup','pointercancel'].forEach(t=>mc.addEventListener(t,()=>{drawing=false;last=null}));
+  const tools=el('div',{class:'row',style:'flex-wrap:wrap'},el('label',{style:'flex:0 0 auto'},'Brush'),sz,seg([{v:false,l:'Paint'},{v:true,l:'Rub out'}],()=>erase,v=>{erase=v}),el('button',{class:'btn sm',onclick:()=>{mask.getContext('2d').clearRect(0,0,mask.width,mask.height);mc.getContext('2d').clearRect(0,0,mc.width,mc.height)}},'Clear'));
+  openModal(el('div',{style:'display:grid;gap:12px'},dlgHead(title),el('p',{class:'note'},intro),holder,tools,pr||null,el('div',{class:'row'},run,el('button',{class:'btn',onclick:closeModal},'Cancel')),status));
+  (async()=>{try{const c=await dataToCanvas(D.assets[imgObj.src],1400);base=c;bc.width=mc.width=c.width;bc.height=mc.height=c.height;bc.getContext('2d').drawImage(c,0,0);mask=canvasOf(c.width,c.height);scale=Math.min(1,holder.getBoundingClientRect().width/c.width)||1;status.textContent='Paint over the area, then press the button.'}catch(e){status.textContent='Could not open that picture'}})();
+}
+function maskBox(mask,pad){const W=mask.width,H=mask.height,d=mask.getContext('2d').getImageData(0,0,W,H).data;let x0=W,y0=H,x1=0,y1=0;for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(d[(y*W+x)*4+3]>40){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  if(x1<x0)return null;const m=Math.round(pad);x0=Math.max(0,x0-m);y0=Math.max(0,y0-m);x1=Math.min(W,x1+m);y1=Math.min(H,y1+m);return {x:x0,y:y0,w:x1-x0,h:y1-y0}}
+const fadedMask=(mask,px)=>{const c=canvasOf(mask.width,mask.height),x=c.getContext('2d');x.filter='blur('+px+'px)';x.drawImage(mask,0,0);x.filter='none';return c};
+
+/* Magic Eraser: local inpainting, or the AI service when one that can edit is set up */
+function openEraser(){const o=first();if(!o||!o.src)return;
+  maskEditor({title:'Magic Eraser',intro:'Paint over anything you want gone — a person, a sign, a blemish. The area is filled in from its surroundings, on this device.',confirm:'Erase',
+    onRun:async({mask,status})=>{status('Erasing…');await yieldUI();return eraseObjects(D.assets[o.src],mask)}});
+}
+/* Magic Edit: change only the painted area, from a text prompt */
+async function openMagicEdit(){const o=first();if(!o||!o.src)return;const st=await aiStatus();
+  if(!st.ready){toast(st.reason||'Set up AI images in Settings first',3600);return}
+  maskEditor({title:'Magic Edit',intro:st.edit?'Paint the part you want to change, say what should be there, and only that part is redrawn.':'Paint the area and describe it. This image service cannot edit a photo directly, so a new picture is made and blended into the painted area (approximate). For exact edits, connect an OpenAI-compatible image service in Settings.',prompt:'e.g. a bunch of marigold flowers',confirm:'Generate',
+    onRun:async({mask,prompt,status,base})=>{
+      const full=await dataToCanvas(D.assets[o.src],2600),W=full.width,H=full.height,m=canvasOf(W,H);m.getContext('2d').drawImage(mask,0,0,W,H);
+      const bx=maskBox(m,Math.max(24,Math.min(W,H)*.06));if(!bx)throw new Error('Paint over the area first');
+      const side=Math.min(Math.max(bx.w,bx.h)*1.15,Math.min(W,H)),cx=bx.x+bx.w/2,cy=bx.y+bx.h/2,sx=Math.max(0,Math.min(W-side,cx-side/2)),sy=Math.max(0,Math.min(H-side,cy-side/2)),S=Math.min(1024,Math.round(side));
+      const crop=canvasOf(S,S);crop.getContext('2d').drawImage(full,sx,sy,side,side,0,0,S,S);
+      status('Asking the image service…');let res;
+      if(st.edit){const mk=canvasOf(S,S),mx=mk.getContext('2d');mx.fillStyle='#fff';mx.fillRect(0,0,S,S);mx.globalCompositeOperation='destination-out';mx.drawImage(m,sx,sy,side,side,0,0,S,S);
+        res=await aiImage({mode:'edit',prompt,image:urlOfCanvas(crop),mask:urlOfCanvas(mk),w:S,h:S})}
+      else res=await aiImage({mode:'gen',prompt:prompt+', photo realistic, matching lighting, seamless',w:S,h:S});
+      const gi=await imgOf(res.image),gc=canvasOf(side,side);gc.getContext('2d').drawImage(gi,0,0,side,side);
+      // blend only through the painted shape (softened), keep everything else exactly as it was
+      const soft=fadedMask(m,Math.max(2,side*.006)),part=canvasOf(side,side),pc=part.getContext('2d');pc.drawImage(soft,sx,sy,side,side,0,0,side,side);pc.globalCompositeOperation='source-in';pc.drawImage(gc,0,0);
+      const out=canvasOf(W,H),oc=out.getContext('2d');oc.drawImage(full,0,0);oc.drawImage(part,sx,sy);return urlOfCanvas(out)}});
+}
+
+/* Upscale */
+async function doUpscale(o,factor,set){
+  try{set('Reading the picture…');const src=await dataToCanvas(D.assets[o.src],0);
+    const {canvas,k}=await upscaleCanvas(src,factor,p=>set('Upscaling… '+Math.round(p*100)+'%'));
+    const url=urlOfCanvas(canvas,canvas.width*canvas.height>16e6?'image/jpeg':'image/png');setImageSrc(o,url);toast(`Upscaled ${Math.round(k*100)/100}× — now ${canvas.width} × ${canvas.height}px`,3200);set('')}
+  catch(e){set((e&&e.message)||'Upscaling failed')}
+}
+
+/* Magic Layers: subject and background on separate layers, with the hole behind the subject filled in */
+async function magicLayers(o,set){
+  try{set('Finding the subject…');const url=D.assets[o.src],cut=await cutOut(url,set);
+    set('Filling in the background…');await yieldUI();
+    const full=await dataToCanvas(url,2600),W=full.width,H=full.height,ci=await imgOf(cut),cc=canvasOf(W,H);cc.getContext('2d').drawImage(ci,0,0,W,H);
+    const m=canvasOf(W,H),mx=m.getContext('2d');mx.drawImage(cc,0,0);mx.globalCompositeOperation='source-in';mx.fillStyle='#000';mx.fillRect(0,0,W,H);
+    const bgURL=await eraseObjects(url,m);
+    const subj=JSON.parse(JSON.stringify(o));subj.id=uid();subj.src=newAsset(cut);subj.name='Subject';subj.orig=null;delete subj.an;
+    o.orig=null;o.src=newAsset(bgURL);o.name='Background';
+    const list=objs(),i=list.findIndex(x=>x.id===o.id);list.splice(i+1,0,subj);sel=[subj.id];touch();selChanged();renderPanel();toast('Split into Subject and Background layers',3200);set('')}
+  catch(e){set((e&&e.message)||'That did not work')}
+}
+
+/* ---- BG Generator ---- */
+const BACKDROPS=[
+ ['Studio',(c,W,H)=>{const g=c.createRadialGradient(W*.5,H*.4,H*.05,W*.5,H*.5,H*.85);g.addColorStop(0,'#f4f1ec');g.addColorStop(1,'#a9a39a');c.fillStyle=g;c.fillRect(0,0,W,H)}],
+ ['Dark studio',(c,W,H)=>{const g=c.createRadialGradient(W*.5,H*.38,H*.04,W*.5,H*.5,H*.9);g.addColorStop(0,'#4a4a55');g.addColorStop(1,'#08080c');c.fillStyle=g;c.fillRect(0,0,W,H)}],
+ ['Sunset',(c,W,H)=>{const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#2b1055');g.addColorStop(.45,'#d6336c');g.addColorStop(.75,'#ff922b');g.addColorStop(1,'#ffd43b');c.fillStyle=g;c.fillRect(0,0,W,H);c.fillStyle='rgba(255,230,150,.9)';c.beginPath();c.arc(W*.5,H*.72,H*.14,0,7);c.fill()}],
+ ['Bokeh',(c,W,H)=>{const g=c.createLinearGradient(0,0,W,H);g.addColorStop(0,'#1c1b3a');g.addColorStop(1,'#5b2a86');c.fillStyle=g;c.fillRect(0,0,W,H);let s=7;const r=()=>{s=(s*16807)%2147483647;return s/2147483647};for(let i=0;i<34;i++){c.fillStyle=`hsla(${30+r()*300},90%,65%,${.1+r()*.22})`;c.beginPath();c.arc(r()*W,r()*H,H*(.03+r()*.1),0,7);c.fill()}}],
+ ['Festive lights',(c,W,H)=>{const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#2b0a4e');g.addColorStop(1,'#0d0220');c.fillStyle=g;c.fillRect(0,0,W,H);let s=11;const r=()=>{s=(s*16807)%2147483647;return s/2147483647};for(let i=0;i<60;i++){c.fillStyle=`rgba(255,${160+r()*80|0},${40+r()*60|0},${.15+r()*.5})`;c.beginPath();c.arc(r()*W,r()*H,H*(.004+r()*.03),0,7);c.fill()}}],
+ ['Aurora',(c,W,H)=>{c.fillStyle='#050b1f';c.fillRect(0,0,W,H);for(let i=0;i<5;i++){const g=c.createLinearGradient(0,H*.1,0,H*.8);g.addColorStop(0,'rgba(80,255,200,0)');g.addColorStop(.5,`rgba(${60+i*30},255,${190-i*20},.28)`);g.addColorStop(1,'rgba(80,255,200,0)');c.fillStyle=g;c.beginPath();c.moveTo(0,H*.3);for(let x=0;x<=W;x+=W/20)c.lineTo(x,H*(.3+.12*Math.sin(x/W*6+i)));c.lineTo(W,H*.9);c.lineTo(0,H*.9);c.fill()}}],
+ ['Paper',(c,W,H)=>{c.fillStyle='#f4ece1';c.fillRect(0,0,W,H);let s=3;const r=()=>{s=(s*16807)%2147483647;return s/2147483647};for(let i=0;i<W*H/260;i++){c.fillStyle=`rgba(120,90,50,${r()*.07})`;c.fillRect(r()*W,r()*H,1.5,1.5)}}],
+ ['Pastel blobs',(c,W,H)=>{c.fillStyle='#fff0f6';c.fillRect(0,0,W,H);[['#ffd6e7',.2,.25,.4],['#d0ebff',.8,.3,.35],['#fff3bf',.5,.85,.45],['#e5dbff',.15,.8,.3]].forEach(([col,x,y,r])=>{c.fillStyle=col;c.beginPath();c.arc(W*x,H*y,H*r,0,7);c.fill()})}],
+ ['Ocean',(c,W,H)=>{const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#a5d8ff');g.addColorStop(.55,'#4dabf7');g.addColorStop(1,'#0b3d91');c.fillStyle=g;c.fillRect(0,0,W,H);c.strokeStyle='rgba(255,255,255,.25)';c.lineWidth=3;for(let k=0;k<6;k++){c.beginPath();for(let x=0;x<=W;x+=12)c.lineTo(x,H*(.58+k*.07)+Math.sin(x/70+k)*10);c.stroke()}}],
+ ['Rangoli glow',(c,W,H)=>{const g=c.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*.7);g.addColorStop(0,'#ffe8a3');g.addColorStop(.5,'#fb8500');g.addColorStop(1,'#7a0c1e');c.fillStyle=g;c.fillRect(0,0,W,H);c.strokeStyle='rgba(255,255,255,.28)';for(let r=40;r<Math.max(W,H);r+=70){c.lineWidth=2;c.beginPath();c.arc(W/2,H/2,r,0,7);c.stroke()}}]
+];
+function backdropURL(i,w,h){const c=canvasOf(w,h);BACKDROPS[i][1](c.getContext('2d'),w,h);return urlOfCanvas(c,'image/jpeg')}
+function useBackdrop(url,asLayer,o){
+  if(asLayer){const id=newAsset(url);const b=mkImage(id,D.w,D.h,{x:0,y:0,w:D.w,h:D.h,fit:'cover',name:'Backdrop'});const list=objs(),i=o?list.findIndex(x=>x.id===o.id):-1;list.splice(i>=0?i:0,0,b);touch();selChanged();renderPanel()}
+  else{const id=newAsset(url);P().bg={t:'img',src:id,c:'#fff'};touch();renderInsp();renderPanel()}
+}
+async function openBgGenerator(){
+  const o=selObjs().find(x=>x.type==='image'&&x.src)||null;const st=await aiStatus();
+  let busy=false;const out=el('div',{class:'grid2'}),status=el('p',{class:'note',role:'status'},st.ready?'Describe a scene, or pick an instant backdrop.':(st.reason||'AI is not set up')+'. Instant backdrops below work without it.');
+  const ta=el('textarea',{class:'f',rows:2,placeholder:'e.g. a warm Diwali evening with glowing diyas and bokeh, soft light','aria-label':'Describe the background'});
+  const styles=['Photo','Illustration','Soft gradient','Festive','Studio','Watercolor'];let style='Photo';
+  const chips=el('div',{class:'chips'});const rc=()=>{chips.innerHTML='';styles.forEach(s=>chips.append(el('button',{class:'chip','aria-pressed':style===s,onclick:()=>{style=s;rc()}},s)))};rc();
+  const asLayerBox=o?el('label',{class:'row',style:'gap:8px'},el('input',{type:'checkbox',checked:true,id:'bgLayer'}),el('span',{},'Put it behind the selected picture')):null;
+  const place=(url)=>{const behind=!asLayerBox||document.getElementById('bgLayer').checked;if(o&&behind)useBackdrop(url,true,o);else useBackdrop(url,false);closeModal();toast('Background added — undo with Ctrl+Z')};
+  const gen=el('button',{class:'btn pri',html:ic('sparkle',16)+' Generate',disabled:!st.ready,onclick:async()=>{
+    if(busy)return;const t=ta.value.trim();if(!t){status.textContent='Describe the background first.';return}busy=true;gen.disabled=true;out.innerHTML='';status.textContent='Creating backgrounds… this can take up to a minute.';
+    const ratio=D.w/D.h,w=ratio>=1?1024:Math.round(1024*ratio),h=ratio>=1?Math.round(1024/ratio):1024;
+    try{const sty={Photo:'photo realistic',Illustration:'flat vector illustration',Festive:'festive, glowing lights, rich colours','Soft gradient':'soft gradient, minimal, out of focus',Studio:'clean studio backdrop, empty',Watercolor:'watercolor painting'}[style];
+      const jobs=[1,2].map(()=>aiImage({mode:'gen',prompt:`${t}, ${sty}, background only, no people, no text, empty center space for a subject`,w,h,seed:Math.floor(Math.random()*1e9)}).catch(e=>({err:e})));
+      const rs=await Promise.all(jobs);const good=rs.filter(r=>r&&r.image);if(!good.length)throw rs[0].err||new Error('No image came back');
+      good.forEach(r=>out.append(el('button',{class:'cell',style:'padding:0;overflow:hidden;aspect-ratio:'+D.w+'/'+D.h,'aria-label':'Use this background',onclick:()=>place(r.image)},el('img',{src:r.image,alt:'',style:'width:100%;height:100%;object-fit:cover'}))));status.textContent='Pick one to use it.'}
+    catch(e){status.textContent=(e&&e.message)||'That did not work'}busy=false;gen.disabled=false}});
+  const inst=el('div',{class:'grid3'},BACKDROPS.map(([n],i)=>{const u=backdropURL(i,320,Math.round(320*D.h/D.w));return el('button',{class:'cell',style:'padding:0;overflow:hidden;aspect-ratio:'+D.w+'/'+D.h+';position:relative','aria-label':'Use backdrop '+n,onclick:()=>place(backdropURL(i,Math.min(1920,D.w),Math.round(Math.min(1920,D.w)*D.h/D.w)))},el('img',{src:u,alt:'',style:'width:100%;height:100%;object-fit:cover'}),el('small',{style:'position:absolute;left:4px;bottom:3px;color:#fff;text-shadow:0 1px 3px #000;font-size:11px'},n))}));
+  openModal(el('div',{style:'display:grid;gap:12px'},dlgHead('BG Generator'),ta,chips,asLayerBox,el('div',{class:'row'},gen),status,out,el('h4',{class:'sh'},'Instant backdrops (no AI needed)'),inst));
+}
+/* free-standing AI picture (Magic Media) */
+async function openMagicMedia(){const st=await aiStatus();if(!st.ready){toast(st.reason||'Set up AI images in Settings first',3600);return}
+  const ta=el('textarea',{class:'f',rows:3,placeholder:'e.g. a rangoli of marigold petals on a stone floor, top view','aria-label':'Describe the picture'}),out=el('div',{class:'grid2'}),status=el('p',{class:'note',role:'status'},'');let busy=false;
+  const go=el('button',{class:'btn pri',html:ic('sparkle',16)+' Create',onclick:async()=>{if(busy)return;const t=ta.value.trim();if(!t){status.textContent='Describe the picture first.';return}busy=true;go.disabled=true;out.innerHTML='';status.textContent='Creating… up to a minute.';
+    try{const rs=await Promise.all([1,2].map(()=>aiImage({mode:'gen',prompt:t,w:1024,h:1024,seed:Math.floor(Math.random()*1e9)}).catch(e=>({err:e}))));const good=rs.filter(r=>r&&r.image);if(!good.length)throw rs[0].err||new Error('No image came back');
+      good.forEach(r=>out.append(el('button',{class:'cell',style:'padding:0;overflow:hidden','aria-label':'Add this picture',onclick:async()=>{const i=await imgOf(r.image);const id=newAsset(r.image);addObj(mkImage(id,i.naturalWidth,i.naturalHeight));closeModal()}},el('img',{src:r.image,alt:'',style:'width:100%;height:100%;object-fit:cover'}))));status.textContent='Pick one to add it to your design.'}catch(e){status.textContent=(e&&e.message)||'That did not work'}busy=false;go.disabled=false}});
+  openModal(el('div',{style:'display:grid;gap:12px'},dlgHead('Magic Media'),el('p',{class:'note'},'Describe a picture and add it to your design.'),ta,el('div',{class:'row'},go),status,out));
+}
+
+/* ---- Image to video: camera moves and parallax on your photo ---- */
+const I2V=[['Slow zoom in','kbin',.14,'The classic documentary push-in'],['Zoom out reveal','kbout',.16,'Starts close and pulls back'],['Pan left','kbl',.18,'A calm sideways glide'],['Pan right','kbr',.18,'A calm sideways glide'],['Tilt up','kbu',.16,'Drifts upward'],['Tilt down','kbd',.16,'Drifts downward'],['Parallax depth','par',.2,'Subject and background move apart (uses Magic Layers)']];
+function applyKB(o,kind,amt,dur){o.an=Object.assign(o.an||{},{l:kind,ka:amt,d:0})}
+async function openImageToVideo(){
+  const o=first();if(!o||!o.src)return;let kind='kbin',dur=P().dur||6,fill=true,busy=false;
+  const lab=el('span',{class:'note',style:'min-width:34px'},dur+' s');
+  const status=el('p',{class:'note',role:'status'},'This animates your photo with camera moves — it does not invent new motion.');
+  const pv=el('canvas',{style:'width:100%;border-radius:10px;background:#111;aspect-ratio:'+D.w+'/'+D.h}),pcx=pv.getContext('2d');pv.width=420;pv.height=Math.round(420*D.h/D.w);
+  const list=el('div',{class:'chips'});
+  const clone=JSON.parse(JSON.stringify(o));if(fill){clone.x=0;clone.y=0;clone.w=D.w;clone.h=D.h}
+  let raf=0,t0=performance.now();const sample=()=>{const cur=I2V.find(x=>x[0]===kind)||I2V[0],k=cur[1]==='par'?'kbin':cur[1],tt=((performance.now()-t0)/1000)%dur;pcx.setTransform(1,0,0,1,0,0);pcx.fillStyle='#000';pcx.fillRect(0,0,pv.width,pv.height);pcx.setTransform(pv.width/D.w,0,0,pv.height/D.h,0,0);
+    const c=Object.assign({},clone);c.an={l:k,ka:cur[2],d:0};drawAnimObj(pcx,c,tt,dur,D.w,D.h,{s:pv.width/D.w});raf=requestAnimationFrame(sample)};
+  const draw=()=>{list.innerHTML='';I2V.forEach(([n,k,a,h])=>list.append(el('button',{class:'chip',title:h,'aria-pressed':kind===n,onclick:()=>{kind=n;draw()}},n)))};draw();
+  const apply=async(exportToo)=>{if(busy)return;busy=true;const cur=I2V.find(x=>x[0]===kind);
+    try{
+      if(fill){o.x=0;o.y=0;o.w=D.w;o.h=D.h;o.fit='cover'}
+      P().dur=dur;
+      if(cur[1]==='par'){status.textContent='Separating subject and background…';const set=t=>status.textContent=t;await magicLayers(o,set);
+        const L=objs(),bg=L.find(x=>x.id===o.id),sub=L[L.findIndex(x=>x.id===o.id)+1];if(bg&&sub){bg.an={l:'kbin',ka:.16,d:0};sub.an={l:'kbpar',ka:.16,d:0}}}
+      else applyKB(o,cur[1],cur[2],dur);
+      touch();renderInsp();cancelAnimationFrame(raf);closeModal();toast('Added motion — press Preview, or export as MP4 / GIF',3600);
+      if(exportToo){expo.fmt='video';openExport()}else playAnim();
+    }catch(e){status.textContent=(e&&e.message)||'That did not work'}busy=false};
+  openModal(el('div',{style:'display:grid;gap:12px'},dlgHead('Image to video'),pv,list,
+    el('div',{class:'row'},el('label',{style:'flex:0 0 auto'},'Length'),el('input',{type:'range',min:2,max:20,step:1,value:dur,'aria-label':'Video length',oninput:e=>{dur=+e.target.value;lab.textContent=dur+' s'}}),lab),
+    el('label',{class:'row',style:'gap:8px'},el('input',{type:'checkbox',checked:true,onchange:e=>{fill=e.target.checked;Object.assign(clone,fill?{x:0,y:0,w:D.w,h:D.h}:{x:o.x,y:o.y,w:o.w,h:o.h})}}),el('span',{},'Fill the whole page with the picture')),
+    el('div',{class:'row'},el('button',{class:'btn pri grow',html:ic('play',16)+' Add motion & preview',onclick:()=>apply(false)}),el('button',{class:'btn grow',html:ic('download',16)+' Add motion & export video',onclick:()=>apply(true)})),status));
+  const modalObserver=new MutationObserver(()=>{if($('#modal').hidden){cancelAnimationFrame(raf);modalObserver.disconnect()}});modalObserver.observe($('#modal'),{attributes:true,attributeFilter:['hidden']});
+  sample();
+}
+
+/* ---- the inspector section ---- */
+function magicInsp(o){
+  if(!o||!o.src)return null;const st=el('p',{class:'note',role:'status'},''),set=t=>st.textContent=t;let busy=false;
+  const guard=fn=>async()=>{if(busy)return;busy=true;try{await fn()}catch(e){set((e&&e.message)||'That did not work')}busy=false};
+  const b=(i,t,fn,h)=>el('button',{class:'btn',title:h,html:ic(i,16)+' '+t,onclick:guard(fn)});
+  return sec('Magic Studio',
+    el('div',{class:'grid2'},b('eraser','Magic Eraser',async()=>openEraser(),'Paint over something to remove it'),b('magic','Magic Edit',async()=>openMagicEdit(),'Change part of the picture from a prompt'),b('image','Upscale 2×',()=>doUpscale(o,2,set),'Sharper, larger picture'),b('image','Upscale 4×',()=>doUpscale(o,4,set),'Up to 8,192 px'),b('layers','Magic Layers',()=>magicLayers(o,set),'Split subject and background'),b('bg','BG Generator',async()=>openBgGenerator(),'New background'),b('play','Image to video',async()=>openImageToVideo(),'Camera moves and parallax')),
+    st,el('p',{class:'note'},'Eraser, Upscale, Layers and Image to video work on this device. Magic Edit and BG Generator use the AI image service set in Settings.'));
+}
 
 /* =====================================================================
    Anands OS integration + the studio's advanced features
@@ -1326,7 +2151,7 @@ function bgInsp(o){
 /* ---------- animation ---------- */
 const AN_IN=[['none','None'],['fade','Fade'],['rise','Rise up'],['drop','Drop in'],['left','From left'],['right','From right'],['zoom','Zoom in'],['pop','Pop'],['spin','Spin in']];
 const AN_OUT=[['none','None'],['fade','Fade'],['rise','Rise up'],['drop','Drop down'],['left','To the left'],['right','To the right'],['zoom','Shrink'],['spin','Spin out']];
-const AN_LOOP=[['none','None'],['float','Float'],['pulse','Pulse'],['sway','Sway'],['spin','Spin']];
+const AN_LOOP=[['none','None'],['float','Float'],['pulse','Pulse'],['sway','Sway'],['spin','Spin'],['kbin','Zoom in (camera)'],['kbout','Zoom out (camera)'],['kbl','Pan left (camera)'],['kbr','Pan right (camera)'],['kbu','Tilt up (camera)'],['kbd','Tilt down (camera)'],['kbpar','Parallax drift']];
 const ease=t=>1-Math.pow(1-t,3),backE=t=>{const c=2.70158,u=t-1;return 1+c*u*u*u+1.70158*u*u};
 function animFrame(o,t,pd,W,H){
   const a=o.an;if(!a)return null;const du=Math.max(.1,a.du||.8),d=a.d||0;let am=1,dx=0,dy=0,s=1,r=0;
@@ -1337,13 +2162,17 @@ function animFrame(o,t,pd,W,H){
   if(a.i&&a.i!=='none'){const p=clamp((t-d)/du,0,1);kind(a.i,ease(p),p)}
   if(a.o&&a.o!=='none'){const p=clamp((t-(pd-du))/du,0,1);if(p>0){const e=1-ease(p);kind(a.o==='drop'?'rise':a.o==='rise'?'drop':a.o==='left'?'right':a.o==='right'?'left':a.o,e,1-p)}}
   if(a.l&&a.l!=='none'&&t>=d){const w=Math.PI*2;if(a.l==='float')dy+=Math.sin(t*w/2.4)*H*.012;else if(a.l==='pulse')s*=1+.04*Math.sin(t*w/1.6);else if(a.l==='sway')r+=3*Math.sin(t*w/2.4);else if(a.l==='spin')r+=t*60}
-  return {am,dx,dy,s,r};
+  let kz=1,kx=0,ky=0;
+  if(a.l&&a.l.startsWith('kb')){const pr=clamp((t-d)/Math.max(.1,pd-d),0,1),e=pr*pr*(3-2*pr),A=a.ka||.12,pan=(A/2)/(1+A);
+    if(a.l==='kbin')kz=1+A*e;else if(a.l==='kbout')kz=1+A*(1-e);else if(a.l==='kbpar'){kz=1+A*.35*e;kx=pan*.5*(1-2*e)}
+    else{kz=1+A;if(a.l==='kbl')kx=pan*(1-2*e);else if(a.l==='kbr')kx=-pan*(1-2*e);else if(a.l==='kbu')ky=pan*(1-2*e);else if(a.l==='kbd')ky=-pan*(1-2*e)}}
+  return {am,dx,dy,s,r,kz,kx,ky};
 }
 function drawAnimObj(ctx,o,t,pd,W,H,opt){
   const f=animFrame(o,t,pd,W,H);if(!f){drawObj(ctx,o,opt);return}
   if(f.am<=.003||f.s<=.003)return;
   ctx.save();const cx=o.x+o.w/2,cy=o.y+o.h/2;ctx.translate(cx+f.dx,cy+f.dy);ctx.rotate(f.r*Math.PI/180);ctx.scale(f.s,f.s);ctx.translate(-cx,-cy);
-  const op=o.op;o.op=(op??1)*f.am;try{drawObj(ctx,o,opt)}finally{o.op=op}ctx.restore();
+  const op=o.op,oz=o.z,ox=o.ox,oy=o.oy;o.op=(op??1)*f.am;if(o.type==='image'&&(f.kz!==1||f.kx||f.ky)){o.z=(oz||1)*f.kz;o.ox=(ox||0)+f.kx;o.oy=(oy||0)+f.ky}try{drawObj(ctx,o,opt)}finally{o.op=op;o.z=oz;o.ox=ox;o.oy=oy}ctx.restore();
 }
 function drawPageContent(ctx,page,W,H,opt){
   if(!opt.transparent)drawBg(ctx,page.bg,W,H,opt);
@@ -1362,6 +2191,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&animRun){animRun=false}},tru
 function animInsp(so){
   const sel1=(label,list,key)=>row(label,el('select',{class:'f','aria-label':label,onchange:e=>{each(o=>{(o.an||(o.an={}))[key]=e.target.value})}},list.map(([v,l])=>el('option',{value:v,selected:((first().an||{})[key]||'none')===v},l))));
   return sec('Animate',sel1('Enter',AN_IN,'i'),sel1('Exit',AN_OUT,'o'),sel1('Loop',AN_LOOP,'l'),
+    (((first().an||{}).l||'').startsWith('kb')?slider('Camera move',()=>((first().an||{}).ka||.12)*100,v=>each(o=>{(o.an||(o.an={})).ka=v/100}),{min:4,max:40,suffix:'%'}):null),
     slider('Delay',()=>(first().an||{}).d||0,v=>each(o=>{(o.an||(o.an={})).d=v}),{min:0,max:15,step:.1,suffix:' s'}),
     slider('Speed',()=>(first().an||{}).du||.8,v=>each(o=>{(o.an||(o.an={})).du=v}),{min:.2,max:4,step:.1,suffix:' s'}),
     el('div',{class:'row'},el('button',{class:'btn grow',html:ic('play',16)+' Preview page',onclick:playAnim}),el('button',{class:'btn grow',onclick:()=>{const a=JSON.parse(JSON.stringify(first().an||{}));P().objs.forEach(o=>{o.an=JSON.parse(JSON.stringify(a))});touch();toast('Applied to every layer on this page')}},'Apply to page')),
@@ -1650,15 +2480,8 @@ async function openLaunchItems(items){
 /* =====================================================================
    Home screen — Canva-style: sidebar, search banner, design types, recents, templates
    ===================================================================== */
-const QUICK=[['Presentation','play','#7048e8',1920,1080],['Instagram post','image','#d6336c',1080,1080],['Story','sparkle','#e8590c',1080,1920],['Video','film','#1098ad',1920,1080],['Poster','text','#2f9e44',1800,2400],['Flyer','grid','#f59f00',874,1240],['Document','text','#4263eb',1240,1754],['YouTube thumbnail','play','#e03131',1280,720],['Logo','brand','#ae3ec9',800,800],['Business card','tpl','#0ca678',1050,600],['Custom size','plus','#6f685f',0,0]];
-const tplSize=t=>t.n==='Business card'?[1050,600]:t.c==='Slides'?[1920,1080]:t.n==='Flyer'||t.n==='Event poster'?[1240,1754]:[1080,1080];
-const home={view:'home',q:'',cat:'All',docs:null,mine:''};
-const tplThumbs=new Map();
-function tplThumb(t){
-  let c=tplThumbs.get(t.n);if(c)return c;
-  const [W,H]=tplSize(t);try{const built=buildTemplate(t,W,H),k=Math.min(2,(devicePixelRatio||1))*300/Math.max(W,H);c=document.createElement('canvas');c.width=Math.round(W*k);c.height=Math.round(H*k);const x=c.getContext('2d');x.scale(k,k);x.fillStyle='#fff';x.fillRect(0,0,W,H);drawPageContent(x,built,W,H,{s:k})}catch(e){c=document.createElement('canvas');c.width=c.height=10}
-  tplThumbs.set(t.n,c);return c;
-}
+const QUICK=[['Presentation','play','#7048e8',1920,1080],['Instagram post','image','#d6336c',1080,1080],['Story','sparkle','#e8590c',1080,1920],['WhatsApp status','chat','#2f9e44',1080,1920],['Video','film','#1098ad',1920,1080],['Poster','text','#2f9e44',1800,2400],['Flyer','grid','#f59f00',874,1240],['Invitation','heart','#c2255c',1050,1470],['Greeting card','sparkle','#ae3ec9',1050,1470],['Resume','text','#364fc7',1240,1754],['Certificate','trophy','#e67700',1754,1240],['Menu','grid','#e8590c',1240,1754],['YouTube thumbnail','play','#e03131',1280,720],['Facebook cover','image','#1971c2',1640,624],['Logo','brand','#ae3ec9',800,800],['Business card','tpl','#0ca678',1050,600],['Brochure','tpl','#5c940d',1754,1240],['Infographic','chart','#1098ad',800,2000],['T-shirt','tpl','#862e9c',2400,2880],['Custom size','plus','#6f685f',0,0]];
+const home={view:'home',q:'',cat:'All',fest:'',docs:null,mine:''};
 const homeEl=()=>document.getElementById('home');
 function showHome(){commit();saveDoc();home.view='home';home.q='';const h=homeEl();h.hidden=false;home.docs=null;renderHome();refreshDocs()}
 function hideHome(){const h=homeEl();if(h)h.hidden=true;setTimeout(()=>{fit();renderStrip()},60)}
@@ -1678,8 +2501,10 @@ function designCard(r,withActions){
   }
   return card;
 }
-function templateCard(t){const th=el('button',{class:'tn','aria-label':'Use template '+t.n,onclick:()=>startTemplate(t)},tplThumb(t));return el('div',{class:'hc'},th,el('b',{},t.n),el('small',{},t.c==='Slides'?'Presentation':t.c==='Print'?'Print':'Social media'))}
+function templateCard(t){const th=el('button',{class:'tn','aria-label':'Use template '+t.n,onclick:()=>startTemplate(t)},tplThumb(t));const [w,h]=tplSize(t);return el('div',{class:'hc'},th,el('b',{title:t.n},t.n),el('small',{},(t.g||t.c)+' · '+w+'×'+h))}
 function sizeButtons(list){return el('div',{class:'hsz'},list.map(s=>el('button',{onclick:()=>startSize(s.w,s.h,s.n)},s.n,el('small',{},`${s.w}×${s.h}`))))}
+function tplList(){const q=(home.tq||'').trim().toLowerCase();return TEMPLATES.filter(t=>(home.cat==='All'||t.c===home.cat)&&(!home.fest||t.g===home.fest)&&(!q||(t.n+' '+t.c+' '+(t.g||'')+' '+(t.tag||'')).toLowerCase().includes(q)))}
+const HOME_ROWS=[['Festivals','Indian festivals & greetings',t=>/Greeting$/.test(t.n)],['Wedding & Events','Weddings & celebrations'],['Business','Business & marketing'],['Social','Social media'],['YouTube','YouTube & video'],['Slides','Presentations'],['Print','Print & cards'],['Resume & Docs','Resumes & documents'],['Education','Education'],['Food','Food & restaurants'],['Fashion & Jewellery','Fashion & jewellery'],['Real estate','Real estate'],['Fitness','Fitness & wellness']];
 function homeSections(){
   const q=home.q.trim().toLowerCase(),out=[];
   const docs=home.docs;
@@ -1691,11 +2516,17 @@ function homeSections(){
     return out;
   }
   if(home.view==='templates'){
-    out.push(el('div',{class:'hs'},el('h2',{},'Templates')),el('div',{class:'hchips'},['All','Social','Slides','Print'].map(c=>el('button',{class:'chip','aria-pressed':home.cat===c,onclick:()=>{home.cat=c;renderHome()}},c==='Social'?'Social media':c==='Slides'?'Presentations':c))),el('div',{style:'height:10px'}),el('div',{class:'hg big'},TEMPLATES.filter(t=>home.cat==='All'||t.c===home.cat).map(templateCard)));
+    const cats=['All',...TCATS.filter(c=>TEMPLATES.some(t=>t.c===c))];
+    const s=el('input',{class:'f',type:'search',placeholder:'Search templates, e.g. Diwali, wedding, resume',value:home.tq||'','aria-label':'Search templates',style:'max-width:420px'});
+    s.addEventListener('input',()=>{home.tq=s.value;const g=document.getElementById('tgrid');g.innerHTML='';g.append(...tplList().map(templateCard));document.getElementById('tcount').textContent=tplList().length+' templates'});
+    const list=tplList();
+    out.push(el('div',{class:'hs'},el('h2',{},'Templates'),el('span',{class:'note',id:'tcount'},list.length+' templates')),s,el('div',{style:'height:12px'}),el('div',{class:'hchips'},cats.map(c=>el('button',{class:'chip','aria-pressed':home.cat===c,onclick:()=>{home.cat=c;home.fest='';renderHome()}},c))));
+    if(home.cat==='Festivals')out.push(el('div',{class:'hchips',style:'margin-top:6px'},[['','All festivals'],...FEST.map(F=>[F.n,F.n])].map(([k,l])=>el('button',{class:'chip',style:'font-size:12px;padding:5px 11px','aria-pressed':home.fest===k,onclick:()=>{home.fest=k;renderHome()}},l))));
+    out.push(el('div',{style:'height:10px'}),el('div',{class:'hg big',id:'tgrid'},list.map(templateCard)));
     return out;
   }
   if(q){
-    const ss=[...SIZES,{n:'Video',w:1920,h:1080},{n:'Presentation',w:1920,h:1080},{n:'Document',w:1240,h:1754}].filter(s=>s.n.toLowerCase().includes(q)),ts=TEMPLATES.filter(t=>(t.n+' '+t.c).toLowerCase().includes(q)),ds=(docs||[]).filter(r=>r.name.toLowerCase().includes(q));
+    const ss=[...SIZES,{n:'Video',w:1920,h:1080},{n:'Presentation',w:1920,h:1080},{n:'Document',w:1240,h:1754}].filter(s=>s.n.toLowerCase().includes(q)),ts=TEMPLATES.filter(t=>(t.n+' '+t.c+' '+(t.g||'')+' '+(t.tag||'')).toLowerCase().includes(q)).slice(0,60),ds=(docs||[]).filter(r=>r.name.toLowerCase().includes(q));
     out.push(el('div',{class:'hs'},el('h2',{},`Results for “${home.q.trim()}”`)));
     if(ss.length)out.push(el('div',{class:'hs',style:'margin-top:6px'},el('h2',{style:'font-size:16px'},'Design types')),sizeButtons(ss));
     if(ts.length)out.push(el('div',{class:'hs'},el('h2',{style:'font-size:16px'},'Templates')),el('div',{class:'hg'},ts.map(templateCard)));
@@ -1705,8 +2536,8 @@ function homeSections(){
   }
   out.push(el('div',{class:'hs'},el('h2',{},'Recent designs'),(docs&&docs.length>5)?el('button',{class:'more',onclick:()=>{home.view='projects';renderHome()}},'See all'):null),
     docs===null?el('p',{class:'note'},'Loading…'):el('div',{class:'hg'},[el('div',{class:'hc'},el('button',{class:'tn new',onclick:()=>openNew(),'aria-label':'Create a design',html:ic('plus',34)}),el('b',{},'Create new')),...docs.slice(0,6).map(r=>designCard(r))]));
-  out.push(el('div',{class:'hs'},el('h2',{},'Start from a template'),el('button',{class:'more',onclick:()=>{home.view='templates';renderHome()}},'See all')),el('div',{class:'hg'},TEMPLATES.slice(0,6).map(templateCard)));
-  out.push(el('div',{class:'hs'},el('h2',{},'All sizes')),sizeButtons(SIZES));
+  HOME_ROWS.forEach(([c,label,f])=>{const l=TEMPLATES.filter(t=>t.c===c&&(!f||f(t)));if(!l.length)return;out.push(el('div',{class:'hs'},el('h2',{},label),el('button',{class:'more',onclick:()=>{home.view='templates';home.cat=c;home.fest='';home.tq='';renderHome()}},'See all '+TEMPLATES.filter(t=>t.c===c).length)),el('div',{class:'hg'},l.slice(0,6).map(templateCard)))});
+  out.push(el('div',{class:'hs'},el('h2',{},'All sizes')),sizeButtons(SIZES.slice(0,24)),el('button',{class:'more',style:'margin-top:10px',onclick:()=>openNew()},'See all design types'));
   return out;
 }
 function renderHome(){
@@ -1728,4 +2559,4 @@ function renderHome(){
   body.append(el('div',{id:'hsections'},...homeSections()));
   main.append(body);h.append(nav,main);
 }
-try{document.fonts.addEventListener('loadingdone',()=>{clearTimeout(home.ft);home.ft=setTimeout(()=>{tplThumbs.clear();const h=homeEl();if(h&&!h.hidden)renderHome()},300)})}catch(e){}
+try{document.fonts.addEventListener('loadingdone',()=>{clearTimeout(home.ft);home.ft=setTimeout(()=>{[...tplDrawn].forEach(c=>c.isConnected&&paintThumb(c,c._t))},400)})}catch(e){}

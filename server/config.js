@@ -65,6 +65,7 @@ export function effective() {
     public: { url: clean(s.public?.url) || PUBLIC_URL },
     turn: { urls: clean(s.turn?.urls) || clean(env.TURN_URLS) || ((s.turn?.secret || env.TURN_SECRET) && PUBLIC_URL ? (() => { try { const h = new URL(PUBLIC_URL).hostname; return 'turn:' + h + ':3478,turn:' + h + ':3478?transport=tcp'; } catch { return ''; } })() : ''), secret: clean(s.turn?.secret) || clean(env.TURN_SECRET), stun: clean(s.turn?.stun) || clean(env.STUN_URLS) },
     stock: { pexels: clean(s.stock?.pexels) || clean(env.PEXELS_API_KEY), unsplash: clean(s.stock?.unsplash) || clean(env.UNSPLASH_ACCESS_KEY), pixabay: clean(s.stock?.pixabay) || clean(env.PIXABAY_API_KEY) },
+    image: { provider: clean(s.image?.provider) || clean(env.IMAGE_PROVIDER) || 'pollinations', url: (clean(s.image?.url) || clean(env.IMAGE_API_URL)).replace(/\/+$/, ''), key: clean(s.image?.key) || clean(env.IMAGE_API_KEY), model: clean(s.image?.model) || clean(env.IMAGE_MODEL) },
     llm: { base: clean(s.llm?.base) || clean(env.LLM_BASE_URL), key: clean(s.llm?.key) || clean(env.LLM_API_KEY), model: clean(s.llm?.model) || clean(env.LLM_MODEL) || 'gpt-4o-mini' }
   };
 }
@@ -91,6 +92,7 @@ export function publicSettings() {
     public: { url: e.public.url },
     turn: { urls: e.turn.urls, secretSet: !!e.turn.secret, stun: e.turn.stun },
     stock: { pexelsSet: !!e.stock.pexels, unsplashSet: !!e.stock.unsplash, pixabaySet: !!e.stock.pixabay },
+    image: { provider: e.image.provider, url: e.image.url, keySet: !!e.image.key, model: e.image.model },
     llm: { base: e.llm.base, keySet: !!e.llm.key, model: e.llm.model }
   };
 }
@@ -101,7 +103,7 @@ export function updateSettings(patch) {
     if (v === undefined) return;
     v = clean(v);
     if (secret && v === '') return;
-    if (!secret && v && !['model', 'user', 'host', 'fromName', 'clientId', 'email'].includes(field) && !urlOk(v)) throw Object.assign(new Error(`${group} address must start with http:// or https://`), { status: 400 });
+    if (!secret && v && !['model', 'user', 'host', 'fromName', 'clientId', 'email', 'provider'].includes(field) && !urlOk(v)) throw Object.assign(new Error(`${group} address must start with http:// or https://`), { status: 400 });
     next[group] = next[group] || {}; next[group][field] = v;
   };
   const p = patch || {};
@@ -143,6 +145,8 @@ export function updateSettings(patch) {
     set('turn', 'secret', p.turn.secret, true);
   }
   set('public', 'url', p.public?.url === undefined ? undefined : String(p.public.url).replace(/\/+$/, ''));
+  if (p.image?.provider !== undefined && !['pollinations', 'openai', 'huggingface'].includes(clean(p.image.provider))) throw Object.assign(new Error('Image provider must be pollinations, openai or huggingface'), { status: 400 });
+  set('image', 'provider', p.image?.provider); set('image', 'url', p.image?.url); set('image', 'model', p.image?.model); set('image', 'key', p.image?.key, true);
   set('stock', 'pexels', p.stock?.pexels, true); set('stock', 'unsplash', p.stock?.unsplash, true); set('stock', 'pixabay', p.stock?.pixabay, true);
   set('llm', 'base', p.llm?.base); set('llm', 'key', p.llm?.key, true); set('llm', 'model', p.llm?.model);
   stored = next;
