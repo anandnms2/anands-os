@@ -1,75 +1,59 @@
-/* Website templates: 36 categories x 3 looks = 108 starting points, with pictures drawn in code (they follow the theme colours).
-   Pictures are stored as "art:<motif>:<seed>" and drawn when the page is rendered, so they stay small and recolour with the theme. */
-const hx=h=>{h=String(h).replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16))};
-const toHex=a=>'#'+a.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
-const mix=(a,b,t)=>{const x=hx(a),y=hx(b);return toHex(x.map((v,i)=>v+(y[i]-v)*t))};
-const rng=seed=>{let a=(seed|0)+0x6D2B79F5;return()=>{a=Math.imul(a^a>>>15,a|1);a^=a+Math.imul(a^a>>>7,a|61);return((a^a>>>14)>>>0)/4294967296}};
-const hashStr=s=>{let h=7;for(const c of String(s))h=Math.imul(h,31)+c.charCodeAt(0)|0;return h};
-const artCache=new Map();
-function artSVG(motif,th,seed){
-  const R=rng(seed*977+hashStr(motif)),p=th.p,dk=th.dark;const L=t=>dk?mix(p,'#000000',t):mix(p,'#ffffff',t),D=t=>mix(p,'#000000',t);
-  const sky=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${L(dk?.55:.5)}"/><stop offset="1" stop-color="${L(dk?.78:.86)}"/></linearGradient></defs><rect width="1200" height="900" fill="url(#g)"/>`;
-  let s='';const n=(a,b)=>a+(b-a)*R();
-  switch(motif){
-  case 'hills':case 'savanna':{const sx=n(220,980);s=sky+`<circle cx="${sx}" cy="${n(170,260)}" r="${n(80,120)}" fill="${mix(p,'#ffffff',.78)}" opacity=".9"/>`;
-    if(motif==='savanna'){s+=`<path d="M0 700 Q300 640 600 690 T1200 670 V900 H0Z" fill="${D(.35)}"/><rect x="${sx-60}" y="430" width="22" height="260" fill="${D(.7)}"/><ellipse cx="${sx-49}" cy="430" rx="230" ry="46" fill="${D(.72)}"/><ellipse cx="${sx-120}" cy="400" rx="140" ry="34" fill="${D(.66)}"/>`}
-    s+=`<path d="M0 620 Q250 470 520 600 T1200 540 V900 H0Z" fill="${D(.12)}" opacity=".9"/><path d="M0 720 Q300 600 640 710 T1200 690 V900 H0Z" fill="${D(.3)}"/><path d="M0 820 Q350 740 700 820 T1200 790 V900 H0Z" fill="${D(.5)}"/>`;break}
-  case 'city':{s=sky;let x=-20;while(x<1200){const w=n(70,130),h=n(220,580);s+=`<rect x="${x}" y="${900-h}" width="${w}" height="${h}" fill="${D(n(.25,.6))}"/>`;for(let yy=900-h+24;yy<880;yy+=40)for(let xx=x+14;xx<x+w-20;xx+=28)if(R()>.45)s+=`<rect x="${xx}" y="${yy}" width="12" height="18" fill="${mix(p,'#ffffff',.8)}" opacity=".75"/>`;x+=w+n(0,14)}break}
-  case 'bloom':case 'leaf':{s=sky;const cx=n(520,680),cy=n(380,480),k=motif==='bloom'?10:7;for(let i=0;i<k;i++)s+=`<ellipse cx="${cx}" cy="${cy-170}" rx="${motif==='bloom'?62:84}" ry="${motif==='bloom'?170:230}" fill="${i%2?L(.25):p}" opacity=".62" transform="rotate(${i*360/k} ${cx} ${cy})"/>`;s+=`<circle cx="${cx}" cy="${cy}" r="48" fill="${mix(p,'#ffffff',.85)}"/>`;break}
-  case 'waves':{s=sky;for(let i=0;i<5;i++){const y=420+i*95,a=n(30,70);s+=`<path d="M0 ${y} C200 ${y-a} 400 ${y+a} 600 ${y} S1000 ${y-a} 1200 ${y} V900 H0Z" fill="${dk?L(.3+i*.1):D(.04+i*.13)}" opacity=".85"/>`}break}
-  case 'grid':{s=sky+`<rect x="150" y="150" width="900" height="600" rx="26" fill="${dk?'#1b1b22':'#ffffff'}" opacity=".96"/><rect x="150" y="150" width="900" height="64" rx="26" fill="${L(.25)}"/>`;[0,1,2].forEach(i=>s+=`<circle cx="${190+i*34}" cy="182" r="9" fill="${mix(p,'#ffffff',.8)}"/>`);for(let i=0;i<3;i++)s+=`<rect x="${190+i*290}" y="260" width="250" height="150" rx="16" fill="${L(.55+i*.08)}"/>`;for(let i=0;i<5;i++)s+=`<rect x="190" y="${450+i*54}" width="${n(300,780)}" height="22" rx="11" fill="${p}" opacity="${.5-i*.07}"/>`;break}
-  case 'circles':{s=sky;for(let i=0;i<9;i++)s+=`<circle cx="${n(100,1100)}" cy="${n(100,800)}" r="${n(60,260)}" fill="${i%3?L(.2+R()*.3):D(.1+R()*.2)}" opacity="${n(.25,.6)}"/>`;break}
-  case 'cup':{s=sky+`<ellipse cx="600" cy="740" rx="330" ry="56" fill="${D(.3)}" opacity=".45"/><path d="M380 360 H820 V560 Q820 720 600 720 Q380 720 380 560Z" fill="${mix(p,'#ffffff',.9)}"/><path d="M820 420 H880 Q960 420 960 500 Q960 580 870 580 H815" fill="none" stroke="${mix(p,'#ffffff',.9)}" stroke-width="34"/><ellipse cx="600" cy="360" rx="220" ry="40" fill="${D(.55)}"/>`;for(let i=0;i<3;i++)s+=`<path d="M${520+i*80} 300 q-40 -50 0 -100 t0 -100" fill="none" stroke="${mix(p,'#ffffff',.9)}" stroke-width="12" stroke-linecap="round" opacity=".7"/>`;break}
-  case 'plate':{s=sky+`<circle cx="600" cy="470" r="330" fill="${mix(p,'#ffffff',.92)}"/><circle cx="600" cy="470" r="250" fill="none" stroke="${L(.4)}" stroke-width="10"/><circle cx="600" cy="470" r="150" fill="${p}" opacity=".8"/><circle cx="560" cy="440" r="48" fill="${L(.35)}"/><circle cx="650" cy="510" r="38" fill="${D(.3)}"/><rect x="170" y="200" width="22" height="540" rx="11" fill="${mix(p,'#ffffff',.9)}"/><rect x="1010" y="200" width="22" height="540" rx="11" fill="${mix(p,'#ffffff',.9)}"/>`;break}
-  case 'camera':{s=sky+`<rect x="200" y="300" width="800" height="500" rx="60" fill="${D(.55)}"/><rect x="460" y="240" width="280" height="90" rx="26" fill="${D(.6)}"/><circle cx="600" cy="550" r="190" fill="${D(.78)}"/><circle cx="600" cy="550" r="140" fill="${D(.35)}"/><circle cx="600" cy="550" r="70" fill="${L(.4)}" opacity=".8"/><circle cx="545" cy="500" r="22" fill="#ffffff" opacity=".6"/><rect x="250" y="340" width="90" height="42" rx="12" fill="${L(.5)}"/>`;break}
-  case 'diamond':{s=sky;const t=[[600,200,420,360],[600,200,780,360],[420,360,600,720],[780,360,600,720],[420,360,780,360]];s+=`<polygon points="420,360 600,200 780,360 600,720" fill="${L(.2)}"/><polygon points="420,360 600,360 600,720" fill="${p}" opacity=".75"/><polygon points="780,360 600,360 600,720" fill="${D(.2)}" opacity=".7"/><polygon points="420,360 500,360 600,200" fill="${mix(p,'#ffffff',.8)}" opacity=".85"/><polygon points="780,360 700,360 600,200" fill="${mix(p,'#ffffff',.55)}" opacity=".8"/><polygon points="500,360 700,360 600,200" fill="${mix(p,'#ffffff',.7)}" opacity=".9"/>`;break}
-  case 'road':{s=sky+`<polygon points="0,470 1200,470 1200,900 0,900" fill="${D(.35)}"/><polygon points="520,470 680,470 1100,900 100,900" fill="${D(.7)}"/>`;for(let i=0;i<5;i++){const y=500+i*i*20+i*30;s+=`<rect x="${595-i*2}" y="${y}" width="${10+i*5}" height="${18+i*7}" fill="#ffffff" opacity=".85"/>`}s+=`<rect x="250" y="300" width="330" height="170" rx="10" fill="${p}"/><rect x="590" y="360" width="150" height="110" rx="10" fill="${L(.2)}"/><circle cx="330" cy="480" r="36" fill="${D(.8)}"/><circle cx="520" cy="480" r="36" fill="${D(.8)}"/><circle cx="670" cy="480" r="36" fill="${D(.8)}"/>`;break}
-  case 'solar':{s=sky+`<circle cx="940" cy="190" r="100" fill="${mix(p,'#ffffff',.85)}"/>`;for(let i=0;i<12;i++){const a=i*Math.PI/6;s+=`<line x1="${940+Math.cos(a)*130}" y1="${190+Math.sin(a)*130}" x2="${940+Math.cos(a)*180}" y2="${190+Math.sin(a)*180}" stroke="${mix(p,'#ffffff',.85)}" stroke-width="14" stroke-linecap="round"/>`}s+=`<polygon points="160,780 520,430 1060,430 940,780" fill="${D(.7)}"/>`;for(let r=0;r<3;r++)for(let c=0;c<5;c++){const x0=240+c*165-r*55,y0=470+r*100;s+=`<polygon points="${x0},${y0+88} ${x0+34},${y0} ${x0+150},${y0} ${x0+118},${y0+88}" fill="${L(.35)}" opacity=".85"/>`}break}
-  case 'house':{s=sky+`<rect x="0" y="740" width="1200" height="160" fill="${D(.4)}"/><rect x="330" y="400" width="540" height="350" fill="${mix(p,'#ffffff',.9)}"/><polygon points="290,410 600,190 910,410" fill="${p}"/><rect x="540" y="560" width="120" height="190" rx="10" fill="${D(.5)}"/><rect x="380" y="470" width="110" height="100" rx="8" fill="${L(.4)}"/><rect x="710" y="470" width="110" height="100" rx="8" fill="${L(.4)}"/>`;break}
-  case 'book':{s=sky+`<path d="M600 280 Q380 220 190 270 V720 Q380 670 600 740Z" fill="${mix(p,'#ffffff',.92)}"/><path d="M600 280 Q820 220 1010 270 V720 Q820 670 600 740Z" fill="${mix(p,'#ffffff',.84)}"/>`;for(let i=0;i<5;i++)s+=`<path d="M250 ${350+i*55} Q400 ${330+i*55} 560 ${370+i*55}" fill="none" stroke="${p}" stroke-width="9" opacity=".45" stroke-linecap="round"/>`;s+=`<rect x="590" y="270" width="20" height="480" fill="${D(.3)}" opacity=".4"/>`;break}
-  case 'heart':{s=sky+`<path d="M600 760 C250 520 220 270 420 270 C520 270 580 330 600 400 C620 330 680 270 780 270 C980 270 950 520 600 760Z" fill="${p}" opacity=".9"/><path d="M600 700 C330 520 300 330 440 330 C520 330 570 380 600 440" fill="none" stroke="${mix(p,'#ffffff',.7)}" stroke-width="14" opacity=".5" stroke-linecap="round"/>`;break}
-  case 'bars':{s=sky+`<rect x="210" y="440" width="780" height="30" rx="15" fill="${D(.6)}"/>`;[[250,300,200],[330,350,100],[870,300,200],[790,350,100]].forEach(a=>s+=`<rect x="${a[0]}" y="${a[1]}" width="50" height="${a[2]+20}" rx="12" fill="${D(.35)}"/>`);s+=`<rect x="380" y="560" width="440" height="40" rx="20" fill="${p}" opacity=".6"/>`;break}
-  case 'stones':{s=sky+`<ellipse cx="600" cy="760" rx="300" ry="40" fill="${D(.3)}" opacity=".5"/>`;[[600,690,230,70,.15],[600,610,180,58,.3],[600,540,130,48,.45],[600,480,82,38,.6]].forEach(a=>s+=`<ellipse cx="${a[0]}" cy="${a[1]}" rx="${a[2]}" ry="${a[3]}" fill="${dk?L(a[4]):D(a[4]-.1)}"/>`);break}
-  case 'tooth':{s=sky+`<path d="M600 270 C520 220 360 250 380 440 C395 560 420 620 450 760 C465 810 520 800 540 740 C560 680 570 620 600 620 C630 620 640 680 660 740 C680 800 735 810 750 760 C780 620 805 560 820 440 C840 250 680 220 600 270Z" fill="${mix(p,'#ffffff',.93)}"/><path d="M470 330 C480 300 520 290 540 305" fill="none" stroke="${L(.4)}" stroke-width="14" stroke-linecap="round"/>`;break}
-  case 'columns':{s=sky+`<polygon points="200,330 600,150 1000,330" fill="${mix(p,'#ffffff',.9)}"/><rect x="200" y="330" width="800" height="40" fill="${mix(p,'#ffffff',.85)}"/><rect x="170" y="760" width="860" height="50" fill="${mix(p,'#ffffff',.85)}"/>`;for(let i=0;i<5;i++)s+=`<rect x="${250+i*165}" y="370" width="68" height="390" fill="${mix(p,'#ffffff',.92)}"/><rect x="${250+i*165+22}" y="370" width="8" height="390" fill="${D(.1)}" opacity=".15"/>`;break}
-  case 'frame':{s=sky;[[170,200,440,520],[640,260,380,300],[640,600,380,170]].forEach((a,i)=>{s+=`<rect x="${a[0]}" y="${a[1]}" width="${a[2]}" height="${a[3]}" fill="${D(.7)}"/><rect x="${a[0]+16}" y="${a[1]+16}" width="${a[2]-32}" height="${a[3]-32}" fill="${mix(p,'#ffffff',.9)}"/><circle cx="${a[0]+a[2]*.4}" cy="${a[1]+a[3]*.45}" r="${Math.min(a[2],a[3])*.2}" fill="${i%2?L(.2):p}" opacity=".85"/><rect x="${a[0]+a[2]*.3}" y="${a[1]+a[3]*.65}" width="${a[2]*.4}" height="${a[3]*.12}" fill="${D(.25)}" opacity=".7"/>`});break}
-  case 'chart':{s=sky+`<rect x="170" y="170" width="860" height="560" rx="26" fill="${dk?'#1b1b22':'#ffffff'}" opacity=".95"/>`;for(let i=0;i<7;i++){const h=n(120,380);s+=`<rect x="${230+i*110}" y="${690-h}" width="64" height="${h}" rx="10" fill="${i%2?L(.3):p}"/>`}s+=`<polyline points="${[0,1,2,3,4,5,6].map(i=>`${262+i*110},${n(260,480)}`).join(' ')}" fill="none" stroke="${D(.5)}" stroke-width="8" stroke-linecap="round"/>`;break}
-  case 'person':{s=`<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${L(.45)}"/><stop offset="1" stop-color="${L(.75)}"/></linearGradient></defs><rect width="1200" height="900" fill="url(#g)"/><circle cx="600" cy="360" r="170" fill="${D(.35+R()*.2)}"/><path d="M200 900 C200 640 380 560 600 560 C820 560 1000 640 1000 900Z" fill="${D(.2+R()*.3)}"/>`;break}
-  default:{s=sky;for(let i=0;i<8;i++)s+=`<circle cx="${n(100,1100)}" cy="${n(100,800)}" r="${n(60,240)}" fill="${L(.2+R()*.3)}" opacity=".45"/>`}}
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">${s}</svg>`}
-function imgSrc(v){if(typeof v!=='string'||!v.startsWith('art:'))return v;const th=(typeof S!=='undefined'&&S&&S.theme)||{p:'#e8590c',dark:false};const key=v+'|'+th.p+'|'+th.dark;let u=artCache.get(key);if(!u){const [,m,sd]=v.split(':');u='data:image/svg+xml;base64,'+btoa(artSVG(m||'circles',th,parseInt(sd,10)||1));artCache.set(key,u)}return u}
-
-/* ---------- building a site from a category and a look ---------- */
-const LOOKS=['Classic','Bold','Minimal'];
-function themeFor(C,v){const p=C.p;const f=FONTPAIRS[(C.f+[0,3,6][v])%FONTPAIRS.length];
-  if(v===1){const pp=mix(p,'#ffffff',.18);return {p:pp,bg:mix(p,'#000000',.9),alt:mix(p,'#000000',.82),tx:'#f4f1ec',dark:true,head:f[0],body:f[1],radius:22}}
-  if(v===2)return {p:mix(p,'#000000',.1),bg:'#faf8f4',alt:'#efe9df',tx:'#1f1c19',dark:false,head:f[0],body:f[1],radius:4};
-  return {p,bg:mix(p,'#ffffff',.97),alt:mix(p,'#ffffff',.88),tx:mix(p,'#000000',.86),dark:false,head:f[0],body:f[1],radius:14}}
+/* Website templates: 45 categories x 5 looks = 225 starting points. Pictures are painted in code (site-art.js) in the theme's three
+   colours and stored as "art:<scene>:<seed>", so they stay small and recolour when the theme changes. */
+const LOOKS=['Classic','Bold','Vibrant','Editorial','Fresh'];
+/* each category gets a more specific scene than the first version used */
+const M2={saas:'laptop',app:'phone',startup:'rocket',agency:'paint',bakery:'fruit',portfolio:'frame',band:'music',conference:'city',course:'laptop',salon:'scissors',boutique:'shop',hotel:'beach',logistics:'port',wedding:'heart',catering:'fruit',charity:'heart',cleaning:'bloom',church:'hills',construction:'house',cv:'person',solar:'solar'};
+CATS.forEach(C=>{if(M2[C.id])C.m=M2[C.id]});
+const POOL={Business:['city','chart','laptop','hills','bars','grid'],Tech:['laptop','phone','rocket','grid','circles','chart'],Food:['plate','fruit','cup','bloom','shop','hills'],Creative:['paint','camera','frame','music','film','circles'],Events:['balloon','gift','heart','bloom','music','city'],Personal:['laptop','book','person','mountain','circles','hills'],Education:['book','balloon','music','person','laptop','hills'],Community:['heart','hills','field','person','house','bloom'],Health:['stones','bloom','leaf','fruit','bars','waves'],Retail:['shop','gift','diamond','bloom','fruit','scissors'],Services:['car','paw','scissors','field','house','shop'],Travel:['savanna','beach','mountain','waves','road','hills']};
+const lum=c=>{const [r,g,b]=hx(c);return(.299*r+.587*g+.114*b)/255};
+const fitDark=c=>{let n=0;while(lum(c)>.55&&n++<8)c=mix(c,'#000000',.12);return c};
+const fitLight=c=>{let n=0;while(lum(c)<.45&&n++<8)c=mix(c,'#ffffff',.14);return c};
+const SERIF=[1,3,4,7,9],FRESH=[0,2,6,8],VIB=[0,2,6,5];
+function themeFor(C,v){const b=C.p;let p,f;
+  if(v===0){p=fitDark(b);f=FONTPAIRS[C.f%FONTPAIRS.length];return {p,p2:rot(p,40,1.15),p3:rot(p,-50,1.15),bg:mix(p,'#ffffff',.97),alt:mix(p,'#ffffff',.88),tx:mix(p,'#000000',.86),dark:false,head:f[0],body:f[1],radius:14,pop:true}}
+  if(v===1){p=fitLight(mix(b,'#ffffff',.2));f=FONTPAIRS[(C.f+3)%FONTPAIRS.length];return {p,p2:rot(p,45,1.1),p3:rot(p,-55,1.1),bg:mix(b,'#000000',.9),alt:mix(b,'#000000',.82),tx:'#f4f1ec',dark:true,head:f[0],body:f[1],radius:22,grad:true,deco:true}}
+  if(v===2){p=fitDark(rot(b,25,1.25));const p2=rot(p,60,1.1),p3=rot(p,-60,1.1);f=FONTPAIRS[VIB[C.f%4]];return {p,p2,p3,bg:mix(p3,'#ffffff',.93),alt:mix(p2,'#ffffff',.84),tx:mix(p,'#000000',.88),dark:false,head:f[0],body:f[1],radius:26,grad:true,pop:true,deco:true}}
+  if(v===3){p=fitDark(mix(b,'#000000',.15));f=FONTPAIRS[SERIF[C.f%5]];return {p,p2:rot(p,30,.8),p3:rot(p,-30,.7),bg:'#fbf7f0',alt:'#f1e9dc',tx:'#201a14',dark:false,head:f[0],body:f[1],radius:2}}
+  p=fitDark(rot(b,-30,1.15,.02));const q2=rot(p,70,1.1),q3=rot(p,-70,1.1);f=FONTPAIRS[FRESH[C.f%4]];
+  return {p,p2:q2,p3:q3,bg:mix(q2,'#ffffff',.92),alt:mix(p,'#ffffff',.85),tx:mix(p,'#000000',.85),dark:false,head:f[0],body:f[1],radius:30,pop:true,deco:true}}
 function buildCategorySite(ci,v){
-  const C=CATS[ci];const th=themeFor(C,v);const sd=ci*7+v*3;
+  const C=CATS[ci];const th=themeFor(C,v);const sd=ci*11+v*5;
   const slug=C.id;const mk=(type,d,over={})=>{const b=mkBlock(type);b.d=Object.assign({},b.d,d);Object.assign(b,over);return b};
-  const names=['Neema K.','Baraka M.','Zawadi S.'],roles={Food:'Guest',Travel:'Guest',Health:'Client',Education:'Parent',Community:'Member',Tech:'User',Creative:'Client',Events:'Guest',Retail:'Customer',Personal:'Colleague',Business:'Client'};
-  const art=(m,n)=>`art:${m||C.m}:${sd+n}`;
-  const nav=()=>mk('nav',{logo:C.n,btn:C.cta[2],btnLink:'page:contact'},{v:v===2?'center':'left',bg:'bg'});
-  const hero=()=>v===1?mk('hero',{eyebrow:C.tag.toUpperCase(),title:C.h[0],sub:C.h[1],btn:C.cta[2],btnLink:'page:contact',btn2:'Learn more',btn2Link:'',img:art(C.m,1)},{v:'cover',bg:'alt'}):v===2?mk('hero',{eyebrow:C.tag.toUpperCase(),title:C.h[0],sub:C.h[1],btn:C.cta[2],btnLink:'page:contact',btn2:'',btn2Link:'',img:''},{v:'center',bg:'bg'}):mk('hero',{eyebrow:C.tag.toUpperCase(),title:C.h[0],sub:C.h[1],btn:C.cta[2],btnLink:'page:contact',btn2:'Learn more',btn2Link:'',img:art(C.m,1)},{v:'split',bg:'alt'});
-  const feats=()=>mk('features',{eyebrow:'WHAT WE DO',title:'Why choose '+C.n.split(' ')[0],sub:'',items:C.ft.map((f,i)=>({icon:C.ic[i],title:f[0],text:f[1]}))},{v:['cards','left','plain'][v],bg:'bg'});
-  const about=(rev)=>mk('split',{eyebrow:'ABOUT US',title:C.ab[0],text:C.ab[1],btn:C.cta[2],btnLink:'page:contact',img:art(C.m,2)},{v:rev?'left':'right',bg:'bg'});
+  const names=['Neema K.','Baraka M.','Zawadi S.'],roles={Food:'Guest',Travel:'Guest',Health:'Client',Education:'Parent',Community:'Member',Tech:'User',Creative:'Client',Events:'Guest',Retail:'Customer',Personal:'Colleague',Business:'Client',Services:'Customer'};
+  const scenes=[C.m].concat((POOL[C.g]||POOL.Business).filter(x=>x!==C.m));
+  const art=(m,n)=>`art:${m||C.m}:${sd+n}`,sc=(i,n)=>art(scenes[i%scenes.length],n);
+  const nav=()=>mk('nav',{logo:C.n,btn:C.cta[2],btnLink:'page:contact'},{v:v===3?'center':'left',bg:'bg'});
+  const heroText={eyebrow:C.tag.toUpperCase(),title:C.h[0],sub:C.h[1],btn:C.cta[2],btnLink:'page:contact',btn2:'Learn more',btn2Link:''};
+  const hero=()=>v===0?mk('hero',{...heroText,img:sc(0,1),img2:sc(1,2),img3:sc(2,3)},{v:'collage',bg:'alt'}):
+    v===1?mk('hero',{...heroText,img:sc(0,1)},{v:'cover',bg:'alt'}):
+    v===2?mk('hero',{...heroText,btn2:'',img:sc(0,1)},{v:'split',bg:'bg'}):
+    v===3?mk('hero',{...heroText,btn2:'',img:''},{v:'center',bg:'bg'}):
+    mk('hero',{...heroText,img:sc(0,1)},{v:'arch',bg:'bg'});
+  const feats=()=>mk('features',{eyebrow:'WHAT WE DO',title:'Why choose '+C.n.split(' ')[0],sub:'',items:C.ft.map((f,i)=>({icon:C.ic[i],title:f[0],text:f[1]}))},{v:v===3?'plain':'cards',bg:'bg'});
+  const cards=(ov)=>mk('cards',{eyebrow:'HIGHLIGHTS',title:v===3?'What we are known for':'See what we do',sub:'',items:C.ft.map((f,i)=>({img:sc(i+1,10+i),title:f[0],text:f[1]}))},{v:ov?'overlay':'grid',bg:v===2||v===4?'alt':'bg'});
+  const about=(rev,a)=>mk('split',{eyebrow:'ABOUT US',title:C.ab[0],text:C.ab[1],btn:C.cta[2],btnLink:'page:contact',img:sc(1,2)},{v:(a?'arch':'')+(rev?(a?'left':'left'):(a?'':'right')),bg:'bg'});
+  const gal=(kind,n)=>mk('gallery',{items:Array.from({length:n},(_,i)=>({img:sc(i,30+i)}))},{v:kind,bg:'bg'});
   const stats=()=>mk('stats',{items:[0,2,4,6].map(i=>({num:C.st[i],label:C.st[i+1]}))},{bg:'primary'});
   const quotes=()=>mk('testimonials',{title:'What people say',items:C.q.map((q,i)=>({quote:q,name:names[i],role:roles[C.g]||'Customer'}))},{bg:'alt'});
   const faq=()=>mk('faq',{title:'Questions, answered',items:[{q:'How do I get started?',a:'Send us a message or call, and we will reply within one working day.'},{q:'Where are you based?',a:'Dar es Salaam, Tanzania. We also work with people across the region.'},{q:'How can I pay?',a:'Bank transfer, mobile money or cash. We will confirm everything in writing first.'}]},{bg:'bg'});
   const cta=()=>mk('cta',{title:C.cta[0],sub:C.cta[1],btn:C.cta[2],btnLink:'page:contact'},{bg:'primary'});
   const contact=()=>mk('contact',{title:'Get in touch',sub:'We usually reply within one working day.',email:'hello@'+slug+'.example',phone:'+255 700 000 000',address:'Dar es Salaam, Tanzania',formTo:'',btn:'Send message'},{bg:'alt'});
-  const footer=()=>mk('footer',{brand:C.n,text:C.h[1].slice(0,70),copy:'© 2026 '+C.n+'. All rights reserved.'},{bg:'dark'});
-  const mid=()=>{const k=C.k;if(k==='menu')return mk('menu',{title:'Our menu',sub:'Fresh, made to order.',items:C.it.map(x=>({name:x[0],desc:x[1],price:x[2]}))},{bg:'bg'});
+  const footer=()=>mk('footer',{brand:C.n,text:C.h[1].slice(0,70),copy:'© 2026 '+C.n+'. All rights reserved.'},{bg:v===2||v===4?'primary':'dark'});
+  const mid=(gk)=>{const k=C.k;if(k==='menu')return mk('menu',{title:'Our menu',sub:'Fresh, made to order.',items:C.it.map(x=>({name:x[0],desc:x[1],price:x[2]}))},{bg:'bg'});
     if(k==='pricing')return mk('pricing',{eyebrow:'PRICING',title:'Simple, clear prices',sub:'Pick what suits you.',items:C.it.map((x,i)=>({name:x[0],price:x[1],per:x[2],features:x[3],btn:'Choose '+x[0],btnLink:'page:contact',hl:i===1}))},{bg:'bg'});
     if(k==='team')return mk('team',{title:'Meet the team',items:C.it.map((x,i)=>({name:x[0],role:x[1],photo:`art:person:${sd+10+i}`}))},{bg:'bg'});
     if(k==='steps')return mk('steps',{eyebrow:'HOW IT WORKS',title:'Simple from start to finish',items:C.it.map(x=>({title:x[0],text:x[1]}))},{bg:'bg'});
-    return mk('gallery',{title:'Gallery',items:[0,1,2,3,4,5].map(i=>({img:art(C.m,20+i)}))},{v:v===2?'masonry':'grid',bg:'bg'})};
+    const g=gal(gk||'grid',gk==='mosaic'?8:gk==='strip'?4:6);g.d.title='Gallery';return g};
   const P=(title,sl,blocks)=>({id:uid(),title,slug:sl,desc:'',blocks});
-  let pages;
-  if(v===0)pages=[P('Home','index',[nav(),hero(),feats(),about(false),mid(),stats(),quotes(),cta(),footer()]),P('About','about',[nav(),about(true),C.k==='team'?mid():feats(),stats(),footer()]),P('Contact','contact',[nav(),contact(),faq(),footer()])];
-  else if(v===1)pages=[P('Home','index',[nav(),hero(),feats(),mid(),stats(),quotes(),faq(),cta(),footer()]),P('Contact','contact',[nav(),contact(),footer()])];
-  else pages=[P('Home','index',[nav(),hero(),mk('text',{title:C.ab[0],text:C.ab[1]},{v:'narrow',bg:'bg'}),C.k==='gallery'?mid():mk('gallery',{title:'',items:[0,1,2,3,4,5].map(i=>({img:art(C.m,30+i)}))},{v:'masonry',bg:'bg'}),C.k==='gallery'?feats():mid(),quotes(),cta(),footer()]),P('Contact','contact',[nav(),contact(),footer()])];
+  const isG=C.k==='gallery';
+  let home,second;
+  if(v===0){home=[nav(),hero(),cards(false),about(false,false),mid('grid'),stats(),quotes(),cta(),footer()];
+    second=P('About','about',[nav(),about(true,false),C.k==='team'?mid():feats(),gal('masonry',6),stats(),footer()])}
+  else if(v===1){home=[nav(),hero(),feats(),cards(true),isG?null:gal('mosaic',8),mid('mosaic'),stats(),quotes(),faq(),cta(),footer()].filter(Boolean);second=null}
+  else if(v===2){home=[nav(),hero(),feats(),about(true,true),isG?null:gal('mosaic',8),mid('mosaic'),stats(),quotes(),cta(),footer()].filter(Boolean);second=P('More','more',[nav(),cards(false),faq(),footer()])}
+  else if(v===3){home=[nav(),hero(),gal('strip',4),mk('text',{title:C.ab[0],text:C.ab[1]},{v:'narrow',bg:'bg'}),cards(true),mid('masonry'),quotes(),cta(),footer()];second=null}
+  else{home=[nav(),hero(),feats(),about(true,true),cards(false),mid('masonry'),isG?null:gal('masonry',6),quotes(),cta(),footer()].filter(Boolean);second=P('About','about',[nav(),about(false,true),stats(),faq(),footer()])}
+  const pages=[P('Home','index',home)];if(second)pages.push(second);pages.push(P('Contact','contact',[nav(),contact(),v===0||v===4?faq():null,footer()].filter(Boolean)));
   pages.forEach(p=>p.blocks.forEach(b=>{if(b.type==='gallery'&&!b.d.title)delete b.d.title}));
   return {v:1,type:'site',id:uid(),name:C.n,desc:C.h[1],theme:th,pages}}
-const TEMPLATES=[];CATS.forEach((C,ci)=>[0,1,2].forEach(v=>TEMPLATES.push({id:C.id+'-'+LOOKS[v].toLowerCase(),name:C.tag+' · '+LOOKS[v],group:C.g,ci,v,words:(C.tag+' '+C.g+' '+C.n+' '+LOOKS[v]).toLowerCase()})));
+const TEMPLATES=[];CATS.forEach((C,ci)=>LOOKS.forEach((L0,v)=>TEMPLATES.push({id:C.id+'-'+L0.toLowerCase(),name:C.tag+' · '+L0,group:C.g,ci,v,words:(C.tag+' '+C.g+' '+C.n+' '+L0).toLowerCase()})));

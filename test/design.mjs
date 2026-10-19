@@ -500,14 +500,14 @@ try {
     await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof aiSample === 'function'); const mg = await p.evaluate(async () => { const s = await aiSample(); const r = await s('say hi'); return r.text; }); assert.match(mg, /^GATEWAY/);
     await p.close();
   });
-  await t('Website templates: 100+ with thumbnails, search, picture art follows the theme, a new site opens the picker', async () => {
+  await t('Website templates: 200+ with thumbnails, search, picture art follows the theme, a new site opens the picker', async () => {
     const p = await ctx.newPage(); await p.setViewportSize({ width: 1300, height: 900 });
     await p.goto(B + '/apps/design-studio/'); await p.waitForFunction(() => typeof edNew === 'function'); await p.evaluate(() => edNew('sites')); await p.waitForURL(/site\.html\?new=1/);
     await p.waitForSelector('#tplGrid .tcard[data-tpl="consulting-classic"]');
-    const n = await p.evaluate(() => TEMPLATES.length); assert.ok(n >= 100, 'templates ' + n); assert.ok((await p.$$('#tplGrid .tcard')).length > 100);
+    const n = await p.evaluate(() => TEMPLATES.length); assert.ok(n >= 200, 'templates ' + n); assert.ok((await p.$$('#tplGrid .tcard')).length > 200);
     const bad = await p.evaluate(() => { const o = []; TEMPLATES.forEach((t) => { const s = buildCategorySite(t.ci, t.v); const h = withSite(s, () => s.pages.map((pg) => pageHTML(pg, 'pub', { hrefFor: (x) => x })).join('')); if (h.length < 5000 || /undefined|NaN/.test(h.replace(/<style>[\s\S]*?<\/style>/, '').replace(/<svg[\s\S]*?<\/svg>/g, ''))) o.push(t.id); }); return o; }); assert.deepEqual(bad, []);
-    await p.fill('#tplSearch', 'wedding'); assert.deepEqual(await p.$$eval('#tplGrid .tcard', (a) => a.map((x) => x.dataset.tpl)), ['blank', 'wedding-classic', 'wedding-bold', 'wedding-minimal']);
-    await p.click('[data-group="All"]'); await p.fill('#tplSearch', ''); await p.click('[data-group="Food"]'); assert.ok((await p.$$('#tplGrid .tcard')).length >= 12);
+    await p.fill('#tplSearch', 'wedding'); assert.deepEqual(await p.$$eval('#tplGrid .tcard', (a) => a.map((x) => x.dataset.tpl)), ['blank', 'wedding-classic', 'wedding-bold', 'wedding-vibrant', 'wedding-editorial', 'wedding-fresh']);
+    await p.click('[data-group="All"]'); await p.fill('#tplSearch', ''); await p.click('[data-group="Food"]'); assert.ok((await p.$$('#tplGrid .tcard')).length >= 20);
     await p.click('[data-group="All"]'); await p.fill('#tplSearch', 'safari'); await p.click('[data-tpl="safari-bold"]'); await p.waitForFunction(() => S.name === 'Pori Safari Co.');
     const art = await p.evaluate(() => { const h = S.pages[0].blocks.find((b) => b.type === 'hero'); return { img: h.d.img, src: imgSrc(h.d.img).slice(0, 26), dark: S.theme.dark }; }); assert.match(art.img, /^art:savanna:/); assert.equal(art.src, 'data:image/svg+xml;base64,'); assert.equal(art.dark, true);
     const dl = Promise.all([p.waitForEvent('download'), (async () => { await p.click('#bDl'); await p.click('text=Website files'); })()]); const [d] = await dl; const zp = path.join(os.tmpdir(), 'tpl-' + Date.now() + '.zip'); await d.saveAs(zp); assert.ok(fs.statSync(zp).size > 3000);

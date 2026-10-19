@@ -110,7 +110,7 @@ It uses [Scramjet](https://github.com/MercuryWorkshop/scramjet), the engine behi
 - Google, YouTube, Reddit and similar sites work. Sites that check for a data-centre address may ask for a CAPTCHA. `SJ_OFF=1` turns the engine off and the Desktop falls back to simple tabs.
 
 ### Design Studio additions
-- **Website templates**: 108 templates (36 kinds × Classic/Bold/Minimal) chosen from live thumbnails; pictures are generated art that follows each template's colours. Pictures can be replaced by upload, free stock photos or AI.
+- **Website templates**: 225 templates (45 kinds × Classic, Bold, Vibrant, Editorial and Fresh) chosen from live thumbnails; pictures are generated art that follows each template's colours. Pictures can be replaced by upload, free stock photos or AI.
 - **Crop** images in the editor, **Trash** for designs, docs, whiteboards and websites (30-day purge), and the A logo in full-screen mode.
 - **Contact forms** on published sites are stored in a server inbox (Messages button) and can optionally be emailed.
 - **AI** (Settings → AI for Design Studio): uses your connected AI by default; Gemini (free tier) or the Anthropic API can be selected. Drives Magic Write, doc/site rewriting, AI pictures and caption transcription.
