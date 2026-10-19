@@ -146,6 +146,21 @@ try {
     await page.evaluate(() => { stock.status = null; stock.items = []; openTab('stock'); }); await page.waitForSelector('#panelBody .cell img', { state: 'attached', timeout: 8000 });
     assert.ok((await page.$$('#panelBody .cell')).length >= 1); assert.match(await page.textContent('#panelBody'), /Unsplash/);
   });
+  await t('Design Studio: 25 corporate, personal and unusual designs plus more icons, frames and graphics', async () => {
+    const r = await page.evaluate(() => { const want = ['Invoice · Clean & modern', 'Retro sunset poster', 'Vintage ticket · Admit one', 'Monogram seal · Wedding', 'Org chart · Boxes & lines']; const bad = []; TEMPLATES.forEach((x) => { try { const b = buildTemplate(x, (x.s || [1080, 1080])[0], (x.s || [1080, 1080])[1]); if (!b.objs.length) bad.push(x.n); } catch (e) { bad.push(x.n); } });
+      return { have: want.filter((n) => TEMPLATES.some((x) => x.n === n)).length, bad, mine: TEMPLATES.filter((x) => /Letterhead · Teal|Quote card · Handwritten|Y2K sticker|Album cover · Midnight|Neon sign · Open late|Memphis pop/.test(x.n)).length, icons: ICONS.filter((i) => ['Logistics', 'Weather', 'Space'].includes(i.c)).length, frames: FRAMES.filter((f) => ['fr_ticket2', 'fr_shield2', 'fr_blob1'].includes(f[0])).length, gfx: GRAPHICS.length, mask: ['fr_ticket2', 'ic_container', 'ic_palm_tree'].every((k) => !!SP[k]) }; });
+    assert.equal(r.have, 5); assert.deepEqual(r.bad, []); assert.equal(r.mine, 6); assert.ok(r.icons >= 10); assert.equal(r.frames, 3); assert.ok(r.gfx >= 20); assert.ok(r.mask);
+  });
+  await t('Websites: swap the drawn pictures for free photos', async () => {
+    const p = await ctx.newPage(); await p.setViewportSize({ width: 1300, height: 900 });
+    await p.goto(B + '/apps/design-studio/site.html?new=1'); await p.waitForSelector('#tplGrid .tcard[data-tpl="cafe-fresh"]'); await p.click('[data-tpl="cafe-fresh"]'); await p.waitForFunction(() => S.name === 'Kahawa Corner');
+    const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    await p.evaluate((png) => { const real = window.fetch.bind(window); window.fetch = async (u, o) => { const s = String(u); if (s.includes('/_local/design/stockstatus')) return new Response(JSON.stringify({ unsplash: true, pixabay: false }), { headers: { 'content-type': 'application/json' } }); if (s.includes('/_local/design/stock') && !s.includes('stockimg')) return new Response(JSON.stringify({ items: [{ full: 'https://images.unsplash.com/a.jpg', by: 'Bo' }, { full: 'https://images.unsplash.com/b.jpg', by: 'Cy' }] }), { headers: { 'content-type': 'application/json' } }); if (s.includes('stockimg')) return fetch(png); return real(u, o); }; }, png);
+    await p.click('#bDl'); await p.click('text=Swap pictures for free photos'); await p.fill('.dlg input', 'coffee shop'); await p.click('.dlg .pri, .dlg .btn.pri');
+    await p.waitForFunction(() => /Done\./.test(document.querySelector('#swapDlg')?.textContent || ''), null, { timeout: 15000 });
+    const left = await p.evaluate(() => { let art = 0, data = 0; S.pages.forEach((pg) => pg.blocks.forEach((b) => JSON.stringify(b.d).replace(/"(art:[a-z]+:\d+|data:image[^"]{0,20})/g, (m, g) => { g.startsWith('art:') ? art++ : data++; return m; }))); return { art, data }; });
+    assert.ok(left.data >= 3, JSON.stringify(left)); await p.close();
+  });
   await t('present mode runs animated frames without errors', async () => {
     await page.evaluate(() => present()); await page.waitForSelector('#present canvas'); await page.waitForTimeout(500); await page.keyboard.press('Escape'); await page.waitForTimeout(200); assert.equal(await page.$('#present'), null);
   });

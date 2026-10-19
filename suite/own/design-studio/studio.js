@@ -3079,6 +3079,230 @@ async function openCropper(o){
   openModal(body);drawChips();layout();fitBox();
 }
 
+/* ---------- 25 more corporate, personal and unusual designs ---------- */
+{
+const sq=(x,y,w,h,f,o)=>SH('rect',x,y,w,h,f,o),ci=(x,y,d,f,o)=>SH('ellipse',x,y,d,d,f,o);
+const ring=(x,y,d,c,sw,o)=>SH('ellipse',x,y,d,d,'transparent',Object.assign({stroke:c,sw},o||{}));
+const G=(c1,c2,a)=>({t:'grad',k:'lin',c1,c2,a:a||150}),S_=c=>({t:'solid',c});
+const A4=[1240,1754],SQ=[1080,1080],PT=[1080,1350],LS=[1920,1080];
+const lines=(x,y,w,n,gap,h,c,op)=>Array.from({length:n},(_,i)=>sq(x,y+i*gap,i===n-1?w*.6:w,h,c,{r:h/2,op}));
+
+/* ---------------- corporate ---------------- */
+add('Business','LinkedIn banner · Navy consultant',[1584,396],(W,H,u)=>({bg:G('#0b1a3b','#16306b',100),objs:[
+ ring(W*.74,-H*.5,H*2,'#e9b949',3,{op:.5}),ring(W*.8,-H*.2,H*1.4,'#e9b949',2,{op:.35}),ci(W*.9,H*.55,H*.35,'#e9b949',{op:.9}),
+ T_('STRATEGY · OPERATIONS · GROWTH',W*.05,H*.2,W*.6,u*3.6,{color:'#e9b949',bold:true,ls:20,align:'left'}),
+ T_('I help growing companies\nrun like they are twice the size.',W*.05,H*.34,W*.62,u*7.8,{font:'Playfair Display',color:'#ffffff',bold:true,align:'left',lh:1.12}),
+ T_('Anand Sankaran  ·  Operations advisor  ·  anands.pro',W*.05,H*.8,W*.6,u*3.5,{color:'#b8c2db',align:'left'})]}),'linkedin cover banner consultant navy gold professional');
+
+add('Business','Letterhead · Teal stripe',A4,(W,H,u)=>({bg:S_('#ffffff'),objs:[
+ sq(0,0,W*.035,H,'#0f766e'),sq(W*.035,0,W*.008,H,'#f59e0b'),ci(W*.07,H*.05,u*9,'#0f766e'),T_('C',W*.07,H*.05+u*1.6,u*9,u*5.6,{font:'Playfair Display',bold:true,color:'#fff',align:'center'}),
+ T_('Coastal Partners Ltd',W*.07+u*11,H*.052,W*.5,u*4.6,{font:'Playfair Display',bold:true,color:'#0b2a28',align:'left'}),T_('CHARTERED ACCOUNTANTS',W*.07+u*11,H*.052+u*5.6,W*.5,u*2,{color:'#0f766e',ls:18,bold:true,align:'left'}),
+ T_('14 Samora Avenue\nDar es Salaam\n+255 22 000 0000\nhello@coastal.example',W*.62,H*.05,W*.3,u*2.3,{color:'#4b5563',align:'right',lh:1.6}),
+ sq(W*.07,H*.15,W*.86,2,'#e5e7eb'),...lines(W*.07,H*.24,W*.86,9,u*3.8,u*1.2,'#d1d5db',.8),
+ ci(W*.5,H*.4,W*.55,'#0f766e',{op:.04}),sq(W*.07,H*.93,W*.86,2,'#e5e7eb'),T_('Registered in Tanzania · TIN 000-000-000 · coastal.example',W*.07,H*.945,W*.86,u*2,{color:'#9ca3af',align:'center'})]}),'letterhead stationery company print teal');
+
+add('Business','Invoice · Clean & modern',A4,(W,H,u)=>({bg:S_('#ffffff'),objs:[
+ sq(0,0,W,H*.16,'#111827'),T_('INVOICE',W*.07,H*.05,W*.5,u*9,{font:'Bricolage Grotesque',bold:true,color:'#fff',align:'left',ls:8}),T_('No. 0001 · 14 Oct 2026',W*.07,H*.05+u*11,W*.5,u*2.6,{color:'#9ca3af',align:'left'}),
+ sq(W*.68,H*.05,W*.25,u*6,'#f59e0b',{r:u*1}),T_('DUE IN 14 DAYS',W*.68,H*.05+u*1.8,W*.25,u*2.2,{bold:true,color:'#111827',align:'center',ls:8}),
+ T_('BILLED TO',W*.07,H*.2,W*.4,u*2,{bold:true,color:'#f59e0b',ls:18,align:'left'}),T_('Client name\nCompany Ltd\nAddress line',W*.07,H*.2+u*3.4,W*.4,u*2.8,{color:'#374151',align:'left',lh:1.5}),
+ T_('FROM',W*.55,H*.2,W*.4,u*2,{bold:true,color:'#f59e0b',ls:18,align:'left'}),T_('Your business\nyou@example.com\n+255 700 000 000',W*.55,H*.2+u*3.4,W*.4,u*2.8,{color:'#374151',align:'left',lh:1.5}),
+ sq(W*.07,H*.36,W*.86,u*5,'#f3f4f6'),T_('DESCRIPTION',W*.09,H*.36+u*1.4,W*.4,u*2,{bold:true,color:'#6b7280',ls:12,align:'left'}),T_('QTY',W*.6,H*.36+u*1.4,W*.1,u*2,{bold:true,color:'#6b7280',align:'center'}),T_('AMOUNT',W*.76,H*.36+u*1.4,W*.15,u*2,{bold:true,color:'#6b7280',align:'right'}),
+ ...[0,1,2,3].flatMap(i=>[T_('Service or product '+(i+1),W*.09,H*.43+i*u*7,W*.45,u*2.8,{color:'#111827',align:'left'}),T_('1',W*.6,H*.43+i*u*7,W*.1,u*2.8,{color:'#111827',align:'center'}),T_('$000.00',W*.76,H*.43+i*u*7,W*.15,u*2.8,{color:'#111827',align:'right'}),sq(W*.07,H*.43+i*u*7+u*5,W*.86,1.5,'#e5e7eb')]),
+ sq(W*.58,H*.72,W*.35,u*11,'#111827',{r:u*1.2}),T_('TOTAL DUE',W*.6,H*.72+u*2,W*.3,u*2.2,{color:'#9ca3af',ls:14,align:'left'}),T_('$000.00',W*.6,H*.72+u*5,W*.3,u*5.6,{font:'Bricolage Grotesque',bold:true,color:'#fff',align:'left'}),
+ T_('Thank you for your business. Pay by bank transfer or mobile money within 14 days.',W*.07,H*.9,W*.6,u*2.4,{color:'#6b7280',align:'left',lh:1.5})]}),'invoice bill receipt print business');
+
+add('Business','Company profile cover · Diagonal',A4,(W,H,u)=>({bg:S_('#0f172a'),objs:[
+ SH('rtri',-W*.05,H*.38,W*1.1,H*.7,'#2563eb',{rot:0,op:.95}),SH('rtri',W*.2,H*.5,W*.9,H*.6,'#38bdf8',{op:.9,rot:0}),artAt(null,'building',W*.74,H*.62,W*.4,H*.3,{},['#38bdf8','#2563eb','#ffffff']),
+ T_('COMPANY PROFILE',W*.08,H*.07,W*.6,u*3,{color:'#38bdf8',bold:true,ls:22,align:'left'}),T_('Building\nthe future,\nbrick by brick.',W*.08,H*.11,W*.7,u*10,{font:'Bricolage Grotesque',bold:true,color:'#fff',align:'left',lh:1.02}),
+ T_('2027 EDITION',W*.08,H*.9,W*.4,u*3,{bold:true,color:'#fff',ls:20,align:'left'}),T_('Apex Construction Group',W*.08,H*.94,W*.6,u*3,{color:'#0f172a',bold:true,align:'left'})]}),'company profile brochure cover construction corporate');
+
+add('Business','Annual report cover · Editorial',A4,(W,H,u)=>({bg:S_('#f4efe6'),objs:[
+ T_('2026',W*.06,H*.08,W*.9,u*38,{font:'Abril Fatface',color:'#1f1c19',align:'left',lh:.9}),sq(W*.07,H*.5,W*.86,3,'#1f1c19'),
+ T_('ANNUAL REPORT',W*.07,H*.52,W*.5,u*3.4,{bold:true,color:'#c2410c',ls:24,align:'left'}),T_('A year of\nsteady growth\nand honest work.',W*.07,H*.58,W*.8,u*8.6,{font:'Playfair Display',color:'#1f1c19',italic:true,align:'left',lh:1.18}),
+ ci(W*.68,H*.1,u*26,'#c2410c',{op:.9}),ci(W*.78,H*.22,u*14,'#1f1c19'),T_('Kilele Holdings PLC',W*.07,H*.92,W*.6,u*3,{bold:true,color:'#1f1c19',align:'left'}),T_('For the year ended 31 December',W*.5,H*.92,W*.43,u*2.6,{color:'#6b6256',align:'right'})]}),'annual report cover editorial corporate print');
+
+add('Business','Email header · Aurora',[1200,360],(W,H,u)=>({bg:G('#7c3aed','#06b6d4',110),objs:[
+ ci(-H*.3,-H*.4,H*1.3,'#ffffff',{op:.12}),ci(W*.78,H*.3,H*1.2,'#ffffff',{op:.1}),T_('NEWSLETTER · ISSUE 24',W*.06,H*.24,W*.6,u*4,{color:'#ffffff',op:.85,bold:true,ls:20,align:'left'}),
+ T_('What shipped this month',W*.06,H*.4,W*.7,u*11,{font:'Bricolage Grotesque',bold:true,color:'#fff',align:'left'}),sq(W*.06,H*.8,u*34,u*1,'#ffffff',{r:u*.5})]}),'email header newsletter banner gradient');
+
+add('Business','ID badge · Staff',[638,1011],(W,H,u)=>({bg:S_('#ffffff'),objs:[
+ sq(0,0,W,H*.34,'#0f766e'),AI('wave',0,H*.28,W,['#ffffff','#ffffff'],{h:W*.12}),T_('ACME LOGISTICS',0,H*.06,W,u*5,{font:'Bricolage Grotesque',bold:true,color:'#fff',ls:14,align:'center'}),
+ ci(W*.22,H*.2,W*.56,'#e5e7eb',{stroke:'#fff',sw:10}),artAt(null,'seal',W*.5,H*.34,W*.4,W*.4,{},['#9ca3af','#d1d5db']),
+ T_('Zawadi Mushi',0,H*.55,W,u*8,{font:'Bricolage Grotesque',bold:true,color:'#111827',align:'center'}),T_('Operations Coordinator',0,H*.55+u*10,W,u*4.4,{color:'#0f766e',bold:true,align:'center'}),
+ T_('ID  2041-0087\nDar es Salaam Hub',0,H*.72,W,u*3.8,{color:'#6b7280',align:'center',lh:1.5}),...Array.from({length:34},(_,i)=>sq(W*.18+i*W*.018,H*.84,i%3?W*.008:W*.014,H*.08,'#111827'))]}),'id card badge employee staff identity');
+
+add('Business','Meeting agenda · One-pager',A4,(W,H,u)=>({bg:S_('#fbfbf8'),objs:[
+ T_('MEETING AGENDA',W*.08,H*.06,W*.6,u*3.2,{bold:true,color:'#ea580c',ls:22,align:'left'}),T_('Quarterly planning',W*.08,H*.09,W*.8,u*9,{font:'Playfair Display',bold:true,color:'#1c1917',align:'left'}),
+ T_('Thu 15 Oct · 10:00 – 11:30 · Boardroom',W*.08,H*.09+u*12,W*.8,u*3,{color:'#78716c',align:'left'}),sq(W*.08,H*.2,W*.84,2,'#1c1917'),
+ ...[['10:00','Welcome and goals','5 min'],['10:05','Results review','20 min'],['10:25','Priorities for next quarter','30 min'],['10:55','Risks and blockers','20 min'],['11:15','Decisions and owners','15 min']].flatMap(([t,a,d],i)=>[T_(t,W*.08,H*.24+i*H*.1,W*.14,u*4,{font:'Bricolage Grotesque',bold:true,color:'#ea580c',align:'left'}),T_(a,W*.24,H*.24+i*H*.1,W*.5,u*4,{color:'#1c1917',align:'left',bold:true}),T_(d,W*.78,H*.24+i*H*.1,W*.14,u*3,{color:'#78716c',align:'right'}),sq(W*.08,H*.24+i*H*.1+u*7,W*.84,1.5,'#e7e5e4')]),
+ sq(W*.08,H*.78,W*.84,H*.14,'#fff7ed',{r:u*1.5}),T_('NOTES',W*.1,H*.795,W*.3,u*2.2,{bold:true,color:'#ea580c',ls:18,align:'left'})]}),'agenda meeting planner print business');
+
+add('Slides','Org chart · Boxes & lines',LS,(W,H,u)=>{const o=[],bx=(cx,y,t,r,f,ink)=>{o.push(sq(cx-W*.1,y,W*.2,H*.15,f,{r:u*1.5}),T_(t,cx-W*.1,y+H*.03,W*.2,u*3.6,{bold:true,color:ink,align:'center',font:'Poppins'}),T_(r,cx-W*.1,y+H*.03+u*5.2,W*.2,u*2.6,{color:ink,op:.75,align:'center',font:'Poppins'}))};
+ o.push(T_('How we are organised',W*.07,H*.07,W*.6,u*8,{font:'Bricolage Grotesque',bold:true,color:'#fff',align:'left'}),sq(W*.5-1,H*.42,3,H*.06,'#64748b'),sq(W*.2,H*.48,W*.6,3,'#64748b'));[.2,.5,.8].forEach(x=>o.push(sq(W*x-1,H*.48,3,H*.06,'#64748b')));
+ bx(W*.5,H*.27,'Managing Director','Strategy','#f59e0b','#111827');[['Operations','COO'],['Commercial','CCO'],['Finance','CFO']].forEach(([t,r],i)=>bx(W*[.2,.5,.8][i],H*.54,t,r,'#1e293b','#fff'));
+ [.2,.5,.8].forEach(x=>{o.push(sq(W*x-1,H*.69,3,H*.05,'#475569'));[-.07,.07].forEach(d=>o.push(sq(W*(x+d)-W*.06,H*.78,W*.12,H*.1,'#334155',{r:u}),T_('Team',W*(x+d)-W*.06,H*.8,W*.12,u*2.8,{color:'#cbd5e1',align:'center',font:'Poppins'})))});return {bg:S_('#0f172a'),objs:o}},'org chart organisation structure slide team');
+
+add('Slides','Pitch cover · Mono',LS,(W,H,u)=>({bg:S_('#ece8df'),objs:[
+ T_('Series A',W*.06,H*.08,W*.3,u*3.4,{font:'Poppins',bold:true,color:'#111',ls:22,align:'left'}),T_('Move\nmoney\nsimply.',W*.06,H*.18,W*.7,u*21,{font:'Bricolage Grotesque',bold:true,color:'#111',align:'left',lh:.92}),
+ ci(W*.66,H*.12,H*.76,'#111'),ring(W*.7,H*.2,H*.6,'#ece8df',4),T_('PAYWAVE · 2027',W*.7,H*.45,H*.6,u*4,{color:'#ece8df',align:'center',bold:true,ls:20,font:'Poppins'}),T_('Confidential · pitch deck',W*.06,H*.92,W*.4,u*2.6,{color:'#555',align:'left'})]}),'pitch deck cover investor startup mono');
+
+/* ---------------- personal ---------------- */
+add('Social','Monogram seal · Wedding',SQ,(W,H,u)=>({bg:S_('#f5ede0'),objs:[
+ ring(W*.12,H*.12,W*.76,'#8a6a3d',3),ring(W*.15,H*.15,W*.7,'#8a6a3d',1.5),AI('arch',W*.36,H*.17,W*.28,['#d9c4a0','#d9c4a0'],{h:W*.4,op:.5}),
+ T_('A  &  M',0,H*.34,W,u*20,{font:'Pinyon Script',color:'#4a3622',align:'center'}),T_('ARJUN & MEERA',0,H*.58,W,u*3.4,{color:'#8a6a3d',bold:true,ls:30,align:'center',font:'Poppins'}),
+ sq(W*.4,H*.65,W*.2,2,'#8a6a3d'),T_('14 · 02 · 2027',0,H*.68,W,u*4,{font:'Playfair Display',color:'#4a3622',align:'center',ls:12}),T_('KOCHI, KERALA',0,H*.74,W,u*2.4,{color:'#8a6a3d',ls:20,align:'center',font:'Poppins'})]}),'monogram wedding seal save the date elegant cream');
+
+add('Print','Personal card · Monogram',[1050,600],(W,H,u)=>({bg:S_('#14213d'),objs:[
+ ring(W*.06,H*.12,H*.76,'#fca311',4),T_('AS',W*.06,H*.34,H*.76,u*17,{font:'Playfair Display',bold:true,color:'#fca311',align:'center'}),
+ T_('Anand Sankaran',W*.42,H*.2,W*.52,u*10,{font:'Playfair Display',bold:true,color:'#fff',align:'left'}),T_('OPERATIONS ADVISOR',W*.42,H*.2+u*13,W*.52,u*3,{color:'#fca311',bold:true,ls:20,align:'left'}),
+ sq(W*.42,H*.55,W*.1,2,'#fca311'),T_('anands.pro\nhello@anands.pro\n+255 700 000 000',W*.42,H*.6,W*.5,u*3.6,{color:'#e5e5e5',align:'left',lh:1.6})]}),'business card personal monogram navy gold');
+
+add('Print','Gratitude journal page',A4,(W,H,u)=>({bg:S_('#fffaf0'),objs:[
+ AI('vine',W*.5,H*.01,W*.5,['#7a9a6b','#b9cfa9'],{op:.7}),T_('Today I am grateful for',W*.08,H*.07,W*.8,u*8,{font:'Caveat',bold:true,color:'#5c4b36',align:'left'}),T_('DATE ____ / ____ / ________',W*.08,H*.07+u*10.4,W*.8,u*2.8,{color:'#9a8a73',ls:10,align:'left',font:'Poppins'}),
+ ...[1,2,3].flatMap(i=>[ci(W*.08,H*.2+(i-1)*H*.11,u*5,'#e8c9a0'),T_(String(i),W*.08,H*.2+(i-1)*H*.11+u*.9,u*5,u*3.2,{font:'Caveat',bold:true,color:'#5c4b36',align:'center'}),sq(W*.16,H*.2+(i-1)*H*.11+u*4.6,W*.76,1.5,'#d8c8ae')]),
+ T_('One thing I am proud of',W*.08,H*.54,W*.8,u*5.4,{font:'Caveat',bold:true,color:'#5c4b36',align:'left'}),...[0,1,2].map(i=>sq(W*.08,H*.62+i*H*.045,W*.84,1.5,'#d8c8ae')),
+ T_('Tomorrow I will',W*.08,H*.78,W*.8,u*5.4,{font:'Caveat',bold:true,color:'#5c4b36',align:'left'}),...[0,1].map(i=>sq(W*.08,H*.86+i*H*.045,W*.84,1.5,'#d8c8ae'))]}),'journal planner gratitude printable personal');
+
+add('Social','Quote card · Handwritten',SQ,(W,H,u)=>({bg:G('#ffd6e0','#ffe9c9',160),objs:[
+ ci(W*.7,-H*.1,W*.5,'#ffffff',{op:.35}),ci(-W*.1,H*.7,W*.5,'#ffffff',{op:.3}),T_('“',W*.1,H*.06,W*.2,u*30,{font:'Playfair Display',color:'#e0527a',align:'left'}),
+ T_('Be kind to your future self.\nStart the small thing today.',W*.1,H*.3,W*.8,u*9,{font:'Caveat',bold:true,color:'#4a2c3a',align:'left',lh:1.15}),sq(W*.1,H*.76,W*.12,4,'#e0527a',{r:2}),T_('@anands.pro',W*.1,H*.79,W*.5,u*3.2,{color:'#4a2c3a',bold:true,align:'left',font:'Poppins'})]}),'quote handwritten pink motivational social');
+
+add('Social','Polaroid collage · Memories',PT,(W,H,u)=>{const o=[],pol=(x,y,w,rot,c,cap)=>{o.push(sq(x,y,w,w*1.2,'#fff',{rot,r:u*.4}),sq(x+w*.07,y+w*.07,w*.86,w*.86,c,{rot}),T_(cap,x,y+w*1.0,w,u*3.4,{font:'Caveat',bold:true,color:'#4a4a4a',align:'center',rot}))};
+ pol(W*.08,H*.1,W*.5,-6,'#f9a8d4','summer \'26');pol(W*.4,H*.3,W*.5,5,'#93c5fd','the gang');pol(W*.1,H*.6,W*.36,4,'#fcd34d','golden hour');
+ o.unshift(sq(0,0,W,H,'#2b2d42'));o.push(T_('MEMORIES',W*.5,H*.8,W*.45,u*7,{font:'Bebas Neue',color:'#ffd166',ls:10,align:'right'}),T_('Add your photos by clicking the coloured squares',W*.05,H*.94,W*.9,u*2.6,{color:'#8d99ae',align:'center'}));return {bg:S_('#2b2d42'),objs:o}},'polaroid collage photos memories scrapbook');
+
+add('Social','Travel postcard · Greetings',[1500,1000],(W,H,u)=>({bg:S_('#fdf3e1'),objs:[
+ sq(W*.03,H*.05,W*.94,H*.9,'#ffffff',{r:u*1}),sq(W*.05,H*.09,W*.52,H*.82,'#f97316',{r:u*.6}),AI('wave',W*.05,H*.7,W*.52,['#fde68a','#fde68a'],{h:W*.1}),artAt(null,'sun',W*.31,H*.36,W*.3,H*.4,{},['#fde047','#f97316','#fff7ed']),
+ T_('Greetings from\nZANZIBAR',W*.07,H*.12,W*.5,u*8.4,{font:'Pacifico',color:'#fff',align:'center',lh:1.1}),
+ ci(W*.8,H*.1,u*13,'transparent',{stroke:'#c2410c',sw:3,dash:'dashed'}),T_('TZ\n2026',W*.8,H*.11+u*3,u*13,u*2.6,{bold:true,color:'#c2410c',align:'center'}),
+ ...[0,1,2,3].map(i=>sq(W*.62,H*.45+i*H*.1,W*.3,2,'#cbd5e1')),T_('Dear friends, the sea is warm, the fish is fresh and the sunsets are unreal. Wish you were here!',W*.62,H*.28,W*.3,u*2.6,{font:'Caveat',color:'#475569',align:'left',lh:1.3})]}),'postcard travel greetings holiday');
+
+add('Print','Bookmark · Botanical',[600,1800],(W,H,u)=>({bg:S_('#e9efe3'),objs:[
+ AI('leafrow',0,H*.02,W,['#4d7c5a','#7da58a'],{op:.9}),AI('leafrow',0,H*.9,W,['#4d7c5a','#7da58a'],{op:.9}),T_('Read\nslowly.',0,H*.38,W,u*13,{font:'Playfair Display',italic:true,color:'#2f4b38',align:'center',lh:1.1}),
+ sq(W*.4,H*.58,W*.2,3,'#4d7c5a'),T_('A LITTLE LIBRARY\nOF YOUR OWN',0,H*.6,W,u*3.2,{bold:true,color:'#4d7c5a',ls:16,align:'center',lh:1.5,font:'Poppins'})]}),'bookmark botanical reading print');
+
+add('Social','Thank-you card · Bokeh',SQ,(W,H,u)=>({bg:G('#1e1b4b','#7c3aed',160),objs:[
+ AI('bokeh',0,0,W,['#f0abfc','#fde68a','#93c5fd'],{fill:H,op:.9}),T_('Thank you',0,H*.32,W,u*18,{font:'Great Vibes',color:'#fff',align:'center'}),sq(W*.4,H*.58,W*.2,2,'#fde68a'),T_('for being part of our story',0,H*.62,W,u*4.2,{color:'#e9d5ff',align:'center',font:'Poppins',ls:8})]}),'thank you card bokeh gratitude');
+
+/* ---------------- unusual ---------------- */
+add('Print','Retro sunset poster',A4,(W,H,u)=>{const o=[];[['#ff7a59',0],['#ff4d8d',.07],['#a14dff',.14]].forEach(([c,k],i)=>o.push(sq(0,H*(.3+k*1.2),W,H,c,{op:0})));
+ o.push(ci(W*.18,H*.18,W*.64,'#ffd166'));[0,1,2,3,4,5].forEach(i=>o.push(sq(W*.12,H*(.33+i*.034),W*.76,H*(.005+i*.0045),'#2a0a4e')));
+ o.push(sq(0,H*.5,W,H*.5,'#2a0a4e'),AI('wave',0,H*.47,W,['#ff4d8d','#ff4d8d'],{h:W*.07}),T_('SUMMER',0,H*.56,W,u*20,{font:'Bungee',color:'#ffd166',align:'center'}),T_('NIGHTS',0,H*.56+u*22,W,u*20,{font:'Bungee',color:'#ff4d8d',align:'center'}),T_('LIVE MUSIC · ROOFTOP · 14 NOV',0,H*.9,W,u*3.4,{color:'#fff',bold:true,ls:20,align:'center',font:'Poppins'}));return {bg:G('#ff9e5e','#ff4d8d',170),objs:o}},'retro sunset synthwave poster 80s party');
+
+add('Print','Brutalist poster · Type',A4,(W,H,u)=>({bg:S_('#f2f2f0'),objs:[
+ sq(W*.06,H*.58,W*.88,H*.16,'#ff2d2d'),T_('NO\nSIGNAL',W*.04,H*.04,W*.95,u*27,{font:'Anton',color:'#000',align:'left',lh:.86}),
+ T_('FESTIVAL OF NEW SOUND',W*.06,H*.605,W*.88,u*7.4,{font:'Archivo Black',color:'#000',align:'left'}),sq(W*.06,H*.8,W*.88,5,'#000'),T_('ARUSHA / 21.11.26 / DOORS 20:00',W*.06,H*.82,W*.6,u*3.4,{font:'Poppins',bold:true,color:'#000',align:'left'}),T_('→',W*.8,H*.8,W*.14,u*14,{font:'Anton',color:'#000',align:'right'})]}),'brutalist poster type bold music event');
+
+add('Social','Y2K sticker sheet',SQ,(W,H,u)=>({bg:G('#c7b8ff','#ffd6f6',140),objs:[
+ SH('burst2',W*.05,H*.06,W*.34,W*.34,'#fff04d',{rot:12}),T_('WOW!',W*.05,H*.06+W*.12,W*.34,u*8,{font:'Bangers',color:'#ff2fa4',align:'center',rot:12}),
+ SH('star4',W*.55,H*.08,W*.26,W*.26,'#7df9ff',{stroke:'#fff',sw:8}),ci(W*.1,H*.5,W*.28,'#ff6bd6',{stroke:'#fff',sw:10}),T_('cool',W*.1,H*.5+W*.09,W*.28,u*7.6,{font:'Pacifico',color:'#fff',align:'center'}),
+ SH('heart',W*.46,H*.44,W*.3,W*.28,'#ff3d6e',{stroke:'#fff',sw:10}),SH('star',W*.72,H*.62,W*.22,W*.22,'#b6ff3d',{stroke:'#fff',sw:8,rot:15}),
+ sq(W*.12,H*.8,W*.76,H*.1,'#ffffff',{r:H*.05}),T_('✦ y2k forever ✦',W*.12,H*.815,W*.76,u*5,{font:'Bungee',color:'#7c3aed',align:'center'})]}),'y2k sticker sheet retro fun bubble');
+
+add('Social','Album cover · Midnight',[1400,1400],(W,H,u)=>({bg:G('#05060f','#1a1250',160),objs:[
+ ...Array.from({length:50},(_,i)=>ci((i*137)%1000/1000*W,(i*263)%1000/1000*H,u*(.4+(i%4)*.3),'#fff',{op:.3+(i%5)*.12})),ci(W*.2,H*.2,W*.6,'#ffd6a5',{op:.18}),ci(W*.3,H*.3,W*.4,'#ffd6a5'),ci(W*.36,H*.28,W*.4,'#05060f'),
+ sq(0,H*.74,W,H*.26,'#05060f'),AI('wave',0,H*.7,W,['#05060f','#05060f'],{h:W*.08}),T_('MIDNIGHT\nSWIM',W*.08,H*.72,W*.84,u*9,{font:'Bebas Neue',color:'#fff',align:'left',ls:14,lh:1}),T_('THE QUIET HOURS · VOL. 2',W*.08,H*.92,W*.84,u*2.6,{color:'#94a3b8',ls:20,align:'left',font:'Poppins'})]}),'album cover music midnight moon');
+
+add('Social','Neon sign · Open late',SQ,(W,H,u)=>({bg:S_('#0a0a12'),objs:[
+ sq(W*.08,H*.1,W*.84,H*.8,'#12121f',{r:u*3}),ring(W*.14,H*.17,W*.72,'#ff2fa4',6),ring(W*.145,H*.175,W*.71,'#ff2fa4',2,{op:.5}),T_('OPEN',0,H*.3,W,u*22,{font:'Audiowide',color:'#ff7ad9',align:'center',ls:8}),T_('LATE',0,H*.3+u*24,W,u*22,{font:'Audiowide',color:'#5ef2ff',align:'center',ls:8}),T_('until 2am · every night',0,H*.78,W,u*3.4,{color:'#c4b5fd',align:'center',ls:14,font:'Poppins'})]}),'neon sign open late bar night');
+
+add('Social','Memphis pop · Flyer',PT,(W,H,u)=>({bg:S_('#fff3d6'),objs:[
+ SH('tri',W*.04,H*.05,W*.22,W*.2,'#ff6b6b',{rot:14}),ci(W*.72,H*.04,W*.22,'#4dabf7'),sq(W*.7,H*.34,W*.2,W*.2,'#ffd43b',{rot:20}),SH('diamond',W*.04,H*.55,W*.16,W*.2,'#51cf66'),AI('dots',W*.55,H*.7,W*.38,['#845ef7','#845ef7'],{h:W*.2,op:.8}),AI('wave',W*.05,H*.28,W*.4,['#1f1c19','#1f1c19'],{h:W*.06}),
+ T_('POP-UP\nMARKET',W*.06,H*.34,W*.9,u*16,{font:'Bungee',color:'#1f1c19',align:'left',lh:.98}),sq(W*.06,H*.67,W*.5,u*7,'#1f1c19',{r:u*3.5}),T_('SAT 7 NOV · 10–6',W*.06,H*.67+u*1.6,W*.5,u*3.4,{color:'#fff',bold:true,align:'center',font:'Poppins'}),T_('Makers · Food · Music · Free entry',W*.06,H*.77,W*.55,u*3,{color:'#1f1c19',align:'left',font:'Poppins',bold:true})]}),'memphis pop flyer market colourful 80s');
+
+add('Print','Vintage ticket · Admit one',[1800,700],(W,H,u)=>({bg:S_('#2b1b17'),objs:[
+ sq(W*.03,H*.08,W*.94,H*.84,'#f1e1c0',{r:u*2}),ci(-u*3,H*.38,u*9,'#2b1b17'),ci(W-u*6,H*.38,u*9,'#2b1b17'),sq(W*.72,H*.14,3,H*.72,'#b8895a',{dash:'dashed'}),
+ T_('ADMIT ONE',W*.07,H*.2,W*.6,u*13,{font:'Alfa Slab One',color:'#7a1f1f',align:'left'}),T_('THE GRAND ARUSHA CIRCUS',W*.07,H*.2+u*16,W*.6,u*4.6,{font:'Playfair Display',bold:true,color:'#2b1b17',align:'left'}),T_('SAT 14 NOV · GATES 6PM · SEAT B-12',W*.07,H*.72,W*.6,u*3.4,{color:'#6b4a2b',bold:true,ls:12,align:'left',font:'Poppins'}),
+ T_('No.\n0417',W*.76,H*.22,W*.18,u*9,{font:'Alfa Slab One',color:'#7a1f1f',align:'center',lh:1}),...Array.from({length:24},(_,i)=>sq(W*.76+i*W*.007,H*.64,i%3?W*.003:W*.005,H*.16,'#2b1b17'))]}),'ticket vintage circus event admit one');
+}
+
+/* ---------- 40 more icons, 14 more photo frames and 14 more graphics ---------- */
+{
+const n0=ICONS.length;
+const rays=(cx,cy,r1,r2,n,w=1.8,off=0)=>Array.from({length:n},(_,i)=>{const a=off+i*2*Math.PI/n;return ic_ln(+(cx+Math.cos(a)*r1).toFixed(2),+(cy+Math.sin(a)*r1).toFixed(2),+(cx+Math.cos(a)*r2).toFixed(2),+(cy+Math.sin(a)*r2).toFixed(2),w)});
+/* logistics and business */
+icon('Container','Logistics','shipping cargo freight box',ic_r(2,6,20,12,1.2),ic_r(5.2,8.4,1.4,7.2,.6),ic_r(9.1,8.4,1.4,7.2,.6),ic_r(13,8.4,1.4,7.2,.6),ic_r(16.9,8.4,1.4,7.2,.6));
+icon('Pallet','Logistics','warehouse stack goods',ic_r(5,3.5,14,9.5,1.2),ic_r(2,14.5,20,2.6,.8),ic_r(3.5,17.6,4,3.4,.6),ic_r(10,17.6,4,3.4,.6),ic_r(16.5,17.6,4,3.4,.6),ic_r(11,5.6,2,5.4,.8));
+icon('Warehouse','Logistics','storage depot','M1.5 10L12 3.5L22.5 10V21H1.5Z',ic_r(7,12,10,9,.8).replace(/.*/,m=>m),ic_r(9,14.2,6,2,.4),ic_r(9,17.8,6,2,.4));
+icon('Crane','Logistics','port lift construction','M5 22V4H7V22ZM3 22H9V20.5H3Z','M2 5H21V7.2H2Z',ic_ln(19.6,7.2,19.6,14,1),ic_r(17.6,14,4,3,.5),ic_ln(8,4,3,2,1.4));
+icon('Fuel can','Logistics','jerrycan oil diesel','M4 7L7.5 3H15V5H10L8.5 7H19A1 1 0 0 1 20 8V20A1.5 1.5 0 0 1 18.5 21.5H5.5A1.5 1.5 0 0 1 4 20Z',ic_r(8,11,8,5,1));
+icon('Safe','Finance','vault secure money',ic_r(3,3,18,18,2),ic_ring(12,12,4.8,1.4),ic_c(12,12,1.5),ic_r(6,21,2.4,1.6,.4),ic_r(15.6,21,2.4,1.6,.4));
+icon('Receipt','Finance','invoice bill slip','M5 2.5H19V22L16.5 20.2L14.2 22L12 20.2L9.8 22L7.5 20.2L5 22Z',ic_r(8,7,8,1.4,.7),ic_r(8,10.6,8,1.4,.7),ic_r(8,14.2,5,1.4,.7));
+icon('Bank','Finance','institution columns','M12 2L22 7.5V9.5H2V7.5Z',ic_r(4,11,2.8,7,.6),ic_r(8.2,11,2.8,7,.6),ic_r(12.6,11,2.8,7,.6),ic_r(17,11,2.8,7,.6),ic_r(2,19.5,20,2.5,.8));
+icon('Growth','Finance','profit increase plant','M12 21V10.5',ic_r(11,10.5,2,10.5,1),'M12 12C12 8 9.5 5.5 5 5.5C5 9.5 7.5 12 12 12Z','M12 9.5C12 5.5 14.5 3 19 3C19 7 16.5 9.5 12 9.5Z',ic_r(7,21,10,1.6,.8));
+icon('Invoice','Finance','document pay bill',ic_r(4,2.5,16,19,2),ic_r(7.5,6.5,9,1.4,.7),ic_r(7.5,10,9,1.4,.7),ic_r(7.5,13.5,5,1.4,.7),ic_c(16,17.2,1.7));
+/* weather */
+icon('Lightning storm','Weather','thunder bolt','M13.5 2L5 13.5H11L9.5 22L19 9.5H13Z');
+icon('Wind','Weather','air breeze',ic_pl([[2,9],[14,9]],2),ic_ring(16.5,7,2.7,1.6),ic_pl([[2,14],[18,14]],2),ic_ring(19.5,16.8,2.5,1.6),ic_pl([[2,19],[10,19]],2));
+icon('Umbrella','Weather','rain cover','M12 3C6.5 3 2.5 7 2 12H22C21.5 7 17.5 3 12 3Z','M11 12H13V18.2A2.3 2.3 0 0 1 8.5 18.8H10.3A.6.6 0 0 0 11 18.2Z',ic_c(12,2.6,.6));
+icon('Thermometer','Weather','temperature hot','M9.5 4.5A2.5 2.5 0 0 1 14.5 4.5V13.2A5 5 0 1 1 9.5 13.2Z',ic_r(11.2,6,1.6,8,.8));
+icon('Sunrise','Weather','dawn morning','M5 18A7 7 0 0 1 19 18Z',ic_r(2,19.5,20,1.8,.9),...rays(12,18,9.5,12.6,7,1.7,-Math.PI));
+icon('Rainbow','Weather','arc colours','M2 19A10 10 0 0 1 22 19H19A7 7 0 0 0 5 19Z','M7.5 19A4.5 4.5 0 0 1 16.5 19Z');
+/* sports and health */
+icon('Football','Sports','soccer ball',ic_ring(12,12,10,1.6),ic_st(12,12,4.2,3.4,5),ic_ln(12,7,12,2.5,1.3),ic_ln(16.8,10.6,21.2,9.2,1.3),ic_ln(15,16.4,17.6,20.2,1.3),ic_ln(9,16.4,6.4,20.2,1.3),ic_ln(7.2,10.6,2.8,9.2,1.3));
+icon('Basketball','Sports','hoops ball',ic_ring(12,12,10,1.6),ic_ln(12,2,12,22,1.4),ic_ln(2,12,22,12,1.4),ic_pl([[5,5],[8,12],[5,19]],1.4),ic_pl([[19,5],[16,12],[19,19]],1.4));
+icon('Stopwatch','Sports','timer race',ic_ring(12,13.5,8.5,2),ic_r(10,2.5,4,2,.8),ic_ln(12,13.5,12,8.8,1.8),ic_ln(12,13.5,15.4,15.6,1.8),ic_ln(18.2,6.2,19.6,4.8,1.6));
+icon('Syringe','Health','vaccine injection','M16.4 3.2L20.8 7.6L19.4 9L18.6 8.2L16.4 10.4L13.6 7.6L15.8 5.4L15 4.6Z','M13.2 8L16 10.8L8.4 18.4L5.6 15.6Z',ic_ln(5.6,18.4,2.6,21.4,1.6));
+icon('Bandage','Health','plaster first aid','M5 12.5L12.5 5A3.8 3.8 0 0 1 18 10.4L10.4 18A3.8 3.8 0 0 1 5 12.5Z',ic_c(11,11,.9),ic_c(13.4,13.4,.9),ic_c(11,13.4,.9),ic_c(13.4,11,.9));
+icon('Ambulance','Health','emergency rescue','M1.5 6H15V16H1.5Z','M15 9H19L22.5 12.5V16H15Z',ic_c(6.5,17.5,2.1),ic_c(18,17.5,2.1),ic_r(7.4,7.6,1.8,5.2,.4),ic_r(5.7,9.3,5.2,1.8,.4));
+/* tech and office */
+icon('Server','Tech','rack hosting data',ic_r(3,3.5,18,5,1.4),ic_r(3,9.5,18,5,1.4),ic_r(3,15.5,18,5,1.4),ic_c(6.5,6,.9),ic_c(6.5,12,.9),ic_c(6.5,18,.9));
+icon('Cursor','Tech','pointer click','M5 3L19 11.2L12.2 12.8L16 20L13.6 21.2L9.8 14L5 18.6Z');
+icon('Folder','Office','files directory','M2.5 6A1.5 1.5 0 0 1 4 4.5H9.2L11.3 7H20A1.5 1.5 0 0 1 21.5 8.5V18.5A1.5 1.5 0 0 1 20 20H4A1.5 1.5 0 0 1 2.5 18.5Z');
+icon('Clipboard','Office','checklist tasks list',ic_r(4.5,4,15,17.5,2),ic_r(8.5,2,7,4,1.2),ic_r(8,10,8,1.4,.7),ic_r(8,13.4,8,1.4,.7),ic_r(8,16.8,5,1.4,.7));
+icon('Printer','Office','print paper',ic_r(6.5,2.5,11,5,1),ic_r(2.5,8,19,9.5,2),ic_r(6.5,13.5,11,8,1),ic_c(18.5,11,1));
+icon('Stamp','Office','seal approve',ic_c(12,6,3.8),'M8 10H16L17.5 14H6.5Z',ic_r(3,14,18,3,1),ic_r(4,19,16,2.2,1.1));
+icon('Paperclip','Office','attach','M16.5 6.5L8.6 14.4A2.2 2.2 0 0 0 11.7 17.5L19.4 9.8A4.2 4.2 0 0 0 13.5 3.9L5.4 12A6.2 6.2 0 0 0 14.2 20.8L19.2 15.8L17.8 14.4L12.8 19.4A4.2 4.2 0 0 1 6.8 13.4L14.9 5.3A2.2 2.2 0 0 1 18 8.4L10.3 16.1L10 15.8L17.4 8.4Z');
+icon('Smile','People','happy emoji face',ic_ring(12,12,10,1.8),ic_c(8.6,9.8,1.4),ic_c(15.4,9.8,1.4),'M7.5 14.2H16.5A4.5 4.5 0 0 1 7.5 14.2Z');
+/* nature, space, education, food */
+icon('Palm tree','Nature','coconut tropical beach','M11 21L11.6 9H13.4L14 21Z','M12.5 9C12.5 5 9.5 3.2 5.2 4.3C8 4.9 9.5 6.3 10.6 8.2Z','M12.5 9C12.5 5 15.5 3.2 19.8 4.3C17 4.9 15.5 6.3 14.4 8.2Z','M12.5 9C9.5 7.5 5.5 8.6 3.5 11.6C6.5 10.4 9.5 10.6 11.6 11Z','M12.5 9C15.5 7.5 19.5 8.6 21.5 11.6C18.5 10.4 15.5 10.6 13.4 11Z',ic_r(6,21,12,1.6,.8));
+icon('Cactus','Nature','desert plant',ic_r(9.5,3,5,18,2.5),ic_r(4.5,9,2.4,6,1.2),ic_r(4.5,14,6,2.4,1.2),ic_r(17.1,6.5,2.4,6,1.2),ic_r(13.5,11.5,6,2.4,1.2),ic_r(6,21,12,1.6,.8));
+icon('Rocket launch','Space','startup launch','M12 2C15.5 4.5 17 8.5 16.4 14H7.6C7 8.5 8.5 4.5 12 2Z',ic_c(12,9,1.8),'M7.6 11L4 15L4.5 18.5L7.6 16Z','M16.4 11L20 15L19.5 18.5L16.4 16Z','M10 15.2H14L12 21Z');
+icon('Satellite','Space','orbit signal',ic_r(9.4,9.4,5.2,5.2,1),ic_r(1.5,9,6,6,.8),ic_r(16.5,9,6,6,.8),ic_ln(7.5,12,9.4,12,1.2),ic_ln(14.6,12,16.5,12,1.2),ic_ln(12,9.4,12,5,1.2),ic_c(12,4,1.8));
+icon('Backpack','Education','school bag','M8 5A4 4 0 0 1 16 5V6H8Z','M6 7.5H18A2 2 0 0 1 20 9.5V20A2 2 0 0 1 18 22H6A2 2 0 0 1 4 20V9.5A2 2 0 0 1 6 7.5Z',ic_r(8,14,8,4.5,1),ic_r(10.2,3.2,3.6,1.8,.9));
+icon('Abacus','Education','counting maths',ic_r(3,3,18,2,1),ic_r(3,19,18,2,1),ic_ln(3.8,5,3.8,19,1.8),ic_ln(20.2,5,20.2,19,1.8),ic_ln(5,8.3,19,8.3,1),ic_ln(5,12,19,12,1),ic_ln(5,15.7,19,15.7,1),ic_c(8,8.3,1.5),ic_c(11,8.3,1.5),ic_c(14,12,1.5),ic_c(17,12,1.5),ic_c(9,15.7,1.5));
+icon('Chef hat','Food','cook restaurant','M6 10A4 4 0 0 1 8 2.8A4.3 4.3 0 0 1 12 2A4.3 4.3 0 0 1 16 2.8A4 4 0 0 1 18 10V16H6Z',ic_r(6,17.5,12,3.5,1));
+icon('Donut','Food','sweet dessert',ic_ring(12,12,10,0).replace(/.*/,'')+ic_c(12,12,10)+ic_c(12,12,3.2),ic_ln(7,6.4,8.4,8.4,1.3),ic_ln(16,6.8,14.6,8.4,1.3));
+icon('Sofa','Home','couch furniture',ic_r(4,7,16,6,2.5),ic_r(2,11,4.4,7,2),ic_r(17.6,11,4.4,7,2),ic_r(5,12,14,5,1.5),ic_r(5,18.6,1.6,2,.5),ic_r(17.4,18.6,1.6,2,.5));
+/* register the new icons as shapes */
+ICONS.slice(n0).forEach(i=>{i.id='ic_'+i.n.toLowerCase().replace(/[^a-z0-9]+/g,'_');SP[i.id]=i.d;if(!ICON_CATS.includes(i.c))ICON_CATS.push(i.c)});
+
+/* ---- more photo frames ---- */
+const FR2=[
+ ['fr_ticket2','Ticket notch','M0 14H36A14 14 0 0 0 64 14H100V86H64A14 14 0 0 0 36 86H0Z'.replace(/.*/,'M0 12H100V40A10 10 0 0 0 100 60V88H0V60A10 10 0 0 0 0 40Z')],
+ ['fr_shield2','Shield wide','M50 0L96 14V50C96 76 76 92 50 100C24 92 4 76 4 50V14Z'],
+ ['fr_drop','Drop','M50 0C50 0 90 44 90 64A40 40 0 0 1 10 64C10 44 50 0 50 0Z'],
+ ['fr_leaf2','Leaf','M0 100C0 44 44 0 100 0C100 56 56 100 0 100Z'],
+ ['fr_cloud','Cloud','M24 86A22 22 0 0 1 22 42A30 30 0 0 1 80 34A26 26 0 0 1 78 86Z'],
+ ['fr_tag2','Tag','M0 20A10 10 0 0 1 10 10H62L100 50L62 90H10A10 10 0 0 1 0 80Z'],
+ ['fr_ribbon','Ribbon banner','M0 18H100L88 50L100 82H0L12 50Z'],
+ ['fr_stamp','Stamp edge','M4 4H96V96H4Z'.replace(/.*/,(()=>{let d='M0 0';for(let i=0;i<10;i++)d+=`H${i*10+3}A2 2 0 0 0 ${i*10+7} 0`;d+='H100';for(let i=0;i<10;i++)d+=`V${i*10+3}A2 2 0 0 0 100 ${i*10+7}`;d+='V100';for(let i=9;i>=0;i--)d+=`H${i*10+7}A2 2 0 0 0 ${i*10+3} 100`;d+='H0';for(let i=9;i>=0;i--)d+=`V${i*10+7}A2 2 0 0 0 0 ${i*10+3}`;return d+'Z'})())],
+ ['fr_double_arch','Double arch','M0 100V40A25 25 0 0 1 50 40A25 25 0 0 1 100 40V100Z'],
+ ['fr_hex_tall','Hexagon tall','M50 0L100 25V75L50 100L0 75V25Z'],
+ ['fr_blob1','Blob 1','M52 4C74 4 96 20 96 46C96 70 80 96 52 96C26 96 4 76 4 50C4 24 28 4 52 4Z'],
+ ['fr_blob2','Blob 2','M40 6C64 -2 94 18 94 48C94 78 70 98 44 94C16 90 2 66 8 40C12 24 24 12 40 6Z'],
+ ['fr_squircle','Squircle','M50 0C90 0 100 10 100 50C100 90 90 100 50 100C10 100 0 90 0 50C0 10 10 0 50 0Z'],
+ ['fr_notch','Notched corners','M14 0H86L100 14V86L86 100H14L0 86V14Z']];
+FR2.forEach(f=>{FRAMES.push(f);SP[f[0]]=f[2]});
+
+/* ---- more graphics (badges, stickers, dividers) ---- */
+const gp=GRAPHICS.push.bind(GRAPHICS),c0=()=>brand.colors[0];
+gp(['Ribbon label',u=>[SH('rect',0,0,u*40,u*10,c0()),SH('tri',u*-3,0,u*6,u*10,'#00000033',{rot:270}),TX('LIMITED EDITION',0,u*2.4,u*40,u*4.6,{bold:true,color:'#fff',align:'center',ls:10})]]);
+gp(['Circle seal',u=>[SH('ellipse',0,0,u*30,u*30,c0()),SH('ellipse',u*2,u*2,u*26,u*26,'transparent',{stroke:'#ffffff',sw:u*.5}),TX('100%\nORGANIC',0,u*7.5,u*30,u*5.4,{font:'Poppins',bold:true,color:'#fff',align:'center',lh:1.2})]]);
+gp(['Sale sticker',u=>[SH('burst',0,0,u*34,u*34,'#ff3d3d',{rot:8}),TX('SALE\n-50%',0,u*9,u*34,u*7.6,{font:'Anton',color:'#fff',align:'center',lh:1,rot:8})]]);
+gp(['Free delivery',u=>[SH('rect',0,0,u*42,u*10,'#12b886',{r:u*5}),TX('FREE DELIVERY',0,u*2.6,u*42,u*4.6,{font:'Poppins',bold:true,color:'#fff',align:'center',ls:8})]]);
+gp(['New label',u=>[SH('rect',0,0,u*16,u*8,'#ffd43b',{r:u*1.2,rot:-6}),TX('NEW',0,u*1.8,u*16,u*4.4,{font:'Anton',color:'#1f1c19',align:'center',rot:-6})]]);
+gp(['Star rating',u=>[0,1,2,3,4].map(i=>SH('star',i*u*6.4,0,u*6,u*6,i<4?'#ffb703':'#ced4da'))]);
+gp(['Arrow doodle',u=>[{id:uid(),type:'path',x:0,y:0,w:u*30,h:u*14,pw:u*30,ph:u*14,rot:0,pts:Array.from({length:30},(_,i)=>[i*u,Math.sin(i/30*Math.PI*2.4)*u*4+u*7]),stroke:'#1f1c19',sw:u*.8,op:1,name:'Doodle'},SH('tri',u*28,u*4.6,u*4,u*5,'#1f1c19',{rot:90})]]);
+gp(['Dotted divider',u=>Array.from({length:12},(_,i)=>SH('ellipse',i*u*3,0,u*1.2,u*1.2,i%3===1?c0():'#adb5bd'))]);
+gp(['Heart divider',u=>[SH('rect',0,u*1.6,u*14,.4*u,c0()),SH('heart',u*16,0,u*4,u*3.6,c0()),SH('rect',u*22,u*1.6,u*14,.4*u,c0())]]);
+gp(['Quote mark',u=>[TX('“',0,0,u*14,u*30,{font:'Playfair Display',bold:true,color:c0()})]]);
+gp(['Speech cloud',u=>[SH('bubble',0,0,u*40,u*26,c0()),TX('Say it\nloud!',0,u*5,u*40,u*7,{font:'Bangers',color:'#fff',align:'center',lh:1})]]);
+gp(['Callout tag',u=>[SH('tag',0,0,u*38,u*16,'#1f1c19'),TX('HOT PICK',u*2,u*4,u*28,u*6,{font:'Bebas Neue',color:'#ffd43b',ls:6})]]);
+gp(['Progress bar',u=>[SH('rect',0,0,u*40,u*3.2,'#e9ecef',{r:u*1.6}),SH('rect',0,0,u*26,u*3.2,c0(),{r:u*1.6})]]);
+gp(['Checklist',u=>[0,1,2].flatMap(i=>[SH('ellipse',0,i*u*7,u*4.6,u*4.6,c0()),TX('✓',0,i*u*7+u*.6,u*4.6,u*3.4,{bold:true,color:'#fff',align:'center'}),TX(['Fast delivery','Easy returns','Friendly support'][i],u*6.4,i*u*7+u*.6,u*30,u*3.6,{color:'#1f1c19'})])]);
+}
+
 /* =====================================================================
    Anands OS integration + the studio's advanced features
    (files, background remover, animation, stock photos, SVG/vector, video/GIF, share links)
