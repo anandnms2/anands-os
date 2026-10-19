@@ -48,6 +48,8 @@ const uiCsp = () => [...UI_CSP_PARTS, "frame-src 'self'" + (SJ_HOST ? ' https://
 /* Apps can only talk to this server. puter.com is not reachable from them: nothing else is in connect-src. */
 const APP_CSP = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: ${CONNECT_EXTRA}; worker-src 'self' blob:; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'`;
 
+/* The Email app shows a message's own pictures only after "Show images"; the message frame has its own tighter policy, but a frame inherits this page's, so the page must allow them. */
+const EMAIL_CSP = APP_CSP.replace("img-src 'self' data: blob:", "img-src 'self' data: blob: https: http:");
 /* what a team member or guest may see of the connections: where things are, never who they sign in as */
 function redact(o) { const out = {}; for (const [g, v] of Object.entries(o)) { if (!v || typeof v !== 'object') { out[g] = v; continue; } out[g] = {}; for (const [k, x] of Object.entries(v)) out[g][k] = ['user', 'clientId', 'from', 'fromName', 'host', 'port', 'secret', 'stun', 'urls'].includes(k) ? (typeof x === 'boolean' ? x : '') : x; } return out; }
 async function api(req, res, url) {
@@ -149,7 +151,7 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/apps/')) {
       if (/^\/apps\/[^/]+$/.test(p)) { res.writeHead(302, { location: p + '/' }); return res.end(); }
       res.setHeader('referrer-policy', 'same-origin');
-      return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': APP_CSP }, { rebrand: true });
+      return serveStatic(req, res, SUITE, p.slice(1), { 'content-security-policy': p.startsWith('/apps/email/') ? EMAIL_CSP : APP_CSP }, { rebrand: true });
     }
     /* Apps are built for the site root: they ask for /icons/x.png, /app.wasm and so on. Resolve those inside the app that asked. */
     if ((req.method === 'GET' || req.method === 'HEAD') && p !== '/' && req.headers.referer) {
@@ -157,7 +159,7 @@ const server = http.createServer(async (req, res) => {
       if (slug && sessionOf(req)) {
         const root = path.join(SUITE, 'apps', slug); let hit = false;
         try { const abs = path.join(root, path.normalize('/' + decodeURIComponent(p))); hit = abs.startsWith(root + path.sep) && fs.statSync(abs).isFile(); } catch {}
-        if (hit) return serveStatic(req, res, root, p.slice(1), { 'content-security-policy': APP_CSP }, { rebrand: true });
+        if (hit) return serveStatic(req, res, root, p.slice(1), { 'content-security-policy': slug === 'email' ? EMAIL_CSP : APP_CSP }, { rebrand: true });
       }
     }
     /* a root-level .wasm that no referer pointed to (workers send odd referers): find it in the apps */

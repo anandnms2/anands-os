@@ -115,6 +115,9 @@ if os.path.exists(ov) and os.path.exists(ei):
         ("{id:`archive`,label:`Archive`,icon:`archive`,box:`archive`},{id:`trash`,label:`Trash`,icon:`trash`,box:`trash`}]",
          "...(window.__aosBoxes?.main||[]),{id:`archive`,label:`Archive`,icon:`archive`,box:`archive`},{id:`trash`,label:`Trash`,icon:`trash`,box:`trash`},...(window.__aosBoxes?.labels||[])]"),
         ("f={inbox:[`archive`,`trash`],", "f={...(window.__aosActs||{}),inbox:[`archive`,`trash`],"),
+        # HTML mail opens with its original formatting (the app's default is plain text); "Show plain text" still switches back
+        ("F=!1,L=m&&e(`button.btn.btn-small.btn-ghost`", "F=!!m,L=m&&e(`button.btn.btn-small.btn-ghost`"),
+        ("L&&(L.onclick=()=>{F=!F,F&&!te.firstChild&&P(),h()})", "F&&!te.firstChild&&P(),L&&(L.onclick=()=>{F=!F,F&&!te.firstChild&&P(),h()})"),
     ]
     for bf in glob.glob(os.path.join(root, "email", "assets", "index-*.js")):
         t = open(bf, encoding="utf-8", errors="surrogateescape").read()
