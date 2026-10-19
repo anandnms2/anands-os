@@ -223,7 +223,16 @@ function openTemplates(isNew){
     if(!list.length)grid.append(el('p',{class:'note'},'No templates match that. Try another word.'));count.textContent=list.length+' templates'};
   const count=el('span',{class:'note'},'');
   search.addEventListener('input',()=>{q=search.value.trim().toLowerCase();draw()});
-  const box=el('div',{class:'tpl',style:'display:grid;gap:10px'},el('div',{class:'row',style:'display:flex;gap:10px;align-items:center'},el('h2',{style:'margin:0;flex:1'},isNew?'Choose a template':'Templates'),count,el('button',{class:'btn',onclick:closeModal},isNew?'Skip':'Close')),search,chips,grid);
+  const dsc=el('input',{class:'f',id:'tplDesc',placeholder:'Describe your business, e.g. a family bakery in Arusha',maxlength:200,'aria-label':'Describe your business'}),nm=el('input',{class:'f',id:'tplName',placeholder:'Business name',maxlength:60,'aria-label':'Business name',style:'max-width:200px'});
+  const build=async()=>{const d=dsc.value.trim();if(!d){dsc.focus();return}const st=await aiReady();if(!st.text||!st.text.ready){toast((st.text&&st.text.reason)||'Connect your AI in Settings first',4500);return}
+    const words=d.toLowerCase().split(/[^a-z]+/).filter(w=>w.length>2);let best=null,bs=-1;TEMPLATES.forEach(t=>{if(t.v!==0)return;let sc=0;words.forEach(w=>{if(t.words.includes(w))sc+=1});if(sc>bs){bs=sc;best=t}});if(!best)best=TEMPLATES[0];
+    const site=buildCategorySite(best.ci,best.v),brand=CATS[best.ci].n,newName=nm.value.trim();closeModal();applyTemplate(site);
+    const swap=v=>typeof v==='string'?v.split(brand).join(newName):Array.isArray(v)?v.map(swap):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,swap(x)])):v;
+    if(newName){S.pages.forEach(p=>p.blocks.forEach(b=>b.d=swap(b.d)));S.name=newName;ed.rec.name=newName;$('#title').value=newName;S.desc=''}
+    toast('Writing your site…',3000);let ok=true;for(const p of S.pages){if(!(await aiCopy(p.blocks.filter(b=>!['nav','footer','spacer','video'].includes(b.type)),'Rewrite for this business: '+d+(newName?' (named '+newName+')':'')+'. Keep each text about the same length.',null))){ok=false;break}}
+    if(ok)toast('Your site is ready. Edit anything by clicking it.',4000)};
+  const gen=el('div',{class:'row',style:'display:flex;gap:8px;flex-wrap:wrap'},dsc,nm,el('button',{class:'btn pri',id:'tplBuild',onclick:build},'✨ Build my site'));dsc.style.flex='1';dsc.style.minWidth='220px';
+  const box=el('div',{class:'tpl',style:'display:grid;gap:10px'},el('div',{class:'row',style:'display:flex;gap:10px;align-items:center'},el('h2',{style:'margin:0;flex:1'},isNew?'Choose a template':'Templates'),count,el('button',{class:'btn',onclick:closeModal},isNew?'Skip':'Close')),gen,search,chips,grid);
   const m=openModal(box);m.classList.add('wide');draw();search.focus()}
 $('#bTpl').onclick=()=>openTemplates(false);
 

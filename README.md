@@ -120,3 +120,4 @@ It uses [Scramjet](https://github.com/MercuryWorkshop/scramjet), the engine behi
   Also: Remove silences (cuts quiet stretches and closes the gaps) and a slow zoom for pictures.
 - **Site check** (Websites ▸ Download ▸ Check my site): titles, descriptions, headings, picture descriptions, empty links and colour contrast; pages also carry social-share tags. **Version history** in Docs, Whiteboards, Websites and Videos (an automatic snapshot every 5 minutes, 20 kept, restorable).
 - **More website sections**: WhatsApp chat button (wa.me link with a first message), QR code, and News/blog list (22 section types).
+- **Build a site from a description** (Websites ▸ Templates): describe the business and name it; the closest template is chosen and every section is rewritten by your AI. **Video**: narrate text (needs a text-to-speech model such as tts-1 on your AI gateway) and record the screen.
