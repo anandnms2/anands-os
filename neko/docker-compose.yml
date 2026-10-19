@@ -16,7 +16,7 @@ services:
       - NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD=${SERVICE_PASSWORD_NEKOADMIN}
       - NEKO_WEBRTC_EPR=52000-52100
       - NEKO_WEBRTC_ICELITE=1
-      - NEKO_WEBRTC_NAT1TO1=173.249.55.16   # this server's public IP
+      - NEKO_WEBRTC_NAT1TO1=${SERVER_PUBLIC_IP:?set your server public IP in the service environment}
     volumes:
       - neko-profile:/home/neko/.config/chromium   # keeps your Google sign-in and bookmarks across restarts
 volumes:

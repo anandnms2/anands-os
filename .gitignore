@@ -3,3 +3,19 @@ data/
 suite/dist/
 suite/.upstream/
 .env
+
+# never commit credentials or local data
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+*.tmp.mjs
+desktop-password
+initial-password
+secret
+sessions.json
+mailboxes.json
+settings.json
