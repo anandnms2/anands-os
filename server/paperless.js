@@ -5,6 +5,8 @@ import { effective } from './config.js';
 import { json, readJson, readBody, httpError } from './util.js';
 
 const base = () => String(effective().links?.paperless || '').replace(/\/+$/, '');
+/* the address can be the single sign-on start link (it is also the Home tile link), so the API always lives at the site root */
+const apiBase = () => { try { return new URL(base()).origin; } catch { return base(); } };
 const token = () => effective().paperless?.token || '';
 const need = (c, m, s = 400) => { if (!c) throw httpError(s, m, 'bad_request'); };
 const intOr = (v, d) => { const n = parseInt(v, 10); return Number.isFinite(n) && n >= 0 ? n : d; };
@@ -17,7 +19,7 @@ function conf() {
 async function pl(path, init = {}, timeout = 20000) {
   conf(); const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), timeout);
   try {
-    const r = await fetch(base() + path, { ...init, signal: ctl.signal, headers: { authorization: 'Token ' + token(), accept: 'application/json', ...(init.headers || {}) } });
+    const r = await fetch(apiBase() + path, { ...init, signal: ctl.signal, headers: { authorization: 'Token ' + token(), accept: 'application/json', ...(init.headers || {}) } });
     return r;
   } catch (e) { throw httpError(502, e.name === 'AbortError' ? 'Paperless did not answer in time' : 'Could not reach Paperless: ' + (e.cause?.code || e.message), 'unreachable'); } finally { clearTimeout(t); }
 }

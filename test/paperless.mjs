@@ -33,6 +33,8 @@ try {
     const s = await (await ctx.request.get(B + '/api/settings')).json(); assert.equal(s.paperless.tokenSet, true); assert.ok(!JSON.stringify(s).includes('wrong'));
     await ctx.request.put(B + '/api/settings', { data: { paperless: { token: TOKEN } }, headers: H });
     r = await get('/status'); assert.equal(r.j.connected, true); assert.equal(r.j.total, 6); assert.equal(r.j.inbox, 1);
+    await ctx.request.put(B + '/api/settings', { data: { links: { paperless: 'http://127.0.0.1:' + fport + '/accounts/oidc/authentik/login/?process=login' } }, headers: H });
+    r = await get('/status'); assert.equal(r.j.connected, true); assert.equal(r.j.total, 6);
     const web = http.createServer((q, rs) => { rs.writeHead(200, { 'content-type': 'text/html' }); rs.end('<html>Sign in</html>'); }); await new Promise((ok) => web.listen(0, '127.0.0.1', ok));
     await ctx.request.put(B + '/api/settings', { data: { links: { paperless: 'http://127.0.0.1:' + web.address().port } }, headers: H });
     r = await get('/status'); assert.equal(r.j.connected, false); assert.match(r.j.reason, /not with Paperless data/i); assert.ok(!/undefined|null/.test(r.j.reason)); web.close();
