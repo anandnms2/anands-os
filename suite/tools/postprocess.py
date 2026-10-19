@@ -27,9 +27,9 @@ WORDING = [
 MEETINGS = [
     (b'"https://puter-meetings-rooms.puter.work"', b"location.origin"),
     (b"location.origin+location.pathname", b'location.origin+"/meet/"'),
-    # Branding: this is Anands Meeting, not Puter Meetings
-    ('r("b",{},"Puter")," Meetings"'.encode(), 'r("b",{},"Anands")," Meeting"'.encode()),
-    ("Puter Meetings".encode(), "Anands Meeting".encode()),
+    # Branding: this is Meetings, not Puter Meetings
+    ('r("b",{},"Puter")," Meetings"'.encode(), 'r("b",{},"Meetings"),""'.encode()),
+    ("Puter Meetings".encode(), "Meetings".encode()),
     ("Open Meetings from your Puter desktop to see".encode(), "Open Meeting from Anands OS to see".encode()),
     ("Sign in with Puter to continue".encode(), "Sign in to Anands OS to continue".encode()),
     ("Can’t reach Puter’s connection service — retrying…".encode(), "Can’t reach the meeting server — retrying…".encode()),
@@ -81,7 +81,7 @@ for dp, _, files in os.walk(root):
                 open(p, "wb").write(nb)
 
 # Anands Meeting: page title and install name
-for rel, pairs in (("meetings/index.html", [("<title>Puter Meetings</title>", "<title>Anands Meeting</title>")]), ("meetings/manifest.json", [("Puter Meetings", "Anands Meeting"), ('"short_name": "Meetings"', '"short_name": "Meeting"')])):
+for rel, pairs in (("meetings/index.html", [("<title>Puter Meetings</title>", "<title>Meetings</title>")]), ("meetings/manifest.json", [("Puter Meetings", "Meetings"), ('"short_name": "Meetings"', '"short_name": "Meetings"')])):
     q = os.path.join(root, rel)
     if os.path.exists(q):
         t = open(q, encoding="utf-8", errors="surrogateescape").read()
