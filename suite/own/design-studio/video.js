@@ -166,6 +166,6 @@ async function startExport(){if(!total())return toast('Nothing to export yet');i
   rec.start(500);$('#bEx').textContent='Recording…';t=0;sync();draw();play()}
 function finishExport(){const ex=exporting;if(!ex)return;setTimeout(()=>{try{ex.rec.stop()}catch(e){}},400)}
 function cancelExport(){const ex=exporting;if(!ex)return;ex.cancel=true;stop();try{ex.rec.stop()}catch(e){}toast('Export cancelled')}
-$('#bEx').onclick=e=>{if(exporting)return cancelExport();const r=e.currentTarget.getBoundingClientRect();ctxMenu(r.left,r.bottom+4,[{label:'Video (.webm)',go:startExport},{label:'Captions (.srt)',go:exportSrt},'-',{label:'Move to trash',go:()=>askTrash(ed,'video',$('#title').value||'this video')}])};
+$('#bEx').onclick=e=>{if(exporting)return cancelExport();const r=e.currentTarget.getBoundingClientRect();ctxMenu(r.left,r.bottom+4,[{label:'Version history',go:()=>openHistory(ed)},'-',{label:'Video (.webm)',go:startExport},{label:'Captions (.srt)',go:exportSrt},'-',{label:'Move to trash',go:()=>askTrash(ed,'video',$('#title').value||'this video')}])};
 function build(){renderTL();setTab(V.clips.length?'clip':'media');if(!V.clips.length)setTab('media');draw()}
 addEventListener('beforeunload',()=>{for(const k in urls)urls[k].then&&urls[k].then(u=>u&&URL.revokeObjectURL(u))});

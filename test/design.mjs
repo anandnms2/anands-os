@@ -553,6 +553,18 @@ try {
     const p2 = await ctx.newPage(); await p2.goto(url); await p2.waitForFunction(() => typeof V !== 'undefined' && V && V.clips.length >= 4); await p2.waitForFunction(() => Object.keys(els).length > 0, null, { timeout: 15000 }); assert.ok(await p2.evaluate(() => V.clips.some((c) => c.text === 'Edited caption')));
     await p2.goto(B + '/apps/design-studio/#videos'); await p2.waitForSelector('.hc[data-ed="videos"]'); await p2.close(); await p.close();
   });
+  await t('Site check flags SEO and accessibility problems; version history restores an earlier version; pages carry social tags', async () => {
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/site.html'); await p.waitForFunction(() => typeof siteCheck === 'function' && S);
+    await p.evaluate(() => { S.pages[0].title = ''; S.pages[0].desc = ''; S.theme.tx = '#999999'; S.theme.bg = '#ffffff'; });
+    const res = await p.evaluate(() => siteCheck().map((x) => x.msg)); assert.ok(res.some((m) => /no page title/.test(m)) && res.some((m) => /no description/.test(m)) && res.some((m) => /Low contrast for text on the page background/.test(m)), res.join(' | '));
+    await p.evaluate(() => { S.pages[0].title = 'Kahawa Corner coffee house'; S.pages[0].desc = 'Single-origin coffee, fresh pastries and a quiet corner to work, in the middle of town.'; S.theme.tx = '#111111'; S.theme.alt = '#f5f5f5'; S.theme.p = '#1a4fa0'; });
+    const html = await p.evaluate(() => pageHTML(S.pages[0], 'pub', { hrefFor: (x) => x })); assert.match(html, /property="og:title" content="Kahawa Corner coffee house"/);
+    await p.click('#bDl'); await p.click('text=Check my site'); await p.waitForSelector('#chkSum'); await p.click('.dlg >> text=Close');
+    const d = await ctx.newPage(); await d.goto(B + '/apps/design-studio/docs.html'); await d.waitForSelector('#page'); await d.waitForFunction(() => document.querySelector('#title'));
+    await d.fill('#title', 'History test'); await d.click('#page'); await d.keyboard.type('First version text'); await d.waitForFunction(() => /Saved/.test(document.querySelector('#st').textContent), null, { timeout: 8000 }); await d.waitForTimeout(600);
+    await d.click('#bDl'); await d.click('text=Version history'); await d.waitForSelector('[data-restore]', { timeout: 8000 }); assert.ok((await d.$$('[data-restore]')).length >= 1);
+    await d.close(); await p.close();
+  });
   await t('right-click menu text is readable in dark mode', async () => {
     const p = await ctx.newPage(); await p.emulateMedia({ colorScheme: 'dark' }); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof ctxMenu === 'function');
     const c = await p.evaluate(() => { ctxMenu(100, 100, [{ label: 'Open', go() {} }]); const b = document.querySelector('.ctx button'), m = document.querySelector('.ctx'); return [getComputedStyle(b).color, getComputedStyle(m).backgroundColor]; });

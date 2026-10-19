@@ -28,7 +28,9 @@ function startEditor(kind,{blank,onLoad,collect}){
   const title=$('#title'),st=$('#st');
   const status=t=>{if(st)st.textContent=t};
   const save=async()=>{if(!rec||saving)return;saving=true;clearTimeout(timer);try{collect(rec);rec.name=title.value.trim()||'Untitled';rec.updated=Date.now();if(!path)path=`${K.dir}/${safe(rec.name)} [${rec.id.slice(-5)}].${K.ext}`;
-      const body=JSON.stringify(rec);await PUT().fs.write(path,body,{createMissingParents:true,overwrite:true});dirty=false;status('Saved to Files');history.replaceState(null,'','?f='+encodeURIComponent(path))}catch(e){status('Not saved')}finally{saving=false}if(dirty)queue()};
+      const body=JSON.stringify(rec);await PUT().fs.write(path,body,{createMissingParents:true,overwrite:true});dirty=false;status('Saved to Files');snapshot(body);history.replaceState(null,'','?f='+encodeURIComponent(path))}catch(e){status('Not saved')}finally{saving=false}if(dirty)queue()};
+  let lastSnap=0;const vdir=()=>K.dir.replace('/Designs','/Designs/.versions');
+  const snapshot=async(body,force)=>{if(!rec||(!force&&Date.now()-lastSnap<3e5))return;lastSnap=Date.now();try{await PUT().fs.write(`${vdir()}/${rec.id}-${Date.now()}.${K.ext}`,body,{createMissingParents:true,overwrite:true});const l=(await PUT().fs.readdir(vdir())).filter(x=>x.name.startsWith(rec.id+'-')).sort((a,b)=>a.name.localeCompare(b.name));for(const x of l.slice(0,Math.max(0,l.length-20)))try{await PUT().fs.delete(vdir()+'/'+x.name)}catch(e){}}catch(e){}};
   const queue=()=>{dirty=true;status('Saving…');clearTimeout(timer);timer=setTimeout(save,900)};
   title.addEventListener('input',queue);
   addEventListener('beforeunload',e=>{if(dirty){save();e.preventDefault();e.returnValue=''}});
@@ -37,7 +39,7 @@ function startEditor(kind,{blank,onLoad,collect}){
     try{rec=path?await readJSON(path):blank()}catch(e){toast('Could not open that file');rec=blank();path=null}
     await Promise.resolve();title.value=rec.name||'Untitled';onLoad(rec);status(path?'Saved to Files':'')})();
   $('#btnTheme')&&($('#btnTheme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;const n=dark?'light':'dark';r.dataset.theme=n;try{localStorage.setItem('ds.theme',n)}catch(e){}});
-  return {queue,save,get rec(){return rec},get path(){return path}}
+  return {queue,save,snapshot,vdir,K,get rec(){return rec},get path(){return path}}
 }
 
 /* Move the open file to the shared trash (30 days, restorable from Home) and go back to Home. */
@@ -49,3 +51,8 @@ const askTrash=(ed,kind,name)=>askSure('Move “'+name+'” to the trash? You ca
 /* AI helpers shared by Docs and Websites: the server uses your connected AI by default, or your Anthropic key. */
 async function aiCall(task,body){const r=await fetch('/_local/design/aitext',{method:'POST',credentials:'same-origin',headers:{'x-aos':'1','content-type':'application/json'},body:JSON.stringify({task,...body})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'The AI did not answer');return j}
 async function aiReady(){try{const r=await fetch('/_local/design/aistatus',{method:'POST',credentials:'same-origin',headers:{'x-aos':'1','content-type':'application/json'},body:'{}'});return await r.json()}catch(e){return {text:{ready:false,reason:'Could not check the AI'}}}}
+
+/* Version history: a snapshot is kept at most every 5 minutes (20 newest); restoring keeps the current version as a snapshot first. */
+async function openHistory(ed){await ed.save();let l=[];try{l=(await PUT().fs.readdir(ed.vdir())).filter(x=>ed.rec&&x.name.startsWith(ed.rec.id+'-')).sort((a,b)=>b.name.localeCompare(a.name))}catch(e){}
+  const rows=l.map(x=>{const ts=+x.name.slice(ed.rec.id.length+1).replace(/\..*$/,'');return el('div',{class:'row',style:'justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:9px;padding:7px 10px'},el('span',{},new Date(ts).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})),el('button',{class:'btn sm','data-restore':x.name,onclick:()=>askSure('Go back to this version? Your current one is kept in the history.','Restore',async()=>{try{const b=await PUT().fs.read(ed.vdir()+'/'+x.name);const txt=typeof b==='string'?b:await b.text();await ed.snapshot(JSON.stringify(ed.rec),true);await PUT().fs.write(ed.path,txt,{overwrite:true});location.reload()}catch(err){toast('Could not restore that version')}})},'Restore'))});
+  openModal(el('div',{style:'display:grid;gap:10px;min-width:min(380px,84vw)'},el('h2',{},'Version history'),el('p',{class:'note',style:'margin:0'},'Earlier versions are saved automatically while you work (the 20 newest are kept).'),...(rows.length?rows:[el('p',{class:'note'},'No earlier versions yet. They appear after your next save.')]),el('div',{class:'row',style:'justify-content:flex-end'},el('button',{class:'btn',onclick:closeModal},'Close'))))}
