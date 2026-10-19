@@ -143,7 +143,7 @@ try {
   await t('background remover: the plain-colour option clears the backdrop and can be undone', async () => {
     await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 400; c.height = 300; const x = c.getContext('2d'); x.fillStyle = '#cfe3f5'; x.fillRect(0, 0, 400, 300); x.fillStyle = '#d9381e'; x.beginPath(); x.ellipse(200, 150, 90, 100, 0, 0, 7); x.fill();
       const b = await new Promise((r) => c.toBlob(r, 'image/png')); const a = await ingestImage(new File([b], 't.png', { type: 'image/png' })); addImageAsset(a); });
-    await page.getByRole('button', { name: 'Remove a plain color background' }).click(); await page.waitForFunction(() => selObjs()[0] && selObjs()[0].orig);
+    await page.getByRole('button', { name: 'Remove plain background' }).click(); await page.waitForFunction(() => selObjs()[0] && selObjs()[0].orig);
     const al = await page.evaluate(async () => { const o = selObjs()[0], c = await dataToCanvas(D.assets[o.src]), x = c.getContext('2d'); return [x.getImageData(4, 4, 1, 1).data[3], x.getImageData(200, 150, 1, 1).data[3]]; }); assert.deepEqual(al, [0, 255]);
     await page.getByRole('button', { name: 'Restore original' }).click(); assert.equal(await page.evaluate(() => !!selObjs()[0].orig), false);
   });
@@ -203,6 +203,21 @@ try {
   await t('BG Generator: instant backdrops need no AI and land behind the picture', async () => {
     const r = await page.evaluate(async () => { const o = objs().find((x) => x.type === 'image'); sel = [o.id]; selChanged(); const n0 = objs().length; openBgGenerator(); await new Promise((r) => setTimeout(r, 400)); const cells = document.querySelectorAll('#modal .cell'); cells[1].click(); await new Promise((r) => setTimeout(r, 300)); return { cells: cells.length, added: objs().length - n0, bottom: objs()[0].name }; });
     assert.ok(r.cells >= 8 && r.added === 1 && r.bottom === 'Backdrop', JSON.stringify(r));
+  });
+  await t('background remover: noisy plain backdrops come out clean (no specks, soft edges, enclosed areas on request)', async () => {
+    const r = await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 400; c.height = 400; const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, 400, 400);
+      x.strokeStyle = '#f68a14'; x.lineWidth = 40; x.beginPath(); x.arc(200, 200, 110, 0, 7); x.stroke();
+      const id = x.getImageData(0, 0, 400, 400), d = id.data; let s = 5; const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; }; for (let i = 0; i < d.length; i += 4) { const n = (rnd() - .5) * 26; d[i] = Math.max(0, Math.min(255, d[i] + n)); d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n)); d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n)); } x.putImageData(id, 0, 0);
+      const url = c.toDataURL('image/png'); const out = await plainBg(url, 40), oc = await dataToCanvas(out), od = oc.getContext('2d').getImageData(0, 0, 400, 400).data;
+      const a = (X, Y) => od[(Y * 400 + X) * 4 + 3]; let stray = 0; for (let Y = 0; Y < 400; Y++) for (let X = 0; X < 400; X++) { const dd = Math.hypot(X - 200, Y - 200); if ((dd < 70 || dd > 150) && a(X, Y) > 0) stray++; }
+      return { stray, ring: a(200 + 110, 200), hole: a(200, 200), corner: a(3, 3) }; });
+    assert.ok(r.stray < 40, 'specks left: ' + r.stray); assert.ok(r.ring > 250 && r.hole === 0 && r.corner === 0, JSON.stringify(r));
+  });
+  await t('uploads are kept in Files and are still listed after reopening the studio', async () => {
+    await page.evaluate(async () => { const c = document.createElement('canvas'); c.width = 120; c.height = 80; c.getContext('2d').fillRect(0, 0, 120, 80); const b = await new Promise((r) => c.toBlob(r, 'image/png')); const a = await ingestImage(new File([b], 'keep.png', { type: 'image/png' })); if (!a) throw new Error('no upload'); });
+    await page.waitForTimeout(1200);
+    const p2 = await ctx.newPage(); await p2.goto(B + '/apps/design-studio/?open'); await p2.waitForFunction(() => typeof libLoad === 'function');
+    const n = await p2.evaluate(async () => { openTab('up'); return (await libLoad(true)).length; }); assert.ok(n >= 1, 'library empty'); await p2.close();
   });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
 } finally { await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }

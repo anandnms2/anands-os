@@ -115,6 +115,15 @@ function afterCommit(noHist){updUndo();renderStrip();clearTimeout(saveT);saveT=s
 
 function usedAssets(){const m=JSON.stringify(D.pages).match(/"a_[a-z0-9]+"/g)||[];const a={};m.forEach(x=>{const k=x.slice(1,-1);if(D.assets[k])a[k]=D.assets[k]});if(brand.logo&&D.assets[brand.logo])a[brand.logo]=D.assets[brand.logo];return a}
 
+const FONT_GROUPS={"Handwriting": ["Amatic SC", "Annie Use Your Telescope", "Architects Daughter", "Bad Script", "Cabin Sketch", "Caveat", "Caveat Brush", "Cedarville Cursive", "Charm", "Charmonman", "Comic Neue", "Coming Soon", "Covered By Your Grace", "Dekko", "Delicious Handrawn", "Edu NSW ACT Foundation", "Fuzzy Bubbles", "Gaegu", "Gamja Flower", "Give You Glory", "Gloria Hallelujah", "Gochi Hand", "Grape Nuts", "Hachi Maru Pop", "Handlee", "Homemade Apple", "Indie Flower", "Itim", "Julee", "Just Another Hand", "Just Me Again Down Here", "Kalam", "Klee One", "Kranky", "Kristi", "La Belle Aurore", "Londrina Sketch", "Londrina Solid", "Loved by the King", "Mali", "Mansalva", "Marck Script", "Merienda", "Mynerve", "Nanum Brush Script", "Nanum Pen Script", "Neucha", "Nothing You Could Do", "Oooh Baby", "Over the Rainbow", "Pangolin", "Patrick Hand", "Permanent Marker", "Playpen Sans", "Rancho", "Redressed", "Reenie Beanie", "Rock Salt", "Rubik Scribble", "Sacramento", "Schoolbell", "Sedgwick Ave", "Shadows Into Light", "Shantell Sans", "Short Stack", "Sriracha", "Sue Ellen Francisco", "Swanky and Moo Moo", "The Girl Next Door", "Waiting for the Sunrise", "Walter Turncoat", "Yomogi", "Zeyada"], "Script & calligraphy": ["Alex Brush", "Allura", "Arizonia", "Babylonica", "Ballet", "Birthstone", "Birthstone Bounce", "Carattere", "Comforter", "Cookie", "Corinthia", "Courgette", "Damion", "Dancing Script", "Ephesis", "Estonia", "Euphoria Script", "Explora", "Fuggles", "Great Vibes", "Grey Qo", "Gwendolyn", "Herr Von Muellerhoff", "Hurricane", "Imperial Script", "Inspiration", "Island Moments", "Italianno", "Kaushan Script", "Kolker Brush", "Leckerli One", "Licorice", "Lobster", "Lobster Two", "Lovers Quarrel", "Luxurious Script", "Mea Culpa", "Meddon", "Monsieur La Doulaise", "Moon Dance", "Mr Dafoe", "Mrs Saint Delafield", "Niconne", "Norican", "Ole", "Pacifico", "Parisienne", "Passions Conflict", "Petit Formal Script", "Pinyon Script", "Playball", "Qwigley", "Rouge Script", "Satisfy", "Seaweed Script", "Send Flowers", "Sofia", "Splash", "Square Peg", "Style Script", "Tangerine", "Tapestry", "The Nautigal", "Updock", "Vujahday Script", "Water Brush", "Waterfall", "Whisper", "Yellowtail", "Yesteryear"], "Display & bold": ["Abril Fatface", "Alfa Slab One", "Anton", "Archivo Black", "Audiowide", "Baloo 2", "Bangers", "Bebas Neue", "Bevan", "Big Shoulders Display", "Black Ops One", "Bowlby One", "Bungee", "Bungee Shade", "Carter One", "Ceviche One", "Chango", "Chewy", "Cinzel", "Cinzel Decorative", "Climate Crisis", "Coiny", "Concert One", "Creepster", "Dela Gothic One", "Emilys Candy", "Ewert", "Fascinate", "Faster One", "Fjalla One", "Fredericka the Great", "Fredoka", "Fugaz One", "Gloock", "Knewave", "League Spartan", "Lemon", "Lilita One", "Limelight", "Luckiest Guy", "Michroma", "Mochiy Pop One", "Modak", "Monoton", "Oi", "Orbitron", "Oswald", "Passion One", "Pathway Gothic One", "Paytone One", "Press Start 2P", "Rammetto One", "Rampart One", "Righteous", "Rubik Glitch", "Rubik Mono One", "Russo One", "Sansita", "Shrikhand", "Sigmar One", "Special Elite", "Squada One", "Staatliches", "Syne", "Teko", "Titan One", "Ultra", "Unbounded", "Vast Shadow"], "Serif": ["Alegreya", "Arvo", "Bitter", "Bodoni Moda", "Cardo", "Cormorant", "Cormorant Garamond", "Cormorant Infant", "Crimson Text", "DM Serif Display", "Domine", "EB Garamond", "Frank Ruhl Libre", "Fraunces", "Gelasio", "Ibarra Real Nova", "Instrument Serif", "Libre Baskerville", "Libre Bodoni", "Libre Caslon Text", "Lora", "Marcellus", "Merriweather", "Newsreader", "Noto Serif", "Old Standard TT", "Playfair Display", "Playfair Display SC", "Prata", "Roboto Slab", "Rufina", "Source Serif 4", "Spectral", "Vollkorn", "Young Serif", "Zilla Slab"], "Sans serif": ["Albert Sans", "Archivo", "Asap", "Barlow", "Barlow Condensed", "Be Vietnam Pro", "Bricolage Grotesque", "Cabin", "Commissioner", "DM Sans", "Epilogue", "Exo 2", "Familjen Grotesk", "Figtree", "Golos Text", "Hanken Grotesk", "Heebo", "IBM Plex Sans", "Instrument Sans", "Inter", "Josefin Sans", "Jost", "Karla", "Kumbh Sans", "Lato", "Lexend", "Lexend Deca", "Manrope", "Montserrat", "Mulish", "Noto Sans", "Nunito", "Onest", "Open Sans", "Outfit", "Overpass", "Plus Jakarta Sans", "Public Sans", "Quicksand", "Raleway", "Readex Pro", "Red Hat Display", "Roboto", "Rubik", "Schibsted Grotesk", "Sora", "Source Sans 3", "Space Grotesk", "Titillium Web", "Ubuntu", "Urbanist", "Work Sans"], "Indian & regional": ["Amita", "Anek Bangla", "Anek Devanagari", "Anek Gujarati", "Anek Gurmukhi", "Anek Kannada", "Anek Malayalam", "Anek Tamil", "Anek Telugu", "Arya", "Baloo Bhai 2", "Baloo Bhaina 2", "Baloo Chettan 2", "Baloo Paaji 2", "Baloo Tamma 2", "Baloo Thambi 2", "Biryani", "Cambay", "Catamaran", "Chilanka", "Eczar", "Gidugu", "Halant", "Hind", "Hind Madurai", "Hind Siliguri", "Hind Vadodara", "Karma", "Khand", "Kurale", "Laila", "Mandali", "Manjari", "Martel", "Meera Inimai", "Mukta", "Noto Sans Bengali", "Noto Sans Devanagari", "Noto Sans Gujarati", "Noto Sans Gurmukhi", "Noto Sans Kannada", "Noto Sans Malayalam", "Noto Sans Oriya", "Noto Sans Tamil", "Noto Sans Telugu", "Noto Serif Devanagari", "Noto Serif Tamil", "Noto Serif Telugu", "Palanquin", "Pavanam", "Poppins", "Pragati Narrow", "Rajdhani", "Ramabhadra", "Rozha One", "Sahitya", "Sura", "Suranna", "Tillana", "Tiro Devanagari Hindi", "Vesper Libre", "Yantramanav", "Yatra One"], "Monospace": ["Courier Prime", "DM Mono", "Fira Code", "IBM Plex Mono", "Inconsolata", "JetBrains Mono", "Roboto Mono", "Source Code Pro", "Space Mono"]};
+FONTS.push(...(["Patrick Hand", "Indie Flower", "Shadows Into Light", "Gloria Hallelujah", "Reenie Beanie", "Covered By Your Grace", "Homemade Apple", "Nanum Pen Script", "Rock Salt", "Just Another Hand", "Architects Daughter", "Sue Ellen Francisco", "Coming Soon", "Schoolbell", "Handlee", "Neucha", "Gaegu", "Gochi Hand", "Amatic SC", "Sriracha", "Itim", "Mansalva", "Nothing You Could Do", "Over the Rainbow", "La Belle Aurore", "Zeyada", "Waiting for the Sunrise", "The Girl Next Door", "Swanky and Moo Moo", "Cedarville Cursive", "Dekko", "Kristi", "Loved by the King", "Short Stack", "Annie Use Your Telescope", "Walter Turncoat", "Sedgwick Ave", "Just Me Again Down Here", "Rancho", "Delicious Handrawn", "Caveat Brush", "Shantell Sans", "Fuzzy Bubbles", "Playpen Sans", "Edu NSW ACT Foundation", "Gamja Flower", "Nanum Brush Script", "Yomogi", "Klee One", "Marck Script", "Bad Script", "Merienda", "Mynerve", "Oooh Baby", "Comic Neue", "Grape Nuts", "Give You Glory", "Londrina Solid", "Hachi Maru Pop", "Redressed", "Londrina Sketch", "Rubik Scribble", "Kranky", "Cabin Sketch", "Julee", "Charm", "Charmonman", "Mali", "Pangolin", "Sacramento", "Allura", "Alex Brush", "Parisienne", "Tangerine", "Italianno", "Pinyon Script", "Monsieur La Doulaise", "Rouge Script", "Yesteryear", "Courgette", "Kaushan Script", "Norican", "Playball", "Cookie", "Damion", "Leckerli One", "Sofia", "Lobster Two", "Style Script", "Yellowtail", "Mr Dafoe", "Arizonia", "Euphoria Script", "Herr Von Muellerhoff", "Niconne", "Petit Formal Script", "Meddon", "Mrs Saint Delafield", "Seaweed Script", "Birthstone", "Mea Culpa", "Whisper", "Comforter", "Explora", "Estonia", "Fuggles", "Gwendolyn", "Send Flowers", "Splash", "Waterfall", "Updock", "Vujahday Script", "Ballet", "Qwigley", "Hurricane", "Licorice", "Ole", "Square Peg", "Water Brush", "Imperial Script", "Corinthia", "Birthstone Bounce", "Carattere", "Ephesis", "Luxurious Script", "The Nautigal", "Island Moments", "Inspiration", "Moon Dance", "Passions Conflict", "Grey Qo", "Lovers Quarrel", "Tapestry", "Kolker Brush", "Babylonica", "Bungee", "Lilita One", "Luckiest Guy", "Bowlby One", "Fugaz One", "Monoton", "Shrikhand", "Chewy", "Black Ops One", "Alfa Slab One", "Ultra", "Titan One", "Paytone One", "Passion One", "Russo One", "Squada One", "Staatliches", "Fredericka the Great", "Cinzel", "Limelight", "Rubik Mono One", "Press Start 2P", "Special Elite", "Creepster", "League Spartan", "Syne", "Unbounded", "Gloock", "Rammetto One", "Modak", "Baloo 2", "Concert One", "Sansita", "Chango", "Bungee Shade", "Rampart One", "Big Shoulders Display", "Oi", "Climate Crisis", "Rubik Glitch", "Faster One", "Audiowide", "Orbitron", "Michroma", "Bevan", "Vast Shadow", "Sigmar One", "Knewave", "Ewert", "Emilys Candy", "Fascinate", "Lemon", "Mochiy Pop One", "Dela Gothic One", "Carter One", "Ceviche One", "Coiny", "Fjalla One", "Pathway Gothic One", "Libre Baskerville", "Crimson Text", "EB Garamond", "Spectral", "Bitter", "Cardo", "Zilla Slab", "Cormorant", "Cormorant Infant", "Libre Caslon Text", "Source Serif 4", "Noto Serif", "Frank Ruhl Libre", "Vollkorn", "Old Standard TT", "Prata", "Bodoni Moda", "Fraunces", "Newsreader", "Gelasio", "Rufina", "Marcellus", "Playfair Display SC", "Young Serif", "Instrument Serif", "Libre Bodoni", "Ibarra Real Nova", "Alegreya", "Domine", "Arvo", "Inter", "DM Sans", "Manrope", "Space Grotesk", "Lexend", "Urbanist", "Figtree", "Epilogue", "Rubik", "Barlow", "Barlow Condensed", "Josefin Sans", "Outfit", "Plus Jakarta Sans", "Sora", "Jost", "Mulish", "Karla", "Open Sans", "Lato", "Roboto", "Noto Sans", "Source Sans 3", "Ubuntu", "Cabin", "Titillium Web", "Exo 2", "Albert Sans", "Red Hat Display", "Be Vietnam Pro", "Public Sans", "IBM Plex Sans", "Archivo", "Overpass", "Hanken Grotesk", "Onest", "Readex Pro", "Schibsted Grotesk", "Familjen Grotesk", "Golos Text", "Kumbh Sans", "Lexend Deca", "Asap", "Heebo", "Commissioner", "Amita", "Sahitya", "Laila", "Tillana", "Sura", "Eczar", "Khand", "Rajdhani", "Pragati Narrow", "Mukta", "Martel", "Arya", "Palanquin", "Yantramanav", "Kurale", "Karma", "Halant", "Vesper Libre", "Biryani", "Cambay", "Noto Serif Devanagari", "Noto Sans Devanagari", "Noto Serif Tamil", "Noto Serif Telugu", "Noto Sans Kannada", "Noto Sans Oriya", "Anek Devanagari", "Baloo Bhai 2", "Baloo Tamma 2", "Baloo Chettan 2", "Baloo Thambi 2", "Baloo Paaji 2", "Baloo Bhaina 2", "Hind Siliguri", "Hind Madurai", "Hind Vadodara", "Mandali", "Ramabhadra", "Gidugu", "Suranna", "Pavanam", "Meera Inimai", "Catamaran", "Chilanka", "Manjari", "Anek Tamil", "Anek Malayalam", "Anek Bangla", "Anek Telugu", "Anek Gujarati", "Anek Kannada", "Anek Gurmukhi", "JetBrains Mono", "IBM Plex Mono", "Fira Code", "Courier Prime", "DM Mono", "Roboto Mono", "Source Code Pro", "Inconsolata"]));
+const fontIO=typeof IntersectionObserver!=='undefined'?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){const b=e.target;b.style.fontFamily=`"${b.dataset.f}",sans-serif`;fontIO.unobserve(b)}}),{rootMargin:'120px'}):null;
+function fontButtons(box,query,current,pick){box.innerHTML='';const q=(query||'').toLowerCase();let any=false;
+  for(const [g,list] of Object.entries(FONT_GROUPS)){const fl=list.filter(f=>!q||f.toLowerCase().includes(q)||(g.toLowerCase().includes(q)));if(!fl.length)continue;any=true;
+    box.append(el('p',{class:'note',style:'margin:8px 0 2px;font-weight:600'},g+' · '+fl.length));
+    fl.forEach(f=>{const b=el('button',{'aria-pressed':f===current,'data-f':f,onclick:()=>pick(f)},f);if(fontIO)fontIO.observe(b);else b.style.fontFamily=`"${f}",sans-serif`;box.append(b)})}
+  if(!any)box.append(el('p',{class:'note'},'No fonts match.'))}
+
 /* ---------- drawing engine ---------- */
 const imgCache=new Map();
 function getImg(id){let i=imgCache.get(id);if(!i){i=new Image();i.onload=()=>render();i.src=D.assets[id]||id;imgCache.set(id,i)}return i}
@@ -696,7 +705,7 @@ async function ingestImage(f){
     let nw=img.naturalWidth||800,nh=img.naturalHeight||600;
     if(f.type!=='image/svg+xml'&&(Math.max(nw,nh)>2600||f.size>3e6)){const sc=Math.min(1,2600/Math.max(nw,nh));const c=document.createElement('canvas');c.width=Math.round(nw*sc);c.height=Math.round(nh*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);url=c.toDataURL(f.type==='image/jpeg'?'image/jpeg':'image/webp',.9);nw=c.width;nh=c.height}
     if(f.type==='image/svg+xml'&&(!img.naturalWidth||nw<10)){nw=800;nh=800}
-    const id='a_'+uid();D.assets[id]=url;(D.uploads||(D.uploads=[])).push(id);return {id,nw,nh};
+    const id='a_'+uid();D.assets[id]=url;(D.uploads||(D.uploads=[])).push(id);if(typeof libSave==='function')libSave(url,'upload');return {id,nw,nh};
   }catch(e){toast('Could not read that image');return null}
 }
 function addImageAsset(a,pos){const o=mkImage(a.id,a.nw,a.nh);if(pos){o.x=pos.x;o.y=pos.y}const empty=selObjs().find(s=>s.type==='image'&&!s.src);if(empty){empty.src=a.id;touch();renderInsp();renderPanel();return}addObj(o);renderPanel()}
@@ -730,7 +739,7 @@ function openColor(anchor,value,onPick,{none=false}={}){
 function openFontPop(anchor,current,pick){
   const q=el('input',{class:'f',placeholder:'Search fonts',type:'search','aria-label':'Search fonts'});
   const list=el('div',{class:'fontlist'});
-  const draw=()=>{list.innerHTML='';FONTS.filter(f=>f.toLowerCase().includes(q.value.toLowerCase())).forEach(f=>list.append(el('button',{style:`font-family:"${f}",sans-serif`,'aria-pressed':f===current,onclick:()=>{pick(f);closePop()}},f)))};
+  const draw=()=>fontButtons(list,q.value,current,f=>{pick(f);closePop()});
   q.addEventListener('input',draw);draw();showPop(anchor,[q,list],270);setTimeout(()=>q.focus(),0);
 }
 
@@ -1029,7 +1038,7 @@ function pText(b){
   b.append(el('div',{},el('h4',{class:'sh'},'Text styles'),el('div',{class:'grid2'},FXPRESETS.map(([n,o,bg])=>el('button',{class:'btn',style:`font-family:"${o.font}";font-size:18px;${bg?`background:${bg};color:#fff;`:''}`,onclick:()=>add(n,Object.assign({size:Math.round(100*u),w:D.w*.7,align:'center'},o))},n)))));
   const fl=el('div',{class:'fontlist'});
   b.append(el('div',{},el('h4',{class:'sh'},'All fonts'),fl));
-  FONTS.forEach(f=>fl.append(el('button',{style:`font-family:"${f}",sans-serif`,onclick:()=>{const t=selObjs().filter(o=>o.type==='text');if(t.length){t.forEach(o=>o.font=f);touch();renderInsp()}else add(f,{font:f,size:Math.round(90*u),w:D.w*.7})}},f)));
+  fontButtons(fl,'',null,f=>{const t=selObjs().filter(o=>o.type==='text');if(t.length){t.forEach(o=>o.font=f);touch();renderInsp()}else add(f,{font:f,size:Math.round(90*u),w:D.w*.7})});
 }
 
 /* ---------- uploads ---------- */
@@ -1039,9 +1048,10 @@ function pUploads(b){
   ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over')}));dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
   dz.addEventListener('drop',async e=>{e.preventDefault();dz.classList.remove('over');for(const f of [...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')))await addImageFile(f)});
   b.append(dz);
+  const libBox=el('div',{style:'display:grid;gap:8px'});b.append(libBox);
+  drawLibrary(libBox);
   const ups=(D.uploads||[]).filter(id=>D.assets[id]);
-  if(ups.length){b.append(el('h4',{class:'sh'},'Your images'),el('div',{class:'grid2'},ups.map(id=>el('div',{style:'display:grid;gap:4px'},el('button',{class:'cell',style:'aspect-ratio:4/3;padding:0;overflow:hidden',title:'Add to design','aria-label':'Add image to design',onclick:()=>{const i=getImg(id);const go=()=>addImageAsset({id,nw:i.naturalWidth,nh:i.naturalHeight});i.complete&&i.naturalWidth?go():i.addEventListener('load',go,{once:true})}},el('img',{src:D.assets[id],alt:'',style:'width:100%;height:100%;object-fit:cover'})),el('button',{class:'btn sm',onclick:()=>{P().bg={t:'img',src:id,c:'#fff'};touch();renderInsp()}},'Use as background')))))}
-  else b.append(el('p',{class:'note'},'Nothing uploaded yet. Images stay in this browser.'));
+  if(ups.length){b.append(el('h4',{class:'sh'},'In this design'),el('div',{class:'grid3'},ups.map(id=>el('button',{class:'cell',style:'aspect-ratio:1;padding:0;overflow:hidden',title:'Add to design','aria-label':'Add image to design',onclick:()=>{const i=getImg(id);const go=()=>addImageAsset({id,nw:i.naturalWidth,nh:i.naturalHeight});i.complete&&i.naturalWidth?go():i.addEventListener('load',go,{once:true})}},el('img',{src:D.assets[id],alt:'',style:'width:100%;height:100%;object-fit:cover'})))))}
 }
 
 /* ---------- draw ---------- */
@@ -2024,6 +2034,248 @@ function magicInsp(o){
     st,el('p',{class:'note'},'Eraser, Upscale, Layers and Image to video work on this device. Magic Edit and BG Generator use the AI image service set in Settings.'));
 }
 
+/* ---------- icon library and photo frames (shapes that live in SP) ---------- */
+const IK=100/24,nfI=v=>Math.round(v*IK*100)/100;
+function scD(d){return d.replace(/([MLHVCSQTAZmlhvcsqtaz])([^MLHVCSQTAZmlhvcsqtaz]*)/g,(m,c,args)=>{if(/[Zz]/.test(c))return 'Z';const n=(args.match(/-?\d*\.?\d+(?:e-?\d+)?/gi)||[]).map(Number);let out=[];
+  if(c==='A'||c==='a'){for(let i=0;i<n.length;i+=7){out.push(nfI(n[i]),nfI(n[i+1]),n[i+2],n[i+3],n[i+4],nfI(n[i+5]),nfI(n[i+6]))}}else out=n.map(nfI);return c+out.join(' ')})}
+const ic_c=(x,y,r)=>`M${x-r} ${y}A${r} ${r} 0 1 0 ${x+r} ${y}A${r} ${r} 0 1 0 ${x-r} ${y}Z`;
+const ic_r=(x,y,w,h,r=0)=>{r=Math.min(r,w/2,h/2);return r?`M${x+r} ${y}H${x+w-r}A${r} ${r} 0 0 1 ${x+w} ${y+r}V${y+h-r}A${r} ${r} 0 0 1 ${x+w-r} ${y+h}H${x+r}A${r} ${r} 0 0 1 ${x} ${y+h-r}V${y+r}A${r} ${r} 0 0 1 ${x+r} ${y}Z`:`M${x} ${y}H${x+w}V${y+h}H${x}Z`};
+const ic_p=pts=>'M'+pts.map(p=>p.join(' ')).join('L')+'Z';
+const ic_ring=(x,y,r,t)=>ic_c(x,y,r)+ic_c(x,y,r-t);
+const ic_ln=(x1,y1,x2,y2,w=2)=>{const dx=x2-x1,dy=y2-y1,l=Math.hypot(dx,dy),nx=-dy/l*w/2,ny=dx/l*w/2;return ic_p([[x1+nx,y1+ny],[x2+nx,y2+ny],[x2-nx,y2-ny],[x1-nx,y1-ny]])};
+const ic_pl=(pts,w=2)=>{const L=[],R=[];pts.forEach((p,i)=>{const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)];let dx=b[0]-a[0],dy=b[1]-a[1];const l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;let nx=-dy*w/2,ny=dx*w/2;if(i>0&&i<pts.length-1){const p0=pts[i-1],p1=pts[i+1];const d1=[p[0]-p0[0],p[1]-p0[1]],d2=[p1[0]-p[0],p1[1]-p[1]],l1=Math.hypot(...d1),l2=Math.hypot(...d2);const n1=[-d1[1]/l1,d1[0]/l1],n2=[-d2[1]/l2,d2[0]/l2];let mx=n1[0]+n2[0],my=n1[1]+n2[1];const ml=Math.hypot(mx,my)||1;mx/=ml;my/=ml;const cs=Math.max(.5,mx*n1[0]+my*n1[1]);nx=mx*w/2/cs;ny=my*w/2/cs}L.push([p[0]+nx,p[1]+ny]);R.unshift([p[0]-nx,p[1]-ny])});return ic_p(L.concat(R))};
+const ic_st=(cx,cy,ro,ri,n,rot=-90)=>ic_p(Array.from({length:n*2},(_,i)=>{const a=(rot+i*180/n)*Math.PI/180,r=i%2?ri:ro;return[+(cx+Math.cos(a)*r).toFixed(2),+(cy+Math.sin(a)*r).toFixed(2)]}));
+const ic_gear=(cx,cy,ro,ri,n)=>{const pts=[];for(let i=0;i<n;i++){const a0=i*2*Math.PI/n,s=Math.PI/n;[[-.55,ri],[-.3,ro],[.3,ro],[.55,ri]].forEach(([f,r])=>{const a=a0+f*s*1;pts.push([+(cx+Math.cos(a)*r).toFixed(2),+(cy+Math.sin(a)*r).toFixed(2)])})}return ic_p(pts)};
+const ICONS=[];const icon=(name,cat,kw,...parts)=>{ICONS.push({n:name,c:cat,k:kw||'',d:scD(parts.join(''))});};
+const ARC=(a,b,c,d)=>'';
+/* ---- interface ---- */
+icon('Arrow right','Interface','next forward','M3 10.6H14V6L21 12L14 18V13.4H3Z');
+icon('Arrow left','Interface','back previous','M21 10.6H10V6L3 12L10 18V13.4H21Z');
+icon('Arrow up','Interface','top','M10.6 21V10H6L12 3L18 10H13.4V21Z');
+icon('Arrow down','Interface','bottom','M10.6 3V14H6L12 21L18 14H13.4V3Z');
+icon('Arrow up-right','Interface','external','M6 4.6H19.4V18H17V8.3L6.6 18.7L4.9 17L15.3 6.6H6Z');
+icon('Chevron right','Interface','next','M8 4.5L10.2 2.3L19.9 12L10.2 21.7L8 19.5L15.5 12Z');
+icon('Chevron down','Interface','dropdown','M4.5 8L2.3 10.2L12 19.9L21.7 10.2L19.5 8L12 15.5Z');
+icon('Check','Interface','tick done yes','M3.5 12.5L5.8 10.2L9.5 13.9L18.2 5.2L20.5 7.5L9.5 18.5Z');
+icon('Close','Interface','cross x cancel','M5 7.2L7.2 5L12 9.8L16.8 5L19 7.2L14.2 12L19 16.8L16.8 19L12 14.2L7.2 19L5 16.8L9.8 12Z');
+icon('Plus','Interface','add new','M10.5 4H13.5V10.5H20V13.5H13.5V20H10.5V13.5H4V10.5H10.5Z');
+icon('Minus','Interface','remove',ic_r(4,10.5,16,3,1.5));
+icon('Menu','Interface','hamburger',ic_r(3,5,18,2.6,1.3),ic_r(3,10.7,18,2.6,1.3),ic_r(3,16.4,18,2.6,1.3));
+icon('Search','Interface','find magnify',ic_ring(10,10,7.5,2.5),ic_ln(15.4,15.4,21,21,3));
+icon('Home','Interface','house','M12 3L22 12H19V20H14.5V14H9.5V20H5V12H2Z');
+icon('Settings','Interface','gear cog',ic_gear(12,12,10,7.6,8),ic_c(12,12,3.2));
+icon('Bell','Interface','notification alert','M12 2.5c-.9 0-1.6.7-1.6 1.6v.6C7.6 5.4 6 7.8 6 10.5v4.2L4 17v1.5h16V17l-2-2.3v-4.2c0-2.7-1.6-5.1-4.4-5.8v-.6c0-.9-.7-1.6-1.6-1.6zM10 19.5h4a2 2 0 0 1-4 0Z');
+icon('Lock','Interface','secure private',ic_r(5,10.5,14,10.5,2),ic_c(12,15,1.7),'M8 10.5V7.5a4 4 0 0 1 8 0v3h-2v-3a2 2 0 0 0-4 0v3Z');
+icon('Eye','Interface','view visible','M12 5C6.5 5 2.5 9 1 12c1.5 3 5.5 7 11 7s9.5-4 11-7c-1.5-3-5.5-7-11-7Z',ic_c(12,12,4.4),ic_c(12,12,2.2));
+icon('Trash','Interface','delete bin',ic_r(4,5,16,2,1),ic_r(9,2.8,6,2),'M6 8H18L17 20.5A1.5 1.5 0 0 1 15.5 22H8.5A1.5 1.5 0 0 1 7 20.5Z',ic_r(9.4,10.5,1.4,8,.7),ic_r(13.2,10.5,1.4,8,.7));
+icon('Edit','Interface','pencil write','M3 17.5V21H6.5L18.5 9L15 5.5ZM15.8 4.7L17.8 2.7A1 1 0 0 1 19.2 2.7L21.3 4.8A1 1 0 0 1 21.3 6.2L19.3 8.2Z');
+icon('Download','Interface','save','M10.5 3H13.5V11H17L12 17L7 11H10.5Z',ic_r(4,19,16,2.5,1));
+icon('Upload','Interface','publish','M10.5 17H13.5V9H17L12 3L7 9H10.5Z',ic_r(4,19,16,2.5,1));
+icon('Share','Interface','send social',ic_c(18,5.5,3),ic_c(6,12,3),ic_c(18,18.5,3),ic_ln(8.4,10.8,15.6,6.7,1.5),ic_ln(8.4,13.2,15.6,17.3,1.5));
+icon('Link','Interface','chain url','M9 7H13A5 5 0 0 1 13 17H9V15H13A3 3 0 0 0 13 9H9ZM15 7H17A5 5 0 0 1 17 17H15V15H17A3 3 0 0 0 17 9H15Z');
+icon('Calendar','Interface','date schedule','M5 4.5H19A2 2 0 0 1 21 6.5V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V6.5A2 2 0 0 1 5 4.5Z'+ic_r(5,10,14,9,1),ic_r(7,2,2,4,1),ic_r(15,2,2,4,1));
+icon('Clock','Interface','time hour',ic_ring(12,12,10,2.2),ic_ln(12,12,12,6.5,2),ic_ln(12,12,15.8,14.2,2));
+icon('Location pin','Interface','map place gps','M12 2A7 7 0 0 0 5 9C5 14 12 22 12 22S19 14 19 9A7 7 0 0 0 12 2Z',ic_c(12,9,2.7));
+icon('Star','Interface','favourite rating',ic_st(12,12.5,10.5,4.4,5));
+icon('Heart','Interface','love like','M12 21.5C3.5 15 2 9.5 4.8 6C7.2 3.2 11 3.8 12 6.5C13 3.8 16.8 3.2 19.2 6C22 9.5 20.5 15 12 21.5Z');
+icon('Bookmark','Interface','save later','M6 3H18V21.5L12 17L6 21.5Z');
+icon('Flag','Interface','report',ic_r(5,3,2,19,1),'M7 4H19L16 8.5L19 13H7Z');
+icon('Info','Interface','about help',ic_c(12,12,10),ic_r(10.8,10.5,2.4,6.5,1.1),ic_c(12,7.5,1.4));
+icon('Warning','Interface','alert caution','M12 2.5L22.5 20.5H1.5Z',ic_r(10.8,8.5,2.4,6,1.1),ic_c(12,17.4,1.3));
+icon('Help','Interface','question',ic_c(12,12,10),ic_c(12,17.2,1.2),'M10 9.5A2 2 0 1 1 12 11.6V13.4H10.8V11C12.2 10.8 12.2 8.7 12 8.7A1 1 0 0 0 11 9.5Z');
+icon('Filter','Interface','funnel','M3 4H21L14 12.5V20L10 18V12.5Z');
+icon('Grid','Interface','apps layout',ic_r(3,3,8,8,1.5),ic_r(13,3,8,8,1.5),ic_r(3,13,8,8,1.5),ic_r(13,13,8,8,1.5));
+icon('List','Interface','bullets',ic_c(4.5,6,1.6),ic_r(8,5,13,2,1),ic_c(4.5,12,1.6),ic_r(8,11,13,2,1),ic_c(4.5,18,1.6),ic_r(8,17,13,2,1));
+icon('Refresh','Interface','reload sync','M12 4A8 8 0 1 0 19.5 9.5H17.2A6 6 0 1 1 12 6V9L17 5L12 1Z');
+icon('Power','Interface','on off','M10.8 2H13.2V12H10.8ZM7 5.2L8.5 7A6.5 6.5 0 1 0 15.5 7L17 5.2A9 9 0 1 1 7 5.2Z');
+icon('Thumbs up','Interface','like good','M2 10H6V21H2ZM8 10L12 2C14 2 15.5 3.5 15 5.5L14.2 9H20A2 2 0 0 1 22 11.4L20.6 19A2 2 0 0 1 18.6 21H8Z');
+icon('Fire','Interface','hot trending','M12 2C12 6 8 8 8 13A4 4 0 0 0 9 15.7C9 14 10 13 11 12.5C11 15 13 15.5 13 18A2 2 0 0 1 11 20A4.5 4.5 0 0 0 17 15.5C17 11 13 8 12 2Z');
+icon('Bolt','Interface','lightning power energy','M13 2L4 14H11L10 22L20 9H13Z');
+icon('Sparkle','Interface','magic new',ic_st(12,12,10.5,2.6,4),ic_st(19,5,3.5,1.1,4));
+icon('Crown','Interface','premium king queen','M3 7L8 11L12 5L16 11L21 7L19 19H5Z');
+icon('Gift','Interface','present surprise',ic_r(3,9,18,4,1),'M4.5 13H19.5V21H4.5ZM11 9H13V21H11Z'.replace('M11 9H13V21H11Z',''),'M12 9C10 5 6 5 6 7.5C6 9.5 9 9 12 9ZM12 9C14 5 18 5 18 7.5C18 9.5 15 9 12 9Z');
+icon('Trophy','Interface','award winner','M7 3H17V9A5 5 0 0 1 12 14A5 5 0 0 1 7 9ZM4 4H7V6.5H5.5V8A2 2 0 0 0 7.5 10V11.5A3.5 3.5 0 0 1 4 8ZM20 4H17V6.5H18.5V8A2 2 0 0 1 16.5 10V11.5A3.5 3.5 0 0 0 20 8Z',ic_r(11,14,2,4),ic_r(7.5,18,9,3,1));
+icon('Medal','Interface','badge award','M7 2H11L12.5 7H9.5ZM17 2H13L11.5 7H14.5Z',ic_ring(12,15,7,2),ic_c(12,15,3.2));
+icon('Shield','Interface','security protect','M12 2L20 5V11C20 16 16.5 20 12 22C7.5 20 4 16 4 11V5Z');
+icon('Target','Interface','goal aim',ic_ring(12,12,10,2.2),ic_ring(12,12,6.2,2.2),ic_c(12,12,1.8));
+icon('Lightbulb','Interface','idea','M12 2A7 7 0 0 0 8.5 15V17H15.5V15A7 7 0 0 0 12 2ZM9 18.5H15V20H9ZM10 21H14V22H10Z');
+icon('Puzzle','Interface','integration plugin','M4 8H8A2.5 2.5 0 1 1 13 8H17V12A2.5 2.5 0 1 1 17 17V20H4V16A2.5 2.5 0 1 0 4 11Z');
+icon('Infinity','Interface','loop forever','M7 7A5 5 0 1 0 7 17C9.5 17 11 15 12 12C13 9 14.5 7 17 7A5 5 0 1 1 17 17C14.5 17 13 15 12 12C11 9 9.5 7 7 7ZM7 9.2C8.2 9.2 8.8 10.3 9.6 12C8.8 13.7 8.2 14.8 7 14.8A2.8 2.8 0 1 1 7 9.2ZM17 9.2A2.8 2.8 0 1 1 17 14.8C15.8 14.8 15.2 13.7 14.4 12C15.2 10.3 15.8 9.2 17 9.2Z'.replace(/Z/g,'Z'));
+/* ---- media & communication ---- */
+icon('Play','Media','start video','M7 4L20 12L7 20Z');
+icon('Pause','Media','',ic_r(6,4,4,16,1),ic_r(14,4,4,16,1));
+icon('Stop','Media','square',ic_r(5,5,14,14,2));
+icon('Next track','Media','skip','M5 5L15 12L5 19Z',ic_r(16,5,3,14,1));
+icon('Volume','Media','sound speaker','M3 9.5H7L12 5V19L7 14.5H3Z','M14.8 8.6L16.2 7.2A6.5 6.5 0 0 1 16.2 16.8L14.8 15.4A4.5 4.5 0 0 0 14.8 8.6Z');
+icon('Microphone','Media','voice record',ic_r(9,2.5,6,12,3),'M5.5 11H7.5A4.5 4.5 0 0 0 16.5 11H18.5A6.5 6.5 0 0 1 13 17.4V20H16V22H8V20H11V17.4A6.5 6.5 0 0 1 5.5 11Z');
+icon('Headphones','Media','music audio','M12 3A9 9 0 0 0 3 12V19A2 2 0 0 0 5 21H7V13H5V12A7 7 0 0 1 19 12V13H17V21H19A2 2 0 0 0 21 19V12A9 9 0 0 0 12 3Z');
+icon('Music','Media','note song','M9 3L20 1V16A3.5 3.5 0 1 1 18 12.8V6L11 7.2V18A3.5 3.5 0 1 1 9 14.8Z');
+icon('Camera','Media','photo',ic_r(2,6.5,20,14,2.5)+ic_c(12,13.5,4.4),ic_c(12,13.5,2.6),ic_p([[8,6.5],[9.5,3.5],[14.5,3.5],[16,6.5]]));
+icon('Image','Media','photo picture',ic_r(3,4,18,16,2)+ic_r(5,6,14,12,.5),'M5 18L10 11.5L13 15.5L15 13L19 18Z',ic_c(15.5,9.5,1.7));
+icon('Video','Media','film movie',ic_r(2,6,13.5,12,2.5),'M17 10L22 6.5V17.5L17 14Z');
+icon('Film','Media','cinema',ic_r(3,3,18,18,2)+ic_r(7,3,10,18,0),ic_r(4.2,5,1.6,2,.3),ic_r(4.2,11,1.6,2,.3),ic_r(4.2,17,1.6,2,.3),ic_r(18.2,5,1.6,2,.3),ic_r(18.2,11,1.6,2,.3),ic_r(18.2,17,1.6,2,.3));
+icon('Mail','Communication','email envelope',ic_r(2,4.5,20,15,2.5)+ic_p([[4,7.8],[12,13.8],[20,7.8],[20,17.5],[4,17.5]]));
+icon('Phone','Communication','mobile',ic_r(7,2,10,20,2.5)+ic_r(8.8,5,6.4,12,.4),ic_c(12,19.5,.9));
+icon('Call','Communication','telephone','M6.6 3L9.5 3.4L10.8 7.5L8.7 9A12 12 0 0 0 15 15.3L16.5 13.2L20.6 14.5L21 17.4A3 3 0 0 1 18 20.5A15.5 15.5 0 0 1 3.5 6A3 3 0 0 1 6.6 3Z');
+icon('Chat','Communication','message bubble',ic_r(3,4,18,13,3),ic_p([[8,17],[8,21.5],[13,17]]));
+icon('Chat dots','Communication','comment',ic_r(3,4,18,13,3)+ic_c(8,10.5,1.2)+ic_c(12,10.5,1.2)+ic_c(16,10.5,1.2),ic_p([[8,17],[8,21.5],[13,17]]));
+icon('Megaphone','Communication','announce marketing','M3 9H7L14 4V20L7 15H5V20H3ZM16 8.5A4.5 4.5 0 0 1 16 15.5V13.5A2.5 2.5 0 0 0 16 10.5Z');
+icon('Send','Communication','paper plane','M2 3L22 12L2 21L4 13L14 12L4 11Z');
+icon('Globe','Communication','world web',ic_ring(12,12,10,1.8)+ic_ring(12,12,4.3,1.6).replace(/.*/,m=>m),ic_ln(2,12,22,12,1.8));
+icon('WiFi','Communication','wireless signal','M12 19.5A1.8 1.8 0 1 0 12 15.9A1.8 1.8 0 0 0 12 19.5ZM12 12C13.7 12 15.2 12.7 16.3 13.8L17.7 12.4A8 8 0 0 0 6.3 12.4L7.7 13.8A6 6 0 0 1 12 12ZM12 7.5A11 11 0 0 1 19.8 10.7L21.2 9.3A13 13 0 0 0 2.8 9.3L4.2 10.7A11 11 0 0 1 12 7.5Z');
+icon('Rss','Communication','feed subscribe',ic_c(5.5,18.5,2.2),'M3.5 10.5A10 10 0 0 1 13.5 20.5H11A7.5 7.5 0 0 0 3.5 13ZM3.5 4A16.5 16.5 0 0 1 20 20.5H17.5A14 14 0 0 0 3.5 6.5Z');
+icon('Hashtag','Communication','tag social',ic_ln(9,3,7,21,2),ic_ln(17,3,15,21,2),ic_ln(4,9,21,9,2),ic_ln(3,15,20,15,2));
+icon('At sign','Communication','email address',ic_ring(12,12,10,2.2),ic_ring(12,12,4,2.2));
+icon('Thumbs','Communication','',ic_c(12,12,1));
+ICONS.pop();
+/* ---- business & finance ---- */
+icon('Briefcase','Business','work job',ic_r(3,7,18,14,2.5)+ic_r(10.5,12.5,3,2),'M9 7V4.5A1.5 1.5 0 0 1 10.5 3H13.5A1.5 1.5 0 0 1 15 4.5V7H13.2V4.8H10.8V7Z');
+icon('Building','Business','office company',ic_r(5,2.5,14,19,1)+ic_r(7.5,5,2,2)+ic_r(11,5,2,2)+ic_r(14.5,5,2,2)+ic_r(7.5,9,2,2)+ic_r(11,9,2,2)+ic_r(14.5,9,2,2)+ic_r(7.5,13,2,2)+ic_r(11,13,2,2)+ic_r(14.5,13,2,2)+ic_r(10,17.5,4,4));
+icon('Bar chart','Business','analytics statistics',ic_r(3.5,12,4.5,9,1),ic_r(9.8,5,4.5,16,1),ic_r(16,9,4.5,12,1));
+icon('Line chart','Business','growth trend',ic_pl([[3,17],[8.5,11],[13,15],[19,8]],2.4),'M15.5 4.6H21.4V10.5Z');
+icon('Pie chart','Business','report share','M11 2.1V13H21.9A10 10 0 1 1 11 2.1Z','M13 2.1A10 10 0 0 1 21.9 11H13Z');
+icon('Trend up','Business','profit increase',ic_pl([[2.5,17.5],[8.5,11.5],[12.5,15.5],[18,10]],2.4),'M15 6H22V13Z');
+icon('Trend down','Business','loss decrease',ic_pl([[2.5,6.5],[8.5,12.5],[12.5,8.5],[18,14]],2.4),'M15 18H22V11Z');
+icon('Rupee','Finance','money inr currency india','M6 3H18V5.2H14.6A4.3 4.3 0 0 1 16.7 8.2H18V10.4H16.9A6 6 0 0 1 11 14.6H9.6L17 21H14L6.4 14.4V12.4H11A3.6 3.6 0 0 0 14.4 10.4H6V8.2H14A3 3 0 0 0 11.2 5.2H6Z');
+icon('Dollar','Finance','money usd currency','M11 2H13V4.1C15.5 4.4 17 6 17 8H15C15 7 14.2 6.2 12 6.2C10 6.2 9 7 9 8C9 9 9.8 9.5 12.5 10.2C15.6 11 17.2 12 17.2 14.4C17.2 16.4 15.5 18 13 18.3V20.5H11V18.3C8.5 18 6.8 16.4 6.8 14.2H9C9 15.5 10 16.2 12 16.2C13.8 16.2 15 15.5 15 14.4C15 13.2 14 12.8 11.5 12.1C8.3 11.2 7 10.2 7 8C7 6 8.6 4.4 11 4.1Z');
+icon('Wallet','Finance','payment cash','M3 6.5A2.5 2.5 0 0 1 5.5 4H18V7H5.5A.5.5 0 0 0 5 7.5V7.5L5 8H20A1 1 0 0 1 21 9V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19Z'+ic_c(17,14,1.4));
+icon('Credit card','Finance','payment bank',ic_r(2,5,20,14,2.5)+ic_r(2,8.5,20,2.8,0).replace(/Z$/,'Z'),ic_r(4.5,14.5,5,2,1));
+icon('Coin','Finance','money cash',ic_ring(12,12,10,2.2),'M12 7L13.2 10.2L16.5 10.4L14 12.6L14.8 15.8L12 14L9.2 15.8L10 12.6L7.5 10.4L10.8 10.2Z');
+icon('Piggy bank','Finance','savings','M19 9.5A9 9 0 0 0 3 12.5A5.5 5.5 0 0 0 5.5 16.5V20H9V18.5H14V20H17.5V16.5A5.5 5.5 0 0 0 20 13.5H22V10.5Z'+ic_c(15.5,10.5,1));
+icon('Handshake','Business','deal partner','M2 9L6.5 6L10.5 8L14 6L19 6L22 9L22 13L19.5 13L15 18L12 18L9.5 16L7 17L5 15L2 13Z');
+icon('Contract','Business','document sign','M5 2H15L20 7V22H5Z'+ic_r(8,12,9,1.6,.5)+ic_r(8,15.5,9,1.6,.5)+ic_r(8,8.5,4,1.6,.5));
+icon('Presentation','Business','slides board',ic_r(2,3,20,13,1.5)+ic_r(4,5,16,9,.5),ic_ln(12,16,12,21,2),ic_ln(7,21.5,17,21.5,1.6),ic_pl([[6,12],[10,8.5],[13,11],[18,7]],1.6));
+icon('Email marketing','Business','newsletter',ic_c(12,12,9.5));ICONS.pop();
+icon('Percent','Business','discount sale offer',ic_c(7,7,3.5)+ic_c(7,7,1.7),ic_c(17,17,3.5)+ic_c(17,17,1.7),ic_ln(19.5,4.5,4.5,19.5,2.2));
+icon('Tag','Shopping','price label','M3 3H12.5L21 11.5L12.5 20L3.5 11.5Z'+ic_c(7.5,7.5,1.7));
+icon('Cart','Shopping','shop basket','M1.5 3H5L5.8 5.5H21L18.5 13.5H7.7L8.2 15.2H19V17H6.8L4 5H1.5Z'+'',ic_c(9,20,1.7),ic_c(17.5,20,1.7));
+icon('Shopping bag','Shopping','store purchase','M5 7H19L20.5 21H3.5Z'+'M9 7V6A3 3 0 0 1 15 6V7H13.2V6A1.2 1.2 0 0 0 10.8 6V7Z'.replace('M9 7V6A3 3 0 0 1 15 6V7H13.2V6A1.2 1.2 0 0 0 10.8 6V7Z',''),'M8.5 9.5V6.5A3.5 3.5 0 0 1 15.5 6.5V9.5H14V6.5A2 2 0 0 0 10 6.5V9.5Z');
+icon('Store','Shopping','shop market','M3 9L4.5 3H19.5L21 9A3 3 0 0 1 15 9A3 3 0 0 1 9 9A3 3 0 0 1 3 9ZM4.5 11V21H19.5V11A4.2 4.2 0 0 1 17.4 10.7V17H6.6V10.7A4.2 4.2 0 0 1 4.5 11Z');
+icon('Truck','Transport','delivery cargo logistics',ic_r(1.5,6,13,10,1.2),'M16 9H19.5L22.5 13V16H16Z',ic_c(6.5,17.5,2.4),ic_c(18,17.5,2.4));
+icon('Package','Shopping','box parcel','M12 2L21 6.5V17.5L12 22L3 17.5V6.5ZM12 4.2L6 7.2L12 10.2L18 7.2Z'.replace('M12 4.2L6 7.2L12 10.2L18 7.2Z',''),'M3 6.5L12 11L21 6.5L21 7.2L12 11.7L3 7.2Z'.replace(/.*/,''));
+ICONS.pop();icon('Package','Shopping','box parcel delivery',ic_p([[12,2],[21,6.5],[21,17.5],[12,22],[3,17.5],[3,6.5]])+ic_p([[12,4.4],[6.2,7.3],[12,10.2],[17.8,7.3]])+ic_p([[11,11.9],[11,19.4],[4.8,16.2],[4.8,8.8]]));
+icon('Barcode','Shopping','scan',ic_r(3,4,2,16),ic_r(6.5,4,1,16),ic_r(9,4,3,16),ic_r(13.5,4,1,16),ic_r(16,4,2,16),ic_r(19.5,4,1.5,16));
+icon('QR code','Shopping','scan',ic_r(3,3,7,7,1)+ic_r(5,5,3,3),ic_r(14,3,7,7,1)+ic_r(16,5,3,3),ic_r(3,14,7,7,1)+ic_r(5,16,3,3),ic_r(14,14,3,3),ic_r(18,18,3,3),ic_r(18,14,3,3).replace(/.*/,''));
+/* ---- people ---- */
+icon('User','People','person profile account',ic_c(12,7.5,4.5),'M3.5 21.5C3.5 16.8 7.3 14 12 14S20.5 16.8 20.5 21.5Z');
+icon('Users','People','team group',ic_c(9,8,3.8),'M1.5 20C1.5 15.8 4.8 13.5 9 13.5S16.5 15.8 16.5 20Z',ic_c(17.2,8.8,3),'M18 13.7C21 13.9 22.8 16 22.8 19.5H18.2C18.2 17.3 17.4 15.2 15.8 14C16.5 13.8 17.2 13.7 18 13.7Z');
+icon('Add user','People','invite',ic_c(10,8,4),'M2.5 21C2.5 16.8 6 14 10 14S17.5 16.8 17.5 21Z','M19 7H21V10H24V12H21V15H19V12H16V10H19Z'.replace('24','23.5'));
+icon('Id card','People','badge identity',ic_r(2,4,20,16,2.5)+ic_c(8.5,10.5,2.3),'M4.8 17C4.8 15 6.4 14 8.5 14S12.2 15 12.2 17Z',ic_r(14,9,6,1.6,.8).replace(/.*/,m=>m),ic_r(14,12.5,6,1.6,.8));
+icon('Graduation cap','Education','student degree','M12 3L23 8.5L12 14L1 8.5ZM5.5 12.5V17C5.5 18.5 8.5 20 12 20S18.5 18.5 18.5 17V12.5L12 15.8Z');
+icon('Book','Education','read study','M4 3.5H11V20H5.5A1.5 1.5 0 0 1 4 18.5ZM13 3.5H20V18.5A1.5 1.5 0 0 1 18.5 20H13Z');
+icon('Open book','Education','library learn','M2 5A9 3 0 0 1 12 6.5A9 3 0 0 1 22 5V19A9 3 0 0 0 12 20.5A9 3 0 0 0 2 19Z'.replace(/.*/,'M2 4.5C5 3.5 9.5 3.8 11.2 5.5V20C9.5 18.6 5 18.4 2 19.3ZM22 4.5C19 3.5 14.5 3.8 12.8 5.5V20C14.5 18.6 19 18.4 22 19.3Z'));
+icon('Pencil ruler','Education','school design',ic_r(3,3,5,18,1)+ic_r(4.6,6,1.8,1.2,.2)+ic_r(4.6,9,1.8,1.2,.2)+ic_r(4.6,12,1.8,1.2,.2),'M12 21L12 7.5L15.5 3L19 7.5V21Z',ic_r(12,18.2,7,1.5,0).replace(/.*/,''));
+icon('Atom','Education','science physics',ic_c(12,12,2),ic_ring(12,12,10,1.2).replace(/.*/,''),'M12 6.5C16.4 6.5 21 8.8 21 12S16.4 17.5 12 17.5S3 15.2 3 12S7.6 6.5 12 6.5ZM12 8.4C8 8.4 5 10.4 5 12S8 15.6 12 15.6S19 13.6 19 12S16 8.4 12 8.4Z');
+icon('Flask','Education','chemistry lab','M9 2H15V4H14V9L19.5 19A2 2 0 0 1 17.8 22H6.2A2 2 0 0 1 4.5 19L10 9V4H9Z'+ic_c(11,16.5,1)+ic_c(14.2,18.5,.8));
+icon('Globe stand','Education','geography',ic_ring(12,10,8,1.8),'M12 18V21H8V22.5H16V21H12ZM12 4C14 6 14 14 12 16C10 14 10 6 12 4Z'.replace(/.*/,m=>''),ic_r(2,9.1,20,1.8).replace(/.*/,''));
+icon('Calculator','Education','math',ic_r(4,2,16,20,2.5)+ic_r(6.5,4.5,11,4.5,.8),ic_r(6.5,11,3,2.4,.6),ic_r(10.5,11,3,2.4,.6),ic_r(14.5,11,3,2.4,.6),ic_r(6.5,15,3,2.4,.6),ic_r(10.5,15,3,2.4,.6),ic_r(14.5,15,3,6.4,.6));
+/* ---- health & fitness ---- */
+icon('Medical cross','Health','hospital doctor','M9 3H15V9H21V15H15V21H9V15H3V9H9Z');
+icon('Heartbeat','Health','pulse ecg','M12 21.5C3.5 15 2 9.5 4.8 6C7.2 3.2 11 3.8 12 6.5C13 3.8 16.8 3.2 19.2 6C22 9.5 20.5 15 12 21.5Z'.replace(/.*/,'M12 21.5C3.5 15 2 9.5 4.8 6C7.2 3.2 11 3.8 12 6.5C13 3.8 16.8 3.2 19.2 6C22 9.5 20.5 15 12 21.5ZM3 11.5H8L9.5 8.5L12 14.5L13.8 11.5H21V12.7H14.5L12 17L9.5 11.5L8.7 12.7H3Z'.replace(/ZM3[\s\S]*/,'Z')),ic_pl([[2.5,12],[8,12],[9.7,8.5],[12.3,15],[14.2,12],[21.5,12]],1.6).replace(/.*/,''));
+icon('Pill','Health','medicine','M7.5 2.5A5 5 0 0 1 14.6 3.4L20.6 9.4A5 5 0 0 1 13.5 16.5L7.5 10.5A5 5 0 0 1 7.5 2.5Z'.replace(/.*/,'M10 2A5.5 5.5 0 0 1 14 3.6L20.4 10A5.5 5.5 0 0 1 12.6 17.8L6.2 11.4A5.5 5.5 0 0 1 10 2ZM9.9 4.6A3 3 0 0 0 8 9.7L9.8 11.5L13 8.3L11.5 6.2Z'));
+icon('Dumbbell','Fitness','gym weight',ic_r(1.5,8.5,3,7,1),ic_r(4.5,6,3,12,1),ic_r(7.5,10.8,9,2.4),ic_r(16.5,6,3,12,1),ic_r(19.5,8.5,3,7,1));
+icon('Running','Fitness','sport',ic_c(14.5,4.5,2.3),'M9 21L12 15L9.5 12.5L8 16L5 15.5L7 9.5L12 8L15 11.5L19 12.5L18.5 14.5L14 13.8L15.5 16.8L19 21L17 22L13 18Z'.replace(/.*/,'M10.5 8.5L14 7.5L16.5 11L19.5 11.8L19 14L15.2 13.2L14.2 12.4L15.3 15.8L18.5 20.3L16.7 21.5L13.5 17.2L12.3 14L9.6 20.5L7.5 19.7L10 12L8 13.3L7 16L5 15.4L6 11.5L10.5 8.5Z'));
+icon('Yoga','Fitness','meditate',ic_c(12,5,2.4),'M12 8.5L16 10.5L21 9.5V11.5L16.5 13L18.5 17H22V19H6V17H8.5L7.5 13L3 11.5V9.5L8 10.5Z'.replace(/.*/,'M12 8.2C14 8.2 15.5 9 17.5 9.2L21.5 8.6L21.8 10.5L17.5 11.6L19.5 15.6L22 17.3L21 19L12 19L3 19L2 17.3L4.5 15.6L6.5 11.6L2.2 10.5L2.5 8.6L6.5 9.2C8.5 9 10 8.2 12 8.2Z'));
+icon('Apple','Health','fruit diet','M12 7C10.5 5.5 6 5.5 4.5 9.5C3 13.5 5.5 20 8.5 21C10 21.5 11 20.8 12 20.8S14 21.5 15.5 21C18.5 20 21 13.5 19.5 9.5C18 5.5 13.5 5.5 12 7ZM12 6.5C12 4.5 13 2.8 15 2C15 4 14 5.8 12 6.5Z');
+icon('Water drop','Health','hydration','M12 2C12 2 5 10 5 15A7 7 0 0 0 19 15C19 10 12 2 12 2Z');
+/* ---- food ---- */
+icon('Coffee','Food','cup tea cafe','M3 7H17V15A5 5 0 0 1 12 20H8A5 5 0 0 1 3 15ZM17 8.5H18.5A3 3 0 0 1 18.5 14.5H17V12.8H18.5A1.3 1.3 0 0 0 18.5 10.2H17ZM6 2.5H8V5H6ZM10 2.5H12V5H10ZM14 2.5H16V5H14Z');
+icon('Pizza','Food','slice','M2.5 7.2C9 2.8 15 2.8 21.5 7.2L12 22ZM5 8.8L12 19.5L19 8.8C14 5.8 10 5.8 5 8.8Z'.replace(/.*/,'M2.5 7.2C9 2.8 15 2.8 21.5 7.2L12 22Z')+ic_c(9,9,1.5)+ic_c(15,9.2,1.5)+ic_c(12,14,1.5));
+icon('Burger','Food','fast food','M3 10A9 7 0 0 1 21 10ZM3 12H21V14H3ZM4 15.5H20V17.5A3 3 0 0 1 17 20.5H7A3 3 0 0 1 4 17.5Z'.replace(/.*/,'M3 10.5C3 6 7 3.5 12 3.5S21 6 21 10.5ZM2.5 12.3H21.5V14.2H2.5ZM3.5 15.6H20.5V17A3.5 3.5 0 0 1 17 20.5H7A3.5 3.5 0 0 1 3.5 17Z'));
+icon('Cake','Food','birthday dessert','M11 3H13V6H11ZM12 2C12.8 3 12.8 3.8 12 4.4C11.2 3.8 11.2 3 12 2ZM4 9H20V13A3 3 0 0 0 17 11.5A3 3 0 0 0 14 13A3 3 0 0 0 11 13A3 3 0 0 0 8 13A3 3 0 0 0 5 11.5A3 3 0 0 0 4 13ZM4 14.5A4.6 4.6 0 0 0 7 13.2A4.5 4.5 0 0 0 12 14.8A4.5 4.5 0 0 0 17 13.2A4.6 4.6 0 0 0 20 14.5V21H4Z'.replace(/.*/,'M11 3H13V7H11ZM12 1.5C13 2.6 13 3.4 12 4.3C11 3.4 11 2.6 12 1.5ZM5 8H19A2 2 0 0 1 21 10V13C19.5 13 19.5 14.5 18 14.5S16.5 13 15 13S13.5 14.5 12 14.5S10.5 13 9 13S7.5 14.5 6 14.5S4.5 13 3 13V10A2 2 0 0 1 5 8ZM3 15.5C4.5 15.5 4.5 17 6 17S7.5 15.5 9 15.5S10.5 17 12 17S13.5 15.5 15 15.5S16.5 17 18 17S19.5 15.5 21 15.5V20A1 1 0 0 1 20 21H4A1 1 0 0 1 3 20Z'));
+icon('Fork & knife','Food','restaurant dining',ic_r(5,2,1.6,8),ic_r(8.2,2,1.6,8),ic_r(11.4,2,1.6,8),'M5 10H13A2 2 0 0 1 11 12.6V22H7V12.6A2 2 0 0 1 5 10Z','M17 2C19.5 3.5 20 8 19 12H18V22H16V2Z'.replace(/.*/,'M18.5 2C20.8 4 21 9 19.5 12.5V22H17V12.5H15.5V3A1 1 0 0 1 16.5 2Z'));
+icon('Ice cream','Food','dessert sweet','M12 22L6.5 11H17.5ZM12 2A5.5 5.5 0 0 1 17.5 7.5A3 3 0 0 1 18 11.2C18 11.2 6 11.2 6 11.2A3 3 0 0 1 6.5 7.5A5.5 5.5 0 0 1 12 2Z'.replace(/.*/,'M12 22.5L6.8 11.8H17.2ZM12 2A5.4 5.4 0 0 1 17.3 6.6A3.2 3.2 0 0 1 17.2 10.2H6.8A3.2 3.2 0 0 1 6.7 6.6A5.4 5.4 0 0 1 12 2Z'));
+icon('Wine glass','Food','drink party','M7 2H17V9A5 5 0 0 1 13 13.9V20H16V22H8V20H11V13.9A5 5 0 0 1 7 9Z');
+icon('Leaf','Nature','eco organic plant','M20.5 3.5C20.5 11 17 18 9 19.5C7 19.8 5.5 18.8 5 17.5L3 21.5L2 21C3.2 18.5 4 16 4.8 14C4 11 7 6 11 5C14 4.3 17 4.5 20.5 3.5Z');
+/* ---- nature & weather ---- */
+icon('Sun','Nature','day weather',ic_c(12,12,4.8),...[0,1,2,3,4,5,6,7].map(i=>{const a=i*Math.PI/4,x1=12+Math.cos(a)*7.8,y1=12+Math.sin(a)*7.8,x2=12+Math.cos(a)*10.6,y2=12+Math.sin(a)*10.6;return ic_ln(+x1.toFixed(2),+y1.toFixed(2),+x2.toFixed(2),+y2.toFixed(2),1.9)}));
+icon('Moon','Nature','night sleep','M20.5 14.5A9 9 0 1 1 9.5 3.5A7 7 0 0 0 20.5 14.5Z');
+icon('Cloud','Nature','weather sky','M7 19A5 5 0 0 1 6.2 9.1A6.5 6.5 0 0 1 18.4 8.6A5.2 5.2 0 0 1 17.5 19Z');
+icon('Rain','Nature','weather','M7 14A5 5 0 0 1 6.2 4.1A6.5 6.5 0 0 1 18.4 3.6A5.2 5.2 0 0 1 17.5 14ZM7.5 16L6 20L8 20L9.5 16ZM12 16L10.5 20L12.5 20L14 16ZM16.5 16L15 20L17 20L18.5 16Z');
+icon('Snowflake','Nature','winter',ic_ln(12,2,12,22,1.8),ic_ln(3.3,7,20.7,17,1.8),ic_ln(3.3,17,20.7,7,1.8));
+icon('Tree','Nature','forest','M12 2L18 10H15L19.5 16H13V22H11V16H4.5L9 10H6Z');
+icon('Flower','Nature','bloom spring',ic_st(12,12,10.2,5,8,-90),ic_c(12,12,2.6));
+icon('Mountain','Nature','hill travel','M1 20L9 6L13.5 13.5L16 10L23 20Z');
+icon('Wave','Nature','sea water','M2 9C5 5 8 5 11 9C14 13 17 13 22 8V12C17 17 14 17 11 13C8 9 5 9 2 13ZM2 16C5 12 8 12 11 16C14 20 17 20 22 15V19C17 24 14 24 11 20C8 16 5 16 2 20Z'.replace(/22 19C17 24[\s\S]*/,'22 19C17 23 14 23 11 19C8 15 5 15 2 19Z'));
+icon('Paw','Nature','pet animal',ic_c(6,10,2.2),ic_c(10,5.8,2.2),ic_c(14,5.8,2.2),ic_c(18,10,2.2),'M12 11C15 11 18 15 17 18C16.5 19.8 14.5 19.5 12 19.5S7.5 19.8 7 18C6 15 9 11 12 11Z');
+icon('Butterfly','Nature','insect','M12 6L13 4M12 6L11 4M12 6V19M11 7C7 2 2 4 3 9C3.5 11.5 6 12.5 8 12.5C5 13.5 4.5 17 7 18.5C9 19.5 11 17 11 14Z'.replace(/.*/,'M12 6.5C13.8 1.5 21 2.5 21.5 8C21.8 11 19.5 12.2 17.8 12.5C20.5 13.5 20.2 17.8 17.2 18.8C14.5 19.6 12.5 17.5 12.5 14.5V8ZM11.5 8V14.5C11.5 17.5 9.5 19.6 6.8 18.8C3.8 17.8 3.5 13.5 6.2 12.5C4.5 12.2 2.2 11 2.5 8C3 2.5 10.2 1.5 11.5 6.5Z'));
+/* ---- travel & places ---- */
+icon('Plane','Travel','flight airport','M21.5 3.5C22 2.5 21 1.8 20 2.5L15.5 6.5L5.5 4.5L4 6L11 9.5L7.5 13.5L4 13L3 14L6.5 16L8.5 19.5L9.5 18.5L9 15L13 11.5L16.5 18.5L18 17L16 7.5Z'.replace(/.*/,'M21 3C21 3 22 2 21 1.5C20 1 18.5 2 17 3.5L13 7.5L4 5.5L2.5 7L9 11L6 14L3.5 13.5L2.5 14.5L6 17L9.5 20.5L10.5 19.5L10 17L13 14L17 20.5L18.5 19L16.5 10L20 6.5C20.5 5.5 21 4 21 3Z'));
+icon('Car','Transport','vehicle drive','M4 9L6 4.5H18L20 9H21.5V17H19V19.5H16.5V17H7.5V19.5H5V17H2.5V9ZM7.2 6.5L6.2 9H17.8L16.8 6.5Z'+ic_c(7,13,1.4)+ic_c(17,13,1.4));
+icon('Bus','Transport','public',ic_r(4,3,16,16,3)+ic_r(6,5,12,6,.8)+ic_c(8,15,1.2)+ic_c(16,15,1.2),ic_r(5,19.5,3,2.5),ic_r(16,19.5,3,2.5));
+icon('Train','Transport','metro rail',ic_r(5,2,14,16,3)+ic_r(7,5,10,5,.8)+ic_c(8.8,14,1.2)+ic_c(15.2,14,1.2),ic_ln(7,22,9.5,18.5,1.8),ic_ln(17,22,14.5,18.5,1.8));
+icon('Ship','Transport','boat cruise','M3 14L12 17L21 14L19 20H5ZM11 2H13V5H17V12L12 13.5L7 12V5H11Z'.replace(/.*/,'M11 2H13V4.5H17.5V12.2L12 14L6.5 12.2V4.5H11ZM3 15L12 18L21 15L19 21H5Z'));
+icon('Bicycle','Transport','cycle',ic_ring(6,16,4.5,1.6),ic_ring(18,16,4.5,1.6),ic_pl([[6,16],[10,8],[16,8],[18,16]],1.4),ic_ln(10,8,9,5.5,1.6),ic_ln(15.5,8,16,5.5,1.6).replace(/.*/,''));
+icon('Fuel','Transport','petrol pump',ic_r(3,3,11,18,1.5)+ic_r(5,5.5,7,4,.5),'M15 8H17.5A1.5 1.5 0 0 1 19 9.5V17A1.2 1.2 0 0 0 21 17V8L18.5 5.5L19.8 4.2L22.5 7V17A3 3 0 0 1 16.5 17V9.8H15Z');
+icon('Compass','Travel','navigate direction',ic_ring(12,12,10,1.8),'M16.5 7.5L13.5 13.5L7.5 16.5L10.5 10.5Z');
+icon('Map','Travel','navigation','M3 5L9 3L15 5L21 3V19L15 21L9 19L3 21ZM9.8 5.3V17.4L8.2 17V4.8ZM15.8 6.6V18.8L14.2 18.4V6.2Z'.replace(/.*/,'M3 5.5L9 3.5L15 5.5L21 3.5V18.5L15 20.5L9 18.5L3 20.5ZM8.2 5.4L4.8 6.6V17.9L8.2 16.8ZM9.8 5.4V16.8L14.2 18.2V6.8ZM15.8 6.8V18.2L19.2 17.1V5.9Z'.replace(/M8\.2[\s\S]*/,'')));
+icon('Hotel bed','Travel','stay sleep','M2 6H4V13H22V19H20V16H4V19H2ZM6 8H11A2.5 2.5 0 0 1 13.5 10.5V12H6ZM14 10H19A3 3 0 0 1 22 13H14Z'.replace(/.*/,'M2 5H4V13H22V19H20V16H4V19H2ZM6 8.5H11.5A2.5 2.5 0 0 1 14 11V12H6Z'));
+icon('Tent','Travel','camp outdoor','M12 3L22 20H2ZM12 8L6 18H10L12 14.5L14 18H18Z'.replace(/.*/,'M12 3L23 20H1ZM12 9L6.5 18H9.7L12 14.2L14.3 18H17.5Z'));
+icon('Luggage','Travel','suitcase bag',ic_r(5,6,14,15,2.5)+ic_r(8.5,9,2,9,1)+ic_r(13.5,9,2,9,1),'M9 6V4A1.5 1.5 0 0 1 10.5 2.5H13.5A1.5 1.5 0 0 1 15 4V6H13.3V4.2H10.7V6Z');
+icon('Passport','Travel','document id',ic_r(4,2,16,20,2)+ic_ring(12,10,4.2,1.4),ic_r(8,16.5,8,1.5,.7));
+/* ---- tech ---- */
+icon('Laptop','Tech','computer device',ic_r(4,4,16,11,1.5)+ic_r(5.8,5.8,12.4,7.4,.3),'M1.5 16.5H22.5L21.5 19A1.5 1.5 0 0 1 20 20H4A1.5 1.5 0 0 1 2.5 19Z');
+icon('Monitor','Tech','desktop screen',ic_r(2,3,20,14,2)+ic_r(4,5,16,10,.5),ic_r(10.5,17,3,3),ic_r(7,20,10,1.8,.9));
+icon('Tablet','Tech','ipad device',ic_r(4,2,16,20,2.5)+ic_r(6,4.5,12,13.5,.5),ic_c(12,20,.9));
+icon('Code','Tech','developer programming','M8.5 6L10 7.7L5.7 12L10 16.3L8.5 18L2.5 12ZM15.5 6L21.5 12L15.5 18L14 16.3L18.3 12L14 7.7Z');
+icon('Terminal','Tech','command console',ic_r(2,4,20,16,2.5)+ic_r(3.8,5.8,16.4,12.4,.5),'M6 8.5L10 12L6 15.5L7.2 16.7L12 12L7.2 7.3Z'.replace(/.*/,'M6 8L10.2 11.5L6 15L6.8 16.2L12 11.5L6.8 6.8Z'.replace(/.*/,'M6 8L10 11L6 14L6.8 15.2L12 11L6.8 6.8Z')),ic_r(12.5,14.5,5,1.4,.5));
+icon('Database','Tech','server storage','M12 2C7 2 3.5 3.5 3.5 5.5V18.5C3.5 20.5 7 22 12 22S20.5 20.5 20.5 18.5V5.5C20.5 3.5 17 2 12 2ZM12 4C15.8 4 18.3 4.8 18.3 5.5S15.8 7 12 7S5.7 6.2 5.7 5.5S8.2 4 12 4ZM18.3 18.5C18.3 19.2 15.8 20 12 20S5.7 19.2 5.7 18.5V16.5C7 17.4 9.3 18 12 18S17 17.4 18.3 16.5ZM18.3 14.5C18.3 15.2 15.8 16 12 16S5.7 15.2 5.7 14.5V12.5C7 13.4 9.3 14 12 14S17 13.4 18.3 12.5ZM18.3 10.5C18.3 11.2 15.8 12 12 12S5.7 11.2 5.7 10.5V8.5C7 9.4 9.3 10 12 10S17 9.4 18.3 8.5Z');
+icon('Cloud upload','Tech','sync backup','M7 19A5 5 0 0 1 6.2 9.1A6.5 6.5 0 0 1 18.4 8.6A5.2 5.2 0 0 1 17.5 19H13V13H15.5L12 9L8.5 13H11V19Z'.replace(/.*/,'M7 19A5 5 0 0 1 6.2 9.1A6.5 6.5 0 0 1 18.4 8.6A5.2 5.2 0 0 1 17.5 19H13.2V13.5H16L12 9L8 13.5H10.8V19Z'));
+icon('Chip','Tech','cpu processor ai',ic_r(6,6,12,12,1.5)+ic_r(9,9,6,6,.5),...[8,11,14].flatMap(v=>[ic_r(v,2.5,2,3),ic_r(v,18.5,2,3),ic_r(2.5,v,3,2),ic_r(18.5,v,3,2)]));
+icon('Robot','Tech','ai bot assistant',ic_r(4,7,16,13,3)+ic_c(9,13,1.8)+ic_c(15,13,1.8),ic_r(11,3.5,2,3.5),ic_c(12,3,1.5),ic_r(1.5,11,2,5,1),ic_r(20.5,11,2,5,1));
+icon('Brain','Tech','ai mind think','M9 3A3.5 3.5 0 0 0 6 6A3.5 3.5 0 0 0 3.5 9.5A3.3 3.3 0 0 0 4.5 12.5A3.5 3.5 0 0 0 7 17.5A3.5 3.5 0 0 0 11 20.5V3.8A2.5 2.5 0 0 0 9 3ZM15 3A2.5 2.5 0 0 0 13 3.8V20.5A3.5 3.5 0 0 0 17 17.5A3.5 3.5 0 0 0 19.5 12.5A3.3 3.3 0 0 0 20.5 9.5A3.5 3.5 0 0 0 18 6A3.5 3.5 0 0 0 15 3Z');
+icon('Wrench','Tech','tools settings repair','M21.5 7A5.5 5.5 0 0 1 14.5 12.6L5.8 21.3A2 2 0 0 1 3 18.5L11.7 9.8A5.5 5.5 0 0 1 17.2 2.5L14.2 5.5L15 9L18.5 9.8Z'.replace(/.*/,'M21.7 6.2L18.5 9.4L15.4 8.6L14.6 5.5L17.8 2.3A5.5 5.5 0 0 0 11.2 9.2L2.8 17.6A2.1 2.1 0 0 0 5.8 20.6L14.2 12.2A5.5 5.5 0 0 0 21.7 6.2Z'));
+icon('Plug','Tech','power electric',ic_r(8.5,2,2,5),ic_r(13.5,2,2,5),'M6 7H18V12A6 6 0 0 1 13 17.9V22H11V17.9A6 6 0 0 1 6 12Z');
+icon('Battery','Tech','charge',ic_r(2,7,18,10,2)+ic_r(4,9,14,6,.4),ic_r(20.5,10,1.8,4,.8),ic_r(4.5,9.5,8,5,.4).replace(/.*/,''));
+icon('Shield check','Tech','secure verified','M12 2L20 5V11C20 16 16.5 20 12 22C7.5 20 4 16 4 11V5Z'.replace(/.*/,'M12 2L20 5V11C20 16 16.5 20 12 22C7.5 20 4 16 4 11V5ZM10.5 14.8L17 8.3L15.8 7.1L10.5 12.4L8.2 10.1L7 11.3Z'));
+icon('Key','Tech','access login',ic_ring(8,12,5.5,2.4),'M13 11H22V15H20V13H18V15H16V13H13Z');
+icon('Fingerprint','Tech','biometric',ic_ring(12,12,10,1.6),ic_ring(12,12,6.5,1.6),ic_c(12,12,2));
+icon('Bug','Tech','debug','M12 7A4 4 0 0 1 16 11V15A4 4 0 0 1 8 15V11A4 4 0 0 1 12 7ZM9 5A3 3 0 0 1 15 5ZM2 10L5 11.2L4.8 13L2 12ZM22 10L19 11.2L19.2 13L22 12ZM2 17L5.3 15.5L5.6 17.3L2.4 19ZM22 17L18.7 15.5L18.4 17.3L21.6 19Z');
+/* ---- home & objects ---- */
+icon('Couch','Home','sofa furniture',ic_r(4,8,16,6,2.5),ic_r(1.5,10,3.5,8,1.5),ic_r(19,10,3.5,8,1.5),ic_r(5,14,14,4,1),ic_ln(5,18,5,20,1.6),ic_ln(19,18,19,20,1.6));
+icon('Lamp','Home','light decor','M8 2H16L19 11H5ZM11 11H13V19H16V21H8V19H11Z');
+icon('Key home','Home','property house rent','M12 3L22 12H19V20H5V12H2Z'+ic_c(12,13.5,2.2));
+icon('Door','Home','entry',ic_r(5,2,14,20,1)+ic_r(7,4,10,16,.3),ic_c(14.5,12,1.1));
+icon('Bathtub','Home','bath','M4 11V6A2.5 2.5 0 0 1 9 6H7.5A.7.7 0 0 0 6 6V11H22V14A5 5 0 0 1 17 19L18 21H16L15 19H9L8 21H6L7 19A5 5 0 0 1 2 14V11Z'.replace(/.*/,'M4 11V6A2.5 2.5 0 0 1 9 6H7.2A.7.7 0 0 0 5.8 6V11H22V14A5 5 0 0 1 17 19L18 21.5H16L15 19H9L8 21.5H6L7 19A5 5 0 0 1 2 14V11Z'));
+icon('Scissors','Fashion','cut salon barber',ic_ring(6,6,3.2,1.6),ic_ring(6,18,3.2,1.6),'M8 8L22 19L21 21L5 9ZM8 16L22 5L21 3L5 15Z'.replace(/.*/,'M7.5 8.2L21.5 18.2L20.4 19.7L6.4 9.7ZM7.5 15.8L21.5 5.8L20.4 4.3L6.4 14.3Z'));
+icon('Shirt','Fashion','clothing tshirt','M8 3L3 6L5.5 11L8 10V21H16V10L18.5 11L21 6L16 3C16 5 14.2 6 12 6S8 5 8 3Z');
+icon('Diamond','Fashion','jewellery gem','M7 3H17L22 9L12 22L2 9Z'.replace(/.*/,'M7 3H17L22 9L12 22L2 9ZM9 9L12 17L15 9ZM6.3 5.2L4.3 8H8.2L9.3 5.2ZM17.7 5.2L14.7 5.2L15.8 8H19.7Z'.replace(/ZM6\.3[\s\S]*/,'Z')));
+icon('Ring','Fashion','wedding engagement',ic_ring(12,15,6.5,2.2),ic_p([[9,5.5],[15,5.5],[17,3],[7,3]]),ic_p([[9,5.5],[12,8.2],[15,5.5]]).replace(/.*/,''));
+icon('Dress','Fashion','woman gown','M9 2H15L14.5 8L18 21H6L9.5 8Z');
+icon('Glasses','Fashion','spectacles',ic_ring(6.5,14,4.5,1.8),ic_ring(17.5,14,4.5,1.8),ic_r(10.5,12.5,3,1.7,.8),ic_ln(2,12,2.5,10,1.5).replace(/.*/,''));
+icon('Palette','Creative','paint art design','M12 2A10 10 0 0 0 2 12A10 10 0 0 0 12 22A2.5 2.5 0 0 0 14 18.5C14 17 15 16.5 16.5 16.5H18A4 4 0 0 0 22 12.5A10.5 10.5 0 0 0 12 2ZM6.5 12.5A1.5 1.5 0 1 1 6.5 9.5A1.5 1.5 0 0 1 6.5 12.5Z'.replace(/.*/,'M12 2A10 10 0 0 0 2 12A10 10 0 0 0 12 22C13.4 22 14.2 21 14.2 19.8C14.2 18.5 13 18 13 17C13 16 14 15.5 15 15.5H17.5A4.5 4.5 0 0 0 22 11C22 6 17.5 2 12 2Z')+ic_c(6.8,11.5,1.6)+ic_c(9.5,7,1.6)+ic_c(15,7,1.6)+ic_c(18,10.6,1.6));
+icon('Brush','Creative','paint','M20.5 2.5L21.5 3.5C22 4 22 4.8 21.5 5.3L12 15L9 12L18.7 2.5C19.2 2 20 2 20.5 2.5ZM8 13L11 16C11 19 9 21.5 4 21.5C3 21.5 2.5 20.8 3.2 20C4 19 3.8 18 4.2 16C4.8 14.5 6.5 13 8 13Z');
+icon('Pen tool','Creative','vector design','M12 2L18 9L16 17H8L6 9ZM10 17H14V19.5H10ZM12 11A1.5 1.5 0 1 0 12 14A1.5 1.5 0 0 0 12 11Z'.replace(/.*/,'M12 2L19 9L16.5 17.5H7.5L5 9ZM11 18.5H13V22H11ZM12 9.5A1.8 1.8 0 1 0 12 13.1A1.8 1.8 0 0 0 12 9.5Z'));
+icon('Layers','Creative','stack','M12 2L22 7.5L12 13L2 7.5ZM3.8 11L12 15.5L20.2 11L22 12L12 17.5L2 12ZM3.8 15.5L12 20L20.2 15.5L22 16.5L12 22L2 16.5Z');
+icon('Crop','Creative','trim','M7 2H9V7H20V9H9V18H7V9H2V7H7ZM15 15H17V9.5H15ZM11 15H15V17H17V22H15V17H11Z'.replace(/.*/,'M7 2H9V7H19A1 1 0 0 1 20 8V18H18V9H9V18H7V9H2V7H7ZM15 15H17V22H15V17H9V15Z'.replace(/M7 2[\s\S]*/,'M7 2H9V7H20V9H9V16H7V9H2V7H7ZM11 17H15V15H17V17H22V19H17V22H15V19H9V17Z'.replace(/M7 2[\s\S]*/,'M7 2H9V16H22V18H9V22H7V18H2V16H7V9H2V7H7ZM11 7H22V9H11Z'.replace(/.*/,'M7 2H9V16H22V18H9V22H7V18H2V16H7V9H2V7H7ZM11 7H17V16H15V9H11Z')))));
+icon('Type','Creative','text font typography','M3 5H21V8H19V7H13V19H15V21H9V19H11V7H5V8H3Z');
+icon('Magic wand','Creative','magic ai',ic_ln(4,20,14,10,2.6),ic_st(17.5,6.5,4.5,1.4,4),ic_st(6,6,2.3,.8,4),ic_st(19,16.5,2,.7,4));
+icon('Eyedropper','Creative','color picker','M20.5 3.5A2.8 2.8 0 0 0 16.5 3.5L13.5 6.5L12.5 5.5L11 7L17 13L18.5 11.5L17.5 10.5L20.5 7.5A2.8 2.8 0 0 0 20.5 3.5ZM11 9L4 16V20H8L15 13Z');
+icon('Ruler','Creative','measure','M3 14L14 3L21 10L10 21ZM6 14L7.4 15.4L8.5 14.3L10 15.8L11.1 14.7L12.5 16.2L13.6 15.1L10 11.5Z'.replace(/.*/,'M3.5 13.5L13.5 3.5L20.5 10.5L10.5 20.5ZM6.4 13.5L7.6 14.7L8.8 13.5L10 14.7L11.2 13.5L10 12.3L11.2 11.1L9.9 9.9Z'.replace(/M6\.4[\s\S]*/,'')));
+/* ---- festival & culture ---- */
+icon('Om','Festival','hindu sacred spiritual','M7.5 5C5 5 3.3 6.7 3.3 9C3.3 10.7 4.4 11.9 6 12C4.2 12.4 3 13.9 3 15.8C3 18.2 5 20 8 20C10.8 20 12.7 18.6 12.7 16.2C12.7 14.6 11.6 13.6 10.4 13.2C11.3 12.5 11.8 11.7 11.8 10.5C11.8 8.6 10.5 7.6 8.5 7.6C7.7 7.6 7.1 7.8 6.6 8.1C6.9 7.2 7.6 6.8 8.4 6.8C9.5 6.8 10.4 7.3 11.2 8.5L12.4 7.8C11.5 6 9.8 5 7.5 5ZM15.5 4.5A2 2 0 0 0 15.5 8.5A2 2 0 0 0 17.2 5.5C17.5 5.3 17.9 5.2 18.3 5.2C19.2 5.2 19.8 5.7 19.8 6.4C19.8 7.2 19.2 7.8 18.3 8.4L14 11.5C12.6 12.5 12.2 13.5 12.2 15C12.2 17.3 13.8 19.5 16.8 19.5C19.8 19.5 21.5 17.5 21.5 15L19.9 14.6C19.9 16.3 18.8 17.7 16.8 17.7C15 17.7 14 16.4 14 15C14 14.2 14.3 13.7 15.2 13.1L19.4 10.1C20.8 9.1 21.6 8.1 21.6 6.6C21.6 4.7 20.1 3.3 18.1 3.3C16.9 3.3 16 3.8 15.5 4.5Z');
+icon('Diya','Festival','lamp diwali light','M12 1.5C13.5 3.5 14.5 4.8 14.5 6.3A2.5 2.5 0 0 1 9.5 6.3C9.5 4.8 10.5 3.5 12 1.5ZM2 12H22C22 17 18 21 12 21S2 17 2 12Z');
+icon('Lantern','Festival','akash kandil','M10 2H14V4H10ZM7 4H17C19 7 19 15 17 18H7C5 15 5 7 7 4ZM9 18.5H15V20H9ZM11 20.5H13V22H11Z'.replace(/.*/,'M10.5 1.5H13.5V3.5H10.5ZM8 3.5H16C18.5 6.5 18.5 14 16 17H8C5.5 14 5.5 6.5 8 3.5ZM11.2 3.8V16.7H12.8V3.8Z'.replace(/M11\.2[\s\S]*/,'')+'M9.5 17.8H14.5V19.3H9.5ZM11 19.8H13V22H11Z'));
+icon('Lotus','Festival','flower padma','M12 3C14.5 6 15.5 9 12 13C8.5 9 9.5 6 12 3ZM5 7C8 7.5 10.5 9.5 10.8 14C7 14.5 4.5 11.5 5 7ZM19 7C19.5 11.5 17 14.5 13.2 14C13.5 9.5 16 7.5 19 7ZM2 12C5 12 8 13.5 9.5 17C6 18.5 2.5 16.5 2 12ZM22 12C21.5 16.5 18 18.5 14.5 17C16 13.5 19 12 22 12ZM6 20H18V21.5H6Z'.replace(/M2 12[\s\S]*/,'M6 19.5H18V21H6Z'));
+icon('Kalash','Festival','pot puja coconut','M9 3H15V5H9ZM10 5H14L13 7H11ZM7 8C7 7.5 8 7 12 7S17 7.5 17 8C17 12 20 14 19 17C18.5 19 16 21 12 21S5.5 19 5 17C4 14 7 12 7 8Z'.replace(/.*/,'M12 1.5C14.5 1.5 15.5 3 14.5 4.5C14 5.3 13 5.5 12 5.5S10 5.3 9.5 4.5C8.5 3 9.5 1.5 12 1.5ZM9.8 6.3H14.2V8H9.8ZM8.5 8.5H15.5C15.5 10.5 19 11.5 19 16C19 19.5 16 21.5 12 21.5S5 19.5 5 16C5 11.5 8.5 10.5 8.5 8.5Z'));
+icon('Temple','Festival','mandir shrine','M12 2L13 4.5C13.6 4.5 14 5 14 5.6V7H15.5L16 9H8L8.5 7H10V5.6C10 5 10.4 4.5 11 4.5ZM7 9.5H17V11H7ZM6 11.5H18V13H18V20H15V16A3 3 0 0 0 9 16V20H6ZM4 20.5H20V22H4Z'.replace(/.*/,'M12 2L13.2 4.6H14L14.8 7.6H16L17 10.2H7L8 7.6H9.2L10 4.6H10.8ZM6 10.8H18V12.4H6ZM6.5 12.9H17.5V20H15V17A3 3 0 0 0 9 17V20H6.5ZM4 20.5H20V22H4Z'));
+icon('Rangoli','Festival','kolam pattern',ic_st(12,12,10.5,4.5,8,-90),ic_st(12,12,6.2,2.8,8,-67.5),ic_c(12,12,1.5));
+icon('Firework','Festival','celebration cracker',ic_ln(12,3,12,8,1.8),ic_ln(12,16,12,21,1.8),ic_ln(3,12,8,12,1.8),ic_ln(16,12,21,12,1.8),ic_ln(5.5,5.5,8.7,8.7,1.8),ic_ln(15.3,15.3,18.5,18.5,1.8),ic_ln(18.5,5.5,15.3,8.7,1.8),ic_ln(8.7,15.3,5.5,18.5,1.8),ic_c(12,12,1.6));
+icon('Balloon','Festival','party birthday','M12 2A6.5 6.5 0 0 1 18.5 8.5C18.5 12.5 15 16 12 17C9 16 5.5 12.5 5.5 8.5A6.5 6.5 0 0 1 12 2ZM11 17H13L13.8 19H10.2ZM12 19.5C11 20.5 13 21 12 22',ic_pl([[12,19],[11,20.5],[13,21.5],[12,23]],.7));
+icon('Party popper','Festival','celebrate confetti','M3 21L7.5 8L16 16.5ZM14 3.5H15.8V6H14ZM19 7L20.5 5.8L22 7.6L20.5 8.8ZM17.5 11H20V12.8H17.5ZM10 3L11.5 4.5L10 6L8.5 4.5Z');
+icon('Gift box','Festival','present',ic_r(3,9,18,4,1)+'',ic_r(4.5,13.5,15,7.5,1),ic_ln(12,9,12,13,2).replace(/.*/,''),'M12 9C10 5 6 5 6 7.5C6 9.5 9 9 12 9ZM12 9C14 5 18 5 18 7.5C18 9.5 15 9 12 9Z');
+icon('Bell temple','Festival','ghanta puja','M12 3C8 3 5 7 5 12V17H19V12C19 7 16 3 12 3ZM10.5 18H13.5A1.5 1.5 0 0 1 10.5 18ZM12 18.5A1.8 1.8 0 1 0 12 22A1.8 1.8 0 0 0 12 18.5Z'.replace(/.*/,'M12 2.5C8.3 2.5 5.5 6.2 5.5 11V16.5H18.5V11C18.5 6.2 15.7 2.5 12 2.5ZM12 18.3A2 2 0 1 0 12 22.3A2 2 0 0 0 12 18.3Z'));
+icon('Moon star','Festival','eid ramadan crescent','M17 3.5A9 9 0 1 0 20.5 17A7.5 7.5 0 0 1 17 3.5Z'.replace(/.*/,'M15.5 3A9.5 9.5 0 1 0 21 18A7.7 7.7 0 0 1 15.5 3Z')+ic_st(18.5,7.5,3,1.2,5));
+icon('Mosque','Festival','masjid eid','M12 1.5C12.8 2.6 13.2 3.4 13.2 4.2A1.2 1.2 0 0 1 10.8 4.2C10.8 3.4 11.2 2.6 12 1.5ZM12 6C16 6 18.5 9 18.5 12H5.5C5.5 9 8 6 12 6ZM3 12.5H5V21H3ZM19 12.5H21V21H19ZM6 12.5H18V21H14V17A2 2 0 0 0 10 17V21H6Z'.replace(/.*/,'M12 1.5C12.8 2.6 13.2 3.4 13.2 4.2A1.2 1.2 0 0 1 10.8 4.2C10.8 3.4 11.2 2.6 12 1.5ZM12 6C15.6 6 18 8.6 18.5 11.5H5.5C6 8.6 8.4 6 12 6ZM5.5 12.5H18.5V21H15V17A3 3 0 0 0 9 17V21H5.5ZM2.5 9H4V21H2.5ZM20 9H21.5V21H20Z'));
+icon('Christmas tree','Festival','xmas holiday','M12 2L17 9H14.5L19 15.5H15L20 21H4L9 15.5H5L9.5 9H7ZM11 21H13V23H11Z'.replace(/.*/,'M12 1.5L16.5 8.5H14.3L18.5 14.5H15.3L20 20H4L8.7 14.5H5.5L9.7 8.5H7.5ZM10.8 20.5H13.2V22.5H10.8Z'));
+icon('Cross church','Festival','christian chapel','M10.5 2H13.5V6H17V9H13.5V22H10.5V9H7V6H10.5Z');
+icon('Wheel','Festival','chakra ashoka dharma',ic_ring(12,12,10.5,1.6),ic_c(12,12,2.4),...[0,1,2,3,4,5,6,7].map(i=>{const a=i*Math.PI/4;return ic_ln(+(12+Math.cos(a)*2.5).toFixed(2),+(12+Math.sin(a)*2.5).toFixed(2),+(12+Math.cos(a)*9.2).toFixed(2),+(12+Math.sin(a)*9.2).toFixed(2),1.2)}));
+icon('Flag India','Festival','tiranga republic independence',ic_r(4,2,1.8,20,.9),ic_r(5.8,3,15,3.6),ic_r(5.8,6.6,15,3.6).replace(/.*/,''),ic_r(5.8,10.2,15,3.6).replace(/.*/,''),ic_ring(13.3,8.4,1.7,.5).replace(/.*/,''));
+ICONS.pop();icon('Flag India','Festival','tiranga republic independence',ic_r(4,2,1.8,20,.9),ic_r(5.8,3,15,3.2),ic_r(5.8,10.4,15,3.2),ic_ring(13.3,8.3,1.8,.5));
+/* register as shapes */
+ICONS.forEach(i=>{i.id='ic_'+i.n.toLowerCase().replace(/[^a-z0-9]+/g,'_');SP[i.id]=i.d});
+const ICON_CATS=[...new Set(ICONS.map(i=>i.c))];
+
 /* =====================================================================
    Anands OS integration + the studio's advanced features
    (files, background remover, animation, stock photos, SVG/vector, video/GIF, share links)
@@ -2091,6 +2343,27 @@ async function openDesigns(){
   body.append(el('div',{class:'row'},el('button',{class:'btn pri',onclick:openNew,html:ic('plus',16)+' New design'}),el('button',{class:'btn',onclick:()=>imp.click(),html:ic('upload',16)+' Import file'}),imp),list.length?grid:el('p',{class:'note'},'Nothing saved yet — your first change creates the file.'));
 }
 
+
+/* ---------- your upload library: kept in Files › Designs › Uploads, so it is there next time ---------- */
+const LIBDIR=DIR+'/Uploads';let libList=null;const libThumbs=new Map();
+async function libSave(url,tag){
+  if(!PUT()||!url)return;
+  try{const blob=await (await fetch(url)).blob();const t=blob.type||'image/png',ext=/svg/.test(t)?'svg':/jpe?g/.test(t)?'jpg':/webp/.test(t)?'webp':/gif/.test(t)?'gif':'png';
+    const name=`${tag||'upload'}-${Date.now().toString(36)}${Math.random().toString(36).slice(2,5)}.${ext}`;
+    await PUT().fs.write(`${LIBDIR}/${name}`,blob,{createMissingParents:true,overwrite:false});libList=null;if(typeof tab!=='undefined'&&tab==='up')renderPanel()}catch(e){}}
+async function libLoad(force){if(libList&&!force)return libList;try{const it=await PUT().fs.readdir(LIBDIR);libList=it.filter(i=>!i.is_dir&&/\.(png|jpe?g|webp|gif|svg)$/i.test(i.name)).sort((a,b)=>(b.modified||0)-(a.modified||0))}catch(e){libList=[]}return libList}
+async function libURL(path){let u=libThumbs.get(path);if(!u){const b=await PUT().fs.read(path);u=URL.createObjectURL(b);libThumbs.set(path,u)}return u}
+async function libUse(path){try{const b=await PUT().fs.read(path);const url=await fileToDataURL(b);const img=new Image();img.src=url;await img.decode();const id=newAsset(url);addImageAsset({id,nw:img.naturalWidth||800,nh:img.naturalHeight||600})}catch(e){toast('Could not open that image')}}
+const libIO=typeof IntersectionObserver!=='undefined'?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){const im=e.target;libIO.unobserve(im);libURL(im.dataset.p).then(u=>{im.src=u}).catch(()=>{})}}),{rootMargin:'160px'}):null;
+async function drawLibrary(box){
+  if(!PUT()){box.append(el('p',{class:'note'},'Open the studio inside Anands OS to keep your uploads between sessions.'));return}
+  box.append(el('p',{class:'note'},'Loading your library…'));const list=await libLoad();box.innerHTML='';
+  if(!list.length){box.append(el('p',{class:'note'},'Nothing in your library yet. Uploaded images are saved to Files › Designs › Uploads and are here every time you open the studio.'));return}
+  box.append(el('h4',{class:'sh'},'Your library · '+list.length),el('div',{class:'grid3'},list.map(it=>{
+    let armed=false;const del=el('button',{class:'btn sm danger',style:'position:absolute;right:3px;top:3px;padding:1px 6px;opacity:.9','aria-label':'Delete '+it.name,title:'Delete from library',onclick:async e=>{e.stopPropagation();if(!armed){armed=true;del.textContent='Sure?';setTimeout(()=>{armed=false;del.textContent='×'},2500);return}try{await PUT().fs.delete(it.path)}catch(er){}libList=null;libThumbs.delete(it.path);renderPanel()}},'×');
+    const im=el('img',{alt:'',style:'width:100%;height:100%;object-fit:contain;background:repeating-conic-gradient(#e9e9e9 0 25%,#fff 0 50%) 0 0/14px 14px','data-p':it.path});if(libIO)libIO.observe(im);else libURL(it.path).then(u=>im.src=u);
+    return el('div',{style:'position:relative'},el('button',{class:'cell',style:'aspect-ratio:1;padding:0;overflow:hidden;width:100%',title:'Add to design','aria-label':'Add '+it.name+' to design',onclick:()=>libUse(it.path)},im),del)})))}
+
 /* ---------- image helpers ---------- */
 const dataToCanvas=async(url,maxSide)=>{const i=new Image();i.src=url;await i.decode();const k=maxSide?Math.min(1,maxSide/Math.max(i.naturalWidth,i.naturalHeight)):1;const c=document.createElement('canvas');c.width=Math.max(1,Math.round(i.naturalWidth*k));c.height=Math.max(1,Math.round(i.naturalHeight*k));c.getContext('2d').drawImage(i,0,0,c.width,c.height);return c};
 function newAsset(url){const id='a_'+uid();D.assets[id]=url;(D.uploads||(D.uploads=[])).push(id);return id}
@@ -2109,43 +2382,114 @@ async function bgSession(status){
   })().catch(e=>{sessP=null;throw e});
   return sessP;
 }
+/* ---- matting helpers: edge-aware, noise-free cut-outs ---- */
+const sstep=x=>{x=x<0?0:x>1?1:x;return x*x*(3-2*x)};
+function boxF(src,W,H,r){ // mean filter, clamped window
+  const tmp=new Float32Array(W*H),out=new Float32Array(W*H);
+  for(let y=0;y<H;y++){const o=y*W;let s=0;const lim=Math.min(r,W-1);for(let x=0;x<=lim;x++)s+=src[o+x];
+    for(let x=0;x<W;x++){const hi=Math.min(W-1,x+r),lo=Math.max(0,x-r);if(x>0){if(x+r<=W-1)s+=src[o+x+r];if(x-r-1>=0)s-=src[o+x-r-1]}tmp[o+x]=s/(hi-lo+1)}}
+  for(let x=0;x<W;x++){let s=0;const lim=Math.min(r,H-1);for(let y=0;y<=lim;y++)s+=tmp[y*W+x];
+    for(let y=0;y<H;y++){const hi=Math.min(H-1,y+r),lo=Math.max(0,y-r);if(y>0){if(y+r<=H-1)s+=tmp[(y+r)*W+x];if(y-r-1>=0)s-=tmp[(y-r-1)*W+x]}out[y*W+x]=s/(hi-lo+1)}}
+  return out}
+function guidedF(I,p,W,H,r,eps){
+  const N=W*H,mI=boxF(I,W,H,r),mp=boxF(p,W,H,r),II=new Float32Array(N),Ip=new Float32Array(N);
+  for(let i=0;i<N;i++){II[i]=I[i]*I[i];Ip[i]=I[i]*p[i]}
+  const cI=boxF(II,W,H,r),cIp=boxF(Ip,W,H,r),a=new Float32Array(N),b=new Float32Array(N);
+  for(let i=0;i<N;i++){const v=cI[i]-mI[i]*mI[i],c=cIp[i]-mI[i]*mp[i];a[i]=c/(v+eps);b[i]=mp[i]-a[i]*mI[i]}
+  const ma=boxF(a,W,H,r),mb=boxF(b,W,H,r),q=new Float32Array(N);
+  for(let i=0;i<N;i++){const v=ma[i]*I[i]+mb[i];q[i]=v<0?0:v>1?1:v}return q}
+function cleanMatte(a,W,H,dropFrac,holeFrac){
+  const N=W*H,lab=new Int32Array(N),q=new Int32Array(N),strong=[0];let nl=0;
+  const fill=(s,id,test,count)=>{let qh=0,qt=0;q[qt++]=s;lab[s]=id;while(qh<qt){const p=q[qh++];count(p);const x=p%W;
+    if(x>0&&!lab[p-1]&&test(p-1)){lab[p-1]=id;q[qt++]=p-1}if(x<W-1&&!lab[p+1]&&test(p+1)){lab[p+1]=id;q[qt++]=p+1}
+    if(p>=W&&!lab[p-W]&&test(p-W)){lab[p-W]=id;q[qt++]=p-W}if(p<N-W&&!lab[p+W]&&test(p+W)){lab[p+W]=id;q[qt++]=p+W}}};
+  for(let s=0;s<N;s++){if(lab[s]||a[s]<=.04)continue;nl++;let st=0;fill(s,nl,p=>a[p]>.04,p=>{if(a[p]>.5)st++});strong.push(st)}
+  const big=Math.max(1,...strong),min=Math.max(6,big*dropFrac);
+  for(let p=0;p<N;p++){const l=lab[p];if(l&&strong[l]<min)a[p]=0}
+  if(holeFrac>0){lab.fill(0);const info=[null];let n2=0;
+    for(let s=0;s<N;s++){if(lab[s]||a[s]>.5)continue;n2++;let ar=0,border=false;fill(s,n2,p=>a[p]<=.5,p=>{ar++;const x=p%W,y=(p/W)|0;if(x===0||y===0||x===W-1||y===H-1)border=true});info.push({ar,border})}
+    const lim=holeFrac*N;for(let p=0;p<N;p++){const l=lab[p];if(l&&!info[l].border&&info[l].ar<lim)a[p]=1}}
+  return a}
+function matteToCanvas(src,alpha,bgCol){ // write alpha; remove background colour spill from soft edges
+  const W=src.width,H=src.height,x=src.getContext('2d'),im=x.getImageData(0,0,W,H),d=im.data,N=W*H;
+  let w=new Float32Array(N),R=new Float32Array(N),G=new Float32Array(N),Bc=new Float32Array(N);
+  if(bgCol){for(let i=0;i<N;i++){const a=alpha[i];if(a>0&&a<1){for(let k=0;k<3;k++){const v=(d[i*4+k]-(1-a)*bgCol[k])/Math.max(a,.04);d[i*4+k]=v<0?0:v>255?255:v}}}}
+  else{for(let i=0;i<N;i++){if(alpha[i]>.97){w[i]=1;R[i]=d[i*4];G[i]=d[i*4+1];Bc[i]=d[i*4+2]}}
+    const r=Math.max(3,Math.round(Math.min(W,H)*.006)),bw=boxF(w,W,H,r),br=boxF(R,W,H,r),bg=boxF(G,W,H,r),bb=boxF(Bc,W,H,r);
+    for(let i=0;i<N;i++){const a=alpha[i];if(a<=.97&&bw[i]>.002){const m=a<.5?1:(1-a)/.5*.7+.3,e=[br[i]/bw[i],bg[i]/bw[i],bb[i]/bw[i]];for(let k=0;k<3;k++)d[i*4+k]=d[i*4+k]*(1-m)+e[k]*m}}}
+  for(let i=0;i<N;i++)d[i*4+3]=Math.round(alpha[i]*255);
+  x.putImageData(im,0,0);return src}
+function borderStats(c){const W=c.width,H=c.height,d=c.getContext('2d').getImageData(0,0,W,H).data,pts=[];
+  const add=(X,Y)=>{const i=(Y*W+X)*4;pts.push([d[i],d[i+1],d[i+2]])};const st=Math.max(1,Math.round(Math.max(W,H)/400));
+  for(let X=0;X<W;X+=st){add(X,0);add(X,H-1);add(X,Math.min(H-1,2));add(X,Math.max(0,H-3))}for(let Y=0;Y<H;Y+=st){add(0,Y);add(W-1,Y);add(Math.min(W-1,2),Y);add(Math.max(0,W-3),Y)}
+  const med=k=>{const v=pts.map(p=>p[k]).sort((a,b)=>a-b);return v[v.length>>1]},bg=[med(0),med(1),med(2)];
+  let near=0;for(const p of pts)if(Math.hypot(p[0]-bg[0],p[1]-bg[1],p[2]-bg[2])<26)near++;
+  const seen=new Set();let k=0;const step=Math.max(1,Math.floor(W*H/6000));for(let i=0;i<W*H;i+=step){seen.add((d[i*4]>>4)<<8|(d[i*4+1]>>4)<<4|(d[i*4+2]>>4));k++}
+  return {bg,uniform:near/pts.length,colors:seen.size,samples:k}}
+/* plain-colour background → soft, de-speckled matte */
+async function plainBg(url,tol,opt){
+  opt=opt||{};tol=tol||40;const c=await dataToCanvas(url,2000),W=c.width,H=c.height,N=W*H,x=c.getContext('2d'),d0=x.getImageData(0,0,W,H).data;
+  const bs=borderStats(c),bg=bs.bg,enclosed=opt.enclosed==null?bs.colors<90:opt.enclosed;
+  // a light blur before measuring distance so JPEG noise cannot punch holes
+  const tmp=document.createElement('canvas');tmp.width=W;tmp.height=H;const tx=tmp.getContext('2d');tx.filter='blur(1px)';tx.drawImage(c,0,0);const sd=tx.getImageData(0,0,W,H).data;
+  const dist=new Float32Array(N);for(let i=0;i<N;i++){const e=Math.hypot(d0[i*4]-bg[0],d0[i*4+1]-bg[1],d0[i*4+2]-bg[2]),f=Math.hypot(sd[i*4]-bg[0],sd[i*4+1]-bg[1],sd[i*4+2]-bg[2]);dist[i]=Math.min(e,f*1.0+e*0)}
+  const t0=tol*.4,t1=tol*1.35,alpha=new Float32Array(N);
+  for(let i=0;i<N;i++)alpha[i]=sstep((dist[i]-t0)/(t1-t0));
+  { // edge pixels: work out how much of each is subject by unmixing against the nearby subject colour
+    const wf=new Float32Array(N),fr=new Float32Array(N),fg=new Float32Array(N),fb=new Float32Array(N);
+    for(let i=0;i<N;i++)if(dist[i]>t1*1.2){wf[i]=1;fr[i]=d0[i*4];fg[i]=d0[i*4+1];fb[i]=d0[i*4+2]}
+    const rr=Math.max(2,Math.round(Math.min(W,H)*.004)),bw=boxF(wf,W,H,rr),br=boxF(fr,W,H,rr),bgc=boxF(fg,W,H,rr),bb=boxF(fb,W,H,rr);
+    for(let i=0;i<N;i++){if(dist[i]<=t0*.6||dist[i]>t1*1.2||bw[i]<.01)continue;
+      const F=[br[i]/bw[i]-bg[0],bgc[i]/bw[i]-bg[1],bb[i]/bw[i]-bg[2]],den=F[0]*F[0]+F[1]*F[1]+F[2]*F[2];if(den<900)continue;
+      const dot=((d0[i*4]-bg[0])*F[0]+(d0[i*4+1]-bg[1])*F[1]+(d0[i*4+2]-bg[2])*F[2])/den;alpha[i]=dot<0?0:dot>1?1:dot}}
+  if(!enclosed){ // only the background touching the border goes; same-coloured areas inside the subject stay
+    const open=new Uint8Array(N),q=new Int32Array(N);let qh=0,qt=0;const lim=t1;
+    const push=p=>{if(open[p]||dist[p]>=lim)return;open[p]=1;q[qt++]=p};
+    for(let X=0;X<W;X++){push(X);push((H-1)*W+X)}for(let Y=0;Y<H;Y++){push(Y*W);push(Y*W+W-1)}
+    while(qh<qt){const p=q[qh++],X=p%W;if(X>0)push(p-1);if(X<W-1)push(p+1);if(p>=W)push(p-W);if(p<N-W)push(p+W)}
+    for(let i=0;i<N;i++)if(!open[i])alpha[i]=1}
+  for(let i=0;i<N;i++)if(alpha[i]<.1)alpha[i]=0;
+  cleanMatte(alpha,W,H,.002,enclosed?0:.0008);
+  const out=document.createElement('canvas');out.width=W;out.height=H;out.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d0),W,H),0,0);
+  matteToCanvas(out,alpha,bg);return out.toDataURL('image/png')}
 async function cutOut(url,status){
-  const sess=await bgSession(status);status('Cutting out…');
-  const src=await dataToCanvas(url,2200),S=320,sm=document.createElement('canvas');sm.width=sm.height=S;
-  const sx=sm.getContext('2d');sx.drawImage(src,0,0,S,S);const d=sx.getImageData(0,0,S,S).data;
+  status=status||(()=>{});const src=await dataToCanvas(url,2000),W=src.width,H=src.height;
+  const bs=borderStats(src);
+  if(bs.uniform>.93&&bs.colors<400){status('Plain backdrop found — cutting it out cleanly…');await yieldUI();return plainBg(url,bs.colors<90?36:44)}
+  const sess=await bgSession(status);status('Cutting out…');await yieldUI();
+  const S=320,sm=document.createElement('canvas');sm.width=sm.height=S;const sx=sm.getContext('2d');sx.drawImage(src,0,0,S,S);const d=sx.getImageData(0,0,S,S).data;
   let mx=1;for(let i=0;i<d.length;i+=4)mx=Math.max(mx,d[i],d[i+1],d[i+2]);
-  const f=new Float32Array(3*S*S),mean=[.485,.456,.406],std=[.229,.224,.225];
-  for(let i=0;i<S*S;i++)for(let c=0;c<3;c++)f[c*S*S+i]=(d[i*4+c]/mx-mean[c])/std[c];
-  const out=await sess.run({[sess.inputNames[0]]:new ort.Tensor('float32',f,[1,3,S,S])});
-  const m=out[sess.outputNames[0]].data;let lo=Infinity,hi=-Infinity;for(let i=0;i<S*S;i++){lo=Math.min(lo,m[i]);hi=Math.max(hi,m[i])}
+  const mean=[.485,.456,.406],std=[.229,.224,.225],run1=async flip=>{const f=new Float32Array(3*S*S);
+    for(let y=0;y<S;y++)for(let x=0;x<S;x++){const si=(y*S+(flip?S-1-x:x))*4,di=y*S+x;for(let c=0;c<3;c++)f[c*S*S+di]=(d[si+c]/mx-mean[c])/std[c]}
+    const out=await sess.run({[sess.inputNames[0]]:new ort.Tensor('float32',f,[1,3,S,S])});const m=Float32Array.from(out[sess.outputNames[0]].data);
+    if(flip){for(let y=0;y<S;y++)for(let x=0;x<S/2;x++){const a=y*S+x,b=y*S+S-1-x,t=m[a];m[a]=m[b];m[b]=t}}return m};
+  const m1=await run1(false);status('Refining the edges…');await yieldUI();const m2=await run1(true);
+  let lo=Infinity,hi=-Infinity;const mm=new Float32Array(S*S);for(let i=0;i<S*S;i++){mm[i]=(m1[i]+m2[i])/2;lo=Math.min(lo,mm[i]);hi=Math.max(hi,mm[i])}
   const mk=document.createElement('canvas');mk.width=mk.height=S;const mc=mk.getContext('2d'),id=mc.createImageData(S,S);
-  for(let i=0;i<S*S;i++){let v=(m[i]-lo)/Math.max(1e-6,hi-lo);v=Math.min(1,Math.max(0,(v-.12)/.76));v=v*v*(3-2*v);id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=0;id.data[i*4+3]=Math.round(v*255)}
+  for(let i=0;i<S*S;i++){const v=sstep((((mm[i]-lo)/Math.max(1e-6,hi-lo))-.3)/.4);id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=v*255;id.data[i*4+3]=255}
   mc.putImageData(id,0,0);
-  const res=document.createElement('canvas');res.width=src.width;res.height=src.height;const rc=res.getContext('2d');
-  rc.drawImage(src,0,0);rc.globalCompositeOperation='destination-in';rc.imageSmoothingEnabled=true;rc.imageSmoothingQuality='high';rc.drawImage(mk,0,0,res.width,res.height);
-  return res.toDataURL('image/png');
-}
-async function plainBg(url,tol){
-  const c=await dataToCanvas(url,2200),x=c.getContext('2d'),W=c.width,H=c.height,im=x.getImageData(0,0,W,H),d=im.data;
-  const px=(X,Y)=>{const i=(Y*W+X)*4;return [d[i],d[i+1],d[i+2]]};
-  const cs=[px(0,0),px(W-1,0),px(0,H-1),px(W-1,H-1)],bg=[0,1,2].map(k=>Math.round(cs.reduce((a,v)=>a+v[k],0)/4));
-  const near=i=>Math.hypot(d[i]-bg[0],d[i+1]-bg[1],d[i+2]-bg[2])<tol;
-  const seen=new Uint8Array(W*H),q=new Int32Array(W*H);let qh=0,qt=0;
-  const push=(X,Y)=>{const p=Y*W+X;if(seen[p]||!near(p*4))return;seen[p]=1;q[qt++]=p};
-  for(let X=0;X<W;X++){push(X,0);push(X,H-1)}for(let Y=0;Y<H;Y++){push(0,Y);push(W-1,Y)}
-  while(qh<qt){const p=q[qh++],X=p%W,Y=(p/W)|0;if(X>0)push(X-1,Y);if(X<W-1)push(X+1,Y);if(Y>0)push(X,Y-1);if(Y<H-1)push(X,Y+1)}
-  for(let p=0;p<W*H;p++)if(seen[p])d[p*4+3]=0;
-  for(let Y=1;Y<H-1;Y++)for(let X=1;X<W-1;X++){const p=Y*W+X;if(seen[p])continue;if(seen[p-1]||seen[p+1]||seen[p-W]||seen[p+W])d[p*4+3]=Math.min(d[p*4+3],150)}
-  x.putImageData(im,0,0);return c.toDataURL('image/png');
-}
+  const up=document.createElement('canvas');up.width=W;up.height=H;const ux=up.getContext('2d');ux.imageSmoothingEnabled=true;ux.imageSmoothingQuality='high';ux.drawImage(mk,0,0,W,H);
+  const ud=ux.getImageData(0,0,W,H).data,sd=src.getContext('2d').getImageData(0,0,W,H).data,N=W*H,p=new Float32Array(N),g=new Float32Array(N);
+  for(let i=0;i<N;i++){p[i]=ud[i*4]/255;g[i]=(.299*sd[i*4]+.587*sd[i*4+1]+.114*sd[i*4+2])/255}
+  await yieldUI();const r=Math.max(4,Math.round(Math.min(W,H)*.007));let a=guidedF(g,p,W,H,r,2e-4);
+  for(let i=0;i<N;i++)a[i]=sstep((a[i]-.32)/.36);
+  await yieldUI();cleanMatte(a,W,H,.05,.0015);
+  matteToCanvas(src,a,null);return src.toDataURL('image/png')}
+
 function bgInsp(o){
   const st=el('p',{class:'note'},o.orig?'Background removed.':'Cut the subject out of its background. Works on this device — your photo is not uploaded.');
   const set=t=>{st.textContent=t};let busy=false;
-  const run=async(fn,done)=>{if(busy||!o.src)return;busy=true;try{const url=await fn(D.assets[o.src]);const id=newAsset(url);if(!o.orig)o.orig=o.src;o.src=id;touch();renderInsp();renderPanel();toast(done)}catch(e){set((e&&e.message)||'That did not work')}busy=false};
+  const run=async(fn,done)=>{if(busy||!o.src)return;busy=true;try{const url=await fn(D.assets[o.src]);const id=newAsset(url);libSave(url,'cutout');if(!o.orig)o.orig=o.src;o.src=id;touch();renderInsp();renderPanel();toast(done)}catch(e){set((e&&e.message)||'That did not work')}busy=false};
+  let tol=+(sessionStorage.getItem('ds.tol')||40),enc=null;
+  const encBox=el('input',{type:'checkbox','aria-label':'Also remove enclosed areas',onchange:e=>{enc=e.target.checked}});
   return sec('Remove background',
     el('button',{class:'btn pri wide',html:ic('sparkle',16)+' Remove background',onclick:()=>run(u=>cutOut(u,set),'Background removed')}),
-    el('button',{class:'btn wide',onclick:()=>run(u=>plainBg(u,48),'Plain background removed')},'Remove a plain color background'),
-    o.orig?el('button',{class:'btn wide',onclick:()=>{const cur_=o.src;o.src=o.orig;o.orig=null;touch();renderInsp()}},'Restore original'):null,st);
+    el('p',{class:'note'},'Smart: a plain backdrop is cut out exactly; photos use the on-device AI model with edge refinement.'),
+    el('div',{class:'sec'},el('h4',{},'Plain colour background'),
+      slider('Tolerance',()=>tol,v=>{tol=v;try{sessionStorage.setItem('ds.tol',v)}catch(e){}},{min:10,max:120,step:1}),
+      el('label',{class:'row',style:'gap:8px'},encBox,el('span',{},'Also remove same-coloured areas inside (rings, letters)')),
+      el('button',{class:'btn wide',onclick:()=>run(u=>plainBg(u,tol,{enclosed:encBox.checked?true:enc}),'Plain background removed')},'Remove plain background')),
+    o.orig?el('button',{class:'btn wide',onclick:()=>{o.src=o.orig;o.orig=null;touch();renderInsp()}},'Restore original'):null,st);
 }
 
 /* ---------- animation ---------- */
