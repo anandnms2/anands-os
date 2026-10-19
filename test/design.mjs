@@ -613,6 +613,15 @@ try {
     await d.click('#bDl'); await d.click('text=Save to shared library'); await d.fill('.dlg input', 'Promo letter'); await d.click('.dlg >> text=Share'); await d.waitForTimeout(500);
     const lib = await (await ctx.request.post(B + '/_local/design/library', { data: { op: 'list' }, headers: { 'x-aos': '1' } })).json(); assert.ok(lib.items.length >= 2 && lib.items.some((x) => x.kind === 'doc' && x.name === 'Promo letter')); await d.close();
   });
+  await t('Dialogs in the Websites, Docs, Whiteboard and Video editors are not cut off on a phone-sized window', async () => {
+    const c2 = await browser.newContext({ viewport: { width: 420, height: 800 } }); await c2.request.post(B + '/auth/password', { data: { password: 'pw' }, headers: { 'x-aos': '1' } }); const p = await c2.newPage(); const bad = [];
+    const chk = async (lab) => { await p.waitForTimeout(200); const r = await p.evaluate(() => { const d = document.querySelector('.modal .dlg'); if (!d) return { none: true }; return { clip: d.scrollWidth > d.clientWidth + 1 }; }); if (r.none || r.clip) bad.push(lab + ':' + JSON.stringify(r)); await p.evaluate(() => closeModal()); };
+    await p.goto(B + '/apps/design-studio/site.html'); await p.waitForFunction(() => typeof pickPicture === 'function' && S);
+    for (const [l, f] of [['templates', () => openTemplates(false)], ['picture', () => pickPicture(() => {})], ['comments', () => openComments(ed, {})], ['library', () => openLibrary('site', () => {})], ['check', () => openSiteCheck()]]) { await p.evaluate(f); await chk('site ' + l); }
+    await p.goto(B + '/apps/design-studio/docs.html'); await p.waitForFunction(() => typeof openNewsletters === 'function' && ed.rec); await p.evaluate(() => openNewsletters()); await chk('docs newsletters');
+    await p.goto(B + '/apps/design-studio/video.html'); await p.waitForFunction(() => typeof V !== 'undefined' && V); await p.click('[data-tab=media]'); await p.click('#bTts'); await chk('video narrate');
+    assert.deepEqual(bad, []); await c2.close();
+  });
   await t('right-click menu text is readable in dark mode', async () => {
     const p = await ctx.newPage(); await p.emulateMedia({ colorScheme: 'dark' }); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof ctxMenu === 'function');
     const c = await p.evaluate(() => { ctxMenu(100, 100, [{ label: 'Open', go() {} }]); const b = document.querySelector('.ctx button'), m = document.querySelector('.ctx'); return [getComputedStyle(b).color, getComputedStyle(m).backgroundColor]; });
