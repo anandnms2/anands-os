@@ -412,6 +412,7 @@ try {
     assert.equal((await fetch(url.replace(/\/$/, '') + '/_form', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'name=X&email=notanemail&message=hi' })).status, 400);
     await p.click('#btnMsgs'); await p.waitForSelector('[data-msg]'); assert.equal((await p.$$('[data-msg]')).length, 1); assert.ok((await p.textContent('[data-msg]')).includes('Hello there'));
     await p.click('[data-msg] .danger'); await p.waitForSelector('#noMsgs'); await p.click('.dlg >> text=Close'); await p.click('#bPub');
+    await p.click('#btnVisits'); await p.waitForSelector('#visitsBox'); const vt = await p.textContent('#visitsBox'); assert.match(vt, /Most visited pages/); assert.match(vt, /Today\s*[3-9]/); await p.click('.dlg >> text=Close'); await p.click('#bPub');
     await p.click('text=Take offline'); await p.waitForTimeout(500); assert.equal((await fetch(url)).status, 404);
     await p.waitForTimeout(1200); const u = p.url(); await p.goto(u); await p.waitForFunction(() => typeof S !== 'undefined' && S);
     assert.equal(await p.evaluate(() => S.pages.length + ':' + S.theme.dark), '4:true');
@@ -565,6 +566,8 @@ try {
     const d = await ctx.newPage(); await d.goto(B + '/apps/design-studio/docs.html'); await d.waitForSelector('#page'); await d.waitForFunction(() => document.querySelector('#title'));
     await d.fill('#title', 'History test'); await d.click('#page'); await d.keyboard.type('First version text'); await d.waitForFunction(() => /Saved/.test(document.querySelector('#st').textContent), null, { timeout: 8000 }); await d.waitForTimeout(600);
     await d.click('#bDl'); await d.click('text=Version history'); await d.waitForSelector('[data-restore]', { timeout: 8000 }); assert.ok((await d.$$('[data-restore]')).length >= 1);
+    await d.evaluate(() => { document.querySelector('#page').innerHTML = '<h1>Hello</h1><p>Body <a href="https://x.test">link</a></p>'; });
+    const eh = await d.evaluate(() => emailHTML()); assert.match(eh, /<h1 style="[^"]*font-size:26px/); assert.match(eh, /<a [^>]*style="[^"]*color:#e8590c/); assert.ok(!/<script/i.test(eh));
     await d.close(); await p.close();
   });
   await t('Video editor: remove silences closes the gaps; pictures get a slow zoom', async () => {

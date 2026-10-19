@@ -175,6 +175,9 @@ const wFile = (t) => path.join(WF, RT(t) + '.json');
 const readSite = (t) => { try { return JSON.parse(fs.readFileSync(wFile(t), 'utf8')); } catch { return null; } };
 /* ---------- website contact forms: stored for the site's owner, optionally mailed to them ---------- */
 const FF = path.join(DATA, 'design-forms'); const formHits = new Map(); const mailDay = new Map();
+const VS = path.join(DATA, 'design-visits'); const sFile = (t) => path.join(VS, RT(t) + '.json'); const seenDay = new Map();
+const readStats = (t) => { try { return JSON.parse(fs.readFileSync(sFile(t), 'utf8')); } catch { return { days: {} }; } };
+function countVisit(req, t, slug) { const ua = String(req.headers['user-agent'] || ''); if (!ua || /bot|crawl|spider|slurp|preview|monitor|curl|wget/i.test(ua)) return; try { const day = new Date().toISOString().slice(0, 10), st = readStats(t), d = st.days[day] || (st.days[day] = { views: 0, uniq: 0, pages: {} }); const k = day + '|' + t + '|' + crypto.createHash('sha256').update(clientIp(req) + ua + day).digest('hex').slice(0, 16); d.views++; d.pages[slug] = (d.pages[slug] || 0) + 1; if (!seenDay.has(k)) { seenDay.set(k, 1); d.uniq++; if (seenDay.size > 50000) seenDay.clear(); } const keep = Object.keys(st.days).sort().slice(-90); st.days = Object.fromEntries(keep.map((x) => [x, st.days[x]])); fs.mkdirSync(VS, { recursive: true, mode: 0o700 }); fs.writeFileSync(sFile(t) + '.tmp', JSON.stringify(st), { mode: 0o600 }); fs.renameSync(sFile(t) + '.tmp', sFile(t)); } catch {} }
 const fFile = (t) => path.join(FF, RT(t) + '.json');
 const readForms = (t) => { try { return JSON.parse(fs.readFileSync(fFile(t), 'utf8')); } catch { return []; } };
 const escH = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -201,6 +204,7 @@ export async function publicSite(req, res, p) {
   const j = readSite(t); if (!j) return gone(); const html = j.pages[slug] || (slug === 'index' ? Object.values(j.pages)[0] : null); if (!html) return gone();
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-cache', 'x-frame-options': 'DENY',
     'content-security-policy': "default-src 'none'; script-src 'none'; img-src data: https:; media-src data: https:; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; form-action 'self' https: mailto:; base-uri 'none'; frame-ancestors 'none'" });
+  if (req.method === 'GET') countVisit(req, t, slug);
   res.end(req.method === 'HEAD' ? undefined : html);
 }
 
@@ -359,6 +363,7 @@ export async function handleDesign(req, res, url, p, s) {
     return json(res, 200, { token: t, path: '/w/' + t + '/' });
   }
   if (p === '/design/unpublish') { const b = await readJson(req, 1024), t = RT(b.token), j = readSite(t); if (j && (j.by === who(s) || isOwner(s))) { try { await fsp.rm(wFile(t)); } catch {} } return json(res, 200, { ok: true }); }
+  if (p === '/design/stats') { const b = await readJson(req, 2048), t = RT(b.token), j = readSite(t); if (!j || (j.by !== who(s) && !isOwner(s))) throw httpError(404, 'That website is not published'); const st = readStats(t), days = Object.keys(st.days).sort().slice(-30); const sum = (n) => days.slice(-n).reduce((a, d) => ({ views: a.views + st.days[d].views, uniq: a.uniq + st.days[d].uniq }), { views: 0, uniq: 0 }); const pages = {}; days.forEach((d) => Object.entries(st.days[d].pages).forEach(([k, v]) => { pages[k] = (pages[k] || 0) + v; })); return json(res, 200, { today: sum(1), week: sum(7), month: sum(30), pages: Object.entries(pages).sort((a, b) => b[1] - a[1]).slice(0, 8), series: days.map((d) => [d, st.days[d].views]), forms: readForms(t).length }); }
   if (p === '/design/forms') { const b = await readJson(req, 2048), t = RT(b.token), j = readSite(t); if (!j || (j.by !== who(s) && !isOwner(s))) throw httpError(404, 'That website is not published'); let all = readForms(t); if (b.del) { all = all.filter((x) => x.id !== String(b.del)); fs.mkdirSync(FF, { recursive: true, mode: 0o700 }); fs.writeFileSync(fFile(t), JSON.stringify(all), { mode: 0o600 }); } if (b.clear) { all = []; try { fs.rmSync(fFile(t)); } catch {} } return json(res, 200, { messages: all.slice().reverse(), mail: mail.configured() }); }
   if (p === '/design/review') {
     const q = url.searchParams, days = Math.max(1, Math.min(60, parseInt(q.get('days'), 10) || 14)), b = await readJson(req, 40 * 1024 * 1024);
