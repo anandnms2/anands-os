@@ -49,7 +49,7 @@ function draw(){if(!V)return;const W=cv.width,H=cv.height;cx.fillStyle='#000';cx
   [...act.filter(c=>c.track!=='o'),...act.filter(c=>c.track==='o')].forEach(c=>{
     if(c.kind==='text'){drawText(c.text||'',c.x==null?50:c.x,c.y==null?50:c.y,c.size||72,c.color||'#fff',c.bg||null,W*.86);return}
     const src=c.kind==='video'?els[c.id]:imgs[c.mid];if(!src)return;const sw=c.kind==='video'?src.videoWidth:src.naturalWidth,sh=c.kind==='video'?src.videoHeight:src.naturalHeight;if(!sw||!sh||(c.kind==='video'&&src.readyState<2))return;
-    const main=c.track!=='o',k=main?Math.min(W/sw,H/sh)*(c.zoom||1):(W*(c.sc||.35))/sw,dw=sw*k,dh=sh*k,px=main?50:(c.x==null?70:c.x),py=main?50:(c.y==null?30:c.y);
+    const kb=c.kb&&c.kind==='image'?(c.kb==='in'?1+.18*Math.min(1,(t-c.start)/c.dur):1.18-.18*Math.min(1,(t-c.start)/c.dur)):1,main=c.track!=='o',k=main?Math.min(W/sw,H/sh)*(c.zoom||1)*kb:(W*(c.sc||.35))/sw,dw=sw*k,dh=sh*k,px=main?50:(c.x==null?70:c.x),py=main?50:(c.y==null?30:c.y);
     cx.save();cx.globalAlpha=Math.min(1,Math.max(0,fade(c)));try{cx.drawImage(src,W*px/100-dw/2,H*py/100-dh/2,dw,dh)}catch(e){}cx.restore()});
   const cap=V.clips.find(c=>c.kind==='cap'&&t>=c.start&&t<c.start+c.dur);if(cap)drawCaption(cap);
   $('#time').textContent=fmt(t,1)+' / '+fmt(total(),1);const ph=$('#ph');if(ph)ph.style.left=(t*pps)+'px'}
@@ -112,9 +112,11 @@ function renderPane(){if(!V)return;const p=$('#pane');p.innerHTML='';$$('#tabs b
     if(c.kind==='video'||c.kind==='audio'){const sps=[.25,.5,.75,1,1.5,2,3];p.append(el('label',{},'Speed',el('select',{class:'f',id:'spd',onchange:e=>{snap();c.speed=+e.target.value;const md=(V.media[c.mid].dur||1e9);c.dur=Math.max(.1,Math.min(c.dur,(md-(c.in||0))/c.speed));changed()}},...sps.map(v=>el('option',{value:v,selected:(c.speed||1)===v},v+'×')))))}
     if(c.kind==='video'||c.kind==='audio'){const r=el('input',{type:'range',min:0,max:2,step:.05,value:c.vol==null?1:c.vol});r.oninput=()=>{c.vol=+r.value;if(gains[c.id])gains[c.id].gain.value=c.vol};r.onchange=()=>{ed.queue()};r.onpointerdown=snap;p.append(el('label',{},'Volume',r),el('label',{style:'display:flex;gap:8px;align-items:center'},el('input',{type:'checkbox',checked:!!c.mute,onchange:e=>{snap();c.mute=e.target.checked;changed()}}),'Mute this clip'))}
     if(c.kind==='video'||c.kind==='image'){const s=el('select',{class:'f',onchange:e=>{snap();c.track=e.target.value;changed()}},el('option',{value:'v',selected:c.track!=='o'},'Main picture'),el('option',{value:'o',selected:c.track==='o'},'Overlay (small, on top)'));p.append(el('label',{},'Layer',s));
+      if(c.kind==='image')p.append(el('label',{},'Slow zoom',el('select',{class:'f',id:'kb',onchange:e=>{snap();c.kb=e.target.value||null;changed()}},...[['','None'],['in','Zoom in'],['out','Zoom out']].map(([v,l])=>el('option',{value:v,selected:(c.kb||'')===v},l)))));
       if(c.track==='o')p.append(num('Size (% of width)',()=>(c.sc||.35)*100,v=>c.sc=v/100,5,100,1),num('Left–right (%)',()=>c.x==null?70:c.x,v=>c.x=v,0,100,1),num('Up–down (%)',()=>c.y==null?30:c.y,v=>c.y=v,0,100,1));else p.append(num('Zoom (1 = fit)',()=>c.zoom||1,v=>c.zoom=v,.2,4,.05))}
     if(c.kind==='text'){p.append(num('Size',()=>c.size||72,v=>c.size=v,10,300,2),num('Left–right (%)',()=>c.x==null?50:c.x,v=>c.x=v,0,100,1),num('Up–down (%)',()=>c.y==null?50:c.y,v=>c.y=v,0,100,1),el('label',{},'Colour',el('input',{type:'color',value:c.color||'#ffffff',oninput:e=>{c.color=e.target.value;draw();ed.queue()},onfocus:snap})),el('label',{style:'display:flex;gap:8px;align-items:center'},el('input',{type:'checkbox',checked:!!c.bg,onchange:e=>{snap();c.bg=e.target.checked?'#000000aa':null;changed()}}),'Dark box behind the text'))}
     if(c.kind!=='cap')p.append(num('Fade in/out (seconds)',()=>c.fade||0,v=>c.fade=v,0,5,.1));
+    if(c.kind==='video'||c.kind==='audio')p.append(el('button',{class:'btn',id:'bSil',onclick:()=>removeSilence(c)},'🤫 Remove silences'));
     p.append(el('div',{class:'row'},el('button',{class:'btn',onclick:split},'✂ Split'),el('button',{class:'btn danger',onclick:del},'Delete')));return}
   /* captions */
   const caps=V.clips.filter(c=>c.kind==='cap').sort((a,b)=>a.start-b.start);
@@ -137,6 +139,14 @@ $('#fSrt').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)
 function exportSrt(){const caps=V.clips.filter(c=>c.kind==='cap').sort((a,b)=>a.start-b.start);if(!caps.length)return toast('No captions yet');const T=s=>{const ms=Math.round(s*1000),h=Math.floor(ms/3600000),m=Math.floor(ms/60000)%60,x=Math.floor(ms/1000)%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')},${String(ms%1000).padStart(3,'0')}`};
   download(safe($('#title').value)+'.srt',new Blob([caps.map((c,i)=>`${i+1}\n${T(c.start)} --> ${T(c.start+c.dur)}\n${c.text}\n`).join('\n')],{type:'text/plain'}))}
 
+/* Cut out the quiet parts of one clip: find stretches below a level for 0.6 s or more, split around them, then close the gaps. */
+async function removeSilence(c){const b=$('#bSil');b.disabled=true;b.textContent='Listening…';try{const u=await getURL(c.mid);if(!u)throw new Error('The file is missing.');const dc=new (window.AudioContext||window.webkitAudioContext)();let buf;try{buf=await dc.decodeAudioData(await (await fetch(u)).arrayBuffer())}catch(e){throw new Error('This clip has no sound that the browser can read.')}finally{dc.close()}
+  const sp=c.speed||1,d=buf.getChannelData(0),sr=buf.sampleRate,win=Math.floor(sr*.05),n=Math.floor(d.length/win),quiet=[];for(let i=0;i<n;i++){let e=0;for(let j=i*win;j<(i+1)*win;j++)e+=d[j]*d[j];quiet.push(Math.sqrt(e/win)<.012)}
+  const a0=c.in,a1=c.in+c.dur*sp,keep=[];let cur=null;const pad=.12;for(let i=0;i<n;i++){const ts=i*.05;if(ts<a0||ts>=a1)continue;if(!quiet[i]){if(!cur)cur={s:ts,e:ts+.05};else cur.e=ts+.05}else if(cur){let g=ts;while(g<a1&&quiet[Math.floor(g/.05)])g+=.05;if(g-ts>=.6||g>=a1){keep.push(cur);cur=null}}}if(cur)keep.push(cur);
+  const segs=keep.map(k=>({s:Math.max(a0,k.s-pad),e:Math.min(a1,k.e+pad)})).filter(k=>k.e-k.s>.15);if(!segs.length)throw new Error('No speech found, so nothing was cut.');
+  const removed=c.dur-segs.reduce((x,k)=>x+(k.e-k.s)/sp,0);if(removed<.3)throw new Error('There are no long silences in this clip.');
+  snap();const oldEnd=c.start+c.dur;let pos=c.start;const out=segs.map(k=>{const n={...c,id:uid(),start:pos,in:k.s,dur:(k.e-k.s)/sp};pos+=n.dur;return n});V.clips=V.clips.filter(x=>x!==c);V.clips.forEach(x=>{if(x.start>=oldEnd-1e-3&&x.kind!=='cap')x.start=Math.max(0,x.start-removed)});out.forEach(n=>{V.clips.push(n);prep(n)});sel=out[0].id;toast('Cut '+removed.toFixed(1)+' s of silence into '+out.length+' clips');changed()}
+  catch(e){toast(e.message,5000)}finally{const bb=$('#bSil');if(bb){bb.disabled=false;bb.textContent='🤫 Remove silences'}}}
 let vo=null;
 async function recordVO(){const b=$('#bVO');if(vo){vo.rec.stop();return}if(!navigator.mediaDevices||!window.MediaRecorder)return toast('This browser cannot record sound');
   let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){return toast('Allow the microphone to record a voice-over')}

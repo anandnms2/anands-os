@@ -567,6 +567,16 @@ try {
     await d.click('#bDl'); await d.click('text=Version history'); await d.waitForSelector('[data-restore]', { timeout: 8000 }); assert.ok((await d.$$('[data-restore]')).length >= 1);
     await d.close(); await p.close();
   });
+  await t('Video editor: remove silences closes the gaps; pictures get a slow zoom', async () => {
+    const ap = path.join(os.tmpdir(), 'sil-' + Date.now() + '.webm'); const ff = spawnSync('ffmpeg', ['-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=4', '-af', "volume='if(between(t,1,3),0,1)':eval=frame", '-c:a', 'libopus', ap]);
+    const ip = path.join(os.tmpdir(), 'pic-' + Date.now() + '.png'); const ff2 = spawnSync('ffmpeg', ['-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc=size=200x120:rate=1:duration=1', '-frames:v', '1', ip]);
+    if (ff.status !== 0 || ff2.status !== 0) { console.log('skip  ffmpeg not installed (silence test)'); return; }
+    const p = await ctx.newPage(); await p.goto(B + '/apps/design-studio/video.html'); await p.waitForFunction(() => typeof V !== 'undefined' && V);
+    await p.setInputFiles('#fMedia', ap); await p.waitForFunction(() => V.clips.length === 1, null, { timeout: 20000 }); await p.waitForFunction(() => els[V.clips[0].id], null, { timeout: 15000 });
+    await p.click('#bSil'); await p.waitForFunction(() => V.clips.length >= 2, null, { timeout: 20000 }); const tt = await p.evaluate(() => total()); assert.ok(tt < 3.2 && tt > 1.5, 'total ' + tt);
+    assert.ok(await p.evaluate(() => { const l = V.clips.slice().sort((a, b) => a.start - b.start); return l.every((c, i) => !i || Math.abs(c.start - (l[i - 1].start + l[i - 1].dur)) < .02); }), 'gaps are closed');
+    await p.setInputFiles('#fMedia', ip); await p.waitForFunction(() => V.clips.some((c) => c.kind === 'image'), null, { timeout: 20000 }); await p.selectOption('#kb', 'in'); assert.equal(await p.evaluate(() => V.clips.find((c) => c.kind === 'image').kb), 'in'); await p.close();
+  });
   await t('right-click menu text is readable in dark mode', async () => {
     const p = await ctx.newPage(); await p.emulateMedia({ colorScheme: 'dark' }); await p.goto(B + '/apps/design-studio/?open'); await p.waitForFunction(() => typeof ctxMenu === 'function');
     const c = await p.evaluate(() => { ctxMenu(100, 100, [{ label: 'Open', go() {} }]); const b = document.querySelector('.ctx button'), m = document.querySelector('.ctx'); return [getComputedStyle(b).color, getComputedStyle(m).backgroundColor]; });
