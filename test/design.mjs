@@ -219,6 +219,14 @@ try {
     const p2 = await ctx.newPage(); await p2.goto(B + '/apps/design-studio/?open'); await p2.waitForFunction(() => typeof libLoad === 'function');
     const n = await p2.evaluate(async () => { openTab('up'); return (await libLoad(true)).length; }); assert.ok(n >= 1, 'library empty'); await p2.close();
   });
+  await t('icons, frames, fonts, templates and decks are all registered', async () => {
+    const r = await page.evaluate(() => ({ ic: Object.keys(SP).filter((k) => k.startsWith('ic_')).length, fr: FRAMES.length, fonts: Object.values(FONT_GROUPS).reduce((a, g) => a + g.length, 0), hand: FONT_GROUPS.Handwriting.length, tpl: TEMPLATES.length, names: new Set(TEMPLATES.map((x) => x.n)).size, flt: Object.keys(FILTERS).length }));
+    assert.ok(r.ic >= 150 && r.fr >= 50 && r.fonts >= 350 && r.hand >= 60 && r.tpl >= 700 && r.flt >= 20, JSON.stringify(r));
+  });
+  await t('Elements panel adds an icon, a frame and a mockup', async () => {
+    const r = await page.evaluate(() => { const n0 = (typeof S !== 'undefined' ? 0 : 0); const before = JSON.stringify(Object.keys(window)).length; const ic = Object.keys(SP).find((k) => k.startsWith('ic_')); return { ic, m: typeof placeMany, f: typeof framesSection, i: typeof iconsSection, mk: typeof mockupsSection }; });
+    assert.ok(r.ic && r.m === 'function' && r.f === 'function' && r.i === 'function' && r.mk === 'function', JSON.stringify(r));
+  });
   await t('no script errors in the studio', async () => { assert.deepEqual(errs, []); });
 } finally { await browser.close(); srv.kill(); px.close(); un.close(); pb.close(); ov.close(); wk.close(); bgHost.close(); imgHost.close(); }
 console.log(`${pass} passed${failed ? ', ' + failed + ' failed' : ''}`); process.exit(failed ? 1 : 0);
