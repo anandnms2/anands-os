@@ -39,7 +39,7 @@ window.aosHost = function (sub, path) { var p = location.hostname.split('.'); re
     return '<div class="lives">' + out.join('') + '</div>';
   }
   var GROUPS = [
-    ['Everyday', [['Pulse', 'pulse', aosHost('control'), 'Anands Control Center', 'pulse'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password'], ['Files', 'folder', aosHost('files', '/api/auth/oidc/login'), 'Anands Filemanager', 'files']]],
+    ['Everyday', [['Pulse', 'pulse', aosHost('control'), 'Anands Control Center', 'pulse'], ['Photos', 'photos', '#photos', 'Anands Photos'], ['Drive', 'cloud', '#drive', 'Anands Drive'], ['Vault', 'lock', '#vault', 'Anands Password']]],
     ['Servers and network', [['Cloud Insights', 'pulse', '#insights', ''], ['Servers', 'monitor', '#servers', ''], ['VPN', 'shield', '#vpn', 'Anands VPN'], ['Status', 'pulse', aosHost('status'), 'Anands Status'], ['Storage', 'folder', aosHost('s3-admin'), 'Anands S3 Storage', 'storage']]]
   ];
   function tile(s, state) {
